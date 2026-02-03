@@ -67,6 +67,9 @@ interface TradePlanChartProps {
   chartId?: string; // Optional custom ID for the chart container (default: 'trade-plan-chart')
   tradeType?: 'scalping' | 'dayTrade' | 'swing'; // Trade type to determine chart interval
   analysisTime?: string | Date; // When the analysis was created (for marker placement)
+  // Trade plan validity status
+  tradePlanStatus?: 'valid' | 'wait_for_entry' | 'trade_missed';
+  tradePlanMessage?: string;
 }
 
 // Get Binance interval based on trade type
@@ -104,6 +107,8 @@ export function TradePlanChart({
   chartId = 'trade-plan-chart',
   tradeType = 'dayTrade',
   analysisTime,
+  tradePlanStatus = 'valid',
+  tradePlanMessage,
 }: TradePlanChartProps) {
   const { interval: chartInterval, label: intervalLabel } = getChartInterval(tradeType);
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -504,6 +509,34 @@ export function TradePlanChart({
           </div>
         </div>
       </div>
+
+      {/* Trade Plan Status Warning */}
+      {tradePlanStatus === 'trade_missed' && (
+        <div className="px-4 py-3 bg-red-500/10 border-b border-red-500/30">
+          <div className="flex items-center gap-2 text-red-500">
+            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="font-semibold text-sm">Trade Missed</p>
+              <p className="text-xs text-red-400">{tradePlanMessage || 'Price has moved beyond all take profit levels. This trade plan is no longer valid.'}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      {tradePlanStatus === 'wait_for_entry' && (
+        <div className="px-4 py-3 bg-amber-500/10 border-b border-amber-500/30">
+          <div className="flex items-center gap-2 text-amber-500">
+            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="font-semibold text-sm">Wait for Better Entry</p>
+              <p className="text-xs text-amber-400">{tradePlanMessage || 'Current price is far from the ideal entry. Consider waiting for a pullback.'}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Chart */}
       <div className="relative">
