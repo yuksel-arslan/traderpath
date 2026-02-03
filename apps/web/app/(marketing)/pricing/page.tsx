@@ -290,7 +290,7 @@ export default function PricingPage() {
                 No packages available at the moment.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
                 {packages.map((pkg) => {
                   const nameKey = pkg.name.toLowerCase().split(' ')[0];
                   const Icon = PACKAGE_ICONS[nameKey] || PACKAGE_ICONS[pkg.id] || Zap;
