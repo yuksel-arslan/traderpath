@@ -7,31 +7,36 @@
 import { prisma } from '../../core/database';
 
 // Default credit costs (fallback if database is not available)
+// NOTE: These values must match backend subscription-tiers.ts SERVICE_CREDITS
 const DEFAULT_CREDIT_COSTS = {
   // Analysis Steps (Classic 7-Step)
   STEP_MARKET_PULSE: 0,
-  STEP_ASSET_SCANNER: 2,
-  STEP_SAFETY_CHECK: 5,
-  STEP_TIMING: 3,
-  STEP_TRADE_PLAN: 5,
-  STEP_TRAP_CHECK: 5,
-  STEP_FINAL_VERDICT: 0,
+  STEP_ASSET_SCANNER: 1,
+  STEP_SAFETY_CHECK: 2,
+  STEP_TIMING: 2,
+  STEP_TRADE_PLAN: 2,
+  STEP_TRAP_CHECK: 2,
+  STEP_FINAL_VERDICT: 1,
 
   // Bundles
-  BUNDLE_FULL_ANALYSIS: 25,      // Classic 7-Step Analysis
-  BUNDLE_MLIS_PRO_ANALYSIS: 35,  // MLIS Pro 5-Layer Analysis
+  BUNDLE_FULL_ANALYSIS: 10,      // Classic 7-Step Analysis
+  BUNDLE_MLIS_PRO_ANALYSIS: 10,  // MLIS Pro 5-Layer Analysis
   BUNDLE_QUICK_CHECK: 5,
   BUNDLE_SMART_ENTRY: 12,
 
   // MLIS Pro Layers (5-Layer Neural Network)
-  MLIS_LAYER_TECHNICAL: 5,
-  MLIS_LAYER_MOMENTUM: 5,
-  MLIS_LAYER_VOLATILITY: 5,
-  MLIS_LAYER_VOLUME: 5,
-  MLIS_LAYER_VERDICT: 5,
+  MLIS_LAYER_TECHNICAL: 2,
+  MLIS_LAYER_MOMENTUM: 2,
+  MLIS_LAYER_VOLATILITY: 2,
+  MLIS_LAYER_VOLUME: 2,
+  MLIS_LAYER_VERDICT: 2,
+
+  // Capital Flow
+  CAPITAL_FLOW_L3_L4: 5,  // L3 + L4 combined
 
   // Features
-  AI_EXPERT_QUESTION: 10,
+  AI_EXPERT_QUESTION: 5,
+  AI_CONCIERGE_MESSAGE: 5,
   PDF_REPORT: 5,
   REPORT_TRANSLATION: 5,
   EMAIL_SEND: 5,
@@ -83,8 +88,12 @@ function mapDbToCosts(dbSettings: any): typeof DEFAULT_CREDIT_COSTS {
     MLIS_LAYER_VOLUME: dbSettings.creditCostMlisVolumeLayer ?? DEFAULT_CREDIT_COSTS.MLIS_LAYER_VOLUME,
     MLIS_LAYER_VERDICT: dbSettings.creditCostMlisVerdictLayer ?? DEFAULT_CREDIT_COSTS.MLIS_LAYER_VERDICT,
 
+    // Capital Flow
+    CAPITAL_FLOW_L3_L4: dbSettings.creditCostCapitalFlowL3L4 ?? DEFAULT_CREDIT_COSTS.CAPITAL_FLOW_L3_L4,
+
     // Features
     AI_EXPERT_QUESTION: dbSettings.creditCostAiExpert ?? DEFAULT_CREDIT_COSTS.AI_EXPERT_QUESTION,
+    AI_CONCIERGE_MESSAGE: dbSettings.creditCostAiConcierge ?? DEFAULT_CREDIT_COSTS.AI_CONCIERGE_MESSAGE,
     PDF_REPORT: dbSettings.creditCostPdfReport ?? DEFAULT_CREDIT_COSTS.PDF_REPORT,
     REPORT_TRANSLATION: dbSettings.creditCostTranslation ?? DEFAULT_CREDIT_COSTS.REPORT_TRANSLATION,
     EMAIL_SEND: dbSettings.creditCostEmailSend ?? DEFAULT_CREDIT_COSTS.EMAIL_SEND,
@@ -167,10 +176,20 @@ export async function updateCreditCosts(updates: Partial<{
   creditCostFinalVerdict: number;
   // Bundles
   creditCostFullAnalysis: number;
+  creditCostMlisProAnalysis: number;
   creditCostQuickCheck: number;
   creditCostSmartEntry: number;
+  // MLIS Pro Layers
+  creditCostMlisTechnicalLayer: number;
+  creditCostMlisMomentumLayer: number;
+  creditCostMlisVolatilityLayer: number;
+  creditCostMlisVolumeLayer: number;
+  creditCostMlisVerdictLayer: number;
+  // Capital Flow
+  creditCostCapitalFlowL3L4: number;
   // Features
   creditCostAiExpert: number;
+  creditCostAiConcierge: number;
   creditCostPdfReport: number;
   creditCostTranslation: number;
   creditCostEmailSend: number;
