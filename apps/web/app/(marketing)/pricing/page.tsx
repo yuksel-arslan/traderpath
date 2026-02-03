@@ -21,11 +21,13 @@ import {
   Bot,
   Check,
   Shield,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost } from '../../../lib/pricing-config';
 import { authFetch, getAuthToken, apiBaseUrl } from '../../../lib/api';
 import { Footer } from '../../../components/common/Footer';
+import { SubscriptionTiers } from '../../../components/pricing/SubscriptionTiers';
 
 // Format credits with full number display (1000087 → 1,000,087)
 function formatCredits(num: number): string {
@@ -197,16 +199,38 @@ export default function PricingPage() {
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full mb-6">
               <Shield className="w-4 h-4 text-emerald-500" />
               <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                Secure Payment · No Hidden Fees
+                Secure Payment · Cancel Anytime
               </span>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900 dark:text-white">
-              Simple, Transparent Pricing
+              Choose Your Trading Plan
             </h1>
-            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-              Pay only for what you use. No subscriptions, no recurring charges.
-              {!isLoggedIn && ` Start with ${FREE_SIGNUP_CREDITS} free credits.`}
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Subscribe to unlock daily credits and premium features.
+              Save up to 20% with yearly billing.
+              {!isLoggedIn && ` Or start free with ${FREE_SIGNUP_CREDITS} credits.`}
             </p>
+          </div>
+        </section>
+
+        {/* Subscription Plans */}
+        <section className="py-16">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-violet-500/10 border border-violet-500/20 rounded-full mb-4">
+                <Sparkles className="w-4 h-4 text-violet-500" />
+                <span className="text-sm font-medium text-violet-600 dark:text-violet-400">
+                  Subscription Plans
+                </span>
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                Daily Credits, Premium Features
+              </h2>
+              <p className="text-muted-foreground max-w-xl mx-auto">
+                Get fresh credits every day and unlock advanced analysis tools
+              </p>
+            </div>
+            <SubscriptionTiers variant="page" />
           </div>
         </section>
 
@@ -240,14 +264,22 @@ export default function PricingPage() {
           </section>
         )}
 
-        {/* Credit Packages */}
-        <section className="py-16">
+        {/* Credit Packages (Add-on) */}
+        <section className="py-16 bg-slate-50/50 dark:bg-slate-900/30">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full mb-4">
+                <Gem className="w-4 h-4 text-amber-500" />
+                <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                  One-Time Purchase
+                </span>
+              </div>
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                Credit Packages
+                Need Extra Credits?
               </h2>
-              <p className="text-muted-foreground">Choose the package that fits your trading needs</p>
+              <p className="text-muted-foreground max-w-lg mx-auto">
+                Top up your account with credit packages. Perfect for heavy analysis days or if you prefer pay-as-you-go.
+              </p>
             </div>
             {packagesLoading ? (
               <div className="flex justify-center py-12">
