@@ -20,6 +20,10 @@ import {
   FileText,
   Globe,
   Target,
+  Calendar,
+  CreditCard,
+  Crown,
+  Sparkles,
 } from 'lucide-react';
 import Link from 'next/link';
 import { authFetch } from '../../../../lib/api';
@@ -692,166 +696,258 @@ export default function FinancePage() {
 
       {/* Packages Tab */}
       {activeTab === 'packages' && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">Credit Packages</h3>
-              <p className="text-sm text-muted-foreground">Manage packages shown to users</p>
+        <div className="space-y-8">
+          {/* ============================================= */}
+          {/* SECTION 1: Monthly Subscription Plans */}
+          {/* ============================================= */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-violet-500/10 rounded-lg">
+                <Calendar className="w-5 h-5 text-violet-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Monthly Subscription Plans</h3>
+                <p className="text-sm text-muted-foreground">Recurring subscriptions with included features</p>
+              </div>
             </div>
-            <button
-              onClick={handleCreatePackage}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
-            >
-              <Plus className="w-4 h-4" />
-              Add Package
-            </button>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Free Tier */}
+              <div className="bg-card border rounded-lg p-4 relative">
+                <div className="flex items-center gap-2 mb-3">
+                  <Zap className="w-5 h-5 text-slate-500" />
+                  <span className="font-semibold">Free</span>
+                </div>
+                <div className="text-2xl font-bold mb-2">$0<span className="text-sm font-normal text-muted-foreground">/mo</span></div>
+                <ul className="text-sm space-y-1 text-muted-foreground">
+                  <li>• Capital Flow L1-L2</li>
+                  <li>• Basic Dashboard</li>
+                  <li>• 3 Scheduled Reports</li>
+                </ul>
+              </div>
+
+              {/* Starter Tier */}
+              <div className="bg-card border border-teal-500/30 rounded-lg p-4 relative">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-5 h-5 text-teal-500" />
+                  <span className="font-semibold">Starter</span>
+                </div>
+                <div className="text-2xl font-bold mb-2">$29<span className="text-sm font-normal text-muted-foreground">/mo</span></div>
+                <ul className="text-sm space-y-1 text-muted-foreground">
+                  <li>• Capital Flow L1-L4</li>
+                  <li>• 5 Daily Analyses</li>
+                  <li>• 5 Scheduled Reports</li>
+                  <li>• 10 Price Alerts</li>
+                </ul>
+              </div>
+
+              {/* Pro Tier */}
+              <div className="bg-card border border-amber-500/30 rounded-lg p-4 relative">
+                <span className="absolute -top-2 right-4 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded">POPULAR</span>
+                <div className="flex items-center gap-2 mb-3">
+                  <Star className="w-5 h-5 text-amber-500" />
+                  <span className="font-semibold">Pro</span>
+                </div>
+                <div className="text-2xl font-bold mb-2">$59<span className="text-sm font-normal text-muted-foreground">/mo</span></div>
+                <ul className="text-sm space-y-1 text-muted-foreground">
+                  <li>• Everything in Starter</li>
+                  <li>• Asset Analysis</li>
+                  <li>• PDF/Email Reports</li>
+                  <li>• Automation</li>
+                </ul>
+              </div>
+
+              {/* Elite Tier */}
+              <div className="bg-gradient-to-br from-violet-500/10 to-purple-500/10 border border-violet-500/30 rounded-lg p-4 relative">
+                <span className="absolute -top-2 right-4 bg-violet-500 text-white text-xs font-bold px-2 py-0.5 rounded">BEST</span>
+                <div className="flex items-center gap-2 mb-3">
+                  <Crown className="w-5 h-5 text-violet-500" />
+                  <span className="font-semibold">Elite</span>
+                </div>
+                <div className="text-2xl font-bold mb-2">$79<span className="text-sm font-normal text-muted-foreground">/mo</span></div>
+                <ul className="text-sm space-y-1 text-muted-foreground">
+                  <li>• Everything in Pro</li>
+                  <li>• AI Concierge</li>
+                  <li>• AI Experts (Unlimited)</li>
+                  <li>• Priority Support</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-sm text-amber-600 dark:text-amber-400">
+              💡 Subscription plans are managed via Stripe. Edit prices in <code className="bg-amber-500/20 px-1 rounded">subscription-tiers.ts</code>
+            </div>
           </div>
 
-          {/* Edit Form */}
-          {editingPackage && (
-            <div className="bg-card border rounded-lg p-6">
-              <h4 className="font-semibold mb-4">{isCreating ? 'Create Package' : 'Edit Package'}</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Name</label>
-                  <input
-                    type="text"
-                    value={editingPackage.name}
-                    onChange={(e) => setEditingPackage({ ...editingPackage, name: e.target.value })}
-                    className="w-full px-4 py-2 bg-background border rounded-lg"
-                    placeholder="Starter, Pro, etc."
-                  />
+          {/* ============================================= */}
+          {/* SECTION 2: Credit Packages (One-time Purchase) */}
+          {/* ============================================= */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-500/10 rounded-lg">
+                  <CreditCard className="w-5 h-5 text-emerald-500" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Credits</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={editingPackage.credits}
-                    onChange={(e) => setEditingPackage({ ...editingPackage, credits: parseInt(e.target.value) || 0 })}
-                    className="w-full px-4 py-2 bg-background border rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Bonus Credits</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={editingPackage.bonusCredits}
-                    onChange={(e) => setEditingPackage({ ...editingPackage, bonusCredits: parseInt(e.target.value) || 0 })}
-                    className="w-full px-4 py-2 bg-background border rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Price (USD)</label>
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={editingPackage.priceUsd}
-                    onChange={(e) => setEditingPackage({ ...editingPackage, priceUsd: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-4 py-2 bg-background border rounded-lg"
-                  />
+                  <h3 className="text-lg font-semibold">Credit Packages</h3>
+                  <p className="text-sm text-muted-foreground">One-time credit purchases for extra analyses</p>
                 </div>
               </div>
-              <div className="flex items-center gap-6 mt-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editingPackage.isPopular}
-                    onChange={(e) => setEditingPackage({ ...editingPackage, isPopular: e.target.checked })}
-                    className="w-4 h-4 rounded"
-                  />
-                  <span className="text-sm">Popular</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editingPackage.isActive}
-                    onChange={(e) => setEditingPackage({ ...editingPackage, isActive: e.target.checked })}
-                    className="w-4 h-4 rounded"
-                  />
-                  <span className="text-sm">Active</span>
-                </label>
-              </div>
-              <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-                <button onClick={handleCancelPackage} className="px-4 py-2 border rounded-lg hover:bg-accent">
-                  <X className="w-4 h-4 inline mr-2" />Cancel
-                </button>
-                <button
-                  onClick={handleSavePackage}
-                  disabled={isSaving || !editingPackage.name}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg disabled:opacity-50"
-                >
-                  <Save className="w-4 h-4 inline mr-2" />{isSaving ? 'Saving...' : 'Save'}
-                </button>
-              </div>
+              <button
+                onClick={handleCreatePackage}
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+              >
+                <Plus className="w-4 h-4" />
+                Add Package
+              </button>
             </div>
-          )}
 
-          {/* Packages Table */}
-          <div className="bg-card border rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-accent/50">
-                <tr>
-                  <th className="text-left p-4 font-medium">Package</th>
-                  <th className="text-left p-4 font-medium">Credits</th>
-                  <th className="text-left p-4 font-medium">Price</th>
-                  <th className="text-left p-4 font-medium">Per Credit</th>
-                  <th className="text-left p-4 font-medium">Status</th>
-                  <th className="text-right p-4 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {packages.length === 0 ? (
+            {/* Edit Form */}
+            {editingPackage && (
+              <div className="bg-card border rounded-lg p-6">
+                <h4 className="font-semibold mb-4">{isCreating ? 'Create Package' : 'Edit Package'}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Name</label>
+                    <input
+                      type="text"
+                      value={editingPackage.name}
+                      onChange={(e) => setEditingPackage({ ...editingPackage, name: e.target.value })}
+                      className="w-full px-4 py-2 bg-background border rounded-lg"
+                      placeholder="Starter Pack, Pro Pack, etc."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Credits</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editingPackage.credits}
+                      onChange={(e) => setEditingPackage({ ...editingPackage, credits: parseInt(e.target.value) || 0 })}
+                      className="w-full px-4 py-2 bg-background border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Bonus Credits</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingPackage.bonusCredits}
+                      onChange={(e) => setEditingPackage({ ...editingPackage, bonusCredits: parseInt(e.target.value) || 0 })}
+                      className="w-full px-4 py-2 bg-background border rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Price (USD)</label>
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={editingPackage.priceUsd}
+                      onChange={(e) => setEditingPackage({ ...editingPackage, priceUsd: parseFloat(e.target.value) || 0 })}
+                      className="w-full px-4 py-2 bg-background border rounded-lg"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-6 mt-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingPackage.isPopular}
+                      onChange={(e) => setEditingPackage({ ...editingPackage, isPopular: e.target.checked })}
+                      className="w-4 h-4 rounded"
+                    />
+                    <span className="text-sm">Popular</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingPackage.isActive}
+                      onChange={(e) => setEditingPackage({ ...editingPackage, isActive: e.target.checked })}
+                      className="w-4 h-4 rounded"
+                    />
+                    <span className="text-sm">Active</span>
+                  </label>
+                </div>
+                <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                  <button onClick={handleCancelPackage} className="px-4 py-2 border rounded-lg hover:bg-accent">
+                    <X className="w-4 h-4 inline mr-2" />Cancel
+                  </button>
+                  <button
+                    onClick={handleSavePackage}
+                    disabled={isSaving || !editingPackage.name}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg disabled:opacity-50"
+                  >
+                    <Save className="w-4 h-4 inline mr-2" />{isSaving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Credit Packages Table */}
+            <div className="bg-card border rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-accent/50">
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-muted-foreground">
-                      No packages yet. Create your first package.
-                    </td>
+                    <th className="text-left p-4 font-medium">Package</th>
+                    <th className="text-left p-4 font-medium">Credits</th>
+                    <th className="text-left p-4 font-medium">Price</th>
+                    <th className="text-left p-4 font-medium">Per Credit</th>
+                    <th className="text-left p-4 font-medium">Status</th>
+                    <th className="text-right p-4 font-medium">Actions</th>
                   </tr>
-                ) : (
-                  packages.map((pkg) => (
-                    <tr key={pkg.id} className={!pkg.isActive ? 'opacity-50' : ''}>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{pkg.name}</span>
-                          {pkg.isPopular && <Star className="w-4 h-4 text-amber-500 fill-amber-500" />}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        {pkg.credits}
-                        {pkg.bonusCredits > 0 && <span className="text-green-500 ml-1">+{pkg.bonusCredits}</span>}
-                      </td>
-                      <td className="p-4 font-mono">${parseFloat(pkg.priceUsd).toFixed(2)}</td>
-                      <td className="p-4 font-mono text-muted-foreground">${parseFloat(pkg.pricePerCredit).toFixed(4)}</td>
-                      <td className="p-4">
-                        <button
-                          onClick={() => handleTogglePackage(pkg)}
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            pkg.isActive ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
-                          }`}
-                        >
-                          {pkg.isActive ? 'Active' : 'Inactive'}
-                        </button>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => handleEditPackage(pkg)} className="p-2 hover:bg-accent rounded-lg">
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeletePackage(pkg.id)}
-                            className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                </thead>
+                <tbody className="divide-y">
+                  {packages.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                        No packages yet. Create your first credit package.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    packages.map((pkg) => (
+                      <tr key={pkg.id} className={!pkg.isActive ? 'opacity-50' : ''}>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{pkg.name}</span>
+                            {pkg.isPopular && <Star className="w-4 h-4 text-amber-500 fill-amber-500" />}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          {pkg.credits}
+                          {pkg.bonusCredits > 0 && <span className="text-green-500 ml-1">+{pkg.bonusCredits}</span>}
+                        </td>
+                        <td className="p-4 font-mono">${parseFloat(pkg.priceUsd).toFixed(2)}</td>
+                        <td className="p-4 font-mono text-muted-foreground">${parseFloat(pkg.pricePerCredit).toFixed(4)}</td>
+                        <td className="p-4">
+                          <button
+                            onClick={() => handleTogglePackage(pkg)}
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              pkg.isActive ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                            }`}
+                          >
+                            {pkg.isActive ? 'Active' : 'Inactive'}
+                          </button>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => handleEditPackage(pkg)} className="p-2 hover:bg-accent rounded-lg">
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeletePackage(pkg.id)}
+                              className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
