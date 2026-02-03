@@ -43,6 +43,11 @@ import {
   isSubscribedToPush,
   sendTestNotification,
 } from '../../../lib/push-notifications';
+import {
+  useSubscription,
+  getTierDisplayName,
+  getTierColor,
+} from '../../../hooks/useSubscription';
 
 // Format credits with thousand separators (1000087 → 1,000,087)
 function formatCredits(num: number): string {
@@ -150,6 +155,18 @@ export default function SettingsPage() {
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const [totalTransactions, setTotalTransactions] = useState(0);
+
+  // Subscription hook
+  const {
+    subscription,
+    loading: subscriptionLoading,
+    openBillingPortal,
+    cancelSubscription,
+    resumeSubscription,
+    actionLoading: subscriptionActionLoading,
+    isSubscribed,
+    isPaidTier,
+  } = useSubscription();
 
   const handleAvatarButtonClick = useCallback(() => {
     fileInputRef.current?.click();
@@ -1630,24 +1647,100 @@ export default function SettingsPage() {
                 <h2 className="text-xl font-semibold mb-6">Billing & Subscription</h2>
 
                 <div className="space-y-6">
-                  {/* Current Plan */}
-                  <div className="p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Current Plan</p>
-                        <p className="text-xl font-bold">Credit-Based</p>
-                        <p className="text-sm text-muted-foreground">
-                          Pay-as-you-go with Daily Passes
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => router.push('/pricing')}
-                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition"
-                      >
-                        View Plans
-                      </button>
+                  {/* Current Subscription */}
+                  {subscriptionLoading ? (
+                    <div className="p-4 bg-background rounded-lg flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                     </div>
-                  </div>
+                  ) : subscription && subscription.tier !== 'free' && isSubscribed ? (
+                    <div className={`p-4 rounded-lg border-2 ${
+                      getTierColor(subscription.tier) === 'blue' ? 'bg-blue-500/5 border-blue-500/30' :
+                      getTierColor(subscription.tier) === 'purple' ? 'bg-purple-500/5 border-purple-500/30' :
+                      getTierColor(subscription.tier) === 'amber' ? 'bg-amber-500/5 border-amber-500/30' :
+                      'bg-slate-500/5 border-slate-500/30'
+                    }`}>
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm text-muted-foreground">Current Plan</p>
+                            {subscription.cancelAtPeriodEnd && (
+                              <span className="px-2 py-0.5 text-xs bg-amber-500/10 text-amber-600 rounded-full">
+                                Cancels Soon
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-2xl font-bold ${
+                            getTierColor(subscription.tier) === 'blue' ? 'text-blue-500' :
+                            getTierColor(subscription.tier) === 'purple' ? 'text-purple-500' :
+                            getTierColor(subscription.tier) === 'amber' ? 'text-amber-500' :
+                            'text-slate-500'
+                          }`}>
+                            {getTierDisplayName(subscription.tier)}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {subscription.dailyCredits.toLocaleString()} credits/day
+                          </p>
+                          {subscription.currentPeriodEnd && (
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {subscription.cancelAtPeriodEnd ? 'Access until: ' : 'Renews: '}
+                              {new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', {
+                                month: 'long',
+                                day: 'numeric',
+                                year: 'numeric',
+                              })}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            onClick={async () => {
+                              const url = await openBillingPortal();
+                              if (url) window.location.href = url;
+                            }}
+                            disabled={subscriptionActionLoading}
+                            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50"
+                          >
+                            {subscriptionActionLoading ? 'Loading...' : 'Manage Billing'}
+                          </button>
+                          {subscription.cancelAtPeriodEnd ? (
+                            <button
+                              onClick={resumeSubscription}
+                              disabled={subscriptionActionLoading}
+                              className="px-4 py-2 border border-green-500 text-green-500 rounded-lg hover:bg-green-500/10 transition disabled:opacity-50"
+                            >
+                              Resume Subscription
+                            </button>
+                          ) : (
+                            <button
+                              onClick={cancelSubscription}
+                              disabled={subscriptionActionLoading}
+                              className="px-4 py-2 text-sm text-muted-foreground hover:text-red-500 transition disabled:opacity-50"
+                            >
+                              Cancel Subscription
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Current Plan</p>
+                          <p className="text-xl font-bold">Free</p>
+                          <p className="text-sm text-muted-foreground">
+                            Upgrade to unlock daily credits and premium features
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => router.push('/pricing')}
+                          className="px-4 py-2 bg-emerald-500 text-white rounded-lg font-medium hover:bg-emerald-600 transition"
+                        >
+                          Upgrade Now
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Credit Balance */}
                   <div className="p-4 bg-background rounded-lg">

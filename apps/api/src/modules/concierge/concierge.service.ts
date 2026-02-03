@@ -7,6 +7,7 @@ import { coinScoreCacheService, CoinScore } from '../analysis/services/coin-scor
 import * as capitalFlowService from '../capital-flow/capital-flow.service';
 import { translationService, SUPPORTED_LANGUAGES } from '../translation/translation.service';
 import { logger } from '../../core/logger';
+import { analysisEngine } from '../analysis/analysis.engine';
 
 interface ConciergeRequest {
   message: string;
@@ -3361,78 +3362,114 @@ Type "top coins" to see results when complete.`;
     }
 
     try {
-      // Use AI Expert Panel for analysis
+      // Direct 7-Step analysis (without Expert Panel - saves ~$0.0015 per analysis)
       const tradeType = getTradeType(interval);
 
-      console.log(`[Concierge] Analysis request: symbol=${upperSymbol}, interval=${interval}, tradeType=${tradeType}, language=${language}`);
+      console.log(`[Concierge] Direct analysis request: symbol=${upperSymbol}, interval=${interval}, tradeType=${tradeType}, language=${language}`);
 
-      const panelResult = await aiExpertService.analyzeWithExpertPanel({
-        symbol: upperSymbol,
+      // Charge credits first
+      const chargeResult = await creditService.charge(
         userId,
-        language: language,
-        tradeType,
-        interval,
-      });
+        ANALYSIS_COST,
+        'ANALYSIS',
+        'concierge_analysis',
+        { symbol: upperSymbol, interval, tradeType }
+      );
 
-      if (!panelResult.success) {
+      if (!chargeResult.success) {
         return {
           success: false,
           intent: 'ANALYSIS',
           message: isTurkish
-            ? `Analiz başarısız: ${panelResult.error || 'Bilinmeyen hata'}`
-            : `Analysis failed: ${panelResult.error || 'Unknown error'}`,
+            ? `Kredi çekimi başarısız: ${chargeResult.error || 'Bilinmeyen hata'}`
+            : `Credit charge failed: ${chargeResult.error || 'Unknown error'}`,
           creditsSpent: 0,
           creditsRemaining: creditBalance,
-          error: panelResult.error,
+          error: chargeResult.error,
         };
       }
 
-      // Build response message
-      const verdict = panelResult.verdict?.toUpperCase() || 'WAIT';
-      const score = panelResult.score || 5;
+      // Run 7-Step analysis directly (NO Expert Panel)
+      const [marketPulse, assetScan, safetyCheck, timing, trapCheck] = await Promise.all([
+        analysisEngine.getMarketPulse(),
+        analysisEngine.scanAsset(upperSymbol, tradeType),
+        analysisEngine.safetyCheck(upperSymbol, tradeType),
+        analysisEngine.timingAnalysis(upperSymbol, tradeType),
+        analysisEngine.trapCheck(upperSymbol, tradeType),
+      ]);
+
+      // Generate preliminary verdict
+      const preliminaryVerdict = analysisEngine.preliminaryVerdict(upperSymbol, {
+        marketPulse,
+        assetScan,
+        safetyCheck,
+        timing,
+        trapCheck,
+      });
+
+      // Generate trade plan
+      const tradePlanResult = await analysisEngine.integratedTradePlan(
+        upperSymbol,
+        preliminaryVerdict,
+        { marketPulse, assetScan, safetyCheck, timing, trapCheck },
+        10000 // Default account size
+      );
+
+      // Generate final verdict
+      const verdictResult = await analysisEngine.getFinalVerdict(
+        upperSymbol,
+        preliminaryVerdict,
+        { marketPulse, assetScan, safetyCheck, timing, trapCheck },
+        tradePlanResult,
+        tradeType
+      );
+
+      // Save analysis to database (without expert comments)
+      const savedAnalysis = await prisma.analysis.create({
+        data: {
+          userId,
+          symbol: upperSymbol,
+          interval: interval,
+          stepsCompleted: [1, 2, 3, 4, 5, 6, 7],
+          step1Result: marketPulse as object,
+          step2Result: assetScan as object,
+          step3Result: safetyCheck as object,
+          step4Result: timing as object,
+          step5Result: tradePlanResult as object || null,
+          step6Result: trapCheck as object,
+          step7Result: verdictResult as object,
+          totalScore: verdictResult.overallScore,
+          creditsSpent: ANALYSIS_COST,
+        },
+      });
+
+      // Trade type completion bonus
+      const tradeTypeBonus = tradeType === 'scalping' ? 3 : tradeType === 'dayTrade' ? 2 : 1;
+      await creditService.add(
+        userId,
+        tradeTypeBonus,
+        'BONUS',
+        'trade_type_completion_bonus',
+        { tradeType, symbol: upperSymbol, analysisId: savedAnalysis.id }
+      );
+
+      // Build response
+      const verdict = verdictResult.verdict?.toUpperCase() || 'WAIT';
+      const score = verdictResult.overallScore || 5;
+      const direction = tradePlanResult?.direction || verdictResult.direction;
 
       const synthesis = this.generateNaturalResponse(upperSymbol, interval, verdict, score, language);
 
-      // Fetch the saved analysis to get direction and trade plan
-      let direction: string | undefined;
+      // Build trade plan for response
       let tradePlan: any | undefined;
-
-      if (panelResult.analysisId) {
-        try {
-          const savedAnalysis = await prisma.analysis.findUnique({
-            where: { id: panelResult.analysisId },
-            select: {
-              step5Result: true,
-              step7Result: true,
-            },
-          });
-
-          if (savedAnalysis) {
-            const step5 = savedAnalysis.step5Result as Record<string, unknown> | null;
-            const step7 = savedAnalysis.step7Result as Record<string, unknown> | null;
-
-            // Get direction from step7 (final verdict)
-            const verdict = step7?.verdict as Record<string, unknown> | undefined;
-            direction = (step7?.direction as string) || (verdict?.direction as string);
-
-            // Get trade plan from step5
-            if (step5) {
-              tradePlan = {
-                averageEntry: step5.averageEntry as number | undefined,
-                stopLoss: step5.stopLoss as { price: number } | number | undefined,
-                takeProfits: step5.takeProfits as Array<{ price: number }> | undefined,
-                direction: (step5.direction as string) || direction,
-                riskRewardRatio: step5.riskRewardRatio as number | undefined,
-              };
-              // Also update direction from tradePlan if not set
-              if (!direction && step5.direction) {
-                direction = step5.direction as string;
-              }
-            }
-          }
-        } catch (fetchError) {
-          logger.error({ error: fetchError }, 'Error fetching analysis details');
-        }
+      if (tradePlanResult) {
+        tradePlan = {
+          averageEntry: tradePlanResult.averageEntry,
+          stopLoss: tradePlanResult.stopLoss,
+          takeProfits: tradePlanResult.takeProfits,
+          direction: tradePlanResult.direction || direction,
+          riskRewardRatio: tradePlanResult.riskRewardRatio,
+        };
       }
 
       // Localized labels
@@ -3459,9 +3496,9 @@ ${synthesis}`;
         success: true,
         intent: 'ANALYSIS',
         message: analysisMessage,
-        creditsSpent: panelResult.creditsSpent || ANALYSIS_COST,
-        creditsRemaining: panelResult.remainingCredits ?? (creditBalance - ANALYSIS_COST),
-        analysisId: panelResult.analysisId,
+        creditsSpent: ANALYSIS_COST,
+        creditsRemaining: chargeResult.newBalance - tradeTypeBonus,
+        analysisId: savedAnalysis.id,
         verdict: verdict,
         score: score,
         direction: direction,
@@ -3472,12 +3509,24 @@ ${synthesis}`;
 
     } catch (error) {
       console.error('Analysis error:', error);
+
+      // Refund credits on failure
+      try {
+        await creditService.add(userId, ANALYSIS_COST, 'BONUS', 'concierge_analysis_refund', {
+          symbol: upperSymbol,
+          reason: 'analysis_failed',
+          error: String(error),
+        });
+      } catch (refundError) {
+        logger.error({ error: refundError }, 'Failed to refund credits after analysis error');
+      }
+
       return {
         success: false,
         intent: 'ANALYSIS',
         message: isTurkish
-          ? 'Analiz sırasında hata oluştu. Lütfen tekrar deneyin.'
-          : 'Error during analysis. Please try again.',
+          ? 'Analiz sırasında hata oluştu. Krediniz iade edildi.'
+          : 'Error during analysis. Credits have been refunded.',
         creditsSpent: 0,
         creditsRemaining: creditBalance,
         error: error instanceof Error ? error.message : 'Analysis failed',

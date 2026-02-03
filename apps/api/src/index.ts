@@ -51,6 +51,8 @@ import { bilgeRoutes } from './modules/bilge/bilge.routes';
 import { initializeBilgeService, collectError } from './modules/bilge/bilge.service';
 import { startBilgeWeeklyReportJob, stopBilgeWeeklyReportJob } from './modules/bilge/bilge-cron.job';
 import { signalRoutes, startSignalGeneratorJob, stopSignalGeneratorJob } from './modules/signals';
+import subscriptionRoutes from './modules/subscriptions/subscription.routes';
+import { startDailyCreditsJob, stopDailyCreditsJob } from './modules/subscriptions/subscription-cron.job';
 
 // ===========================================
 // Server Configuration
@@ -413,6 +415,9 @@ app.register(bilgeRoutes);
 // Signal System routes (proactive trading signals)
 app.register(signalRoutes, { prefix: '/api/v1' });
 app.register(signalRoutes, { prefix: '/api' }); // Legacy
+// Subscription management routes
+app.register(subscriptionRoutes, { prefix: '/api/v1/subscriptions' });
+app.register(subscriptionRoutes, { prefix: '/api/subscriptions' }); // Legacy
 
 // ===========================================
 // 404 Handler
@@ -580,6 +585,9 @@ const start = async () => {
     // Start Signal Generator cron job (hourly at :15)
     startSignalGeneratorJob();
     logger.info('✓ Signal generator cron started');
+    // Start subscription daily credits cron job (00:00 UTC)
+    startDailyCreditsJob();
+    logger.info('✓ Subscription daily credits cron started');
 
     // Start server
     await app.listen({
@@ -637,6 +645,9 @@ const shutdown = async (signal: string) => {
     // Stop Signal Generator cron
     stopSignalGeneratorJob();
     logger.info('✓ Signal generator cron stopped');
+    // Stop subscription daily credits cron
+    stopDailyCreditsJob();
+    logger.info('✓ Subscription daily credits cron stopped');
 
     // Stop accepting new connections
     await app.close();

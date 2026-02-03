@@ -37,6 +37,8 @@ import { authFetch } from '@/lib/api';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
+import { useFeatureGate } from '@/hooks/useFeatureGate';
+import { UpgradeCard } from '@/components/modals/UpgradePrompt';
 
 // Lazy load TradePlanChart
 const TradePlanChart = dynamic(
@@ -275,6 +277,10 @@ export default function ConciergePage() {
   const recognitionRef = useRef<any>(null);
   const scanPollRef = useRef<NodeJS.Timeout | null>(null);
   const scanStartTimeRef = useRef<number>(0);
+
+  // Feature gate for AI Features (includes Concierge)
+  const { hasAccess, currentTier, loading: featureLoading } = useFeatureGate();
+  const hasConciergeAccess = hasAccess('ai_features');
 
   // Fetch Capital Flow data
   useEffect(() => {
@@ -532,6 +538,35 @@ export default function ConciergePage() {
   };
 
   const biasDisplay = capitalFlow?.globalLiquidity?.bias ? getBiasDisplay(capitalFlow.globalLiquidity.bias) : null;
+
+  // Show upgrade prompt if user doesn't have access
+  if (!featureLoading && !hasConciergeAccess) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+        <div className="max-w-xl mx-auto px-4 py-12">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 mb-4 shadow-xl">
+              <Bot className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
+              AI Concierge
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400">
+              Your Capital Flow aware trading assistant
+            </p>
+          </div>
+
+          {/* Upgrade Card */}
+          <UpgradeCard
+            feature="ai_features"
+            currentTier={currentTier}
+            message="Upgrade to Elite to access AI Concierge - your personal trading assistant that understands natural language and provides instant analysis based on Capital Flow intelligence."
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-slate-50 via-slate-100 to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
