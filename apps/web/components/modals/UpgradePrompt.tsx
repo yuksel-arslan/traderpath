@@ -18,15 +18,14 @@ import { SubscriptionTier, getTierDisplayName } from '../../hooks/useSubscriptio
 export type UpgradeFeature =
   | 'capital_flow_l3'
   | 'capital_flow_l4'
-  | 'mlis_pro'
-  | 'ai_concierge'
-  | 'ai_expert'
+  | 'asset_analysis'
+  | 'ai_features'
+  | 'reports_export'
+  | 'automation'
+  | 'rewards'
   | 'scheduled_reports'
   | 'pdf_reports'
   | 'email_reports'
-  | 'api_access'
-  | 'priority_support'
-  | 'early_features'
   | 'daily_limit';
 
 interface UpgradePromptProps {
@@ -70,37 +69,59 @@ const FEATURE_INFO: Record<UpgradeFeature, {
       'Suggested assets to analyze',
     ],
   },
-  mlis_pro: {
-    title: 'MLIS Pro Analysis',
-    description: 'Access our 5-layer Multi-Layer Intelligence System for advanced analysis.',
+  asset_analysis: {
+    title: 'Asset Analysis',
+    description: 'Access 7-Step Classic and MLIS Pro analysis for any asset.',
     icon: Star,
-    requiredTier: 'starter',
+    requiredTier: 'pro',
     benefits: [
-      '5 neural signal layers',
-      'Technical + Momentum + Volatility',
-      'STRONG_BUY/SELL recommendations',
+      '7-Step Classic Analysis',
+      'MLIS Pro 5-layer Analysis',
+      '40+ technical indicators',
     ],
   },
-  ai_concierge: {
-    title: 'AI Concierge',
-    description: 'Chat with our AI assistant for natural language trading queries.',
+  ai_features: {
+    title: 'AI Features',
+    description: 'Access AI Concierge and AI Expert panel for advanced insights.',
     icon: Sparkles,
-    requiredTier: 'starter',
+    requiredTier: 'elite',
     benefits: [
-      'Natural language analysis',
-      'Voice commands',
-      '50+ supported coins',
+      'AI Concierge (natural language)',
+      'AI Expert Q&A (ARIA, NEXUS, ORACLE)',
+      'Voice commands support',
     ],
   },
-  ai_expert: {
-    title: 'AI Expert Q&A',
-    description: 'Ask unlimited questions to our specialized AI trading experts.',
+  reports_export: {
+    title: 'Reports & Export',
+    description: 'Export your analyses as PDF reports or send via email.',
     icon: Star,
     requiredTier: 'starter',
     benefits: [
-      'ARIA (Technical Expert)',
-      'NEXUS (Risk Expert)',
-      'ORACLE (Whale Expert)',
+      'PDF report downloads',
+      'Email report delivery',
+      'Screenshot export',
+    ],
+  },
+  automation: {
+    title: 'Automation',
+    description: 'Set up scheduled reports and price alerts.',
+    icon: Zap,
+    requiredTier: 'starter',
+    benefits: [
+      'Scheduled analysis reports',
+      'Price alerts',
+      'Multi-channel delivery',
+    ],
+  },
+  rewards: {
+    title: 'Rewards',
+    description: 'Earn credits through daily activities.',
+    icon: Star,
+    requiredTier: 'free',
+    benefits: [
+      'Daily login rewards',
+      'Lucky spin wheel',
+      'Quiz challenges',
     ],
   },
   scheduled_reports: {
@@ -136,48 +157,15 @@ const FEATURE_INFO: Record<UpgradeFeature, {
       'Trade plan included',
     ],
   },
-  api_access: {
-    title: 'API Access',
-    description: 'Integrate TraderPath analysis into your own applications.',
-    icon: Crown,
-    requiredTier: 'elite',
-    benefits: [
-      'RESTful API',
-      'Webhook notifications',
-      'Custom integrations',
-    ],
-  },
-  priority_support: {
-    title: 'Priority Support',
-    description: 'Get faster responses from our support team.',
-    icon: Crown,
-    requiredTier: 'pro',
-    benefits: [
-      'Faster response times',
-      'Dedicated support channel',
-      'Feature request priority',
-    ],
-  },
-  early_features: {
-    title: 'Early Access Features',
-    description: 'Be the first to try new TraderPath features.',
-    icon: Crown,
-    requiredTier: 'elite',
-    benefits: [
-      'Beta feature access',
-      'Shape product direction',
-      'Exclusive previews',
-    ],
-  },
   daily_limit: {
     title: 'Daily Analysis Limit',
     description: 'You have reached your daily analysis limit.',
     icon: Lock,
-    requiredTier: 'starter',
+    requiredTier: 'pro',
     benefits: [
-      'Up to 4 analyses/day (Starter)',
-      'Up to 10 analyses/day (Pro)',
-      'Up to 20 analyses/day (Elite)',
+      '5 analyses/day (Free & Starter)',
+      '10 analyses/day (Pro)',
+      '15 analyses/day (Elite)',
     ],
   },
 };

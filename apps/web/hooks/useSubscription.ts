@@ -19,17 +19,18 @@ export interface SubscriptionPlan {
   yearlySavings: number;
   dailyCredits: number;
   features: {
-    capitalFlowL3: boolean;
-    capitalFlowL4: boolean;
-    mlisProAccess: boolean;
-    aiConcierge: boolean;
-    apiAccess: boolean;
-    prioritySupport: boolean;
-    earlyFeatures: boolean;
+    capitalFlowL3: boolean;      // Layer 3: Sector Analysis
+    capitalFlowL4: boolean;      // Layer 4: AI Recommendations
+    assetAnalysis: boolean;      // 7-Step + MLIS Pro Analysis
+    aiFeatures: boolean;         // AI Concierge + AI Experts
+    reportsExport: boolean;      // PDF, Email, Screenshot export
+    automation: boolean;         // Scheduled Reports, Price Alerts
+    rewards: boolean;            // Daily Login, Spin, Quiz, Referral
   };
   limits: {
     maxScheduledReports: number;
     maxAlerts: number;
+    maxDailyAnalyses: number;
     monthlyAiExpertQuestions: number;
     monthlyEmailReports: number;
     monthlyPdfReports: number;
