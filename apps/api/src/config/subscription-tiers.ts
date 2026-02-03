@@ -109,7 +109,7 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
     rewards: true,
     maxScheduledReports: 10,
     maxAlerts: 50,
-    maxDailyAnalyses: 5, // All tiers: 5 analyses/day limit
+    maxDailyAnalyses: 10, // Pro: 10 analyses/day
     monthlyAiExpertQuestions: 0,
     monthlyEmailReports: 50,
     monthlyPdfReports: 50,
@@ -127,7 +127,7 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
     rewards: true,
     maxScheduledReports: -1, // Unlimited
     maxAlerts: -1,
-    maxDailyAnalyses: 5, // All tiers: 5 analyses/day limit
+    maxDailyAnalyses: 15, // Elite: 15 analyses/day
     monthlyAiExpertQuestions: -1,
     monthlyEmailReports: -1,
     monthlyPdfReports: -1,
@@ -159,7 +159,7 @@ export const STRIPE_PRODUCTS: Record<Exclude<SubscriptionTier, 'free'>, StripePr
 
   elite: {
     name: 'TraderPath Elite',
-    description: 'Pro + AI Features (Concierge, Experts). Unlimited analyses.',
+    description: 'Pro + AI Features (Concierge, Experts). Up to 15 analyses/day.',
     metadata: {
       tier: 'elite',
       credits_daily: 0,
