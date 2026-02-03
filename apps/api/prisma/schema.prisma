@@ -110,6 +110,7 @@ model User {
   reports          Report[]
   scheduledReports ScheduledReport[]
   dailyPasses      DailyPass[]
+  subscription     Subscription?
 
   @@map("users")
 }
@@ -944,6 +945,56 @@ enum DailyPassType {
   CAPITAL_FLOW_L3    // 25 credits/day - Sector Activity (Layer 3)
   CAPITAL_FLOW_L4    // 25 credits/day - AI Recommendations (Layer 4)
   ASSET_ANALYSIS     // 100 credits/day - Asset Analysis (max 10)
+}
+
+// ===========================================
+// Subscriptions
+// Stripe-based subscription management for tiered access
+// ===========================================
+
+model Subscription {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @unique @map("user_id") @db.Uuid
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Stripe identifiers
+  stripeCustomerId     String?  @unique @map("stripe_customer_id") @db.VarChar(255)
+  stripeSubscriptionId String?  @unique @map("stripe_subscription_id") @db.VarChar(255)
+  stripePriceId        String?  @map("stripe_price_id") @db.VarChar(255)
+
+  // Subscription tier
+  tier         SubscriptionTier @default(FREE)
+  status       SubscriptionStatus @default(INACTIVE)
+
+  // Billing period
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+  cancelAtPeriodEnd  Boolean   @default(false) @map("cancel_at_period_end")
+
+  // Timestamps
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([tier])
+  @@index([status])
+  @@index([stripeCustomerId])
+  @@map("subscriptions")
+}
+
+enum SubscriptionTier {
+  FREE
+  STARTER
+  PRO
+  ELITE
+}
+
+enum SubscriptionStatus {
+  INACTIVE        // No active subscription
+  ACTIVE          // Subscription is active
+  PAST_DUE        // Payment failed, grace period
+  CANCELED        // Canceled but period not ended
+  UNPAID          // Payment failed, access revoked
+  TRIALING        // On trial period
 }
 
 // ===========================================
