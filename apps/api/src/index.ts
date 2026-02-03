@@ -50,6 +50,7 @@ import { initializeAssetLogos } from './modules/asset-logos/asset-logos.service'
 import { bilgeRoutes } from './modules/bilge/bilge.routes';
 import { initializeBilgeService, collectError } from './modules/bilge/bilge.service';
 import { startBilgeWeeklyReportJob, stopBilgeWeeklyReportJob } from './modules/bilge/bilge-cron.job';
+import { signalRoutes, startSignalGeneratorJob, stopSignalGeneratorJob } from './modules/signals';
 
 // ===========================================
 // Server Configuration
@@ -409,6 +410,10 @@ app.register(assetLogosRoutes, { prefix: '/api/asset-logos' }); // Legacy
 // BILGE Guardian System routes (admin)
 app.register(bilgeRoutes);
 
+// Signal System routes (proactive trading signals)
+app.register(signalRoutes, { prefix: '/api/v1' });
+app.register(signalRoutes, { prefix: '/api' }); // Legacy
+
 // ===========================================
 // 404 Handler
 // ===========================================
@@ -572,6 +577,10 @@ const start = async () => {
     startBilgeWeeklyReportJob();
     logger.info('✓ BILGE weekly report cron started');
 
+    // Start Signal Generator cron job (hourly at :15)
+    startSignalGeneratorJob();
+    logger.info('✓ Signal generator cron started');
+
     // Start server
     await app.listen({
       port: config.port,
@@ -624,6 +633,10 @@ const shutdown = async (signal: string) => {
     // Stop BILGE weekly report cron
     stopBilgeWeeklyReportJob();
     logger.info('✓ BILGE weekly report cron stopped');
+
+    // Stop Signal Generator cron
+    stopSignalGeneratorJob();
+    logger.info('✓ Signal generator cron stopped');
 
     // Stop accepting new connections
     await app.close();
