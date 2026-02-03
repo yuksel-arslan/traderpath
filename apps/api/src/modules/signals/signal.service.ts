@@ -3,8 +3,8 @@
  * Manages proactive trading signals generation and delivery
  */
 
-import { prisma } from '../../core/prisma';
-import { redis } from '../../core/redis';
+import { prisma } from '../../core/database';
+import { redis } from '../../core/cache';
 import type {
   SignalData,
   SignalFilterCriteria,
