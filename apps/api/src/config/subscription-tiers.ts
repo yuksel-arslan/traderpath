@@ -61,16 +61,16 @@ export interface CreditPackageConfig {
 // =============================================================================
 
 export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
-  // FREE: Only Capital Flow L1-L2 (Global Liquidity + Market Flow)
+  // FREE: Capital Flow L1-L2 + Rewards only
   free: {
-    dailyCredits: 0,
+    dailyCredits: 0, // No daily credit allocation - buy credits separately
     capitalFlowL3: false,
     capitalFlowL4: false,
     assetAnalysis: false,
     aiFeatures: false,
     reportsExport: false,
     automation: false,
-    rewards: false,
+    rewards: true, // Rewards available for all users
     maxScheduledReports: 0,
     maxAlerts: 0,
     maxDailyAnalyses: 0,
@@ -79,9 +79,9 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
     monthlyPdfReports: 0,
   },
 
-  // STARTER: L1-2-3-4 + Reports/Automation/Rewards
+  // STARTER: Full Capital Flow (L1-L4) + Reports/Automation
   starter: {
-    dailyCredits: 100,
+    dailyCredits: 0, // No daily credit allocation - buy credits separately
     capitalFlowL3: true,
     capitalFlowL4: true,
     assetAnalysis: false,
@@ -99,7 +99,7 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
 
   // PRO: Starter + Asset Analysis (7-Step, MLIS Pro)
   pro: {
-    dailyCredits: 200,
+    dailyCredits: 0, // No daily credit allocation - buy credits separately
     capitalFlowL3: true,
     capitalFlowL4: true,
     assetAnalysis: true,
@@ -117,7 +117,7 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
 
   // ELITE: Pro + AI Features (Concierge + Experts)
   elite: {
-    dailyCredits: 350,
+    dailyCredits: 0, // No daily credit allocation - buy credits separately
     capitalFlowL3: true,
     capitalFlowL4: true,
     assetAnalysis: true,
@@ -141,10 +141,10 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
 export const STRIPE_PRODUCTS: Record<Exclude<SubscriptionTier, 'free'>, StripeProductConfig> = {
   starter: {
     name: 'TraderPath Starter',
-    description: 'Full Capital Flow access (L1-L4), Reports, Automation, Rewards.',
+    description: 'Full Capital Flow access (L1-L4), Reports, Automation.',
     metadata: {
       tier: 'starter',
-      credits_daily: 100,
+      credits_daily: 0,
     },
   },
 
@@ -153,16 +153,16 @@ export const STRIPE_PRODUCTS: Record<Exclude<SubscriptionTier, 'free'>, StripePr
     description: 'Starter + Asset Analysis (7-Step, MLIS Pro). Up to 10 analyses/day.',
     metadata: {
       tier: 'pro',
-      credits_daily: 200,
+      credits_daily: 0,
     },
   },
 
   elite: {
     name: 'TraderPath Elite',
-    description: 'Pro + AI Features (Concierge, Experts). Unlimited everything.',
+    description: 'Pro + AI Features (Concierge, Experts). Unlimited analyses.',
     metadata: {
       tier: 'elite',
-      credits_daily: 350,
+      credits_daily: 0,
     },
   },
 };

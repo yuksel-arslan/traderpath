@@ -307,14 +307,6 @@ function TierCard({
         </div>
       </div>
 
-      {/* Credits */}
-      <div className="text-center py-4 mb-4 border-y border-slate-200 dark:border-slate-800">
-        <div className={cn('text-2xl font-bold', colors.text)}>
-          {plan.dailyCredits.toLocaleString()}
-        </div>
-        <p className="text-sm text-muted-foreground">credits per day</p>
-      </div>
-
       {/* Features */}
       <div className={cn('space-y-2 mb-4', isCompact && 'text-sm')}>
         <FeatureItem included={true} text="Capital Flow L1-L2" compact={isCompact} />
