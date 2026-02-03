@@ -69,23 +69,13 @@ const endNav = [
   { name: 'Rewards', href: '/rewards', icon: Gift },
 ];
 
-// All flat items for mobile menu
-const allNavItems = [
-  ...directNav,
-  { name: 'Concierge', href: '/concierge', icon: Bot },
-  { name: 'AI Experts', href: '/ai-expert', icon: Brain },
-  { name: 'Scheduled', href: '/scheduled', icon: Calendar },
-  { name: 'Alerts', href: '/alerts', icon: Bell },
-  ...endNav,
-];
-
 // User menu items (Settings, Admin, Logout)
 const userMenuNav = [
   { name: 'Settings', href: '/settings', icon: Settings },
   { name: 'Admin', href: '/admin', icon: Server },
 ];
 
-// NavDropdown Component for grouped navigation
+// NavDropdown Component for grouped navigation (Desktop)
 function NavDropdown({
   name,
   icon: Icon,
@@ -137,6 +127,66 @@ function NavDropdown({
               </Link>
             ))}
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// MobileNavGroup Component for collapsible groups (Mobile)
+function MobileNavGroup({
+  name,
+  icon: Icon,
+  items,
+  isActive,
+  onItemClick,
+}: {
+  name: string;
+  icon: any;
+  items: { name: string; href: string; icon: any }[];
+  isActive: (href: string) => boolean;
+  onItemClick: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const hasActiveItem = items.some((item) => isActive(item.href));
+
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className={cn(
+          'flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+          hasActiveItem
+            ? 'bg-primary/10 text-primary'
+            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+        )}
+      >
+        <span className="flex items-center gap-3">
+          <Icon className="w-4 h-4" />
+          {name}
+        </span>
+        <ChevronDown className={cn('w-4 h-4 transition-transform', expanded && 'rotate-180')} />
+      </button>
+
+      {expanded && (
+        <div className="ml-7 mt-1 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150">
+          {items.map((item) => (
+            <Link
+              key={item.name}
+              href={item.href}
+              prefetch={true}
+              onClick={onItemClick}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+                isActive(item.href)
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+              )}
+            >
+              <item.icon className="w-4 h-4" />
+              {item.name}
+            </Link>
+          ))}
         </div>
       )}
     </div>
@@ -539,7 +589,8 @@ export default function DashboardLayout({
           {mobileMenuOpen && (
             <nav className="lg:hidden border-t border-border animate-in fade-in slide-in-from-top-1 duration-150">
               <div className="py-3 space-y-1">
-                {[...allNavItems, ...userMenuNav.filter(item => item.name !== 'Admin' || isAdmin)].map((item) => (
+                {/* Direct nav items */}
+                {directNav.map((item) => (
                   <Link
                     key={item.name}
                     href={item.href}
@@ -556,7 +607,63 @@ export default function DashboardLayout({
                     {item.name}
                   </Link>
                 ))}
-                {/* Language Selector in Mobile Menu */}
+
+                {/* Collapsible groups (synced with header dropdowns) */}
+                {dropdownNav.map((group) => (
+                  <MobileNavGroup
+                    key={group.name}
+                    name={group.name}
+                    icon={group.icon}
+                    items={group.items}
+                    isActive={isActive}
+                    onItemClick={() => setMobileMenuOpen(false)}
+                  />
+                ))}
+
+                {/* End nav items */}
+                {endNav.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    prefetch={true}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                      isActive(item.href)
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                    )}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {item.name}
+                  </Link>
+                ))}
+
+                {/* Divider */}
+                <div className="border-t border-border my-2" />
+
+                {/* User menu items (Settings, Admin) */}
+                {userMenuNav
+                  .filter(item => item.name !== 'Admin' || isAdmin)
+                  .map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    prefetch={true}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                      isActive(item.href)
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                    )}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {item.name}
+                  </Link>
+                ))}
+
+                {/* Language Selector */}
                 <div className="px-3 py-2.5 border-t border-border mt-2 pt-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Language</span>
