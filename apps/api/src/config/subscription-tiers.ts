@@ -98,6 +98,7 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
   },
 
   // PRO: Starter + Asset Analysis (7-Step, MLIS Pro)
+  // Note: Users can purchase additional credits for extra analyses beyond daily limit
   pro: {
     dailyCredits: 0, // No daily credit allocation - buy credits separately
     capitalFlowL3: true,
@@ -107,9 +108,9 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
     reportsExport: true,
     automation: true,
     rewards: true,
-    maxScheduledReports: 10,
-    maxAlerts: 50,
-    maxDailyAnalyses: 10, // Pro: 10 analyses/day
+    maxScheduledReports: 5, // 5 scheduled reports
+    maxAlerts: 10, // 10 price alerts
+    maxDailyAnalyses: 5, // 5 analyses/day (extra available via credits)
     monthlyAiExpertQuestions: 0,
     monthlyEmailReports: 50,
     monthlyPdfReports: 50,
@@ -126,9 +127,9 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
     reportsExport: true,
     automation: true,
     rewards: true,
-    maxScheduledReports: 15, // 15 scheduled reports
-    maxAlerts: 50, // 50 price alerts
-    maxDailyAnalyses: 15, // Elite: 15 analyses/day (extra available via credits)
+    maxScheduledReports: 5, // 5 scheduled reports
+    maxAlerts: 10, // 10 price alerts
+    maxDailyAnalyses: 5, // 5 analyses/day (extra available via credits)
     monthlyAiExpertQuestions: -1,
     monthlyEmailReports: -1,
     monthlyPdfReports: -1,
@@ -151,7 +152,7 @@ export const STRIPE_PRODUCTS: Record<Exclude<SubscriptionTier, 'free'>, StripePr
 
   pro: {
     name: 'TraderPath Pro',
-    description: 'Starter + Asset Analysis (7-Step, MLIS Pro). Up to 10 analyses/day.',
+    description: 'Starter + Asset Analysis (7-Step, MLIS Pro). 5 analyses/day included. Need more? Buy credit packs.',
     metadata: {
       tier: 'pro',
       credits_daily: 0,
@@ -160,7 +161,7 @@ export const STRIPE_PRODUCTS: Record<Exclude<SubscriptionTier, 'free'>, StripePr
 
   elite: {
     name: 'TraderPath Elite',
-    description: 'Pro + AI Features (Concierge, Experts). 15 analyses/day included. Need more? Buy credit packs for extra analyses.',
+    description: 'Pro + AI Features (Concierge, Experts). 5 analyses/day included. Need more? Buy credit packs.',
     metadata: {
       tier: 'elite',
       credits_daily: 0,
@@ -182,8 +183,8 @@ export const STRIPE_PRICES: StripePriceConfig[] = [
   { product: 'pro', unitAmount: 59000, currency: 'usd', interval: 'year' },
 
   // Elite
-  { product: 'elite', unitAmount: 9900, currency: 'usd', interval: 'month' },
-  { product: 'elite', unitAmount: 99000, currency: 'usd', interval: 'year' },
+  { product: 'elite', unitAmount: 7900, currency: 'usd', interval: 'month' },
+  { product: 'elite', unitAmount: 79000, currency: 'usd', interval: 'year' },
 ];
 
 // =============================================================================
@@ -227,9 +228,18 @@ export const CREDIT_PACKAGES: CreditPackageConfig[] = [
 // =============================================================================
 
 export const SERVICE_CREDITS = {
-  SEVEN_STEP_ANALYSIS: 25,
-  MLIS_PRO_ANALYSIS: 25,
+  // Capital Flow extra analysis (L3 + L4)
+  CAPITAL_FLOW_L3_L4: 5,
+
+  // Asset Analysis (7-Step or MLIS Pro)
+  SEVEN_STEP_ANALYSIS: 10,
+  MLIS_PRO_ANALYSIS: 10,
+
+  // AI Features
   AI_EXPERT_QUESTION: 5,
+  AI_CONCIERGE_MESSAGE: 5,
+
+  // Reports
   EMAIL_REPORT: 5,
   PDF_REPORT: 5,
   PRICE_ALERT: 1,
