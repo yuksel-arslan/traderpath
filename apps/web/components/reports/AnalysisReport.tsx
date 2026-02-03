@@ -2136,7 +2136,7 @@ function generateSinglePageReport(data: AnalysisReportData): string {
 
           <!-- 2-COLUMN LAYOUT -->
           <div class="two-col">
-            <!-- LEFT COLUMN: Market Pulse, Asset Scan, Stocks Analysis -->
+            <!-- LEFT COLUMN: Market Pulse, Asset Scan, Stocks Analysis, Safety Check, Timing Analysis -->
             <div>
               <!-- Market Pulse -->
               <div class="step-mini">
@@ -2184,7 +2184,7 @@ function generateSinglePageReport(data: AnalysisReportData): string {
                 </div>
               </div>
 
-              <!-- Stocks Analysis (using indicator summary as proxy) -->
+              <!-- Stocks/Technical Analysis -->
               <div class="step-mini">
                 <div class="step-mini-header">
                   <span class="step-mini-num">3</span>
@@ -2205,10 +2205,7 @@ function generateSinglePageReport(data: AnalysisReportData): string {
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- RIGHT COLUMN: Safety Check, Timing Analysis, Trap Check -->
-            <div>
               <!-- Safety Check -->
               <div class="step-mini">
                 <div class="step-mini-header">
@@ -2246,7 +2243,37 @@ function generateSinglePageReport(data: AnalysisReportData): string {
                   </div>
                   <div class="step-mini-metric" style="flex: 2;">
                     <div class="step-mini-metric-label">Reason</div>
-                    <div class="step-mini-metric-value" style="font-size: 6px;">${(tm.reason || 'N/A').slice(0, 40)}${(tm.reason || '').length > 40 ? '...' : ''}</div>
+                    <div class="step-mini-metric-value" style="font-size: 6px;">${(tm.reason || 'N/A').slice(0, 35)}${(tm.reason || '').length > 35 ? '...' : ''}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Trade Plan, Trap Check, ML Confirmation, AI Recommendation -->
+            <div>
+              <!-- Trade Plan (Entry • TP1-2 • SL) -->
+              <div class="step-mini" style="background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); border-color: #0d9488;">
+                <div class="step-mini-header">
+                  <span class="step-mini-num" style="background: #0d9488; color: white; padding: 1px 4px; border-radius: 2px;">6</span>
+                  <span class="step-mini-title" style="color: #0f766e;">Trade Plan</span>
+                  <span style="margin-left: auto; font-size: 6px; font-weight: 600; color: #0f766e;">R:R ${formatRiskReward(tp.riskReward)}</span>
+                </div>
+                <div class="step-mini-row">
+                  <div class="step-mini-metric" style="border-color: #99f6e4;">
+                    <div class="step-mini-metric-label">Entry</div>
+                    <div class="step-mini-metric-value" style="color: #0d9488;">${formatPrice(tp.averageEntry)}</div>
+                  </div>
+                  <div class="step-mini-metric" style="border-color: #99f6e4;">
+                    <div class="step-mini-metric-label">TP1</div>
+                    <div class="step-mini-metric-value text-green">${formatPrice(tp.takeProfits?.[0]?.price)}</div>
+                  </div>
+                  <div class="step-mini-metric" style="border-color: #99f6e4;">
+                    <div class="step-mini-metric-label">TP2</div>
+                    <div class="step-mini-metric-value text-green">${formatPrice(tp.takeProfits?.[1]?.price)}</div>
+                  </div>
+                  <div class="step-mini-metric" style="border-color: #99f6e4;">
+                    <div class="step-mini-metric-label">SL</div>
+                    <div class="step-mini-metric-value text-red">${formatPrice(tp.stopLoss?.price)}</div>
                   </div>
                 </div>
               </div>
@@ -2254,7 +2281,7 @@ function generateSinglePageReport(data: AnalysisReportData): string {
               <!-- Trap Check -->
               <div class="step-mini">
                 <div class="step-mini-header">
-                  <span class="step-mini-num">6</span>
+                  <span class="step-mini-num">7</span>
                   <span class="step-mini-title">Trap Check</span>
                   <span class="step-mini-gate" style="color: ${getGateStatus(tc.gate).color};">${getGateStatus(tc.gate).text}</span>
                 </div>
@@ -2273,6 +2300,50 @@ function generateSinglePageReport(data: AnalysisReportData): string {
                   </div>
                 </div>
               </div>
+
+              <!-- ML Confirmation -->
+              <div class="step-mini" style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-color: #8b5cf6;">
+                <div class="step-mini-header">
+                  <span class="step-mini-num" style="background: #8b5cf6; color: white; padding: 1px 4px; border-radius: 2px;">ML</span>
+                  <span class="step-mini-title" style="color: #6b21a8;">ML Confirmation</span>
+                </div>
+                ${ml ? `
+                <div class="step-mini-row">
+                  <div class="step-mini-metric" style="border-color: #ddd6fe; flex: 1.5;">
+                    <div class="step-mini-metric-label">Recommendation</div>
+                    <div class="step-mini-metric-value" style="color: #6b21a8; font-size: 9px;">${ml.recommendation || 'HOLD'}</div>
+                  </div>
+                  <div class="step-mini-metric" style="border-color: #ddd6fe;">
+                    <div class="step-mini-metric-label">Confidence</div>
+                    <div class="step-mini-metric-value" style="color: #7c3aed;">${ml.confidence || 0}%</div>
+                  </div>
+                </div>
+                ` : `
+                <div style="font-size: 6px; color: #9ca3af; text-align: center; padding: 4px;">Run MLIS Pro for ML confirmation</div>
+                `}
+              </div>
+
+              <!-- AI Recommendation (from Capital Flow L4) -->
+              <div class="step-mini" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-color: #f59e0b;">
+                <div class="step-mini-header">
+                  <span class="step-mini-num" style="background: #f59e0b; color: white; padding: 1px 4px; border-radius: 2px;">AI</span>
+                  <span class="step-mini-title" style="color: #92400e;">AI Recommendation</span>
+                </div>
+                <div class="step-mini-row">
+                  <div class="step-mini-metric" style="border-color: #fcd34d; flex: 1;">
+                    <div class="step-mini-metric-label">Direction</div>
+                    <div class="step-mini-metric-value ${l4Dir === 'BUY' ? 'text-green' : l4Dir === 'SELL' ? 'text-red' : ''}" style="font-size: 10px;">${l4Dir}</div>
+                  </div>
+                  <div class="step-mini-metric" style="border-color: #fcd34d; flex: 1;">
+                    <div class="step-mini-metric-label">Market</div>
+                    <div class="step-mini-metric-value" style="color: #92400e;">${cf.layer4?.market || '-'}</div>
+                  </div>
+                  <div class="step-mini-metric" style="border-color: #fcd34d; flex: 1;">
+                    <div class="step-mini-metric-label">Confidence</div>
+                    <div class="step-mini-metric-value" style="color: #b45309;">${cf.layer4?.confidence || 0}%</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -2284,62 +2355,13 @@ function generateSinglePageReport(data: AnalysisReportData): string {
             </div>
           </div>
 
-          <!-- ML CONFIRMATION (Full Width) -->
-          ${ml ? `
-          <div class="ml-box">
-            <div class="ml-header">
-              <span class="ml-badge">ML</span>
-              <span class="ml-title">Machine Learning Confirmation</span>
+          <!-- TRADE PLAN CHART (Full Width) -->
+          <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px; margin-top: 6px; background: #1a1a2e;">
+            <div style="font-size: 7px; font-weight: 600; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+              <span>Trade Plan Chart</span>
+              <span style="font-size: 6px; color: #9ca3af;">Entry • TP1-2 • SL</span>
             </div>
-            <div class="ml-content">
-              <div style="text-align: center; padding-right: 10px; border-right: 1px solid #ddd6fe;">
-                <div class="ml-rec">${ml.recommendation || 'HOLD'}</div>
-                <div class="ml-conf">Confidence: ${ml.confidence || 0}%</div>
-              </div>
-              <div class="ml-layers">
-                ${ml.layers?.technical ? `<div class="ml-layer"><div class="ml-layer-name">Tech</div><div class="ml-layer-score">${ml.layers.technical.score}</div></div>` : ''}
-                ${ml.layers?.momentum ? `<div class="ml-layer"><div class="ml-layer-name">Mom</div><div class="ml-layer-score">${ml.layers.momentum.score}</div></div>` : ''}
-                ${ml.layers?.volatility ? `<div class="ml-layer"><div class="ml-layer-name">Vol</div><div class="ml-layer-score">${ml.layers.volatility.score}</div></div>` : ''}
-                ${ml.layers?.volume ? `<div class="ml-layer"><div class="ml-layer-name">Vol</div><div class="ml-layer-score">${ml.layers.volume.score}</div></div>` : ''}
-              </div>
-            </div>
-          </div>
-          ` : `
-          <div class="ml-box" style="border-color: #ddd; background: #f9fafb;">
-            <div class="ml-header">
-              <span class="ml-badge" style="background: #6b7280;">ML</span>
-              <span class="ml-title" style="color: #6b7280;">ML Confirmation Not Available</span>
-            </div>
-            <div style="font-size: 7px; color: #9ca3af; text-align: center; padding: 4px;">Run MLIS Pro analysis for ML confirmation</div>
-          </div>
-          `}
-
-          <!-- TRADE PLAN (Full Width) -->
-          <div class="trade-plan-box">
-            <div class="tp-header">
-              <span class="tp-badge">PLAN</span>
-              <span class="tp-title">Trade Plan (Entry • TP1-2 • SL)</span>
-              <span style="margin-left: auto; font-size: 7px; font-weight: 600; color: #0f766e;">R:R ${formatRiskReward(tp.riskReward)}</span>
-            </div>
-            <div class="tp-grid">
-              <div class="tp-item">
-                <div class="tp-item-label">Entry</div>
-                <div class="tp-item-value">${formatPrice(tp.averageEntry)}</div>
-              </div>
-              <div class="tp-item">
-                <div class="tp-item-label">TP1 (${tp.takeProfits?.[0]?.percentage || 50}%)</div>
-                <div class="tp-item-value text-green">${formatPrice(tp.takeProfits?.[0]?.price)}</div>
-              </div>
-              <div class="tp-item">
-                <div class="tp-item-label">TP2 (${tp.takeProfits?.[1]?.percentage || 50}%)</div>
-                <div class="tp-item-value text-green">${formatPrice(tp.takeProfits?.[1]?.price)}</div>
-              </div>
-              <div class="tp-item">
-                <div class="tp-item-label">Stop Loss</div>
-                <div class="tp-item-value text-red">${formatPrice(tp.stopLoss?.price)}</div>
-                <div class="tp-item-sub">${tp.stopLoss?.percentage ? `-${tp.stopLoss.percentage.toFixed(1)}%` : ''}</div>
-              </div>
-            </div>
+            ${generateTradePlanSvgChart(tp, as, as?.chartCandles)}
           </div>
         </div>
 
