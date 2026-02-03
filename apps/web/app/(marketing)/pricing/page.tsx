@@ -308,112 +308,103 @@ export default function PricingPage() {
         {pricingMode === 'active' && (
           <>
             {/* Credit Packages */}
-            <section className="py-16">
+            <section className="py-16 bg-slate-50/50 dark:bg-slate-900/30">
               <div className="container mx-auto px-4">
                 <div className="text-center mb-12">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full mb-4">
+                    <Gem className="w-4 h-4 text-amber-500" />
+                    <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                      One-Time Purchase
+                    </span>
+                  </div>
                   <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
                     Credit Packages
                   </h2>
-                  <p className="text-muted-foreground">Buy credits once, use them anytime. No expiration.</p>
+                  <p className="text-muted-foreground max-w-lg mx-auto">
+                    Buy credits once, use them anytime. No expiration. Perfect for pay-as-you-go analysis.
+                  </p>
                 </div>
-        {/* Credit Packages (Add-on) */}
-        <section className="py-16 bg-slate-50/50 dark:bg-slate-900/30">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full mb-4">
-                <Gem className="w-4 h-4 text-amber-500" />
-                <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                  One-Time Purchase
-                </span>
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                Need Extra Credits?
-              </h2>
-              <p className="text-muted-foreground max-w-lg mx-auto">
-                Top up your account with credit packages. Perfect for heavy analysis days or if you prefer pay-as-you-go.
-              </p>
-            </div>
-            {packagesLoading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
-              </div>
-            ) : packages.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                No packages available at the moment.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
-                {packages.map((pkg) => {
-                  const nameKey = pkg.name.toLowerCase().split(' ')[0];
-                  const Icon = PACKAGE_ICONS[nameKey] || PACKAGE_ICONS[pkg.id] || Zap;
-                  const isSelected = selectedPackage === pkg.id;
-                  const isPurchasing = purchasing && isSelected;
+                {packagesLoading ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+                  </div>
+                ) : packages.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    No packages available at the moment.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
+                    {packages.map((pkg) => {
+                      const nameKey = pkg.name.toLowerCase().split(' ')[0];
+                      const Icon = PACKAGE_ICONS[nameKey] || PACKAGE_ICONS[pkg.id] || Zap;
+                      const isSelected = selectedPackage === pkg.id;
+                      const isPurchasing = purchasing && isSelected;
 
-                  return (
-                    <div
-                      key={pkg.id}
-                      className={cn(
-                        'bg-white dark:bg-slate-900 rounded-xl border p-6 relative transition-all duration-200',
-                        pkg.popular
-                          ? 'border-emerald-500 shadow-lg'
-                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700',
-                        isSelected && 'border-emerald-500'
-                      )}
-                    >
-                      {pkg.popular && (
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-500 text-white text-xs font-semibold rounded-full">
-                          RECOMMENDED
-                        </div>
-                      )}
-                      <div className="text-center">
-                        <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                          <Icon className="w-6 h-6 text-emerald-500" />
-                        </div>
-                        <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">{pkg.name}</h3>
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
-                          {pkg.price}
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-4">{pkg.perCredit} per credit</p>
-                        <div className="py-4 border-t border-b border-slate-200 dark:border-slate-800 mb-4">
-                          <div className="text-2xl font-bold text-emerald-500">
-                            {formatCredits(pkg.credits)}
-                            {pkg.bonus > 0 && (
-                              <span className="text-base text-amber-500 ml-1">+{pkg.bonus} bonus</span>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">credits</p>
-                        </div>
-                        <button
-                          onClick={() => handlePurchase(pkg.id)}
-                          disabled={purchasing}
+                      return (
+                        <div
+                          key={pkg.id}
                           className={cn(
-                            'w-full py-3 rounded-lg font-medium text-center transition flex items-center justify-center gap-2',
+                            'bg-white dark:bg-slate-900 rounded-xl border p-6 relative transition-all duration-200',
                             pkg.popular
-                              ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700',
-                            purchasing && 'opacity-50 cursor-not-allowed'
+                              ? 'border-emerald-500 shadow-lg'
+                              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700',
+                            isSelected && 'border-emerald-500'
                           )}
                         >
-                          {isPurchasing ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Processing...
-                            </>
-                          ) : isLoggedIn ? (
-                            <>
-                              <CreditCard className="w-4 h-4" />
-                              Buy Now
-                            </>
-                          ) : (
-                            'Get Started'
+                          {pkg.popular && (
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-500 text-white text-xs font-semibold rounded-full">
+                              RECOMMENDED
+                            </div>
                           )}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                          <div className="text-center">
+                            <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                              <Icon className="w-6 h-6 text-emerald-500" />
+                            </div>
+                            <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">{pkg.name}</h3>
+                            <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
+                              {pkg.price}
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-4">{pkg.perCredit} per credit</p>
+                            <div className="py-4 border-t border-b border-slate-200 dark:border-slate-800 mb-4">
+                              <div className="text-2xl font-bold text-emerald-500">
+                                {formatCredits(pkg.credits)}
+                                {pkg.bonus > 0 && (
+                                  <span className="text-base text-amber-500 ml-1">+{pkg.bonus} bonus</span>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">credits</p>
+                            </div>
+                            <button
+                              onClick={() => handlePurchase(pkg.id)}
+                              disabled={purchasing}
+                              className={cn(
+                                'w-full py-3 rounded-lg font-medium text-center transition flex items-center justify-center gap-2',
+                                pkg.popular
+                                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700',
+                                purchasing && 'opacity-50 cursor-not-allowed'
+                              )}
+                            >
+                              {isPurchasing ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  Processing...
+                                </>
+                              ) : isLoggedIn ? (
+                                <>
+                                  <CreditCard className="w-4 h-4" />
+                                  Buy Now
+                                </>
+                              ) : (
+                                'Get Started'
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <p className="text-center text-xs text-muted-foreground mt-8">
                   Secure payment processing by Lemon Squeezy. All prices in USD.
                 </p>
