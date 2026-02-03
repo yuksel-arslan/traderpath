@@ -73,7 +73,7 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
     rewards: true, // Rewards available for all users
     maxScheduledReports: 0,
     maxAlerts: 0,
-    maxDailyAnalyses: 0,
+    maxDailyAnalyses: 5, // All tiers: 5 analyses/day limit
     monthlyAiExpertQuestions: 0,
     monthlyEmailReports: 0,
     monthlyPdfReports: 0,
@@ -91,7 +91,7 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
     rewards: true,
     maxScheduledReports: 3,
     maxAlerts: 10,
-    maxDailyAnalyses: 0,
+    maxDailyAnalyses: 5, // All tiers: 5 analyses/day limit
     monthlyAiExpertQuestions: 0,
     monthlyEmailReports: 10,
     monthlyPdfReports: 10,
@@ -109,7 +109,7 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
     rewards: true,
     maxScheduledReports: 10,
     maxAlerts: 50,
-    maxDailyAnalyses: 10,
+    maxDailyAnalyses: 5, // All tiers: 5 analyses/day limit
     monthlyAiExpertQuestions: 0,
     monthlyEmailReports: 50,
     monthlyPdfReports: 50,
@@ -127,7 +127,7 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
     rewards: true,
     maxScheduledReports: -1, // Unlimited
     maxAlerts: -1,
-    maxDailyAnalyses: -1,
+    maxDailyAnalyses: 5, // All tiers: 5 analyses/day limit
     monthlyAiExpertQuestions: -1,
     monthlyEmailReports: -1,
     monthlyPdfReports: -1,
