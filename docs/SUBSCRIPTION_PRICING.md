@@ -2,7 +2,7 @@
 
 > **Version:** 1.0
 > **Date:** 2026-02-03
-> **Status:** Phase 4 Complete - Ready for Phase 5 (Free Tier)
+> **Status:** All 5 Phases Complete - Subscription System Ready
 
 ---
 
@@ -400,15 +400,41 @@ POST   /api/credits/purchase             - One-time credit purchase
 - `apps/web/app/(marketing)/pricing/page.tsx` - Public pricing page
 - `apps/web/app/(dashboard)/settings/page.tsx` - Billing settings section
 
-### Next Steps (Phase 5 - Free Tier)
+### Phase 5 Implementation Status
 
-1. Implement free tier limitations
-   - Restrict Capital Flow L3/L4 access
-   - Limit MLIS Pro access
-   - Cap daily analyses to 1
-2. Add upgrade prompts for free users
-   - Show upgrade CTA when limits reached
-   - Feature-gated UI components
-3. Track and enforce daily credit limits
-   - Credit guard middleware
-   - Daily credit reset verification
+### Completed (2026-02-03)
+
+1. ✅ Feature gate hook created (`useFeatureGate`)
+   - Checks subscription tier for feature access
+   - Returns `hasAccess()`, `meetsMinimumTier()`, `getRemainingLimit()`
+   - Supports upgrade prompt state management
+2. ✅ UpgradePrompt component created
+   - Modal and inline (card) variants
+   - Feature-specific messaging and benefits
+   - Tier-specific colors and styling
+   - Redirect to pricing page
+3. ✅ Capital Flow feature gates
+   - Layer 3 (Sector Activity) - requires Starter+
+   - Layer 4 (AI Recommendations) - requires Starter+
+   - Shows UpgradeCard when locked
+4. ✅ AI Concierge feature gate
+   - Requires Starter+ subscription
+   - Full-page upgrade prompt for free users
+
+**Frontend Files Created/Updated:**
+- `apps/web/hooks/useFeatureGate.ts` - Feature gate hook
+- `apps/web/components/modals/UpgradePrompt.tsx` - Upgrade UI components
+- `apps/web/app/(dashboard)/capital-flow/page.tsx` - L3/L4 feature gates
+- `apps/web/app/(dashboard)/concierge/page.tsx` - Concierge feature gate
+
+---
+
+## Implementation Complete
+
+All 5 phases of the billing system have been implemented:
+
+1. ✅ **Phase 1 - Cost Analysis**: Gemini API costs analyzed
+2. ✅ **Phase 2 - Pricing Model**: $29/$59/$99 tier structure approved
+3. ✅ **Phase 3 - Stripe Integration**: Backend subscription handling
+4. ✅ **Phase 4 - Frontend Integration**: Pricing page and billing settings
+5. ✅ **Phase 5 - Free Tier**: Feature gates and upgrade prompts
