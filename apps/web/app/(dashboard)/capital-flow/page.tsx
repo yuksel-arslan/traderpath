@@ -40,6 +40,8 @@ import { cn } from '@/lib/utils';
 import { X, Loader2, LineChart, Download, Mail, ChevronUp, CheckCircle, HelpCircle, Lock, Search, Bot, MessageSquare } from 'lucide-react';
 import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
 import { downloadCapitalFlowReport, generateCapitalFlowEmailHTML } from '@/lib/capital-flow-report-generator';
+import { useFeatureGate } from '@/hooks/useFeatureGate';
+import { UpgradePrompt, UpgradeCard } from '@/components/modals/UpgradePrompt';
 
 // Types
 interface GlobalLiquidity {
@@ -1473,7 +1475,15 @@ function SystemFlowChart({ apiData, onLayerClick, onMarketClick }: { apiData: Ca
 
             {/* Layer Content - Sector Data */}
             <div className={`overflow-hidden transition-all duration-500 ${expandedLayers[3] ? 'max-h-[500px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
-              {apiData?.markets.find(m => m.market === apiData.recommendation?.primaryMarket)?.sectors ? (
+              {!layer3Unlocked ? (
+                <div className="max-w-md mx-auto">
+                  <UpgradeCard
+                    feature="capital_flow_l3"
+                    currentTier={currentTier}
+                    message="Unlock Sector Activity to see which sectors are receiving capital inflows within each market."
+                  />
+                </div>
+              ) : apiData?.markets.find(m => m.market === apiData.recommendation?.primaryMarket)?.sectors ? (
                 <div className="max-w-3xl mx-auto">
                   <p className="text-xs text-center text-slate-500 mb-3">
                     Showing sectors for <strong className="text-purple-600 dark:text-purple-400 capitalize">{apiData.recommendation?.primaryMarket}</strong>
@@ -1559,79 +1569,89 @@ function SystemFlowChart({ apiData, onLayerClick, onMarketClick }: { apiData: Ca
 
             {/* Layer Content - AI Recommendations */}
             <div className={`overflow-hidden transition-all duration-500 ${expandedLayers[4] ? 'max-h-[600px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
-              <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* BUY Opportunity */}
-                {apiData?.recommendation && (
-                  <div className="backdrop-blur-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-2 border-emerald-500/30 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-emerald-500" />
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">BUY Opportunity</span>
+              {!layer4Unlocked ? (
+                <div className="max-w-md mx-auto">
+                  <UpgradeCard
+                    feature="capital_flow_l4"
+                    currentTier={currentTier}
+                    message="Unlock AI Recommendations to get BUY/SELL signals with confidence scores and suggested assets."
+                  />
+                </div>
+              ) : (
+                <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* BUY Opportunity */}
+                  {apiData?.recommendation && (
+                    <div className="backdrop-blur-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-2 border-emerald-500/30 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="w-5 h-5 text-emerald-500" />
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400">BUY Opportunity</span>
+                        </div>
+                        <span className="text-2xl font-bold text-emerald-600">{apiData.recommendation.confidence}%</span>
                       </div>
-                      <span className="text-2xl font-bold text-emerald-600">{apiData.recommendation.confidence}%</span>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Market</span>
+                          <span className="font-semibold text-slate-900 dark:text-white capitalize">{apiData.recommendation.primaryMarket}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Phase</span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${getPhaseColor(apiData.recommendation.phase || 'mid')}`}>
+                            {(apiData.recommendation.phase || 'mid').toUpperCase()}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 pt-2 border-t border-emerald-500/20">
+                          {apiData.recommendation.reason || 'Analysis in progress...'}
+                        </p>
+                        <Link
+                          href={`/analyze?market=${apiData.recommendation.primaryMarket}`}
+                          className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-semibold rounded-lg hover:from-emerald-600 hover:to-teal-600 hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-emerald-500/25"
+                        >
+                          <Search className="w-3.5 h-3.5" />
+                          Asset Analysis
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                      </div>
                     </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Market</span>
-                        <span className="font-semibold text-slate-900 dark:text-white capitalize">{apiData.recommendation.primaryMarket}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Phase</span>
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${getPhaseColor(apiData.recommendation.phase || 'mid')}`}>
-                          {(apiData.recommendation.phase || 'mid').toUpperCase()}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 pt-2 border-t border-emerald-500/20">
-                        {apiData.recommendation.reason || 'Analysis in progress...'}
-                      </p>
-                      <Link
-                        href={`/analyze?market=${apiData.recommendation.primaryMarket}`}
-                        className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-semibold rounded-lg hover:from-emerald-600 hover:to-teal-600 hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-emerald-500/25"
-                      >
-                        <Search className="w-3.5 h-3.5" />
-                        Asset Analysis
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {/* SELL Opportunity */}
-                {apiData?.sellRecommendation && (
-                  <div className="backdrop-blur-xl bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-2 border-red-500/30 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <TrendingDown className="w-5 h-5 text-red-500" />
-                        <span className="font-bold text-red-600 dark:text-red-400">SELL Opportunity</span>
+                  {/* SELL Opportunity */}
+                  {apiData?.sellRecommendation && (
+                    <div className="backdrop-blur-xl bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-2 border-red-500/30 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <TrendingDown className="w-5 h-5 text-red-500" />
+                          <span className="font-bold text-red-600 dark:text-red-400">SELL Opportunity</span>
+                        </div>
+                        <span className="text-2xl font-bold text-red-600">{apiData.sellRecommendation.confidence}%</span>
                       </div>
-                      <span className="text-2xl font-bold text-red-600">{apiData.sellRecommendation.confidence}%</span>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Market</span>
+                          <span className="font-semibold text-slate-900 dark:text-white capitalize">{apiData.sellRecommendation.primaryMarket}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Phase</span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${getPhaseColor(apiData.sellRecommendation.phase || 'late')}`}>
+                            {(apiData.sellRecommendation.phase || 'late').toUpperCase()}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 pt-2 border-t border-red-500/20">
+                          {apiData.sellRecommendation.reason || 'Analysis in progress...'}
+                        </p>
+                        <Link
+                          href={`/analyze?market=${apiData.sellRecommendation.primaryMarket}`}
+                          className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500 to-rose-500 text-white text-xs font-semibold rounded-lg hover:from-red-600 hover:to-rose-600 hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-red-500/25"
+                        >
+                          <Search className="w-3.5 h-3.5" />
+                          Asset Analysis
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                      </div>
                     </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Market</span>
-                        <span className="font-semibold text-slate-900 dark:text-white capitalize">{apiData.sellRecommendation.primaryMarket}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Phase</span>
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${getPhaseColor(apiData.sellRecommendation.phase || 'late')}`}>
-                          {(apiData.sellRecommendation.phase || 'late').toUpperCase()}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300 pt-2 border-t border-red-500/20">
-                        {apiData.sellRecommendation.reason || 'Analysis in progress...'}
-                      </p>
-                      <Link
-                        href={`/analyze?market=${apiData.sellRecommendation.primaryMarket}`}
-                        className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500 to-rose-500 text-white text-xs font-semibold rounded-lg hover:from-red-600 hover:to-rose-600 hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-red-500/25"
-                      >
-                        <Search className="w-3.5 h-3.5" />
-                        Asset Analysis
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
 
             </div>
           </div>
@@ -1652,9 +1672,20 @@ export default function CapitalFlowPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [correlationsExpanded, setCorrelationsExpanded] = useState(false);
 
-  // All layers are now unlocked by default (no paywall)
-  const layer3Unlocked = true;
-  const layer4Unlocked = true;
+  // Feature gate for premium layers
+  const {
+    hasAccess,
+    showUpgradePrompt,
+    promptFeature,
+    openUpgradePrompt,
+    closeUpgradePrompt,
+    currentTier,
+    isFreeTier,
+  } = useFeatureGate();
+
+  // Check if user has access to premium layers
+  const layer3Unlocked = hasAccess('capital_flow_l3');
+  const layer4Unlocked = hasAccess('capital_flow_l4');
 
   // Fullscreen layer modal state
   const [fullscreenLayer, setFullscreenLayer] = useState<number | null>(null);
@@ -2715,6 +2746,16 @@ export default function CapitalFlowPage() {
             setAnalysisMarket(null);
             setAnalysisData(null);
           }}
+        />
+      )}
+
+      {/* Upgrade Prompt Modal */}
+      {showUpgradePrompt && promptFeature && (
+        <UpgradePrompt
+          isOpen={showUpgradePrompt}
+          onClose={closeUpgradePrompt}
+          feature={promptFeature}
+          currentTier={currentTier}
         />
       )}
     </div>

@@ -50,6 +50,8 @@ import { initializeAssetLogos } from './modules/asset-logos/asset-logos.service'
 import { bilgeRoutes } from './modules/bilge/bilge.routes';
 import { initializeBilgeService, collectError } from './modules/bilge/bilge.service';
 import { startBilgeWeeklyReportJob, stopBilgeWeeklyReportJob } from './modules/bilge/bilge-cron.job';
+import subscriptionRoutes from './modules/subscriptions/subscription.routes';
+import { startDailyCreditsJob, stopDailyCreditsJob } from './modules/subscriptions/subscription-cron.job';
 
 // ===========================================
 // Server Configuration
@@ -409,6 +411,10 @@ app.register(assetLogosRoutes, { prefix: '/api/asset-logos' }); // Legacy
 // BILGE Guardian System routes (admin)
 app.register(bilgeRoutes);
 
+// Subscription management routes
+app.register(subscriptionRoutes, { prefix: '/api/v1/subscriptions' });
+app.register(subscriptionRoutes, { prefix: '/api/subscriptions' }); // Legacy
+
 // ===========================================
 // 404 Handler
 // ===========================================
@@ -572,6 +578,10 @@ const start = async () => {
     startBilgeWeeklyReportJob();
     logger.info('✓ BILGE weekly report cron started');
 
+    // Start subscription daily credits cron job (00:00 UTC)
+    startDailyCreditsJob();
+    logger.info('✓ Subscription daily credits cron started');
+
     // Start server
     await app.listen({
       port: config.port,
@@ -624,6 +634,10 @@ const shutdown = async (signal: string) => {
     // Stop BILGE weekly report cron
     stopBilgeWeeklyReportJob();
     logger.info('✓ BILGE weekly report cron stopped');
+
+    // Stop subscription daily credits cron
+    stopDailyCreditsJob();
+    logger.info('✓ Subscription daily credits cron stopped');
 
     // Stop accepting new connections
     await app.close();
