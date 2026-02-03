@@ -1,5 +1,6 @@
 'use client';
 
+// Pricing page - handles credit packages and signal subscriptions
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -548,7 +549,7 @@ export default function PricingPage() {
                         </div>
                         <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">{sub.name}</h3>
                         <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
-                          ${sub.price}
+                          {'$'}{sub.price}
                           <span className="text-base font-normal text-muted-foreground">
                             /{sub.period === 'monthly' ? 'mo' : 'yr'}
                           </span>
