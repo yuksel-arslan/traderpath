@@ -146,6 +146,42 @@ export interface AnalysisReportData {
 
   aiExpertComment?: string;
 
+  // Capital Flow Data (4 Layers)
+  capitalFlow?: {
+    layer1?: { // Global Liquidity
+      bias: 'risk_on' | 'risk_off' | 'neutral';
+      fedBalanceSheet?: number;
+      m2Supply?: number;
+      dxy?: number;
+      vix?: number;
+    };
+    layer2?: { // Market Flow
+      primaryMarket?: string;
+      flows?: Array<{ market: string; flow7d: number; flow30d: number; phase: string }>;
+    };
+    layer3?: { // Sector Activity
+      topSectors?: Array<{ name: string; flow: number; trend: string }>;
+    };
+    layer4?: { // AI Recommendation
+      direction: 'BUY' | 'SELL' | 'HOLD';
+      market: string;
+      confidence: number;
+      reason?: string;
+    };
+  };
+
+  // ML Confirmation (MLIS Pro results)
+  mlConfirmation?: {
+    recommendation: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
+    confidence: number;
+    layers?: {
+      technical?: { score: number; signal: string };
+      momentum?: { score: number; signal: string };
+      volatility?: { score: number; signal: string };
+      volume?: { score: number; signal: string };
+    };
+  };
+
   indicatorDetails?: {
     trend?: Record<string, IndicatorDetailItem | undefined>;
     momentum?: Record<string, IndicatorDetailItem | undefined>;
@@ -1923,7 +1959,406 @@ interface PdfResult {
   fileName: string;
 }
 
-export async function generateAnalysisReport(data: AnalysisReportData, captureChart: boolean = true): Promise<PdfResult | void> {
+// ===========================================
+// SINGLE PAGE REPORT FORMAT
+// Section 1: Capital Flow Analysis Summary (4 layer boxes 2x2)
+// Section 2: 7 Step Analysis (2-column layout + Trade Decision + ML Confirmation + Trade Plan)
+// ===========================================
+
+function generateSinglePageReport(data: AnalysisReportData): string {
+  const mp = data.marketPulse || { btcDominance: 0, fearGreedIndex: 0, fearGreedLabel: 'N/A', trend: { direction: 'neutral', strength: 0 } };
+  const as = data.assetScan || { currentPrice: 0, priceChange24h: 0, indicators: { rsi: 0, macd: { histogram: 0 } } };
+  const sc = data.safetyCheck || { riskLevel: 'N/A', warnings: [], manipulation: { pumpDumpRisk: 'N/A' }, whaleActivity: { bias: 'N/A' } };
+  const tm = data.timing || { tradeNow: false, reason: 'N/A', conditions: [] };
+  const tp = data.tradePlan || { direction: 'N/A', averageEntry: 0, stopLoss: { price: 0 }, takeProfits: [], riskReward: 0 };
+  const tc = data.trapCheck || { traps: { bullTrap: false, bearTrap: false, fakeoutRisk: 'N/A' } };
+  const verdict = data.verdict || { action: 'WAIT', overallScore: 0 };
+  const cf = data.capitalFlow || {};
+  const ml = data.mlConfirmation;
+
+  const directionStr = formatDirection(tp.direction);
+  const isLong = directionStr.toLowerCase() === 'long';
+  const isShort = directionStr.toLowerCase() === 'short';
+
+  const verdictAction = formatAction(getVerdictAction(verdict));
+  const verdictColor = verdictAction === 'GO' ? '#16a34a' : verdictAction.includes('CONDITIONAL') ? '#d97706' : verdictAction === 'AVOID' ? '#dc2626' : '#666';
+
+  // Unique gradient IDs for this page
+  const tealGradId = 'tealGradSP';
+  const coralGradId = 'coralGradSP';
+
+  const logoSvgSinglePage = `<svg width="28" height="28" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="${tealGradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#5EEDC3"/><stop offset="50%" stop-color="#2DD4A8"/><stop offset="100%" stop-color="#14B8A6"/>
+      </linearGradient>
+      <linearGradient id="${coralGradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#FF8A9B"/><stop offset="50%" stop-color="#F87171"/><stop offset="100%" stop-color="#EF5A6F"/>
+      </linearGradient>
+    </defs>
+    <path d="M100 10 L120 80 L100 100 L80 80 Z" fill="url(#${tealGradId})"/>
+    <path d="M190 100 L120 120 L100 100 L120 80 Z" fill="url(#${tealGradId})"/>
+    <path d="M100 190 L80 120 L100 100 L120 120 Z" fill="url(#${coralGradId})"/>
+    <path d="M10 100 L80 80 L100 100 L80 120 Z" fill="url(#${coralGradId})"/>
+  </svg>`;
+
+  // Helper for Capital Flow layer boxes
+  const getLayerBox = (num: number, title: string, content: string, badge?: string, badgeColor?: string) => `
+    <div style="flex: 1; min-width: 240px; border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px 8px; background: #fafafa;">
+      <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+        <span style="font-size: 7px; font-weight: 700; color: #666;">L${num}</span>
+        <span style="font-size: 8px; font-weight: 600; color: #1a1a1a;">${title}</span>
+        ${badge ? `<span style="margin-left: auto; font-size: 6px; font-weight: 600; padding: 1px 4px; border-radius: 2px; background: ${badgeColor || '#666'}; color: white;">${badge}</span>` : ''}
+      </div>
+      <div style="font-size: 7px; color: #444; line-height: 1.4;">${content}</div>
+    </div>
+  `;
+
+  // Layer 1: Global Liquidity
+  const l1Bias = cf.layer1?.bias || 'neutral';
+  const l1BiasColor = l1Bias === 'risk_on' ? '#16a34a' : l1Bias === 'risk_off' ? '#dc2626' : '#666';
+  const l1Content = cf.layer1
+    ? `DXY: ${cf.layer1.dxy?.toFixed(2) || '-'} | VIX: ${cf.layer1.vix?.toFixed(1) || '-'}`
+    : 'No data available';
+
+  // Layer 2: Market Flow
+  const l2Market = cf.layer2?.primaryMarket || '-';
+  const l2Content = cf.layer2?.flows?.slice(0, 2).map(f => `${f.market}: ${f.flow7d > 0 ? '+' : ''}${f.flow7d.toFixed(1)}%`).join(' | ') || 'No flow data';
+
+  // Layer 3: Sector Activity
+  const l3Content = cf.layer3?.topSectors?.slice(0, 2).map(s => `${s.name}: ${s.flow > 0 ? '+' : ''}${s.flow.toFixed(1)}%`).join(' | ') || 'No sector data';
+
+  // Layer 4: AI Recommendation
+  const l4Dir = cf.layer4?.direction || 'HOLD';
+  const l4DirColor = l4Dir === 'BUY' ? '#16a34a' : l4Dir === 'SELL' ? '#dc2626' : '#666';
+  const l4Content = cf.layer4 ? `${cf.layer4.market || '-'} | Conf: ${cf.layer4.confidence || 0}%` : 'No recommendation';
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        ${styles}
+        .single-page { padding: 12px 16px; }
+        .section-box { border: 1px solid #ddd; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; background: #fff; }
+        .section-title-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e0e0e0; }
+        .section-num { font-size: 8px; font-weight: 700; color: #fff; background: #1a1a1a; padding: 2px 6px; border-radius: 3px; }
+        .section-name { font-size: 10px; font-weight: 600; color: #1a1a1a; }
+        .layer-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+        .two-col { display: flex; gap: 8px; }
+        .two-col > div { flex: 1; }
+        .step-mini { border: 1px solid #e5e5e5; border-radius: 3px; padding: 5px 7px; margin-bottom: 5px; background: #fafafa; }
+        .step-mini-header { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
+        .step-mini-num { font-size: 7px; font-weight: 700; color: #666; }
+        .step-mini-title { font-size: 8px; font-weight: 600; color: #1a1a1a; }
+        .step-mini-gate { margin-left: auto; font-size: 6px; font-weight: 600; }
+        .step-mini-content { font-size: 7px; color: #444; line-height: 1.35; }
+        .step-mini-row { display: flex; gap: 4px; margin-top: 3px; }
+        .step-mini-metric { background: #fff; border: 1px solid #eee; border-radius: 2px; padding: 2px 5px; flex: 1; }
+        .step-mini-metric-label { font-size: 5px; color: #888; text-transform: uppercase; }
+        .step-mini-metric-value { font-size: 8px; font-weight: 600; color: #1a1a1a; }
+        .trade-decision-box { border: 2px solid #1a1a1a; border-radius: 4px; padding: 8px 12px; text-align: center; background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%); }
+        .trade-decision-action { font-size: 20px; font-weight: 700; }
+        .trade-decision-sub { font-size: 7px; color: #666; margin-top: 2px; }
+        .ml-box { border: 1px solid #8b5cf6; border-radius: 4px; padding: 6px 10px; background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); margin-top: 6px; }
+        .ml-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+        .ml-badge { font-size: 7px; font-weight: 700; color: #fff; background: #8b5cf6; padding: 2px 6px; border-radius: 3px; }
+        .ml-title { font-size: 8px; font-weight: 600; color: #6b21a8; }
+        .ml-content { display: flex; gap: 8px; }
+        .ml-rec { font-size: 12px; font-weight: 700; color: #6b21a8; }
+        .ml-conf { font-size: 8px; color: #7c3aed; }
+        .ml-layers { display: flex; gap: 4px; flex: 1; }
+        .ml-layer { flex: 1; background: #fff; border: 1px solid #ddd6fe; border-radius: 2px; padding: 2px 4px; text-align: center; }
+        .ml-layer-name { font-size: 5px; color: #7c3aed; text-transform: uppercase; }
+        .ml-layer-score { font-size: 8px; font-weight: 600; color: #6b21a8; }
+        .trade-plan-box { border: 1px solid #0d9488; border-radius: 4px; padding: 8px 10px; background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); margin-top: 6px; }
+        .tp-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+        .tp-badge { font-size: 7px; font-weight: 700; color: #fff; background: #0d9488; padding: 2px 6px; border-radius: 3px; }
+        .tp-title { font-size: 9px; font-weight: 600; color: #0f766e; }
+        .tp-grid { display: flex; gap: 6px; }
+        .tp-item { flex: 1; background: #fff; border: 1px solid #99f6e4; border-radius: 3px; padding: 4px 6px; text-align: center; }
+        .tp-item-label { font-size: 6px; color: #0f766e; text-transform: uppercase; }
+        .tp-item-value { font-size: 10px; font-weight: 700; color: #0d9488; }
+        .tp-item-sub { font-size: 6px; color: #5eead4; }
+      </style>
+    </head>
+    <body>
+      <div class="page single-page">
+        <!-- HEADER -->
+        <div class="header" style="margin-bottom: 8px; padding-bottom: 6px;">
+          <div class="brand">
+            <div class="logo">${logoSvgSinglePage}</div>
+            <div class="brand-name" style="font-size: 11px;">
+              <span style="color: #0D9488;">Trader</span><span style="color: #DC2626;">Path</span>
+            </div>
+          </div>
+          <div class="header-center">
+            <div class="report-title" style="font-size: 10px;">Asset Analysis Report</div>
+            <div class="report-subtitle" style="font-size: 6px;">${data.method === 'mlis_pro' ? 'MLIS Pro' : 'Classic 7-Step'} | ${new Date(data.generatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</div>
+          </div>
+          <div class="header-right">
+            <div class="symbol" style="font-size: 12px;">${data.symbol}
+              <span class="direction-tag ${isLong ? 'tag-long' : isShort ? 'tag-short' : ''}" style="font-size: 8px;">${directionStr}</span>
+            </div>
+            <div class="score-box" style="margin-top: 2px;">
+              <span class="score-value" style="font-size: 14px; color: ${verdictColor};">${(verdict.overallScore || 0).toFixed(1)}</span>
+              <span class="score-label" style="font-size: 6px;">/10</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 1: CAPITAL FLOW ANALYSIS SUMMARY -->
+        <div class="section-box">
+          <div class="section-title-bar">
+            <span class="section-num">1</span>
+            <span class="section-name">Capital Flow Analysis Summary</span>
+          </div>
+          <div class="layer-grid">
+            <!-- Row 1: L1 + L2 -->
+            <div style="display: flex; gap: 6px; width: 100%; margin-bottom: 4px;">
+              ${getLayerBox(1, 'Global Liquidity', l1Content, l1Bias.toUpperCase().replace('_', ' '), l1BiasColor)}
+              ${getLayerBox(2, 'Market Flow', l2Content, l2Market.toUpperCase(), '#0369a1')}
+            </div>
+            <!-- Row 2: L3 + L4 -->
+            <div style="display: flex; gap: 6px; width: 100%;">
+              ${getLayerBox(3, 'Sector Activity', l3Content)}
+              ${getLayerBox(4, 'AI Recommendation', l4Content, l4Dir, l4DirColor)}
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2: 7 STEP ANALYSIS -->
+        <div class="section-box" style="flex: 1; display: flex; flex-direction: column;">
+          <div class="section-title-bar">
+            <span class="section-num">2</span>
+            <span class="section-name">7 Step Analysis</span>
+          </div>
+
+          <!-- 2-COLUMN LAYOUT -->
+          <div class="two-col">
+            <!-- LEFT COLUMN: Market Pulse, Asset Scan, Stocks Analysis -->
+            <div>
+              <!-- Market Pulse -->
+              <div class="step-mini">
+                <div class="step-mini-header">
+                  <span class="step-mini-num">1</span>
+                  <span class="step-mini-title">Market Pulse</span>
+                  <span class="step-mini-gate" style="color: ${getGateStatus(mp.gate).color};">${getGateStatus(mp.gate).text}</span>
+                </div>
+                <div class="step-mini-row">
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">BTC Dom</div>
+                    <div class="step-mini-metric-value">${mp.btcDominance?.toFixed(1) || '-'}%</div>
+                  </div>
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">Fear/Greed</div>
+                    <div class="step-mini-metric-value">${mp.fearGreedIndex || '-'}</div>
+                  </div>
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">Regime</div>
+                    <div class="step-mini-metric-value">${formatRegime(mp.marketRegime)}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Asset Scan -->
+              <div class="step-mini">
+                <div class="step-mini-header">
+                  <span class="step-mini-num">2</span>
+                  <span class="step-mini-title">Asset Scanner</span>
+                  <span class="step-mini-gate" style="color: ${getGateStatus(as.gate).color};">${getGateStatus(as.gate).text}</span>
+                </div>
+                <div class="step-mini-row">
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">Price</div>
+                    <div class="step-mini-metric-value">${formatPrice(as.currentPrice)}</div>
+                  </div>
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">24h Chg</div>
+                    <div class="step-mini-metric-value ${(as.priceChange24h || 0) >= 0 ? 'text-green' : 'text-red'}">${(as.priceChange24h || 0) >= 0 ? '+' : ''}${(as.priceChange24h || 0).toFixed(2)}%</div>
+                  </div>
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">RSI</div>
+                    <div class="step-mini-metric-value">${as.indicators?.rsi?.toFixed(0) || '-'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Stocks Analysis (using indicator summary as proxy) -->
+              <div class="step-mini">
+                <div class="step-mini-header">
+                  <span class="step-mini-num">3</span>
+                  <span class="step-mini-title">Technical Analysis</span>
+                </div>
+                <div class="step-mini-row">
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">Bullish</div>
+                    <div class="step-mini-metric-value text-green">${data.indicatorDetails?.summary?.bullishIndicators || 0}</div>
+                  </div>
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">Bearish</div>
+                    <div class="step-mini-metric-value text-red">${data.indicatorDetails?.summary?.bearishIndicators || 0}</div>
+                  </div>
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">Neutral</div>
+                    <div class="step-mini-metric-value">${data.indicatorDetails?.summary?.neutralIndicators || 0}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Safety Check, Timing Analysis, Trap Check -->
+            <div>
+              <!-- Safety Check -->
+              <div class="step-mini">
+                <div class="step-mini-header">
+                  <span class="step-mini-num">4</span>
+                  <span class="step-mini-title">Safety Check</span>
+                  <span class="step-mini-gate" style="color: ${getGateStatus(sc.gate).color};">${getGateStatus(sc.gate).text}</span>
+                </div>
+                <div class="step-mini-row">
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">Risk</div>
+                    <div class="step-mini-metric-value ${sc.riskLevel === 'low' ? 'text-green' : sc.riskLevel === 'high' ? 'text-red' : 'text-amber'}">${(sc.riskLevel || 'N/A').toUpperCase()}</div>
+                  </div>
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">Whale</div>
+                    <div class="step-mini-metric-value">${(sc.whaleActivity?.bias || 'N/A').charAt(0).toUpperCase() + (sc.whaleActivity?.bias || 'N/A').slice(1)}</div>
+                  </div>
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">Pump/Dump</div>
+                    <div class="step-mini-metric-value">${(sc.manipulation?.pumpDumpRisk || 'N/A').charAt(0).toUpperCase() + (sc.manipulation?.pumpDumpRisk || 'N/A').slice(1)}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Timing Analysis -->
+              <div class="step-mini">
+                <div class="step-mini-header">
+                  <span class="step-mini-num">5</span>
+                  <span class="step-mini-title">Timing Analysis</span>
+                  <span class="step-mini-gate" style="color: ${getGateStatus(tm.gate).color};">${getGateStatus(tm.gate).text}</span>
+                </div>
+                <div class="step-mini-row">
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">Trade Now</div>
+                    <div class="step-mini-metric-value ${tm.tradeNow ? 'text-green' : 'text-amber'}">${tm.tradeNow ? 'YES' : 'WAIT'}</div>
+                  </div>
+                  <div class="step-mini-metric" style="flex: 2;">
+                    <div class="step-mini-metric-label">Reason</div>
+                    <div class="step-mini-metric-value" style="font-size: 6px;">${(tm.reason || 'N/A').slice(0, 40)}${(tm.reason || '').length > 40 ? '...' : ''}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Trap Check -->
+              <div class="step-mini">
+                <div class="step-mini-header">
+                  <span class="step-mini-num">6</span>
+                  <span class="step-mini-title">Trap Check</span>
+                  <span class="step-mini-gate" style="color: ${getGateStatus(tc.gate).color};">${getGateStatus(tc.gate).text}</span>
+                </div>
+                <div class="step-mini-row">
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">Bull Trap</div>
+                    <div class="step-mini-metric-value ${tc.traps?.bullTrap ? 'text-red' : 'text-green'}">${tc.traps?.bullTrap ? 'YES' : 'NO'}</div>
+                  </div>
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">Bear Trap</div>
+                    <div class="step-mini-metric-value ${tc.traps?.bearTrap ? 'text-red' : 'text-green'}">${tc.traps?.bearTrap ? 'YES' : 'NO'}</div>
+                  </div>
+                  <div class="step-mini-metric">
+                    <div class="step-mini-metric-label">Fakeout</div>
+                    <div class="step-mini-metric-value">${(tc.traps?.fakeoutRisk || 'N/A').charAt(0).toUpperCase() + (tc.traps?.fakeoutRisk || 'N/A').slice(1)}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TRADE DECISION (Full Width) -->
+          <div class="trade-decision-box" style="margin-top: 6px;">
+            <div class="trade-decision-action" style="color: ${verdictColor};">${verdictAction}</div>
+            <div class="trade-decision-sub">
+              Score: ${(verdict.overallScore || 0).toFixed(1)}/10 | Direction: ${directionStr} | Confidence: ${formatPercent(tp.confidence)}
+            </div>
+          </div>
+
+          <!-- ML CONFIRMATION (Full Width) -->
+          ${ml ? `
+          <div class="ml-box">
+            <div class="ml-header">
+              <span class="ml-badge">ML</span>
+              <span class="ml-title">Machine Learning Confirmation</span>
+            </div>
+            <div class="ml-content">
+              <div style="text-align: center; padding-right: 10px; border-right: 1px solid #ddd6fe;">
+                <div class="ml-rec">${ml.recommendation || 'HOLD'}</div>
+                <div class="ml-conf">Confidence: ${ml.confidence || 0}%</div>
+              </div>
+              <div class="ml-layers">
+                ${ml.layers?.technical ? `<div class="ml-layer"><div class="ml-layer-name">Tech</div><div class="ml-layer-score">${ml.layers.technical.score}</div></div>` : ''}
+                ${ml.layers?.momentum ? `<div class="ml-layer"><div class="ml-layer-name">Mom</div><div class="ml-layer-score">${ml.layers.momentum.score}</div></div>` : ''}
+                ${ml.layers?.volatility ? `<div class="ml-layer"><div class="ml-layer-name">Vol</div><div class="ml-layer-score">${ml.layers.volatility.score}</div></div>` : ''}
+                ${ml.layers?.volume ? `<div class="ml-layer"><div class="ml-layer-name">Vol</div><div class="ml-layer-score">${ml.layers.volume.score}</div></div>` : ''}
+              </div>
+            </div>
+          </div>
+          ` : `
+          <div class="ml-box" style="border-color: #ddd; background: #f9fafb;">
+            <div class="ml-header">
+              <span class="ml-badge" style="background: #6b7280;">ML</span>
+              <span class="ml-title" style="color: #6b7280;">ML Confirmation Not Available</span>
+            </div>
+            <div style="font-size: 7px; color: #9ca3af; text-align: center; padding: 4px;">Run MLIS Pro analysis for ML confirmation</div>
+          </div>
+          `}
+
+          <!-- TRADE PLAN (Full Width) -->
+          <div class="trade-plan-box">
+            <div class="tp-header">
+              <span class="tp-badge">PLAN</span>
+              <span class="tp-title">Trade Plan (Entry • TP1-2 • SL)</span>
+              <span style="margin-left: auto; font-size: 7px; font-weight: 600; color: #0f766e;">R:R ${formatRiskReward(tp.riskReward)}</span>
+            </div>
+            <div class="tp-grid">
+              <div class="tp-item">
+                <div class="tp-item-label">Entry</div>
+                <div class="tp-item-value">${formatPrice(tp.averageEntry)}</div>
+              </div>
+              <div class="tp-item">
+                <div class="tp-item-label">TP1 (${tp.takeProfits?.[0]?.percentage || 50}%)</div>
+                <div class="tp-item-value text-green">${formatPrice(tp.takeProfits?.[0]?.price)}</div>
+              </div>
+              <div class="tp-item">
+                <div class="tp-item-label">TP2 (${tp.takeProfits?.[1]?.percentage || 50}%)</div>
+                <div class="tp-item-value text-green">${formatPrice(tp.takeProfits?.[1]?.price)}</div>
+              </div>
+              <div class="tp-item">
+                <div class="tp-item-label">Stop Loss</div>
+                <div class="tp-item-value text-red">${formatPrice(tp.stopLoss?.price)}</div>
+                <div class="tp-item-sub">${tp.stopLoss?.percentage ? `-${tp.stopLoss.percentage.toFixed(1)}%` : ''}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer" style="position: absolute; bottom: 8px; left: 16px; right: 16px;">
+          <div class="footer-row">
+            <span>TraderPath.io</span>
+            <span>Analysis ID: ${data.analysisId || 'N/A'}</span>
+            <span>${new Date(data.generatedAt).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div class="footer-disclaimer">${DISCLAIMER_TEXT}</div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+export async function generateAnalysisReport(data: AnalysisReportData, captureChart: boolean = true, singlePage: boolean = false): Promise<PdfResult | void> {
   // Validate required data
   if (!data) {
     throw new Error('Report data is required');
@@ -1942,7 +2377,24 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
 
-    // Total pages: 7 (Executive Summary, Trade Plan, Tokenomics, Steps 1-2, Steps 3-4, Steps 5-6, Verdict)
+    const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'DayTrade', swing: 'Swing' };
+    const tradeType = data.tradeType ? tradeTypes[data.tradeType] || '' : '';
+
+    // SINGLE PAGE FORMAT - Compact layout with all info on one page
+    if (singlePage) {
+      console.log('[PDF] Generating single page report');
+      const canvas = await renderPageToCanvas(generateSinglePageReport(data));
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+      const fileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_Summary_${new Date().toISOString().split('T')[0]}.pdf`;
+      const pdfBase64 = pdf.output('datauristring').split(',')[1];
+      pdf.save(fileName);
+
+      console.log(`[TraderPath] Single page report generated successfully`);
+      return { base64: pdfBase64, fileName };
+    }
+
+    // MULTI-PAGE FORMAT - Detailed 7 page report
     const totalPages = 7;
 
     // Page 1: Executive Summary
@@ -1986,10 +2438,7 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
     const canvas7 = await renderPageToCanvas(generatePageVerdict(data, totalPages));
     pdf.addImage(canvas7.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
-    const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'DayTrade', swing: 'Swing' };
-    const tradeType = data.tradeType ? tradeTypes[data.tradeType] || '' : '';
     const fileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_${new Date().toISOString().split('T')[0]}.pdf`;
-
     const pdfBase64 = pdf.output('datauristring').split(',')[1];
     pdf.save(fileName);
 
