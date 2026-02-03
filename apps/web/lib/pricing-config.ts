@@ -109,3 +109,84 @@ export const FEATURE_COSTS = [
 
 // Free signup credits
 export const FREE_SIGNUP_CREDITS = 25;
+
+// ==========================================
+// SIGNAL SERVICE SUBSCRIPTION TIERS
+// ==========================================
+export interface SignalSubscription {
+  id: string;
+  name: string;
+  price: number;
+  priceDisplay: string;
+  period: 'monthly' | 'yearly';
+  markets: string[];
+  features: string[];
+  signalsPerDay: string;
+  popular?: boolean;
+  savings?: string;
+}
+
+export const SIGNAL_SUBSCRIPTIONS: SignalSubscription[] = [
+  {
+    id: 'signal_basic',
+    name: 'Basic Signals',
+    price: 9,
+    priceDisplay: '$9/mo',
+    period: 'monthly',
+    markets: ['Crypto'],
+    signalsPerDay: '5-10',
+    features: [
+      'Crypto signals only',
+      '5-10 signals per day',
+      'Entry, SL, TP levels',
+      'Telegram delivery',
+      '7-Step + MLIS Pro analysis',
+    ],
+  },
+  {
+    id: 'signal_pro',
+    name: 'Pro Signals',
+    price: 19,
+    priceDisplay: '$19/mo',
+    period: 'monthly',
+    markets: ['Crypto', 'Stocks', 'Metals', 'Bonds'],
+    signalsPerDay: '10-20',
+    popular: true,
+    features: [
+      'All 4 markets',
+      '10-20 signals per day',
+      'Entry, SL, TP1, TP2 levels',
+      'Telegram + Discord delivery',
+      '7-Step + MLIS Pro analysis',
+      'Capital Flow context',
+      'Priority delivery',
+    ],
+  },
+  {
+    id: 'signal_pro_yearly',
+    name: 'Pro Signals (Annual)',
+    price: 149,
+    priceDisplay: '$149/yr',
+    period: 'yearly',
+    markets: ['Crypto', 'Stocks', 'Metals', 'Bonds'],
+    signalsPerDay: '10-20',
+    savings: 'Save $79',
+    features: [
+      'All 4 markets',
+      '10-20 signals per day',
+      'Entry, SL, TP1, TP2 levels',
+      'Telegram + Discord + Email',
+      '7-Step + MLIS Pro analysis',
+      'Capital Flow context',
+      'Priority delivery',
+      '2 months FREE',
+    ],
+  },
+];
+
+// Daily Pass costs (for active traders who want to do their own analysis)
+export const DAILY_PASS_COSTS = {
+  CAPITAL_FLOW_L3: { cost: 25, name: 'Sector Analysis', description: 'Layer 3 - Sector drill-down' },
+  CAPITAL_FLOW_L4: { cost: 25, name: 'AI Recommendations', description: 'Layer 4 - BUY/SELL signals' },
+  ASSET_ANALYSIS: { cost: 100, name: 'Asset Analysis', description: '7-Step + MLIS Pro (max 10/day)' },
+};

@@ -21,9 +21,16 @@ import {
   Bot,
   Check,
   Shield,
+  Radio,
+  Send,
+  Clock,
+  Target,
+  Sparkles,
+  Calendar,
+  Gift,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost } from '../../../lib/pricing-config';
+import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost, SIGNAL_SUBSCRIPTIONS, DAILY_PASS_COSTS } from '../../../lib/pricing-config';
 import { authFetch, getAuthToken, apiBaseUrl } from '../../../lib/api';
 import { Footer } from '../../../components/common/Footer';
 
@@ -51,6 +58,9 @@ const PACKAGE_ICONS: Record<string, typeof Zap> = {
   whale: Crown,
 };
 
+// Pricing modes
+type PricingMode = 'active' | 'signals';
+
 export default function PricingPage() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -62,6 +72,7 @@ export default function PricingPage() {
   const [packages, setPackages] = useState<ApiPackage[]>([]);
   const [packagesLoading, setPackagesLoading] = useState(true);
   const [packagesFromApi, setPackagesFromApi] = useState(false);
+  const [pricingMode, setPricingMode] = useState<PricingMode>('active');
 
   useEffect(() => {
     checkAuthStatus();
@@ -201,12 +212,42 @@ export default function PricingPage() {
               </span>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900 dark:text-white">
-              Simple, Transparent Pricing
+              Choose Your Trading Style
             </h1>
-            <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-              Pay only for what you use. No subscriptions, no recurring charges.
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+              Active trader? Buy credits for on-demand analysis. Prefer ready signals? Subscribe to our signal service.
               {!isLoggedIn && ` Start with ${FREE_SIGNUP_CREDITS} free credits.`}
             </p>
+
+            {/* Pricing Mode Toggle */}
+            <div className="inline-flex items-center p-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl">
+              <button
+                onClick={() => setPricingMode('active')}
+                className={cn(
+                  'flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all',
+                  pricingMode === 'active'
+                    ? 'bg-white dark:bg-slate-900 text-emerald-600 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                )}
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>Active Trading</span>
+                <span className="hidden sm:inline text-xs bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full">Credits</span>
+              </button>
+              <button
+                onClick={() => setPricingMode('signals')}
+                className={cn(
+                  'flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all',
+                  pricingMode === 'signals'
+                    ? 'bg-white dark:bg-slate-900 text-violet-600 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                )}
+              >
+                <Radio className="w-4 h-4" />
+                <span>Signal Service</span>
+                <span className="hidden sm:inline text-xs bg-violet-500/10 text-violet-600 px-2 py-0.5 rounded-full">Subscription</span>
+              </button>
+            </div>
           </div>
         </section>
 
@@ -240,15 +281,18 @@ export default function PricingPage() {
           </section>
         )}
 
-        {/* Credit Packages */}
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                Credit Packages
-              </h2>
-              <p className="text-muted-foreground">Choose the package that fits your trading needs</p>
-            </div>
+        {/* ==================== ACTIVE TRADING MODE ==================== */}
+        {pricingMode === 'active' && (
+          <>
+            {/* Credit Packages */}
+            <section className="py-16">
+              <div className="container mx-auto px-4">
+                <div className="text-center mb-12">
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                    Credit Packages
+                  </h2>
+                  <p className="text-muted-foreground">Buy credits once, use them anytime. No expiration.</p>
+                </div>
             {packagesLoading ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
@@ -330,89 +374,285 @@ export default function PricingPage() {
                 })}
               </div>
             )}
-            <p className="text-center text-xs text-muted-foreground mt-8">
-              Secure payment processing by Lemon Squeezy. All prices in USD.
-            </p>
-          </div>
-        </section>
+                <p className="text-center text-xs text-muted-foreground mt-8">
+                  Secure payment processing by Lemon Squeezy. All prices in USD.
+                </p>
+              </div>
+            </section>
 
-        {/* What Credits Get You */}
-        <section className="py-16 bg-slate-50 dark:bg-slate-900/50">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                What Your Credits Unlock
-              </h2>
-              <p className="text-muted-foreground">Everything you need for smarter trading decisions</p>
-            </div>
-            <div className="max-w-4xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { Icon: Globe, title: 'Global Capital Flow', desc: 'Layer 1-2: Track money flow across markets', badge: 'FREE', badgeColor: 'emerald' },
-                  { Icon: Layers, title: 'Sector Analysis', desc: 'Layer 3: Drill down into market sectors', badge: '25 credits/day', badgeColor: 'slate' },
-                  { Icon: Brain, title: 'AI Recommendations', desc: 'Layer 4: BUY/SELL signals with confidence scores', badge: '25 credits/day', badgeColor: 'slate' },
-                  { Icon: BarChart3, title: 'Asset Analysis', desc: '7-Step Analysis with MLIS Pro AI confirmation', badge: '100 credits/day', badgeColor: 'slate' },
-                  { Icon: Bot, title: 'AI Expert Consultation', desc: '3 free questions per analysis, then 5 credits each', badge: null, badgeColor: null },
-                  { Icon: FileText, title: 'PDF Reports', desc: 'Download and share detailed analysis reports', badge: null, badgeColor: null },
-                  { Icon: Bell, title: 'Price Alerts', desc: 'Get notified when price targets are hit', badge: null, badgeColor: null },
-                  { Icon: Gem, title: 'Daily Rewards', desc: 'Earn free credits through daily activities', badge: 'EARN FREE', badgeColor: 'amber' },
-                ].map((item, index) => (
-                  <div key={index} className="flex items-start gap-4 p-4 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
-                    <div className={cn(
-                      "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                      item.badgeColor === 'emerald' && "bg-emerald-500/10",
-                      item.badgeColor === 'amber' && "bg-amber-500/10",
-                      (!item.badgeColor || item.badgeColor === 'slate') && "bg-slate-100 dark:bg-slate-800"
-                    )}>
-                      <item.Icon className={cn(
-                        'w-5 h-5',
-                        item.badgeColor === 'emerald' && "text-emerald-500",
-                        item.badgeColor === 'amber' && "text-amber-500",
-                        (!item.badgeColor || item.badgeColor === 'slate') && "text-slate-500"
-                      )} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium text-slate-900 dark:text-white">{item.title}</p>
-                        {item.badge && (
-                          <span className={cn(
-                            "px-2 py-0.5 text-[10px] font-semibold rounded-full",
-                            item.badgeColor === 'emerald' && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-                            item.badgeColor === 'amber' && "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-                            item.badgeColor === 'slate' && "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                          )}>
-                            {item.badge}
-                          </span>
-                        )}
+            {/* What Credits Get You */}
+            <section className="py-16 bg-slate-50 dark:bg-slate-900/50">
+              <div className="container mx-auto px-4">
+                <div className="text-center mb-12">
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                    What Your Credits Unlock
+                  </h2>
+                  <p className="text-muted-foreground">Everything you need for smarter trading decisions</p>
+                </div>
+                <div className="max-w-4xl mx-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      { Icon: Globe, title: 'Global Capital Flow', desc: 'Layer 1-2: Track money flow across markets', badge: 'FREE', badgeColor: 'emerald' },
+                      { Icon: Layers, title: 'Sector Analysis', desc: 'Layer 3: Drill down into market sectors', badge: '25 credits/day', badgeColor: 'slate' },
+                      { Icon: Brain, title: 'AI Recommendations', desc: 'Layer 4: BUY/SELL signals with confidence scores', badge: '25 credits/day', badgeColor: 'slate' },
+                      { Icon: BarChart3, title: 'Asset Analysis', desc: '7-Step Analysis with MLIS Pro AI confirmation', badge: '100 credits/day', badgeColor: 'slate' },
+                      { Icon: Bot, title: 'AI Expert Consultation', desc: '3 free questions per analysis, then 5 credits each', badge: null, badgeColor: null },
+                      { Icon: FileText, title: 'PDF Reports', desc: 'Download and share detailed analysis reports', badge: null, badgeColor: null },
+                      { Icon: Bell, title: 'Price Alerts', desc: 'Get notified when price targets are hit', badge: null, badgeColor: null },
+                      { Icon: Gem, title: 'Daily Rewards', desc: 'Earn free credits through daily activities', badge: 'EARN FREE', badgeColor: 'amber' },
+                    ].map((item, index) => (
+                      <div key={index} className="flex items-start gap-4 p-4 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                        <div className={cn(
+                          "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                          item.badgeColor === 'emerald' && "bg-emerald-500/10",
+                          item.badgeColor === 'amber' && "bg-amber-500/10",
+                          (!item.badgeColor || item.badgeColor === 'slate') && "bg-slate-100 dark:bg-slate-800"
+                        )}>
+                          <item.Icon className={cn(
+                            'w-5 h-5',
+                            item.badgeColor === 'emerald' && "text-emerald-500",
+                            item.badgeColor === 'amber' && "text-amber-500",
+                            (!item.badgeColor || item.badgeColor === 'slate') && "text-slate-500"
+                          )} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-slate-900 dark:text-white">{item.title}</p>
+                            {item.badge && (
+                              <span className={cn(
+                                "px-2 py-0.5 text-[10px] font-semibold rounded-full",
+                                item.badgeColor === 'emerald' && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                                item.badgeColor === 'amber' && "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+                                item.badgeColor === 'slate' && "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                              )}>
+                                {item.badge}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{item.desc}</p>
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground">{item.desc}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Why Active Trading */}
+            <section className="py-16">
+              <div className="container mx-auto px-4">
+                <div className="max-w-4xl mx-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                    {[
+                      { value: 'No Subscription', desc: 'Pay once, use anytime. Credits never expire.' },
+                      { value: '4 Markets', desc: 'Crypto, Stocks, Bonds, and Precious Metals.' },
+                      { value: '40+ Indicators', desc: 'Comprehensive technical and fundamental analysis.' },
+                    ].map((item, index) => (
+                      <div key={index}>
+                        <div className="text-xl font-bold text-slate-900 dark:text-white mb-2">{item.value}</div>
+                        <p className="text-sm text-muted-foreground">{item.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* ==================== SIGNAL SERVICE MODE ==================== */}
+        {pricingMode === 'signals' && (
+          <>
+            {/* Signal Subscription Packages */}
+            <section className="py-16">
+              <div className="container mx-auto px-4">
+                <div className="text-center mb-12">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-violet-500/10 border border-violet-500/20 rounded-full mb-4">
+                    <Radio className="w-4 h-4 text-violet-500 animate-pulse" />
+                    <span className="text-sm font-medium text-violet-600 dark:text-violet-400">
+                      Automated Trading Signals
+                    </span>
+                  </div>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                    Signal Subscription Plans
+                  </h2>
+                  <p className="text-muted-foreground max-w-xl mx-auto">
+                    Receive AI-generated trading signals directly to your Telegram or Discord.
+                    Perfect for traders who want ready-to-trade setups.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                  {SIGNAL_SUBSCRIPTIONS.map((sub) => (
+                    <div
+                      key={sub.id}
+                      className={cn(
+                        'bg-white dark:bg-slate-900 rounded-xl border p-6 relative transition-all duration-200',
+                        sub.popular
+                          ? 'border-violet-500 shadow-lg shadow-violet-500/10'
+                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                      )}
+                    >
+                      {sub.popular && (
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-violet-500 text-white text-xs font-semibold rounded-full">
+                          MOST POPULAR
+                        </div>
+                      )}
+                      {sub.savings && (
+                        <div className="absolute -top-3 right-4 px-3 py-1 bg-emerald-500 text-white text-xs font-semibold rounded-full">
+                          {sub.savings}
+                        </div>
+                      )}
+                      <div className="text-center">
+                        <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                          <Radio className="w-6 h-6 text-violet-500" />
+                        </div>
+                        <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">{sub.name}</h3>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
+                          ${sub.price}
+                          <span className="text-base font-normal text-muted-foreground">
+                            /{sub.period === 'monthly' ? 'mo' : 'yr'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-center gap-2 mb-4">
+                          <Clock className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">{sub.signalsPerDay} signals/day</span>
+                        </div>
+
+                        {/* Markets */}
+                        <div className="py-3 border-t border-slate-200 dark:border-slate-800 mb-4">
+                          <div className="flex flex-wrap justify-center gap-1">
+                            {sub.markets.map((market) => (
+                              <span
+                                key={market}
+                                className="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full"
+                              >
+                                {market}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Features */}
+                        <ul className="text-left space-y-2 mb-6">
+                          {sub.features.map((feature, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm">
+                              <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                              <span className="text-slate-600 dark:text-slate-400">{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+
+                        <button
+                          onClick={() => {
+                            if (!isLoggedIn) {
+                              router.push('/register');
+                            } else {
+                              // TODO: Signal subscription checkout
+                              router.push(`/settings?subscribe=${sub.id}`);
+                            }
+                          }}
+                          className={cn(
+                            'w-full py-3 rounded-lg font-medium text-center transition flex items-center justify-center gap-2',
+                            sub.popular
+                              ? 'bg-violet-500 text-white hover:bg-violet-600'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'
+                          )}
+                        >
+                          <Send className="w-4 h-4" />
+                          {isLoggedIn ? 'Subscribe Now' : 'Get Started'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-center text-xs text-muted-foreground mt-8">
+                  Cancel anytime. Secure payment processing by Lemon Squeezy.
+                </p>
+              </div>
+            </section>
+
+            {/* How Signal Service Works */}
+            <section className="py-16 bg-slate-50 dark:bg-slate-900/50">
+              <div className="container mx-auto px-4">
+                <div className="text-center mb-12">
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                    How It Works
+                  </h2>
+                  <p className="text-muted-foreground">Automated signals delivered straight to your phone</p>
+                </div>
+                <div className="max-w-4xl mx-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    {[
+                      { Icon: Globe, title: 'Capital Flow Scan', desc: 'Every hour, we scan global capital flows across 4 markets' },
+                      { Icon: Target, title: 'Asset Selection', desc: 'AI identifies high-probability trading opportunities' },
+                      { Icon: Brain, title: '7-Step + MLIS', desc: 'Full analysis with AI confirmation validates each signal' },
+                      { Icon: Send, title: 'Instant Delivery', desc: 'Signals with Entry, SL, TP sent to Telegram/Discord' },
+                    ].map((item, index) => (
+                      <div key={index} className="text-center">
+                        <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                          <item.Icon className="w-6 h-6 text-violet-500" />
+                        </div>
+                        <div className="text-sm font-medium text-slate-900 dark:text-white mb-1">{item.title}</div>
+                        <p className="text-xs text-muted-foreground">{item.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Signal Quality Stats */}
+            <section className="py-16">
+              <div className="container mx-auto px-4">
+                <div className="max-w-4xl mx-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                    {[
+                      { value: '10-20', label: 'Signals per day', desc: 'High-quality setups only' },
+                      { value: '7-Step + MLIS', label: 'Analysis Method', desc: 'Full validation before signal' },
+                      { value: '4 Markets', label: 'Coverage', desc: 'Crypto, Stocks, Metals, Bonds' },
+                    ].map((item, index) => (
+                      <div key={index}>
+                        <div className="text-2xl font-bold text-violet-500 mb-1">{item.value}</div>
+                        <div className="text-sm font-medium text-slate-900 dark:text-white mb-1">{item.label}</div>
+                        <p className="text-xs text-muted-foreground">{item.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Comparison Box */}
+            <section className="py-8">
+              <div className="container mx-auto px-4">
+                <div className="max-w-2xl mx-auto p-6 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900 dark:text-white mb-2">
+                        Not sure which to choose?
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        <strong>Active Trading (Credits)</strong> is for traders who want to do their own analysis and make their own decisions.
+                        <br />
+                        <strong>Signal Service (Subscription)</strong> is for passive traders who want ready-to-trade signals delivered automatically.
+                      </p>
+                      <button
+                        onClick={() => setPricingMode('active')}
+                        className="text-sm text-violet-600 dark:text-violet-400 hover:underline"
+                      >
+                        View Active Trading pricing →
+                      </button>
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Why TraderPath */}
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                {[
-                  { value: 'No Subscription', desc: 'Pay once, use anytime. Credits never expire.' },
-                  { value: '4 Markets', desc: 'Crypto, Stocks, Bonds, and Precious Metals.' },
-                  { value: '40+ Indicators', desc: 'Comprehensive technical and fundamental analysis.' },
-                ].map((item, index) => (
-                  <div key={index}>
-                    <div className="text-xl font-bold text-slate-900 dark:text-white mb-2">{item.value}</div>
-                    <p className="text-sm text-muted-foreground">{item.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
+            </section>
+          </>
+        )}
 
         {/* CTA */}
         {!isLoggedIn && (
