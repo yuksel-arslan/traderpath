@@ -1825,6 +1825,78 @@ Kullanıcı Hakları Aktif:
   - **Trade Plan** (tam genişlik): Entry • TP1-2 • SL ile R:R
   - `generateAnalysisReport(data, captureChart, singlePage)` parametresi eklendi
   - Dosya: `apps/web/components/reports/AnalysisReport.tsx`
+- **Proactive Signal System Eklendi**:
+  - Saatlik Capital Flow tarama ve otomatik sinyal üretimi
+  - 7-Step + MLIS Pro entegre analiz (tek analiz, ayrı değil)
+  - Telegram ve Discord'a otomatik sinyal gönderimi
+  - **Yeni Dosyalar**:
+    - `apps/api/src/modules/signals/types.ts` - Type tanımlamaları
+    - `apps/api/src/modules/signals/signal.service.ts` - Sinyal CRUD ve tercihler
+    - `apps/api/src/modules/signals/signal-generator.job.ts` - Saatlik cron job
+    - `apps/api/src/modules/signals/telegram-formatter.ts` - Telegram mesaj formatı
+    - `apps/api/src/modules/signals/signal.routes.ts` - API endpoint'leri
+  - **Database Tabloları**: `Signal`, `UserSignalPreferences`
+  - **Sinyal Validasyonu**: Score >= 7.0, Confidence >= 70%, MLIS confirmation
+  - Cron job her saat :15'te çalışır
+  - Dosya: `apps/api/prisma/migrations/add_signals_tables.sql`
+- **Signal Subscription Pricing Eklendi**:
+  - Pricing sayfası iki mod: Active Trading (Credits) vs Signal Service (Subscription)
+  - **Active Trading**: Mevcut kredi paketleri (one-time purchase)
+  - **Signal Service Paketleri**:
+    - Basic Signals: $9/ay (sadece Crypto, 5-10 sinyal/gün)
+    - Pro Signals: $19/ay (4 market, 10-20 sinyal/gün, Telegram + Discord)
+    - Pro Annual: $149/yıl (2 ay ücretsiz, tüm özellikler)
+  - Pricing mode toggle ile kolay geçiş
+  - How It Works bölümü sinyal akışını açıklıyor
+  - Comparison box ile kullanıcı kararına yardım
+  - Dosyalar: `apps/web/lib/pricing-config.ts`, `apps/web/app/(marketing)/pricing/page.tsx`
+
+---
+
+## 📡 SIGNAL SERVICE (Proactive Signals)
+
+### Servis Mantığı
+
+| Özellik | Değer |
+|---------|-------|
+| **Tarama Sıklığı** | Her saat başı :15 |
+| **Analiz Tipi** | 7-Step + MLIS Pro (entegre) |
+| **Teslimat** | Telegram, Discord, Email |
+| **Sinyal Validasyonu** | Score >= 7.0, Confidence >= 70%, MLIS confirms |
+
+### Abonelik Paketleri
+
+| Paket | Fiyat | Markets | Sinyal/Gün |
+|-------|-------|---------|------------|
+| Basic | $9/mo | Crypto | 5-10 |
+| Pro | $19/mo | Crypto, Stocks, Metals, Bonds | 10-20 |
+| Pro Annual | $149/yr | Tüm marketler | 10-20 |
+
+### Maliyet Analizi
+
+```
+Aylık API Maliyeti: ~$180 (Gemini AI × 6000 analiz)
+Break-even: 10 abone @ $19/mo = $190
+Kar marjı: 100 abone @ $19/mo = $1,720 kar/ay
+```
+
+### API Endpoint'leri
+
+| Endpoint | Method | Açıklama |
+|----------|--------|----------|
+| `/api/v1/signals` | GET | Kullanıcının aldığı sinyaller |
+| `/api/v1/signals/:id` | GET | Sinyal detayı |
+| `/api/v1/signals/preferences` | GET/PATCH | Kullanıcı tercihleri |
+| `/api/v1/signals/admin/generate` | POST | Manuel sinyal üretimi (admin) |
+
+### Kod Lokasyonları
+
+| Dosya | Açıklama |
+|-------|----------|
+| `apps/api/src/modules/signals/signal-generator.job.ts` | Saatlik cron job |
+| `apps/api/src/modules/signals/signal.service.ts` | Sinyal CRUD |
+| `apps/api/src/modules/signals/telegram-formatter.ts` | Telegram formatı |
+| `apps/api/src/modules/signals/types.ts` | Type tanımlamaları |
 
 ---
 

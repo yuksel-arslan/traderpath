@@ -1170,6 +1170,8 @@ export default function AnalysisDetailsPage() {
                   tradeType={getTradeType(analysis.interval)}
                   chartId="trade-plan-chart"
                   analysisTime={analysis.createdAt}
+                  tradePlanStatus={step5.tradePlanStatus}
+                  tradePlanMessage={step5.tradePlanMessage}
                 />
               </div>
             </div>

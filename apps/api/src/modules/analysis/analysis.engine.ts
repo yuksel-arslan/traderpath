@@ -2048,6 +2048,9 @@ interface TradePlanResult {
   needsToWaitForEntry: boolean;
   entryDistancePercent: number; // How far current price is from entry (%)
   entryStatus: 'immediate' | 'wait_for_pullback' | 'wait_for_rally';
+  // Trade plan validity - whether the plan is still actionable
+  tradePlanStatus: 'valid' | 'wait_for_entry' | 'trade_missed';
+  tradePlanMessage: string; // Explanation of current status
   stopLoss: {
     price: number;
     percentage: number;
@@ -5779,6 +5782,34 @@ export const analysisEngine = {
     if (safetyCheck.riskLevel === 'low') score += 0.5;
     score = parseFloat(Math.max(1, Math.min(10, score)).toFixed(1));
 
+    // ===== TRADE PLAN VALIDITY CHECK =====
+    // Check if current price has already exceeded all take profits (trade missed)
+    let tradePlanStatus: 'valid' | 'wait_for_entry' | 'trade_missed' = 'valid';
+    let tradePlanMessage = '';
+
+    const highestTP = Math.max(...takeProfits.map(tp => tp.price));
+    const lowestTP = Math.min(...takeProfits.map(tp => tp.price));
+
+    if (direction === 'long') {
+      // For LONG: if current price > highest TP, trade is missed
+      if (currentPrice > highestTP) {
+        tradePlanStatus = 'trade_missed';
+        tradePlanMessage = `Price has already exceeded all take profit levels. Entry was at $${averageEntry.toFixed(2)}, current price is $${currentPrice.toFixed(2)}. Consider waiting for a pullback to re-evaluate.`;
+      } else if (needsToWaitForEntry && entryStatus === 'wait_for_pullback') {
+        tradePlanStatus = 'wait_for_entry';
+        tradePlanMessage = `Current price ($${currentPrice.toFixed(2)}) is ${entryDistancePercent.toFixed(1)}% above entry ($${averageEntry.toFixed(2)}). Wait for pullback before entering.`;
+      }
+    } else {
+      // For SHORT: if current price < lowest TP, trade is missed
+      if (currentPrice < lowestTP) {
+        tradePlanStatus = 'trade_missed';
+        tradePlanMessage = `Price has already exceeded all take profit levels. Entry was at $${averageEntry.toFixed(2)}, current price is $${currentPrice.toFixed(2)}. Consider waiting for a rally to re-evaluate.`;
+      } else if (needsToWaitForEntry && entryStatus === 'wait_for_rally') {
+        tradePlanStatus = 'wait_for_entry';
+        tradePlanMessage = `Current price ($${currentPrice.toFixed(2)}) is ${entryDistancePercent.toFixed(1)}% below entry ($${averageEntry.toFixed(2)}). Wait for rally before entering.`;
+      }
+    }
+
     return {
       symbol,
       direction,
@@ -5790,6 +5821,9 @@ export const analysisEngine = {
       needsToWaitForEntry,
       entryDistancePercent: parseFloat(entryDistancePercent.toFixed(2)),
       entryStatus,
+      // Trade plan validity
+      tradePlanStatus,
+      tradePlanMessage,
       stopLoss: {
         price: roundPrice(stopPrice),
         percentage: parseFloat(stopPercentage.toFixed(2)),

@@ -110,6 +110,7 @@ model User {
   reports          Report[]
   scheduledReports ScheduledReport[]
   dailyPasses      DailyPass[]
+  signalPreferences UserSignalPreferences?
   subscription     Subscription?
 
   @@map("users")
@@ -1016,4 +1017,108 @@ model AssetLogos {
   lastUpdated  DateTime @default(now()) @map("last_updated")
 
   @@map("asset_logos")
+}
+
+// ===========================================
+// Proactive Signal System
+// Hourly Capital Flow → Asset Analysis → Telegram Signals
+// ===========================================
+
+model Signal {
+  id                  String    @id @default(uuid()) @db.Uuid
+
+  // Asset Information
+  symbol              String    @db.VarChar(20)
+  assetClass          String    @map("asset_class") @db.VarChar(20) // crypto, stocks, metals, bonds
+  market              String    @db.VarChar(20) // crypto, stocks, bonds, metals
+
+  // Trade Direction
+  direction           String    @db.VarChar(10) // long, short
+
+  // Trade Plan (from 7-Step Analysis)
+  entryPrice          Decimal   @map("entry_price") @db.Decimal(20, 8)
+  stopLoss            Decimal   @map("stop_loss") @db.Decimal(20, 8)
+  takeProfit1         Decimal   @map("take_profit_1") @db.Decimal(20, 8)
+  takeProfit2         Decimal   @map("take_profit_2") @db.Decimal(20, 8)
+  riskRewardRatio     Decimal   @map("risk_reward_ratio") @db.Decimal(5, 2)
+
+  // Analysis Results
+  classicVerdict      String    @map("classic_verdict") @db.VarChar(20) // GO, CONDITIONAL_GO, WAIT, AVOID
+  classicScore        Decimal   @map("classic_score") @db.Decimal(4, 1) // 0-10
+  mlisConfirmation    Boolean   @map("mlis_confirmation") // true if MLIS agrees with Classic
+  mlisRecommendation  String?   @map("mlis_recommendation") @db.VarChar(20) // STRONG_BUY, BUY, HOLD, SELL
+  mlisConfidence      Int?      @map("mlis_confidence") // 0-100
+  overallConfidence   Int       @map("overall_confidence") // 0-100 combined confidence
+
+  // Capital Flow Context
+  capitalFlowPhase    String    @map("capital_flow_phase") @db.VarChar(10) // early, mid, late, exit
+  capitalFlowBias     String    @map("capital_flow_bias") @db.VarChar(15) // risk_on, risk_off, neutral
+  sectorFlow          Decimal?  @map("sector_flow") @db.Decimal(5, 2) // sector 7d flow %
+
+  // Analysis References
+  classicAnalysisId   String?   @map("classic_analysis_id") @db.Uuid
+  mlisAnalysisId      String?   @map("mlis_analysis_id") @db.Uuid
+
+  // Signal Status
+  status              String    @default("pending") @db.VarChar(20) // pending, published, expired, cancelled
+  publishedAt         DateTime? @map("published_at")
+  expiresAt           DateTime  @map("expires_at") // Signal validity window
+
+  // Outcome Tracking
+  outcome             String?   @db.VarChar(20) // tp1_hit, tp2_hit, sl_hit, expired
+  outcomePrice        Decimal?  @map("outcome_price") @db.Decimal(20, 8)
+  outcomeAt           DateTime? @map("outcome_at")
+  pnlPercent          Decimal?  @map("pnl_percent") @db.Decimal(6, 2)
+
+  // Delivery Tracking
+  telegramMessageId   String?   @map("telegram_message_id") @db.VarChar(50)
+  discordMessageId    String?   @map("discord_message_id") @db.VarChar(50)
+
+  // Timestamps
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@index([symbol])
+  @@index([status])
+  @@index([createdAt])
+  @@index([market, status])
+  @@map("signals")
+}
+
+model UserSignalPreferences {
+  id                  String    @id @default(uuid()) @db.Uuid
+  userId              String    @unique @map("user_id") @db.Uuid
+
+  // Market Preferences
+  enabledMarkets      String[]  @map("enabled_markets") // ["crypto", "stocks", "metals", "bonds"]
+  enabledAssetClasses String[]  @map("enabled_asset_classes")
+
+  // Filter Preferences
+  minConfidence       Int       @default(70) @map("min_confidence") // 0-100
+  minClassicScore     Decimal   @default(7.0) @map("min_classic_score") @db.Decimal(3, 1)
+  requireMlisConfirm  Boolean   @default(true) @map("require_mlis_confirm")
+
+  // Verdict Filters
+  allowedVerdicts     String[]  @default(["GO", "CONDITIONAL_GO"]) @map("allowed_verdicts")
+
+  // Notification Channels
+  telegramEnabled     Boolean   @default(false) @map("telegram_enabled")
+  telegramChatId      String?   @map("telegram_chat_id") @db.VarChar(50)
+  discordEnabled      Boolean   @default(false) @map("discord_enabled")
+  discordWebhookUrl   String?   @map("discord_webhook_url") @db.VarChar(255)
+  emailEnabled        Boolean   @default(true) @map("email_enabled")
+
+  // Quiet Hours (UTC)
+  quietHoursEnabled   Boolean   @default(false) @map("quiet_hours_enabled")
+  quietHoursStart     Int?      @map("quiet_hours_start") // 0-23 UTC hour
+  quietHoursEnd       Int?      @map("quiet_hours_end") // 0-23 UTC hour
+
+  // Timestamps
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_signal_preferences")
 }

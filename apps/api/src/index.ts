@@ -50,6 +50,7 @@ import { initializeAssetLogos } from './modules/asset-logos/asset-logos.service'
 import { bilgeRoutes } from './modules/bilge/bilge.routes';
 import { initializeBilgeService, collectError } from './modules/bilge/bilge.service';
 import { startBilgeWeeklyReportJob, stopBilgeWeeklyReportJob } from './modules/bilge/bilge-cron.job';
+import { signalRoutes, startSignalGeneratorJob, stopSignalGeneratorJob } from './modules/signals';
 import subscriptionRoutes from './modules/subscriptions/subscription.routes';
 import { startDailyCreditsJob, stopDailyCreditsJob } from './modules/subscriptions/subscription-cron.job';
 
@@ -411,6 +412,9 @@ app.register(assetLogosRoutes, { prefix: '/api/asset-logos' }); // Legacy
 // BILGE Guardian System routes (admin)
 app.register(bilgeRoutes);
 
+// Signal System routes (proactive trading signals)
+app.register(signalRoutes, { prefix: '/api/v1' });
+app.register(signalRoutes, { prefix: '/api' }); // Legacy
 // Subscription management routes
 app.register(subscriptionRoutes, { prefix: '/api/v1/subscriptions' });
 app.register(subscriptionRoutes, { prefix: '/api/subscriptions' }); // Legacy
@@ -578,6 +582,9 @@ const start = async () => {
     startBilgeWeeklyReportJob();
     logger.info('✓ BILGE weekly report cron started');
 
+    // Start Signal Generator cron job (hourly at :15)
+    startSignalGeneratorJob();
+    logger.info('✓ Signal generator cron started');
     // Start subscription daily credits cron job (00:00 UTC)
     startDailyCreditsJob();
     logger.info('✓ Subscription daily credits cron started');
@@ -635,6 +642,9 @@ const shutdown = async (signal: string) => {
     stopBilgeWeeklyReportJob();
     logger.info('✓ BILGE weekly report cron stopped');
 
+    // Stop Signal Generator cron
+    stopSignalGeneratorJob();
+    logger.info('✓ Signal generator cron stopped');
     // Stop subscription daily credits cron
     stopDailyCreditsJob();
     logger.info('✓ Subscription daily credits cron stopped');
