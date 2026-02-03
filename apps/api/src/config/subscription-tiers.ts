@@ -116,6 +116,7 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
   },
 
   // ELITE: Pro + AI Features (Concierge + Experts)
+  // Note: Users can purchase additional credits for extra analyses beyond daily limit
   elite: {
     dailyCredits: 0, // No daily credit allocation - buy credits separately
     capitalFlowL3: true,
@@ -125,9 +126,9 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
     reportsExport: true,
     automation: true,
     rewards: true,
-    maxScheduledReports: -1, // Unlimited
-    maxAlerts: -1,
-    maxDailyAnalyses: 15, // Elite: 15 analyses/day
+    maxScheduledReports: 15, // 15 scheduled reports
+    maxAlerts: 50, // 50 price alerts
+    maxDailyAnalyses: 15, // Elite: 15 analyses/day (extra available via credits)
     monthlyAiExpertQuestions: -1,
     monthlyEmailReports: -1,
     monthlyPdfReports: -1,
@@ -159,7 +160,7 @@ export const STRIPE_PRODUCTS: Record<Exclude<SubscriptionTier, 'free'>, StripePr
 
   elite: {
     name: 'TraderPath Elite',
-    description: 'Pro + AI Features (Concierge, Experts). Up to 15 analyses/day.',
+    description: 'Pro + AI Features (Concierge, Experts). 15 analyses/day included. Need more? Buy credit packs for extra analyses.',
     metadata: {
       tier: 'elite',
       credits_daily: 0,

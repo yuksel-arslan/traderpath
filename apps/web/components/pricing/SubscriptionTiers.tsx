@@ -334,6 +334,11 @@ function TierCard({
             {plan.limits.maxScheduledReports === -1 ? 'Unlimited' : plan.limits.maxScheduledReports}
           </p>
           <p>Price Alerts: {plan.limits.maxAlerts === -1 ? 'Unlimited' : plan.limits.maxAlerts}</p>
+          {plan.features.assetAnalysis && plan.limits.maxDailyAnalyses !== -1 && (
+            <p className="text-emerald-600 dark:text-emerald-400 font-medium mt-2">
+              💡 Need more? Buy credits for extra analyses
+            </p>
+          )}
         </div>
       )}
 
