@@ -498,6 +498,14 @@ function calculateSMA(values: number[], period: number): number[] {
   return sma;
 }
 
+// Determine chart line color based on trend direction
+// Green for uptrend (positive), Red for downtrend (negative), Yellow/Amber for neutral
+function getTrendColor(value: number, threshold: number = 0.5): 'emerald' | 'red' | 'amber' {
+  if (value > threshold) return 'emerald';  // Uptrend → Green
+  if (value < -threshold) return 'red';      // Downtrend → Red
+  return 'amber';                            // Neutral → Yellow
+}
+
 // Mini Sparkline Chart Component with Moving Averages (smoother, laminar flow)
 function MiniSparkline({ data, color, height = 40 }: { data: FlowDataPoint[]; color: 'emerald' | 'blue' | 'red' | 'amber'; height?: number }) {
   if (!data || data.length < 2) return null;
@@ -642,7 +650,7 @@ function MarketCard({ market, onClick, onAnalyze }: { market: MarketFlow; onClic
             </p>
             <MiniSparkline
               data={market.flowHistory}
-              color={market.flow30d >= 0 ? 'emerald' : 'red'}
+              color={getTrendColor(market.flow30d ?? 0)}
               height={36}
             />
           </div>
@@ -655,7 +663,7 @@ function MarketCard({ market, onClick, onAnalyze }: { market: MarketFlow; onClic
             {market.velocityHistory && (
               <MiniSparkline
                 data={market.velocityHistory}
-                color={market.flowVelocity >= 0 ? 'blue' : 'amber'}
+                color={getTrendColor(market.flowVelocity ?? 0)}
                 height={36}
               />
             )}
