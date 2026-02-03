@@ -9,15 +9,14 @@ import { useSubscription, SubscriptionTier, SubscriptionPlan } from './useSubscr
 export type GatedFeature =
   | 'capital_flow_l3'
   | 'capital_flow_l4'
-  | 'mlis_pro'
-  | 'ai_concierge'
-  | 'ai_expert'
+  | 'asset_analysis'
+  | 'ai_features'
+  | 'reports_export'
+  | 'automation'
+  | 'rewards'
   | 'scheduled_reports'
   | 'pdf_reports'
-  | 'email_reports'
-  | 'api_access'
-  | 'priority_support'
-  | 'early_features';
+  | 'email_reports';
 
 // Map features to their required subscription properties
 const FEATURE_MAP: Record<GatedFeature, {
@@ -26,15 +25,14 @@ const FEATURE_MAP: Record<GatedFeature, {
 }> = {
   capital_flow_l3: { subscriptionKey: 'capitalFlowL3', minimumTier: 'starter' },
   capital_flow_l4: { subscriptionKey: 'capitalFlowL4', minimumTier: 'starter' },
-  mlis_pro: { subscriptionKey: 'mlisProAccess', minimumTier: 'starter' },
-  ai_concierge: { subscriptionKey: 'aiConcierge', minimumTier: 'starter' },
-  ai_expert: { subscriptionKey: null, minimumTier: 'starter' }, // Checked via limits
-  scheduled_reports: { subscriptionKey: null, minimumTier: 'starter' }, // Checked via limits
-  pdf_reports: { subscriptionKey: null, minimumTier: 'starter' },
-  email_reports: { subscriptionKey: null, minimumTier: 'starter' },
-  api_access: { subscriptionKey: 'apiAccess', minimumTier: 'elite' },
-  priority_support: { subscriptionKey: 'prioritySupport', minimumTier: 'pro' },
-  early_features: { subscriptionKey: 'earlyFeatures', minimumTier: 'elite' },
+  asset_analysis: { subscriptionKey: 'assetAnalysis', minimumTier: 'pro' },
+  ai_features: { subscriptionKey: 'aiFeatures', minimumTier: 'elite' },
+  reports_export: { subscriptionKey: 'reportsExport', minimumTier: 'starter' },
+  automation: { subscriptionKey: 'automation', minimumTier: 'starter' },
+  rewards: { subscriptionKey: 'rewards', minimumTier: 'free' },
+  scheduled_reports: { subscriptionKey: 'automation', minimumTier: 'starter' },
+  pdf_reports: { subscriptionKey: 'reportsExport', minimumTier: 'starter' },
+  email_reports: { subscriptionKey: 'reportsExport', minimumTier: 'starter' },
 };
 
 // Tier hierarchy for comparison

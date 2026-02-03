@@ -278,9 +278,9 @@ export default function ConciergePage() {
   const scanPollRef = useRef<NodeJS.Timeout | null>(null);
   const scanStartTimeRef = useRef<number>(0);
 
-  // Feature gate for AI Concierge
+  // Feature gate for AI Features (includes Concierge)
   const { hasAccess, currentTier, loading: featureLoading } = useFeatureGate();
-  const hasConciergeAccess = hasAccess('ai_concierge');
+  const hasConciergeAccess = hasAccess('ai_features');
 
   // Fetch Capital Flow data
   useEffect(() => {
@@ -559,9 +559,9 @@ export default function ConciergePage() {
 
           {/* Upgrade Card */}
           <UpgradeCard
-            feature="ai_concierge"
+            feature="ai_features"
             currentTier={currentTier}
-            message="Upgrade to access AI Concierge - your personal trading assistant that understands natural language and provides instant analysis based on Capital Flow intelligence."
+            message="Upgrade to Elite to access AI Concierge - your personal trading assistant that understands natural language and provides instant analysis based on Capital Flow intelligence."
           />
         </div>
       </div>
