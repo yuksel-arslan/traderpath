@@ -1,6 +1,9 @@
 /**
  * Signal Generator Job
- * Hourly cron that runs Capital Flow → Asset Analysis → Signal Generation
+ * Hourly cron that runs Capital Flow → Asset Analysis (7-Step + MLIS Pro) → Signal Generation
+ *
+ * Note: MLIS Pro confirmation is integrated into the 7-Step Classic Analysis,
+ * they are NOT separate analysis methods.
  */
 
 import cron from 'node-cron';
@@ -77,7 +80,7 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
 
     console.log(`[SignalGenerator] Selected ${assetsToAnalyze.length} assets to analyze:`, assetsToAnalyze.map(a => a.symbol));
 
-    // Step 3: Analyze each asset (7-Step + MLIS Pro)
+    // Step 3: Analyze each asset (7-Step + MLIS Pro integrated)
     for (const asset of assetsToAnalyze) {
       try {
         result.processed++;
@@ -95,33 +98,33 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
           continue;
         }
 
-        // Run 7-Step Classic Analysis
-        console.log(`[SignalGenerator] Running Classic analysis for ${asset.symbol}`);
-        const classicResult = await runClassicAnalysis(asset.symbol, asset.assetClass);
+        // Run integrated 7-Step + MLIS Pro Analysis
+        console.log(`[SignalGenerator] Running analysis for ${asset.symbol} (7-Step + MLIS Pro)`);
+        const analysisResult = await runIntegratedAnalysis(asset.symbol, asset.assetClass);
 
-        if (!classicResult) {
-          result.errors.push({ symbol: asset.symbol, error: 'Classic analysis failed' });
+        if (!analysisResult) {
+          result.errors.push({ symbol: asset.symbol, error: 'Analysis failed' });
           continue;
         }
 
-        // Check if Classic verdict is actionable
-        if (!['GO', 'CONDITIONAL_GO'].includes(classicResult.verdict)) {
-          console.log(`[SignalGenerator] ${asset.symbol} verdict ${classicResult.verdict} - not actionable`);
+        // Check if verdict is actionable
+        if (!['GO', 'CONDITIONAL_GO'].includes(analysisResult.verdict)) {
+          console.log(`[SignalGenerator] ${asset.symbol} verdict ${analysisResult.verdict} - not actionable`);
           result.skipped++;
           continue;
         }
 
-        // Run MLIS Pro for confirmation
-        console.log(`[SignalGenerator] Running MLIS Pro for ${asset.symbol}`);
-        const mlisResult = await runMLISAnalysis(asset.symbol);
-
-        // Determine MLIS confirmation
-        const mlisConfirmed = isMLISConfirmed(mlisResult, classicResult);
+        // Check MLIS confirmation
+        if (!analysisResult.mlisConfirmation) {
+          console.log(`[SignalGenerator] ${asset.symbol} - MLIS did not confirm, skipping`);
+          result.skipped++;
+          continue;
+        }
 
         // Calculate overall confidence
         const overallConfidence = calculateOverallConfidence(
-          classicResult,
-          mlisResult,
+          analysisResult.totalScore,
+          analysisResult.mlisConfidence || 50,
           recommendation.confidence
         );
 
@@ -131,22 +134,22 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
           assetClass: asset.assetClass,
           market: asset.market,
           direction: recommendation.action === 'BUY' ? 'long' : 'short',
-          entryPrice: classicResult.tradePlan?.averageEntry || 0,
-          stopLoss: classicResult.tradePlan?.stopLoss?.price || 0,
-          takeProfit1: classicResult.tradePlan?.takeProfits?.[0]?.price || 0,
-          takeProfit2: classicResult.tradePlan?.takeProfits?.[1]?.price || 0,
-          riskRewardRatio: classicResult.tradePlan?.riskReward || 0,
-          classicVerdict: classicResult.verdict,
-          classicScore: classicResult.totalScore,
-          mlisConfirmation: mlisConfirmed,
-          mlisRecommendation: mlisResult?.recommendation,
-          mlisConfidence: mlisResult?.confidence,
+          entryPrice: analysisResult.tradePlan?.averageEntry || 0,
+          stopLoss: analysisResult.tradePlan?.stopLoss?.price || 0,
+          takeProfit1: analysisResult.tradePlan?.takeProfits?.[0]?.price || 0,
+          takeProfit2: analysisResult.tradePlan?.takeProfits?.[1]?.price || 0,
+          riskRewardRatio: analysisResult.tradePlan?.riskReward || 0,
+          classicVerdict: analysisResult.verdict,
+          classicScore: analysisResult.totalScore,
+          mlisConfirmation: analysisResult.mlisConfirmation,
+          mlisRecommendation: analysisResult.mlisRecommendation,
+          mlisConfidence: analysisResult.mlisConfidence,
           overallConfidence,
           capitalFlowPhase: recommendation.phase,
           capitalFlowBias: capitalFlowSummary.globalLiquidity?.bias || 'neutral',
           sectorFlow: asset.sectorFlow,
-          classicAnalysisId: classicResult.analysisId,
-          mlisAnalysisId: mlisResult?.analysisId,
+          classicAnalysisId: analysisResult.analysisId,
+          mlisAnalysisId: analysisResult.analysisId, // Same analysis includes MLIS
         };
 
         // Validate signal quality
@@ -254,24 +257,26 @@ function selectAssetsToAnalyze(
 }
 
 /**
- * Run 7-Step Classic Analysis
+ * Run integrated 7-Step + MLIS Pro Analysis
+ * This is a SINGLE analysis that includes both Classic steps and MLIS confirmation
  */
-async function runClassicAnalysis(symbol: string, assetClass: string): Promise<any | null> {
+async function runIntegratedAnalysis(symbol: string, assetClass: string): Promise<any | null> {
   try {
     const tradeType = 'swing'; // Default for signals
+    const interval = '1d';
 
     // Create analysis record
     const analysis = await prisma.analysis.create({
       data: {
         symbol,
-        interval: '1d',
+        interval,
         tradeType,
-        method: 'classic',
+        method: 'classic', // Integrated analysis uses classic method with MLIS confirmation
         status: 'in_progress',
       },
     });
 
-    // Run all 7 steps
+    // ===== 7-Step Classic Analysis =====
     const [marketPulse, assetScan, safetyCheck, timing, trapCheck] = await Promise.all([
       analysisEngine.getMarketPulse(),
       analysisEngine.scanAsset(symbol, tradeType),
@@ -301,7 +306,7 @@ async function runClassicAnalysis(symbol: string, assetClass: string): Promise<a
       );
     }
 
-    // Get final verdict
+    // Get final verdict (Classic)
     const finalVerdict = await analysisEngine.getFinalVerdict(
       symbol,
       preliminaryVerdict,
@@ -310,10 +315,47 @@ async function runClassicAnalysis(symbol: string, assetClass: string): Promise<a
       tradeType
     );
 
+    // ===== MLIS Pro Confirmation (integrated) =====
+    let mlisConfirmation = false;
+    let mlisRecommendation: string | undefined;
+    let mlisConfidence: number | undefined;
+    let mlisLayers: any = null;
+
+    try {
+      const mlisResult = await analyzeMLIS(symbol, interval);
+
+      if (mlisResult) {
+        mlisLayers = mlisResult.layers;
+        mlisRecommendation = mlisResult.recommendation;
+        mlisConfidence = mlisResult.confidence;
+
+        // Check if MLIS confirms the Classic direction
+        const classicDirection = finalVerdict.verdict?.direction?.toLowerCase();
+        const mlisDirection = mlisResult.direction?.toLowerCase();
+
+        // MLIS confirms if:
+        // 1. Directions match
+        // 2. MLIS recommendation aligns with Classic verdict
+        // 3. MLIS confidence is above threshold
+        const positiveRecommendations = ['STRONG_BUY', 'BUY'];
+        const negativeRecommendations = ['STRONG_SELL', 'SELL'];
+
+        if (classicDirection === 'long' && positiveRecommendations.includes(mlisResult.recommendation)) {
+          mlisConfirmation = true;
+        } else if (classicDirection === 'short' && negativeRecommendations.includes(mlisResult.recommendation)) {
+          mlisConfirmation = true;
+        } else if (mlisDirection === classicDirection && mlisResult.confidence >= 60) {
+          mlisConfirmation = true;
+        }
+      }
+    } catch (mlisError) {
+      console.error(`[runIntegratedAnalysis] MLIS failed for ${symbol}, continuing without confirmation:`, mlisError);
+    }
+
     // Calculate total score
     const totalScore = finalVerdict.overallScore;
 
-    // Update analysis record
+    // Update analysis record with both Classic and MLIS results
     await prisma.analysis.update({
       where: { id: analysis.id },
       data: {
@@ -325,7 +367,14 @@ async function runClassicAnalysis(symbol: string, assetClass: string): Promise<a
         step4Result: timing as any,
         step5Result: tradePlan as any,
         step6Result: trapCheck as any,
-        step7Result: finalVerdict as any,
+        step7Result: {
+          ...finalVerdict,
+          // MLIS confirmation integrated into final verdict
+          mlisConfirmation,
+          mlisRecommendation,
+          mlisConfidence,
+          mlisLayers,
+        } as any,
       },
     });
 
@@ -333,112 +382,34 @@ async function runClassicAnalysis(symbol: string, assetClass: string): Promise<a
       analysisId: analysis.id,
       totalScore,
       verdict: finalVerdict.verdict?.action || 'WAIT',
+      direction: finalVerdict.verdict?.direction,
       tradePlan,
+      // MLIS confirmation data
+      mlisConfirmation,
+      mlisRecommendation,
+      mlisConfidence,
       step7Result: finalVerdict,
     };
   } catch (error) {
-    console.error(`[runClassicAnalysis] Error for ${symbol}:`, error);
+    console.error(`[runIntegratedAnalysis] Error for ${symbol}:`, error);
     return null;
   }
-}
-
-/**
- * Run MLIS Pro Analysis
- */
-async function runMLISAnalysis(symbol: string): Promise<any | null> {
-  try {
-    // Create analysis record
-    const analysis = await prisma.analysis.create({
-      data: {
-        symbol,
-        interval: '1d',
-        tradeType: 'swing',
-        method: 'mlis_pro',
-        status: 'in_progress',
-      },
-    });
-
-    // Run MLIS analysis
-    const result = await analyzeMLIS(symbol, '1d');
-
-    if (!result) {
-      await prisma.analysis.update({
-        where: { id: analysis.id },
-        data: { status: 'failed' },
-      });
-      return null;
-    }
-
-    // Update analysis record
-    await prisma.analysis.update({
-      where: { id: analysis.id },
-      data: {
-        status: 'completed',
-        totalScore: result.confidence / 10, // Convert to 0-10 scale
-        step1Result: { mlis: true, layers: result.layers } as any,
-        step7Result: {
-          recommendation: result.recommendation,
-          confidence: result.confidence,
-          direction: result.direction,
-        } as any,
-      },
-    });
-
-    return {
-      ...result,
-      analysisId: analysis.id,
-    };
-  } catch (error) {
-    console.error(`[runMLISAnalysis] Error for ${symbol}:`, error);
-    return null;
-  }
-}
-
-/**
- * Check if MLIS confirms Classic analysis
- */
-function isMLISConfirmed(mlisResult: any, classicResult: any): boolean {
-  if (!mlisResult) return false;
-
-  const classicDirection = classicResult.step7Result?.verdict?.direction?.toLowerCase();
-  const mlisDirection = mlisResult.direction?.toLowerCase();
-
-  // MLIS must agree on direction
-  if (classicDirection && mlisDirection && classicDirection !== mlisDirection) {
-    return false;
-  }
-
-  // MLIS recommendation must be positive for BUY signals
-  const positiveRecommendations = ['STRONG_BUY', 'BUY'];
-  const negativeRecommendations = ['STRONG_SELL', 'SELL'];
-
-  if (classicDirection === 'long' && positiveRecommendations.includes(mlisResult.recommendation)) {
-    return true;
-  }
-
-  if (classicDirection === 'short' && negativeRecommendations.includes(mlisResult.recommendation)) {
-    return true;
-  }
-
-  // MLIS confidence must be above threshold
-  return mlisResult.confidence >= 60;
 }
 
 /**
  * Calculate overall confidence
  */
 function calculateOverallConfidence(
-  classicResult: any,
-  mlisResult: any,
+  classicScore: number,
+  mlisConfidence: number,
   capitalFlowConfidence: number
 ): number {
   // Weights: Classic 40%, MLIS 35%, Capital Flow 25%
-  const classicScore = (classicResult.totalScore / 10) * 100; // Convert to 0-100
-  const mlisScore = mlisResult?.confidence || 50;
+  const classicPercent = (classicScore / 10) * 100; // Convert to 0-100
 
   const weighted =
-    classicScore * 0.4 +
-    mlisScore * 0.35 +
+    classicPercent * 0.4 +
+    mlisConfidence * 0.35 +
     capitalFlowConfidence * 0.25;
 
   return Math.round(weighted);
