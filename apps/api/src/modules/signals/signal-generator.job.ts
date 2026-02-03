@@ -7,8 +7,8 @@
  */
 
 import cron from 'node-cron';
-import { prisma } from '../../core/prisma';
-import { redis } from '../../core/redis';
+import { prisma } from '../../core/database';
+import { redis } from '../../core/cache';
 import { getCapitalFlowSummary } from '../capital-flow/capital-flow.service';
 import { analysisEngine } from '../analysis/analysis.engine';
 import { analyzeMLIS } from '../analysis/services/mlis.service';
