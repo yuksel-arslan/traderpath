@@ -80,12 +80,27 @@ export function useProactiveSignals(): UseProactiveSignalsResult {
         authFetch('/api/analysis/top-coins?limit=5&tradeableOnly=true')
       ])
 
-      // Parse JSON responses
-      const capitalFlowData = await capitalFlowRes.json()
-      const topCoinsData = await topCoinsRes.json()
+      // Parse JSON responses safely
+      let capitalFlow: CapitalFlowSummary | null = null
+      let topCoins: TopCoin[] = []
 
-      const capitalFlow: CapitalFlowSummary | null = capitalFlowData.success ? capitalFlowData.data : null
-      const topCoins: TopCoin[] = topCoinsData.success ? (topCoinsData.data?.coins || []) : []
+      try {
+        if (capitalFlowRes.ok) {
+          const capitalFlowData = await capitalFlowRes.json()
+          capitalFlow = capitalFlowData.success ? capitalFlowData.data : null
+        }
+      } catch (e) {
+        console.error('Failed to parse capital flow response:', e)
+      }
+
+      try {
+        if (topCoinsRes.ok) {
+          const topCoinsData = await topCoinsRes.json()
+          topCoins = topCoinsData.success ? (topCoinsData.data?.coins || []) : []
+        }
+      } catch (e) {
+        console.error('Failed to parse top coins response:', e)
+      }
 
       const newSignals: TrafficLightSignal[] = []
 
