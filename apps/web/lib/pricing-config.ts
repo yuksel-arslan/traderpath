@@ -254,9 +254,9 @@ export const SIGNAL_SUBSCRIPTIONS: SignalSubscription[] = [
   },
 ];
 
-// Daily Pass costs (for active traders who want to do their own analysis)
+// Per-use costs (for active traders who want to do their own analysis)
 export const DAILY_PASS_COSTS = {
-  CAPITAL_FLOW_L3: { cost: 25, name: 'Sector Analysis', description: 'Layer 3 - Sector drill-down' },
-  CAPITAL_FLOW_L4: { cost: 25, name: 'AI Recommendations', description: 'Layer 4 - BUY/SELL signals' },
-  ASSET_ANALYSIS: { cost: 100, name: 'Asset Analysis', description: '7-Step + MLIS Pro (max 10/day)' },
+  CAPITAL_FLOW_L3: { cost: 5, name: 'Sector Analysis', description: 'Layer 3 - Sector drill-down' },
+  CAPITAL_FLOW_L4: { cost: 5, name: 'AI Recommendations', description: 'Layer 4 - BUY/SELL signals' },
+  ASSET_ANALYSIS: { cost: 10, name: 'Asset Analysis', description: '7-Step + MLIS Pro analysis' },
 };
