@@ -25,6 +25,9 @@ interface SignalTierConfig {
   };
 }
 
+// Signal delivery schedule: every 4 hours (10:00, 14:00, 18:00, 22:00, 02:00, 06:00 UTC)
+export const SIGNAL_SCHEDULE_HOURS = [2, 6, 10, 14, 18, 22]; // 6 delivery windows per day
+
 export const SIGNAL_TIER_CONFIG: Record<
   Exclude<SignalSubscriptionTier, 'SIGNAL_FREE'>,
   SignalTierConfig
@@ -33,7 +36,7 @@ export const SIGNAL_TIER_CONFIG: Record<
     name: 'Basic Signals',
     price: { monthly: 900 }, // $9/mo
     markets: ['crypto'],
-    maxSignalsPerDay: 10,
+    maxSignalsPerDay: 5, // 5 asset signals distributed across 6 delivery windows
     deliveryChannels: {
       telegram: true,
       discord: false,
@@ -44,7 +47,7 @@ export const SIGNAL_TIER_CONFIG: Record<
     name: 'Pro Signals',
     price: { monthly: 1900 }, // $19/mo
     markets: ['crypto', 'stocks', 'metals', 'bonds'],
-    maxSignalsPerDay: 20,
+    maxSignalsPerDay: 5, // 5 asset signals distributed across 6 delivery windows
     deliveryChannels: {
       telegram: true,
       discord: true,
@@ -55,7 +58,7 @@ export const SIGNAL_TIER_CONFIG: Record<
     name: 'Pro Signals (Annual)',
     price: { yearly: 14900 }, // $149/yr
     markets: ['crypto', 'stocks', 'metals', 'bonds'],
-    maxSignalsPerDay: 20,
+    maxSignalsPerDay: 5, // 5 asset signals distributed across 6 delivery windows
     deliveryChannels: {
       telegram: true,
       discord: true,

@@ -745,7 +745,7 @@ export default function PricingPage() {
                 <div className="max-w-4xl mx-auto">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
                     {[
-                      { value: '10-20', label: 'Signals per day', desc: 'High-quality setups only' },
+                      { value: '5 Assets', label: 'Signals per day', desc: 'Sent every 4 hours (6x daily)' },
                       { value: '7-Step + MLIS', label: 'Analysis Method', desc: 'Full validation before signal' },
                       { value: '4 Markets', label: 'Coverage', desc: 'Crypto, Stocks, Metals, Bonds' },
                     ].map((item, index) => (
