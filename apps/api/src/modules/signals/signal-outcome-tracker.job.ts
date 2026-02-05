@@ -9,6 +9,7 @@ import { prisma } from '../../core/database';
 import { redis } from '../../core/cache';
 import { formatSignalUpdate } from './telegram-formatter';
 import { signalMonitoring } from './signal-monitoring.service';
+import { emailService } from '../email/email.service';
 import type { SignalOutcome } from './types';
 
 const CRON_SCHEDULE = '*/15 * * * *'; // Every 15 minutes
@@ -16,6 +17,123 @@ const REDIS_LOCK_KEY = 'signal-outcome-tracker:lock';
 const REDIS_LOCK_TTL = 600; // 10 minutes
 
 let cronJob: cron.ScheduledTask | null = null;
+
+// Email notification template
+function generateOutcomeEmailHTML(
+  symbol: string,
+  direction: 'long' | 'short',
+  outcome: SignalOutcome,
+  entryPrice: number,
+  outcomePrice: number,
+  pnlPercent: number,
+  signalId: string
+): { subject: string; html: string } {
+  const isProfit = outcome === 'tp1_hit' || outcome === 'tp2_hit';
+  const outcomeLabel = {
+    tp1_hit: 'TP1 HIT ✅',
+    tp2_hit: 'TP2 HIT 🎯',
+    sl_hit: 'STOP LOSS HIT 🛑',
+    expired: 'EXPIRED ⏱️',
+  }[outcome];
+
+  const backgroundColor = isProfit ? '#10b981' : '#ef4444';
+  const pnlColor = pnlPercent >= 0 ? '#10b981' : '#ef4444';
+
+  const subject = `${outcomeLabel} - ${symbol} ${direction.toUpperCase()} Signal`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc;">
+  <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f8fafc;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">TraderPath Signal Update</h1>
+            </td>
+          </tr>
+
+          <!-- Outcome Badge -->
+          <tr>
+            <td style="padding: 30px; text-align: center;">
+              <div style="display: inline-block; background-color: ${backgroundColor}; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-size: 18px; font-weight: 700;">
+                ${outcomeLabel}
+              </div>
+            </td>
+          </tr>
+
+          <!-- Signal Info -->
+          <tr>
+            <td style="padding: 0 30px 30px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                    <span style="color: #64748b; font-size: 14px;">Symbol:</span>
+                    <strong style="float: right; color: #1e293b; font-size: 16px;">${symbol}</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                    <span style="color: #64748b; font-size: 14px;">Direction:</span>
+                    <strong style="float: right; color: ${direction === 'long' ? '#10b981' : '#ef4444'}; font-size: 16px; text-transform: uppercase;">${direction}</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                    <span style="color: #64748b; font-size: 14px;">Entry Price:</span>
+                    <strong style="float: right; color: #1e293b; font-size: 16px;">$${entryPrice.toFixed(entryPrice >= 1 ? 2 : 6)}</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+                    <span style="color: #64748b; font-size: 14px;">Exit Price:</span>
+                    <strong style="float: right; color: #1e293b; font-size: 16px;">$${outcomePrice.toFixed(outcomePrice >= 1 ? 2 : 6)}</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 0;">
+                    <span style="color: #64748b; font-size: 14px;">P/L:</span>
+                    <strong style="float: right; color: ${pnlColor}; font-size: 20px; font-weight: 700;">${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%</strong>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- CTA Button -->
+          <tr>
+            <td style="padding: 0 30px 30px; text-align: center;">
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://traderpath.io'}/signals/${signalId}" style="display: inline-block; background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%); color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
+                View Signal Details
+              </a>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 30px; text-align: center; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 12px;">
+              <p style="margin: 0 0 10px;">This is an automated notification from TraderPath.</p>
+              <p style="margin: 0;">Manage your notification preferences in <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://traderpath.io'}/settings" style="color: #14b8a6; text-decoration: none;">Settings</a>.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  return { subject, html };
+}
 
 // Price fetching service
 async function getCurrentPrice(symbol: string, assetClass: string): Promise<number | null> {
@@ -203,9 +321,27 @@ async function sendUserNotifications(
 
       // Email notifications
       if (pref.emailEnabled && pref.user.email) {
-        // TODO: Implement email notification
-        // This would use the email service to send formatted outcome notification
-        console.log(`[OutcomeTracker] Email notification queued for ${pref.user.email}`);
+        try {
+          const { subject, html } = generateOutcomeEmailHTML(
+            signal.symbol,
+            signal.direction as 'long' | 'short',
+            outcome,
+            Number(signal.entryPrice),
+            outcomePrice,
+            pnlPercent,
+            signal.id
+          );
+
+          await emailService.sendEmail({
+            to: pref.user.email,
+            subject,
+            html,
+          });
+
+          console.log(`[OutcomeTracker] Email sent to ${pref.user.email}`);
+        } catch (err) {
+          console.error(`[OutcomeTracker] Email error for user ${pref.userId}:`, err);
+        }
       }
     }
 
