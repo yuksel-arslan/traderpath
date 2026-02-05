@@ -2158,6 +2158,85 @@ export default async function adminRoutes(app: FastifyInstance) {
       }
     }
   );
+
+  // ===========================================
+  // RECONCILIATION
+  // ===========================================
+
+  /**
+   * POST /api/admin/reconciliation/run
+   * Run payment reconciliation check
+   */
+  app.post(
+    '/reconciliation/run',
+    { preHandler: requireAdmin },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = request.body as {
+          fixDiscrepancies?: boolean;
+          checkLemonSqueezy?: boolean;
+          checkStripe?: boolean;
+          checkCredits?: boolean;
+        };
+
+        const { reconciliationService } = await import('./reconciliation.service');
+        const report = await reconciliationService.runReconciliation(body);
+
+        return reply.send({
+          success: true,
+          data: report,
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Reconciliation failed');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'RECONCILIATION_ERROR', message: `Reconciliation failed: ${error.message}` },
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/admin/reconciliation/reprocess-order
+   * Manually reprocess a LemonSqueezy order
+   */
+  app.post(
+    '/reconciliation/reprocess-order',
+    { preHandler: requireAdmin },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = request.body as { orderId: string };
+
+        if (!body.orderId) {
+          return reply.status(400).send({
+            success: false,
+            error: { code: 'MISSING_ORDER_ID', message: 'Order ID is required' },
+          });
+        }
+
+        const { reconciliationService } = await import('./reconciliation.service');
+        const result = await reconciliationService.reprocessLemonSqueezyOrder(body.orderId);
+
+        if (!result.success) {
+          return reply.status(400).send({
+            success: false,
+            error: { code: 'REPROCESS_FAILED', message: result.message },
+          });
+        }
+
+        return reply.send({
+          success: true,
+          data: result,
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Order reprocess failed');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'REPROCESS_ERROR', message: `Failed to reprocess: ${error.message}` },
+        });
+      }
+    }
+  );
 }
 
 // Helper functions
