@@ -505,5 +505,11 @@ export const MARKET_CONFIG: Record<MarketType, {
     icon: '🥇',
     color: '#fbbf24',
     symbols: ['XAU', 'XAG', 'GLD']
+  },
+  bist: {
+    name: 'BIST',
+    icon: '🇹🇷',
+    color: '#e11d48',
+    symbols: ['THYAO', 'GARAN', 'XU100']
   }
 };
