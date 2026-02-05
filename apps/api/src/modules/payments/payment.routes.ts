@@ -159,10 +159,37 @@ export default async function paymentRoutes(app: FastifyInstance) {
 
       app.log.info({ event }, 'Received Lemon Squeezy webhook');
 
+      // ⭐ Replay Attack Protection - Check webhook timestamp
+      // Reject webhooks older than 5 minutes to prevent replay attacks
+      if (meta?.event_created_at) {
+        const webhookTimestamp = new Date(meta.event_created_at).getTime();
+        const now = Date.now();
+        const fiveMinutes = 5 * 60 * 1000;
+
+        if (now - webhookTimestamp > fiveMinutes) {
+          app.log.warn(
+            { event, timestamp: meta.event_created_at, age: now - webhookTimestamp },
+            'Webhook timestamp too old - possible replay attack'
+          );
+          return reply.code(400).send({ error: 'Webhook timestamp too old' });
+        }
+      }
+
       // Handle the event
       switch (event) {
         case 'order_created': {
           // Order created - payment successful
+          const orderId = data.id;
+
+          // ⭐ Idempotency check - prevent duplicate processing
+          const { idempotencyService } = await import('../../core/idempotency');
+          const alreadyProcessed = await idempotencyService.isProcessed(orderId, 'order_created');
+
+          if (alreadyProcessed) {
+            app.log.warn({ orderId, event: 'order_created' }, 'Webhook already processed - skipping');
+            return reply.send({ received: true, status: 'already_processed' });
+          }
+
           const customData = meta.custom_data;
 
           if (!customData) {
@@ -181,7 +208,6 @@ export default async function paymentRoutes(app: FastifyInstance) {
             break;
           }
 
-          const orderId = data.id;
           const orderAttributes = data.attributes || {};
 
           app.log.info(
@@ -236,15 +262,34 @@ export default async function paymentRoutes(app: FastifyInstance) {
             // Invalidate credit cache
             await cache.del(cacheKeys.userCredits(userId));
 
+            // ⭐ Mark as processed after successful transaction
+            await idempotencyService.markAsProcessed(orderId, 'order_created', {
+              userId,
+              packageId,
+              totalCredits,
+            });
+
             app.log.info({ userId, totalCredits }, 'Credits added successfully');
           } catch (dbError) {
             app.log.error({ error: dbError }, 'Failed to add credits');
+            // Don't mark as processed on failure - allow retry
           }
           break;
         }
 
         case 'order_refunded': {
           // Handle refunds - deduct credits
+          const orderId = data.id;
+
+          // ⭐ Idempotency check - prevent duplicate refund processing
+          const { idempotencyService } = await import('../../core/idempotency');
+          const alreadyProcessed = await idempotencyService.isProcessed(orderId, 'order_refunded');
+
+          if (alreadyProcessed) {
+            app.log.warn({ orderId, event: 'order_refunded' }, 'Refund webhook already processed - skipping');
+            return reply.send({ received: true, status: 'already_processed' });
+          }
+
           const customData = meta.custom_data;
 
           if (!customData?.user_id || !customData?.total_credits) {
@@ -293,9 +338,16 @@ export default async function paymentRoutes(app: FastifyInstance) {
             // Invalidate credit cache
             await cache.del(cacheKeys.userCredits(userId));
 
+            // ⭐ Mark as processed after successful refund
+            await idempotencyService.markAsProcessed(orderId, 'order_refunded', {
+              userId,
+              totalCredits,
+            });
+
             app.log.info({ userId }, 'Refund processed - credits deducted');
           } catch (dbError) {
             app.log.error({ error: dbError }, 'Failed to process refund');
+            // Don't mark as processed on failure - allow retry
           }
           break;
         }

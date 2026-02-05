@@ -53,6 +53,7 @@ import { startBilgeWeeklyReportJob, stopBilgeWeeklyReportJob } from './modules/b
 import { signalRoutes, startSignalGeneratorJob, stopSignalGeneratorJob } from './modules/signals';
 import subscriptionRoutes from './modules/subscriptions/subscription.routes';
 import { startDailyCreditsJob, stopDailyCreditsJob } from './modules/subscriptions/subscription-cron.job';
+import { startReconciliationJob, stopReconciliationJob } from './modules/admin/reconciliation.cron';
 
 // ===========================================
 // Server Configuration
@@ -588,6 +589,9 @@ const start = async () => {
     // Start subscription daily credits cron job (00:00 UTC)
     startDailyCreditsJob();
     logger.info('✓ Subscription daily credits cron started');
+    // Start payment reconciliation cron job (03:00 UTC daily)
+    startReconciliationJob();
+    logger.info('✓ Payment reconciliation cron started');
 
     // Start server
     await app.listen({
@@ -648,6 +652,9 @@ const shutdown = async (signal: string) => {
     // Stop subscription daily credits cron
     stopDailyCreditsJob();
     logger.info('✓ Subscription daily credits cron stopped');
+    // Stop payment reconciliation cron
+    stopReconciliationJob();
+    logger.info('✓ Payment reconciliation cron stopped');
 
     // Stop accepting new connections
     await app.close();

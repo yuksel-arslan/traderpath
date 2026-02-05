@@ -371,6 +371,14 @@ export default async function subscriptionRoutes(app: FastifyInstance) {
               subscription,
               subscription.customer as string
             );
+
+            // Notify user of cancellation
+            const userId = subscription.metadata.userId;
+            if (userId) {
+              const { paymentNotificationService } = await import('../notifications/payment-notification.service');
+              await paymentNotificationService.notifySubscriptionCanceled(userId);
+            }
+
             app.log.info({ subscriptionId: subscription.id }, 'Subscription deleted');
             break;
           }
@@ -387,6 +395,14 @@ export default async function subscriptionRoutes(app: FastifyInstance) {
                   subscription,
                   invoice.customer as string
                 );
+
+                // Notify user of successful payment
+                const userId = subscription.metadata.userId;
+                const tier = subscription.metadata.tier || 'unknown';
+                if (userId) {
+                  const { paymentNotificationService } = await import('../notifications/payment-notification.service');
+                  await paymentNotificationService.notifySubscriptionSuccess(userId, tier);
+                }
               }
             }
             app.log.info({ invoiceId: invoice.id }, 'Invoice payment succeeded');
@@ -405,6 +421,16 @@ export default async function subscriptionRoutes(app: FastifyInstance) {
                   subscription,
                   invoice.customer as string
                 );
+
+                // Notify user of payment failure
+                const userId = subscription.metadata.userId;
+                const amount = (invoice.amount_due || 0) / 100; // Convert cents to dollars
+                const reason = invoice.last_payment_error?.message || 'Payment method declined';
+
+                if (userId) {
+                  const { paymentNotificationService } = await import('../notifications/payment-notification.service');
+                  await paymentNotificationService.notifyPaymentFailed(userId, reason, amount);
+                }
               }
             }
             app.log.warn({ invoiceId: invoice.id }, 'Invoice payment failed');

@@ -81,7 +81,7 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
 
   // STARTER: Full Capital Flow (L1-L4) + Reports/Automation
   starter: {
-    dailyCredits: 0, // No daily credit allocation - buy credits separately
+    dailyCredits: 50, // 50 credits/day = ~1500/month ($29/mo)
     capitalFlowL3: true,
     capitalFlowL4: true,
     assetAnalysis: false,
@@ -100,7 +100,7 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
   // PRO: Starter + Asset Analysis (7-Step, MLIS Pro)
   // Note: Users can purchase additional credits for extra analyses beyond daily limit
   pro: {
-    dailyCredits: 0, // No daily credit allocation - buy credits separately
+    dailyCredits: 100, // 100 credits/day = ~3000/month ($59/mo)
     capitalFlowL3: true,
     capitalFlowL4: true,
     assetAnalysis: true,
@@ -119,7 +119,7 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
   // ELITE: Pro + AI Features (Concierge + Experts)
   // Note: Users can purchase additional credits for extra analyses beyond daily limit
   elite: {
-    dailyCredits: 0, // No daily credit allocation - buy credits separately
+    dailyCredits: 200, // 200 credits/day = ~6000/month ($79/mo)
     capitalFlowL3: true,
     capitalFlowL4: true,
     assetAnalysis: true,
@@ -143,28 +143,28 @@ export const TIER_CONFIG: Record<SubscriptionTier, TierConfig> = {
 export const STRIPE_PRODUCTS: Record<Exclude<SubscriptionTier, 'free'>, StripeProductConfig> = {
   starter: {
     name: 'TraderPath Starter',
-    description: 'Full Capital Flow access (L1-L4), Reports, Automation.',
+    description: 'Full Capital Flow access (L1-L4), Reports, Automation. 50 credits/day included.',
     metadata: {
       tier: 'starter',
-      credits_daily: 0,
+      credits_daily: 50,
     },
   },
 
   pro: {
     name: 'TraderPath Pro',
-    description: 'Starter + Asset Analysis (7-Step, MLIS Pro). 5 analyses/day included. Need more? Buy credit packs.',
+    description: 'Starter + Asset Analysis (7-Step, MLIS Pro). 100 credits/day included. 5 analyses/day + extra via credits.',
     metadata: {
       tier: 'pro',
-      credits_daily: 0,
+      credits_daily: 100,
     },
   },
 
   elite: {
     name: 'TraderPath Elite',
-    description: 'Pro + AI Features (Concierge, Experts). 5 analyses/day included. Need more? Buy credit packs.',
+    description: 'Pro + AI Features (Concierge, Experts). 200 credits/day included. 5 analyses/day + unlimited AI questions.',
     metadata: {
       tier: 'elite',
-      credits_daily: 0,
+      credits_daily: 200,
     },
   },
 };

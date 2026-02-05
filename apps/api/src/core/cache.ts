@@ -81,6 +81,13 @@ const memoryCacheClient = {
     return remaining > 0 ? remaining : -2;
   },
 
+  async setnx(key: string, value: string): Promise<number> {
+    const exists = memoryCache.has(key);
+    if (exists) return 0;
+    memoryCache.set(key, { value });
+    return 1;
+  },
+
   async quit(): Promise<'OK'> {
     memoryCache.clear();
     return 'OK';
@@ -294,6 +301,39 @@ export const cache = {
       () => redis.ping(),
       () => memoryCacheClient.ping()
     );
+  },
+
+  /**
+   * Set if Not Exists (SETNX)
+   * Returns true if key was set, false if key already exists
+   */
+  async setNX(key: string, value: unknown, ttlSeconds?: number): Promise<boolean> {
+    const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+
+    if (redis instanceof Redis) {
+      try {
+        let result: 'OK' | null;
+        if (ttlSeconds) {
+          result = await redis.set(key, serialized, 'EX', ttlSeconds, 'NX');
+        } else {
+          result = await redis.set(key, serialized, 'NX');
+        }
+        return result === 'OK';
+      } catch (error) {
+        logger.warn({ error }, '[Cache] Redis SETNX failed, using fallback');
+        const exists = await memoryCacheClient.setnx(key, serialized);
+        if (exists === 1 && ttlSeconds) {
+          await memoryCacheClient.expire(key, ttlSeconds);
+        }
+        return exists === 1;
+      }
+    } else {
+      const exists = await memoryCacheClient.setnx(key, serialized);
+      if (exists === 1 && ttlSeconds) {
+        await memoryCacheClient.expire(key, ttlSeconds);
+      }
+      return exists === 1;
+    }
   },
 };
 

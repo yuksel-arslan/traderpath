@@ -1562,6 +1562,681 @@ export default async function adminRoutes(app: FastifyInstance) {
       });
     }
   });
+
+  // ===========================================
+  // PAYMENT ANALYTICS
+  // ===========================================
+
+  /**
+   * GET /api/admin/analytics/payments
+   * Comprehensive payment analytics dashboard
+   */
+  app.get(
+    '/analytics/payments',
+    { preHandler: requireAdmin },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const last30DaysStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+        // Revenue Metrics
+        const [
+          totalRevenue,
+          revenueToday,
+          revenueThisWeek,
+          revenueThisMonth,
+          lemonSqueezyRevenue,
+          stripeRevenue,
+        ] = await Promise.all([
+          // Total revenue (all time) - LemonSqueezy
+          prisma.creditTransaction.aggregate({
+            where: {
+              type: 'PURCHASE',
+              source: { startsWith: 'package_' },
+            },
+            _count: true,
+          }).then(async (result) => {
+            // Calculate total from packages
+            const transactions = await prisma.creditTransaction.findMany({
+              where: {
+                type: 'PURCHASE',
+                source: { startsWith: 'package_' },
+              },
+              select: {
+                metadata: true,
+              },
+            });
+
+            let total = 0;
+            for (const tx of transactions) {
+              const metadata = tx.metadata as any;
+              if (metadata?.totalUsd) {
+                total += parseFloat(metadata.totalUsd);
+              }
+            }
+            return total;
+          }),
+
+          // Revenue today
+          prisma.creditTransaction.findMany({
+            where: {
+              type: 'PURCHASE',
+              source: { startsWith: 'package_' },
+              createdAt: { gte: todayStart },
+            },
+            select: { metadata: true },
+          }).then((txs) => {
+            let total = 0;
+            for (const tx of txs) {
+              const metadata = tx.metadata as any;
+              if (metadata?.totalUsd) total += parseFloat(metadata.totalUsd);
+            }
+            return total;
+          }),
+
+          // Revenue this week
+          prisma.creditTransaction.findMany({
+            where: {
+              type: 'PURCHASE',
+              source: { startsWith: 'package_' },
+              createdAt: { gte: weekStart },
+            },
+            select: { metadata: true },
+          }).then((txs) => {
+            let total = 0;
+            for (const tx of txs) {
+              const metadata = tx.metadata as any;
+              if (metadata?.totalUsd) total += parseFloat(metadata.totalUsd);
+            }
+            return total;
+          }),
+
+          // Revenue this month
+          prisma.creditTransaction.findMany({
+            where: {
+              type: 'PURCHASE',
+              source: { startsWith: 'package_' },
+              createdAt: { gte: monthStart },
+            },
+            select: { metadata: true },
+          }).then((txs) => {
+            let total = 0;
+            for (const tx of txs) {
+              const metadata = tx.metadata as any;
+              if (metadata?.totalUsd) total += parseFloat(metadata.totalUsd);
+            }
+            return total;
+          }),
+
+          // LemonSqueezy revenue
+          prisma.creditTransaction.findMany({
+            where: {
+              type: 'PURCHASE',
+              source: { startsWith: 'package_' },
+            },
+            select: { metadata: true },
+          }).then((txs) => {
+            let total = 0;
+            for (const tx of txs) {
+              const metadata = tx.metadata as any;
+              if (metadata?.totalUsd) total += parseFloat(metadata.totalUsd);
+            }
+            return total;
+          }),
+
+          // Stripe revenue (subscriptions)
+          prisma.subscription.aggregate({
+            where: {
+              status: { in: ['active', 'past_due', 'canceled'] },
+            },
+            _count: true,
+          }).then(async (result) => {
+            // Estimate based on active subscriptions
+            const subscriptions = await prisma.subscription.findMany({
+              where: {
+                status: { in: ['active', 'past_due'] },
+              },
+              select: { tier: true },
+            });
+
+            let estimatedMRR = 0;
+            for (const sub of subscriptions) {
+              if (sub.tier === 'starter') estimatedMRR += 29;
+              else if (sub.tier === 'pro') estimatedMRR += 59;
+              else if (sub.tier === 'elite') estimatedMRR += 79;
+            }
+            return estimatedMRR;
+          }),
+        ]);
+
+        // Refund Metrics
+        const [totalRefunds, refundCount] = await Promise.all([
+          prisma.creditTransaction.aggregate({
+            where: { type: 'REFUND' },
+            _sum: { amount: true },
+          }).then((result) => Math.abs(result._sum.amount || 0)),
+
+          prisma.creditTransaction.count({
+            where: { type: 'REFUND' },
+          }),
+        ]);
+
+        const totalPurchaseCount = await prisma.creditTransaction.count({
+          where: { type: 'PURCHASE' },
+        });
+
+        const refundRate = totalPurchaseCount > 0
+          ? ((refundCount / totalPurchaseCount) * 100).toFixed(2)
+          : '0.00';
+
+        // Subscription Metrics
+        const [activeSubscriptions, subscriptionsByTier, totalSubscriptions] = await Promise.all([
+          prisma.subscription.count({
+            where: { status: 'active' },
+          }),
+
+          prisma.subscription.groupBy({
+            by: ['tier'],
+            where: { status: 'active' },
+            _count: true,
+          }),
+
+          prisma.subscription.count(),
+        ]);
+
+        // Calculate MRR (Monthly Recurring Revenue)
+        const subscriptions = await prisma.subscription.findMany({
+          where: { status: 'active' },
+          select: { tier: true },
+        });
+
+        let mrr = 0;
+        for (const sub of subscriptions) {
+          if (sub.tier === 'starter') mrr += 29;
+          else if (sub.tier === 'pro') mrr += 59;
+          else if (sub.tier === 'elite') mrr += 79;
+        }
+
+        // Time-series revenue data (last 30 days)
+        const dailyRevenue = await prisma.creditTransaction.findMany({
+          where: {
+            type: 'PURCHASE',
+            createdAt: { gte: last30DaysStart },
+          },
+          select: {
+            createdAt: true,
+            metadata: true,
+          },
+        });
+
+        // Group by day
+        const revenueByDay: Record<string, number> = {};
+        for (const tx of dailyRevenue) {
+          const day = tx.createdAt.toISOString().split('T')[0];
+          const metadata = tx.metadata as any;
+          const amount = metadata?.totalUsd ? parseFloat(metadata.totalUsd) : 0;
+          revenueByDay[day] = (revenueByDay[day] || 0) + amount;
+        }
+
+        // Convert to array for chart
+        const chartData = Object.entries(revenueByDay)
+          .map(([date, revenue]) => ({ date, revenue }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        // Conversion metrics (estimated)
+        const uniquePurchasers = await prisma.creditTransaction.groupBy({
+          by: ['userId'],
+          where: { type: 'PURCHASE' },
+          _count: true,
+        });
+
+        const totalUsers = await prisma.user.count();
+        const conversionRate = totalUsers > 0
+          ? ((uniquePurchasers.length / totalUsers) * 100).toFixed(2)
+          : '0.00';
+
+        return reply.send({
+          success: true,
+          data: {
+            revenue: {
+              total: totalRevenue.toFixed(2),
+              today: revenueToday.toFixed(2),
+              thisWeek: revenueThisWeek.toFixed(2),
+              thisMonth: revenueThisMonth.toFixed(2),
+              bySource: {
+                lemonSqueezy: lemonSqueezyRevenue.toFixed(2),
+                stripe: stripeRevenue.toFixed(2),
+              },
+            },
+            refunds: {
+              total: totalRefunds,
+              count: refundCount,
+              rate: `${refundRate}%`,
+            },
+            subscriptions: {
+              active: activeSubscriptions,
+              total: totalSubscriptions,
+              byTier: subscriptionsByTier.map((s) => ({
+                tier: s.tier,
+                count: s._count,
+              })),
+              mrr: mrr.toFixed(2),
+            },
+            conversion: {
+              purchasers: uniquePurchasers.length,
+              totalUsers,
+              rate: `${conversionRate}%`,
+            },
+            chartData,
+          },
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Failed to fetch payment analytics');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'ANALYTICS_ERROR', message: 'Failed to fetch payment analytics' },
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /api/admin/analytics/revenue-chart
+   * Revenue chart data for visualization
+   */
+  app.get(
+    '/analytics/revenue-chart',
+    { preHandler: requireAdmin },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const query = request.query as { days?: string };
+        const days = parseInt(query.days || '30');
+        const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+        const transactions = await prisma.creditTransaction.findMany({
+          where: {
+            type: 'PURCHASE',
+            createdAt: { gte: startDate },
+          },
+          select: {
+            createdAt: true,
+            metadata: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        });
+
+        // Group by day
+        const revenueByDay: Record<string, number> = {};
+        for (const tx of transactions) {
+          const day = tx.createdAt.toISOString().split('T')[0];
+          const metadata = tx.metadata as any;
+          const amount = metadata?.totalUsd ? parseFloat(metadata.totalUsd) : 0;
+          revenueByDay[day] = (revenueByDay[day] || 0) + amount;
+        }
+
+        // Fill missing days with 0
+        const chartData = [];
+        for (let i = 0; i < days; i++) {
+          const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+          const day = date.toISOString().split('T')[0];
+          chartData.push({
+            date: day,
+            revenue: revenueByDay[day] || 0,
+          });
+        }
+
+        return reply.send({
+          success: true,
+          data: chartData,
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Failed to fetch revenue chart data');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'CHART_ERROR', message: 'Failed to fetch revenue chart data' },
+        });
+      }
+    }
+  );
+
+  // ===========================================
+  // REFUND MANAGEMENT
+  // ===========================================
+
+  /**
+   * GET /api/admin/refunds
+   * List all refund transactions
+   */
+  app.get(
+    '/refunds',
+    { preHandler: requireAdmin },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const query = request.query as { status?: string; limit?: string; offset?: string };
+        const limit = parseInt(query.limit || '50');
+        const offset = parseInt(query.offset || '0');
+
+        const refunds = await prisma.creditTransaction.findMany({
+          where: {
+            type: 'REFUND',
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+          skip: offset,
+        });
+
+        const total = await prisma.creditTransaction.count({
+          where: { type: 'REFUND' },
+        });
+
+        return reply.send({
+          success: true,
+          data: {
+            refunds: refunds.map((r) => ({
+              id: r.id,
+              userId: r.userId,
+              user: r.user,
+              amount: Math.abs(r.amount), // Convert negative to positive for display
+              source: r.source,
+              metadata: r.metadata,
+              createdAt: r.createdAt,
+            })),
+            pagination: {
+              total,
+              limit,
+              offset,
+              hasMore: offset + limit < total,
+            },
+          },
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Failed to fetch refunds');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'REFUNDS_ERROR', message: 'Failed to fetch refunds' },
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/admin/refunds/manual
+   * Process a manual refund
+   */
+  app.post(
+    '/refunds/manual',
+    { preHandler: requireAdmin },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = request.body as {
+          userId: string;
+          amount: number; // Credits to refund
+          reason: string;
+          notify?: boolean; // Send email notification
+        };
+
+        const { userId, amount, reason, notify = true } = body;
+
+        // Validate user exists
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true, name: true },
+        });
+
+        if (!user) {
+          return reply.status(404).send({
+            success: false,
+            error: { code: 'USER_NOT_FOUND', message: 'User not found' },
+          });
+        }
+
+        // Get user's credit balance
+        const creditBalance = await prisma.creditBalance.findUnique({
+          where: { userId },
+        });
+
+        if (!creditBalance) {
+          return reply.status(404).send({
+            success: false,
+            error: { code: 'BALANCE_NOT_FOUND', message: 'User credit balance not found' },
+          });
+        }
+
+        // Process refund in transaction
+        await prisma.$transaction(async (tx) => {
+          // Deduct credits
+          await tx.creditBalance.update({
+            where: { userId },
+            data: {
+              balance: { decrement: amount },
+              lifetimePurchased: { decrement: amount },
+            },
+          });
+
+          // Get updated balance
+          const updatedBalance = await tx.creditBalance.findUnique({
+            where: { userId },
+            select: { balance: true },
+          });
+
+          // Record refund transaction
+          await tx.creditTransaction.create({
+            data: {
+              userId,
+              amount: -amount, // Negative for refund
+              type: 'REFUND',
+              source: 'manual_admin_refund',
+              balanceAfter: updatedBalance?.balance || 0,
+              metadata: {
+                reason,
+                processedBy: 'admin',
+                processedAt: new Date().toISOString(),
+              },
+            },
+          });
+        });
+
+        // Send email notification if requested
+        if (notify) {
+          const { emailService } = await import('../email/email.service');
+          await emailService.sendEmail({
+            to: user.email,
+            subject: 'Refund Processed - TraderPath',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                  <h1 style="color: white; margin: 0;">Refund Processed</h1>
+                </div>
+                <div style="padding: 30px; background: white;">
+                  <p>Hi ${user.name || 'there'},</p>
+                  <p>Your refund has been processed successfully.</p>
+
+                  <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                    <tr style="background: #f7fafc;">
+                      <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>Credits Refunded:</strong></td>
+                      <td style="padding: 12px; border: 1px solid #e2e8f0;">${amount}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>Reason:</strong></td>
+                      <td style="padding: 12px; border: 1px solid #e2e8f0;">${reason}</td>
+                    </tr>
+                  </table>
+
+                  <p>If you have any questions, please contact our support team.</p>
+
+                  <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #718096; font-size: 14px;">
+                    <p>Best regards,<br>TraderPath Team</p>
+                    <p>Questions? Contact us at support@traderpath.io</p>
+                  </div>
+                </div>
+              </div>
+            `,
+            text: `Hi ${user.name || 'there'},\n\nYour refund has been processed successfully.\n\nCredits Refunded: ${amount}\nReason: ${reason}\n\nIf you have any questions, please contact our support team.\n\nBest regards,\nTraderPath Team`,
+          });
+        }
+
+        app.log.info({ userId, amount, reason }, 'Manual refund processed');
+
+        return reply.send({
+          success: true,
+          data: {
+            message: 'Refund processed successfully',
+            userId,
+            amount,
+            reason,
+            notified: notify,
+          },
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Failed to process manual refund');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'REFUND_ERROR', message: `Failed to process refund: ${error.message}` },
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /api/admin/refunds/pending
+   * List pending refund requests (transactions that might need review)
+   */
+  app.get(
+    '/refunds/pending',
+    { preHandler: requireAdmin },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        // Find users who had failed payments recently
+        const failedPayments = await prisma.subscription.findMany({
+          where: {
+            status: 'past_due',
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+              },
+            },
+          },
+          orderBy: { updatedAt: 'desc' },
+          take: 20,
+        });
+
+        return reply.send({
+          success: true,
+          data: {
+            pendingReviews: failedPayments.map((sub) => ({
+              userId: sub.userId,
+              user: sub.user,
+              subscriptionId: sub.id,
+              tier: sub.tier,
+              status: sub.status,
+              updatedAt: sub.updatedAt,
+            })),
+          },
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Failed to fetch pending refunds');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'PENDING_ERROR', message: 'Failed to fetch pending refunds' },
+        });
+      }
+    }
+  );
+
+  // ===========================================
+  // RECONCILIATION
+  // ===========================================
+
+  /**
+   * POST /api/admin/reconciliation/run
+   * Run payment reconciliation check
+   */
+  app.post(
+    '/reconciliation/run',
+    { preHandler: requireAdmin },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = request.body as {
+          fixDiscrepancies?: boolean;
+          checkLemonSqueezy?: boolean;
+          checkStripe?: boolean;
+          checkCredits?: boolean;
+        };
+
+        const { reconciliationService } = await import('./reconciliation.service');
+        const report = await reconciliationService.runReconciliation(body);
+
+        return reply.send({
+          success: true,
+          data: report,
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Reconciliation failed');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'RECONCILIATION_ERROR', message: `Reconciliation failed: ${error.message}` },
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/admin/reconciliation/reprocess-order
+   * Manually reprocess a LemonSqueezy order
+   */
+  app.post(
+    '/reconciliation/reprocess-order',
+    { preHandler: requireAdmin },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = request.body as { orderId: string };
+
+        if (!body.orderId) {
+          return reply.status(400).send({
+            success: false,
+            error: { code: 'MISSING_ORDER_ID', message: 'Order ID is required' },
+          });
+        }
+
+        const { reconciliationService } = await import('./reconciliation.service');
+        const result = await reconciliationService.reprocessLemonSqueezyOrder(body.orderId);
+
+        if (!result.success) {
+          return reply.status(400).send({
+            success: false,
+            error: { code: 'REPROCESS_FAILED', message: result.message },
+          });
+        }
+
+        return reply.send({
+          success: true,
+          data: result,
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Order reprocess failed');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'REPROCESS_ERROR', message: `Failed to reprocess: ${error.message}` },
+        });
+      }
+    }
+  );
 }
 
 // Helper functions
