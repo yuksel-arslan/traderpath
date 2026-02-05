@@ -34,7 +34,6 @@ import { cn } from '../../../lib/utils';
 import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost, SIGNAL_SUBSCRIPTIONS, DAILY_PASS_COSTS } from '../../../lib/pricing-config';
 import { authFetch, getAuthToken, apiBaseUrl } from '../../../lib/api';
 import { Footer } from '../../../components/common/Footer';
-import { SubscriptionTiers } from '../../../components/pricing/SubscriptionTiers';
 
 // Format credits with full number display (1000087 → 1,000,087)
 function formatCredits(num: number): string {
