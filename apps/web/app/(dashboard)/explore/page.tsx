@@ -8,7 +8,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import {
   Globe,
   BarChart3,
@@ -35,12 +34,6 @@ import {
 import { cn } from '@/lib/utils'
 import { authFetch } from '@/lib/api'
 import { getCoinIcon, FALLBACK_COIN_ICON } from '@/lib/coin-icons'
-
-// Lazy load chart
-const TradePlanChart = dynamic(
-  () => import('@/components/analysis/TradePlanChart'),
-  { ssr: false, loading: () => <div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin text-teal-500" /></div> }
-)
 
 // ===========================================
 // Types
