@@ -7,6 +7,7 @@
  * - Stocks: Yahoo Finance
  * - Bonds: Yahoo Finance
  * - Metals: Yahoo Finance
+ * - BIST (Borsa İstanbul): Yahoo Finance (.IS suffix)
  *
  * "Para nereye akıyorsa potansiyel oradadır"
  */
@@ -419,8 +420,10 @@ export async function fetchCandles(
     if (assetClass === 'crypto') {
       return await fetchBinanceCandles(symbol, interval, limit);
     } else {
-      // stocks, bonds, metals - use Yahoo Finance
-      return await fetchYahooCandles(symbol, interval, limit);
+      // stocks, bonds, metals, bist - use Yahoo Finance
+      // BIST symbols use .IS suffix (e.g., THYAO.IS, GARAN.IS)
+      const resolved = resolveSymbol(symbol);
+      return await fetchYahooCandles(resolved.normalized, interval, limit);
     }
   } catch (error) {
     console.error(`[MultiAssetProvider] Error fetching candles for ${symbol}:`, error);
@@ -451,7 +454,9 @@ export async function fetchTicker(symbol: string): Promise<TickerData> {
         volume24h: data.volume24h,
       };
     } else {
-      const data = await fetchYahooTicker(symbol);
+      // stocks, bonds, metals, bist - use Yahoo Finance
+      const resolved = resolveSymbol(symbol);
+      const data = await fetchYahooTicker(resolved.normalized);
       return {
         symbol: data.symbol,
         assetClass: data.assetClass,
@@ -488,6 +493,12 @@ export function isSymbolSupported(symbol: string): boolean {
       }
     }
     return SUPPORTED_SYMBOLS.crypto.includes(base) || SUPPORTED_SYMBOLS.crypto.includes(upper);
+  }
+
+  // For BIST, check with and without .IS suffix
+  if (assetClass === 'bist') {
+    const withSuffix = upper.endsWith('.IS') ? upper : `${upper}.IS`;
+    return SUPPORTED_SYMBOLS.bist?.includes(withSuffix) ?? false;
   }
 
   return SUPPORTED_SYMBOLS[assetClass]?.includes(upper) ?? false;

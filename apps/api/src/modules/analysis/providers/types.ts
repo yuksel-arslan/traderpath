@@ -6,7 +6,7 @@
  */
 
 // Asset class types
-export type AssetClass = 'crypto' | 'stocks' | 'bonds' | 'metals';
+export type AssetClass = 'crypto' | 'stocks' | 'bonds' | 'metals' | 'bist';
 
 // OHLCV Candle (universal format)
 export interface OHLCV {
@@ -251,6 +251,53 @@ export const SUPPORTED_SYMBOLS: Record<AssetClass, string[]> = {
     'GDXJ',   // Junior Gold Miners
     'SIL',    // Silver Miners
   ],
+  bist: [
+    // BIST Index
+    'XU100.IS',  // BIST 100 Index
+    // Banking
+    'GARAN.IS',  // Garanti BBVA
+    'AKBNK.IS',  // Akbank
+    'YKBNK.IS',  // Yapı Kredi
+    'ISCTR.IS',  // İş Bankası
+    'HALKB.IS',  // Halkbank
+    'VAKBN.IS',  // Vakıfbank
+    'TSKB.IS',   // Türkiye Sınai Kalkınma Bankası
+    // Holding
+    'KCHOL.IS',  // Koç Holding
+    'SAHOL.IS',  // Sabancı Holding
+    'TAVHL.IS',  // TAV Havalimanları
+    'TKFEN.IS',  // Tekfen Holding
+    'DOHOL.IS',  // Doğan Holding
+    // Industrial
+    'SISE.IS',   // Şişecam
+    'TOASO.IS',  // Tofaş
+    'FROTO.IS',  // Ford Otosan
+    'EREGL.IS',  // Ereğli Demir Çelik
+    'KRDMD.IS',  // Kardemir
+    'TUPRS.IS',  // Tüpraş
+    'PETKM.IS',  // Petkim
+    // Aviation & Tourism
+    'THYAO.IS',  // Türk Hava Yolları
+    'PGSUS.IS',  // Pegasus
+    // Telecom
+    'TCELL.IS',  // Turkcell
+    'TTKOM.IS',  // Türk Telekom
+    // Retail
+    'BIMAS.IS',  // BİM
+    'MGROS.IS',  // Migros
+    'SOKM.IS',   // Şok Market
+    // Real Estate & Construction
+    'ENKAI.IS',  // Enka İnşaat
+    'EKGYO.IS',  // Emlak Konut GYO
+    // Technology
+    'ASELS.IS',  // Aselsan
+    'LOGO.IS',   // Logo Yazılım
+    // Other
+    'ARCLK.IS',  // Arçelik
+    'VESTL.IS',  // Vestel
+    'KOZAL.IS',  // Koza Altın
+    'KOZAA.IS',  // Koza Anadolu
+  ],
 };
 
 // Timeframe mappings (provider-specific)
@@ -283,6 +330,14 @@ export const TIMEFRAME_MAPPINGS: Record<AssetClass, Record<string, string>> = {
   },
   metals: {
     '5m': '5m',
+    '15m': '15m',
+    '30m': '30m',
+    '1h': '60m',
+    '4h': '4h',
+    '1d': '1d',
+    '1w': '1wk',
+  },
+  bist: {
     '15m': '15m',
     '30m': '30m',
     '1h': '60m',
