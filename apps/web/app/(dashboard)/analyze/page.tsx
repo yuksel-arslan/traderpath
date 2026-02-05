@@ -82,7 +82,7 @@ interface GlobalLiquidity {
 }
 
 interface MarketFlow {
-  market: AssetType;
+  market: string;
   currentValue: number;
   flow7d: number;
   flow30d: number;
@@ -94,14 +94,14 @@ interface MarketFlow {
 }
 
 interface FlowRecommendation {
-  primaryMarket: AssetType;
+  primaryMarket: string;
   phase: Phase;
   action: 'analyze' | 'wait' | 'avoid';
-  direction: 'BUY' | 'SELL';
+  direction: string;
   reason: string;
   sectors?: string[];
   confidence: number;
-  suggestedAssets?: { symbol: string; name: string; market: AssetType; sector?: string; riskLevel: 'low' | 'medium' | 'high'; reason: string }[];
+  suggestedAssets?: { symbol: string; name: string; market: string; sector?: string; riskLevel: 'low' | 'medium' | 'high'; reason: string }[];
 }
 
 interface CapitalFlowSummary {
@@ -594,8 +594,8 @@ export default function AnalyzePage() {
     return config[bias] || config.neutral;
   };
 
-  const getMarketIcon = (market: AssetType) => {
-    const icons: Record<AssetType, typeof Coins> = { crypto: Coins, stocks: BarChart3, bonds: Landmark, metals: Gem };
+  const getMarketIcon = (market: string) => {
+    const icons: Record<string, typeof Coins> = { crypto: Coins, stocks: BarChart3, bonds: Landmark, metals: Gem, bist: Building2 };
     return icons[market] || Activity;
   };
 
@@ -665,7 +665,7 @@ export default function AnalyzePage() {
                     <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300">L1: LIQUIDITY</span>
                   </div>
                   {(() => {
-                    const biasConfig = getBiasConfig(capitalFlow.liquidityBias);
+                    const biasConfig = getBiasConfig(capitalFlow?.liquidityBias ?? 'neutral');
                     const BiasIcon = biasConfig.icon;
                     return (
                       <div className={cn("flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold w-fit", biasConfig.bg, biasConfig.color)}>
@@ -675,7 +675,7 @@ export default function AnalyzePage() {
                     );
                   })()}
                   <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-1">
-                    Net: {safeToFixed(capitalFlow.globalLiquidity.netLiquidity?.change30d ?? capitalFlow.globalLiquidity.m2MoneySupply?.change30d)}%
+                    Net: {safeToFixed(capitalFlow?.globalLiquidity?.netLiquidity?.change30d ?? capitalFlow?.globalLiquidity?.m2MoneySupply?.change30d)}%
                   </p>
                 </div>
 
@@ -740,12 +740,16 @@ export default function AnalyzePage() {
                   </div>
                   <div className={cn(
                     "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold w-fit",
-                    capitalFlow.recommendation?.direction === 'BUY'
+                    capitalFlow.recommendation?.direction?.toUpperCase() === 'BUY'
                       ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-                      : "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
+                      : capitalFlow.recommendation?.direction?.toUpperCase() === 'SELL'
+                      ? "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
+                      : "bg-slate-100 dark:bg-slate-500/20 text-slate-700 dark:text-slate-400"
                   )}>
-                    {capitalFlow.recommendation?.direction === 'BUY' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    {capitalFlow.recommendation?.direction} {capitalFlow.recommendation?.primaryMarket?.toUpperCase()}
+                    {capitalFlow.recommendation?.direction?.toUpperCase() === 'BUY' ? <TrendingUp className="w-3 h-3" /> :
+                     capitalFlow.recommendation?.direction?.toUpperCase() === 'SELL' ? <TrendingDown className="w-3 h-3" /> :
+                     <Minus className="w-3 h-3" />}
+                    {capitalFlow.recommendation?.direction?.toUpperCase() || 'NEUTRAL'} {capitalFlow.recommendation?.primaryMarket?.toUpperCase()}
                   </div>
                   <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-1">
                     {capitalFlow.recommendation?.confidence ?? 0}% confidence
@@ -820,7 +824,9 @@ export default function AnalyzePage() {
                           <button
                             key={idx}
                             onClick={() => {
-                              setAssetType(asset.market);
+                              if (asset.market in ALL_SYMBOLS) {
+                                setAssetType(asset.market as AssetType);
+                              }
                               setSelectedSymbol(asset.symbol);
                             }}
                             className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-500/30 text-xs font-medium text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all"
@@ -834,16 +840,19 @@ export default function AnalyzePage() {
 
                   <button
                     onClick={() => {
-                      setAssetType(capitalFlow.recommendation.primaryMarket);
-                      const marketAssets = ALL_SYMBOLS[capitalFlow.recommendation.primaryMarket]?.all;
-                      if (marketAssets && marketAssets.length > 0) {
-                        setSelectedSymbol(marketAssets[0].symbol);
+                      const pm = capitalFlow?.recommendation?.primaryMarket;
+                      if (pm && pm in ALL_SYMBOLS) {
+                        setAssetType(pm as AssetType);
+                        const marketAssets = ALL_SYMBOLS[pm as AssetType]?.all;
+                        if (marketAssets && marketAssets.length > 0) {
+                          setSelectedSymbol(marketAssets[0].symbol);
+                        }
                       }
                     }}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold rounded-xl hover:from-emerald-600 hover:to-teal-600 hover:shadow-lg hover:shadow-emerald-500/25 transition-all"
                   >
                     <Search className="w-4 h-4" />
-                    Analyze {capitalFlow.recommendation.primaryMarket.toUpperCase()} Assets
+                    Analyze {capitalFlow?.recommendation?.primaryMarket?.toUpperCase() || 'Market'} Assets
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -906,10 +915,13 @@ export default function AnalyzePage() {
 
                   <button
                     onClick={() => {
-                      setAssetType(capitalFlow.sellRecommendation!.primaryMarket);
-                      const marketAssets = ALL_SYMBOLS[capitalFlow.sellRecommendation!.primaryMarket]?.all;
-                      if (marketAssets && marketAssets.length > 0) {
-                        setSelectedSymbol(marketAssets[0].symbol);
+                      const pm = capitalFlow?.sellRecommendation?.primaryMarket;
+                      if (pm && pm in ALL_SYMBOLS) {
+                        setAssetType(pm as AssetType);
+                        const marketAssets = ALL_SYMBOLS[pm as AssetType]?.all;
+                        if (marketAssets && marketAssets.length > 0) {
+                          setSelectedSymbol(marketAssets[0].symbol);
+                        }
                       }
                     }}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-500 to-rose-500 text-white text-sm font-semibold rounded-xl hover:from-red-600 hover:to-rose-600 hover:shadow-lg hover:shadow-red-500/25 transition-all"
@@ -1256,12 +1268,12 @@ export default function AnalyzePage() {
                                   {analysis.direction && (
                                     <span className={cn(
                                       "px-1 py-0.5 rounded text-[9px] font-medium",
-                                      analysis.direction === 'long' ? "bg-teal-500/10 text-teal-600 dark:text-teal-400" :
-                                      analysis.direction === 'short' ? "bg-red-500/10 text-red-600 dark:text-red-400" :
+                                      analysis.direction?.toLowerCase() === 'long' ? "bg-teal-500/10 text-teal-600 dark:text-teal-400" :
+                                      analysis.direction?.toLowerCase() === 'short' ? "bg-red-500/10 text-red-600 dark:text-red-400" :
                                       "bg-slate-500/10 text-slate-600 dark:text-slate-400"
                                     )}>
-                                      {analysis.direction === 'long' ? <TrendingUp className="w-2.5 h-2.5 inline" /> :
-                                       analysis.direction === 'short' ? <TrendingDown className="w-2.5 h-2.5 inline" /> :
+                                      {analysis.direction?.toLowerCase() === 'long' ? <TrendingUp className="w-2.5 h-2.5 inline" /> :
+                                       analysis.direction?.toLowerCase() === 'short' ? <TrendingDown className="w-2.5 h-2.5 inline" /> :
                                        <Minus className="w-2.5 h-2.5 inline" />}
                                     </span>
                                   )}
