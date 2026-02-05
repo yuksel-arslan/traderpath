@@ -1562,6 +1562,345 @@ export default async function adminRoutes(app: FastifyInstance) {
       });
     }
   });
+
+  // ===========================================
+  // PAYMENT ANALYTICS
+  // ===========================================
+
+  /**
+   * GET /api/admin/analytics/payments
+   * Comprehensive payment analytics dashboard
+   */
+  app.get(
+    '/analytics/payments',
+    { preHandler: requireAdmin },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const last30DaysStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+        // Revenue Metrics
+        const [
+          totalRevenue,
+          revenueToday,
+          revenueThisWeek,
+          revenueThisMonth,
+          lemonSqueezyRevenue,
+          stripeRevenue,
+        ] = await Promise.all([
+          // Total revenue (all time) - LemonSqueezy
+          prisma.creditTransaction.aggregate({
+            where: {
+              type: 'PURCHASE',
+              source: { startsWith: 'package_' },
+            },
+            _count: true,
+          }).then(async (result) => {
+            // Calculate total from packages
+            const transactions = await prisma.creditTransaction.findMany({
+              where: {
+                type: 'PURCHASE',
+                source: { startsWith: 'package_' },
+              },
+              select: {
+                metadata: true,
+              },
+            });
+
+            let total = 0;
+            for (const tx of transactions) {
+              const metadata = tx.metadata as any;
+              if (metadata?.totalUsd) {
+                total += parseFloat(metadata.totalUsd);
+              }
+            }
+            return total;
+          }),
+
+          // Revenue today
+          prisma.creditTransaction.findMany({
+            where: {
+              type: 'PURCHASE',
+              source: { startsWith: 'package_' },
+              createdAt: { gte: todayStart },
+            },
+            select: { metadata: true },
+          }).then((txs) => {
+            let total = 0;
+            for (const tx of txs) {
+              const metadata = tx.metadata as any;
+              if (metadata?.totalUsd) total += parseFloat(metadata.totalUsd);
+            }
+            return total;
+          }),
+
+          // Revenue this week
+          prisma.creditTransaction.findMany({
+            where: {
+              type: 'PURCHASE',
+              source: { startsWith: 'package_' },
+              createdAt: { gte: weekStart },
+            },
+            select: { metadata: true },
+          }).then((txs) => {
+            let total = 0;
+            for (const tx of txs) {
+              const metadata = tx.metadata as any;
+              if (metadata?.totalUsd) total += parseFloat(metadata.totalUsd);
+            }
+            return total;
+          }),
+
+          // Revenue this month
+          prisma.creditTransaction.findMany({
+            where: {
+              type: 'PURCHASE',
+              source: { startsWith: 'package_' },
+              createdAt: { gte: monthStart },
+            },
+            select: { metadata: true },
+          }).then((txs) => {
+            let total = 0;
+            for (const tx of txs) {
+              const metadata = tx.metadata as any;
+              if (metadata?.totalUsd) total += parseFloat(metadata.totalUsd);
+            }
+            return total;
+          }),
+
+          // LemonSqueezy revenue
+          prisma.creditTransaction.findMany({
+            where: {
+              type: 'PURCHASE',
+              source: { startsWith: 'package_' },
+            },
+            select: { metadata: true },
+          }).then((txs) => {
+            let total = 0;
+            for (const tx of txs) {
+              const metadata = tx.metadata as any;
+              if (metadata?.totalUsd) total += parseFloat(metadata.totalUsd);
+            }
+            return total;
+          }),
+
+          // Stripe revenue (subscriptions)
+          prisma.subscription.aggregate({
+            where: {
+              status: { in: ['active', 'past_due', 'canceled'] },
+            },
+            _count: true,
+          }).then(async (result) => {
+            // Estimate based on active subscriptions
+            const subscriptions = await prisma.subscription.findMany({
+              where: {
+                status: { in: ['active', 'past_due'] },
+              },
+              select: { tier: true },
+            });
+
+            let estimatedMRR = 0;
+            for (const sub of subscriptions) {
+              if (sub.tier === 'starter') estimatedMRR += 29;
+              else if (sub.tier === 'pro') estimatedMRR += 59;
+              else if (sub.tier === 'elite') estimatedMRR += 79;
+            }
+            return estimatedMRR;
+          }),
+        ]);
+
+        // Refund Metrics
+        const [totalRefunds, refundCount] = await Promise.all([
+          prisma.creditTransaction.aggregate({
+            where: { type: 'REFUND' },
+            _sum: { amount: true },
+          }).then((result) => Math.abs(result._sum.amount || 0)),
+
+          prisma.creditTransaction.count({
+            where: { type: 'REFUND' },
+          }),
+        ]);
+
+        const totalPurchaseCount = await prisma.creditTransaction.count({
+          where: { type: 'PURCHASE' },
+        });
+
+        const refundRate = totalPurchaseCount > 0
+          ? ((refundCount / totalPurchaseCount) * 100).toFixed(2)
+          : '0.00';
+
+        // Subscription Metrics
+        const [activeSubscriptions, subscriptionsByTier, totalSubscriptions] = await Promise.all([
+          prisma.subscription.count({
+            where: { status: 'active' },
+          }),
+
+          prisma.subscription.groupBy({
+            by: ['tier'],
+            where: { status: 'active' },
+            _count: true,
+          }),
+
+          prisma.subscription.count(),
+        ]);
+
+        // Calculate MRR (Monthly Recurring Revenue)
+        const subscriptions = await prisma.subscription.findMany({
+          where: { status: 'active' },
+          select: { tier: true },
+        });
+
+        let mrr = 0;
+        for (const sub of subscriptions) {
+          if (sub.tier === 'starter') mrr += 29;
+          else if (sub.tier === 'pro') mrr += 59;
+          else if (sub.tier === 'elite') mrr += 79;
+        }
+
+        // Time-series revenue data (last 30 days)
+        const dailyRevenue = await prisma.creditTransaction.findMany({
+          where: {
+            type: 'PURCHASE',
+            createdAt: { gte: last30DaysStart },
+          },
+          select: {
+            createdAt: true,
+            metadata: true,
+          },
+        });
+
+        // Group by day
+        const revenueByDay: Record<string, number> = {};
+        for (const tx of dailyRevenue) {
+          const day = tx.createdAt.toISOString().split('T')[0];
+          const metadata = tx.metadata as any;
+          const amount = metadata?.totalUsd ? parseFloat(metadata.totalUsd) : 0;
+          revenueByDay[day] = (revenueByDay[day] || 0) + amount;
+        }
+
+        // Convert to array for chart
+        const chartData = Object.entries(revenueByDay)
+          .map(([date, revenue]) => ({ date, revenue }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        // Conversion metrics (estimated)
+        const uniquePurchasers = await prisma.creditTransaction.groupBy({
+          by: ['userId'],
+          where: { type: 'PURCHASE' },
+          _count: true,
+        });
+
+        const totalUsers = await prisma.user.count();
+        const conversionRate = totalUsers > 0
+          ? ((uniquePurchasers.length / totalUsers) * 100).toFixed(2)
+          : '0.00';
+
+        return reply.send({
+          success: true,
+          data: {
+            revenue: {
+              total: totalRevenue.toFixed(2),
+              today: revenueToday.toFixed(2),
+              thisWeek: revenueThisWeek.toFixed(2),
+              thisMonth: revenueThisMonth.toFixed(2),
+              bySource: {
+                lemonSqueezy: lemonSqueezyRevenue.toFixed(2),
+                stripe: stripeRevenue.toFixed(2),
+              },
+            },
+            refunds: {
+              total: totalRefunds,
+              count: refundCount,
+              rate: `${refundRate}%`,
+            },
+            subscriptions: {
+              active: activeSubscriptions,
+              total: totalSubscriptions,
+              byTier: subscriptionsByTier.map((s) => ({
+                tier: s.tier,
+                count: s._count,
+              })),
+              mrr: mrr.toFixed(2),
+            },
+            conversion: {
+              purchasers: uniquePurchasers.length,
+              totalUsers,
+              rate: `${conversionRate}%`,
+            },
+            chartData,
+          },
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Failed to fetch payment analytics');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'ANALYTICS_ERROR', message: 'Failed to fetch payment analytics' },
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /api/admin/analytics/revenue-chart
+   * Revenue chart data for visualization
+   */
+  app.get(
+    '/analytics/revenue-chart',
+    { preHandler: requireAdmin },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const query = request.query as { days?: string };
+        const days = parseInt(query.days || '30');
+        const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+        const transactions = await prisma.creditTransaction.findMany({
+          where: {
+            type: 'PURCHASE',
+            createdAt: { gte: startDate },
+          },
+          select: {
+            createdAt: true,
+            metadata: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        });
+
+        // Group by day
+        const revenueByDay: Record<string, number> = {};
+        for (const tx of transactions) {
+          const day = tx.createdAt.toISOString().split('T')[0];
+          const metadata = tx.metadata as any;
+          const amount = metadata?.totalUsd ? parseFloat(metadata.totalUsd) : 0;
+          revenueByDay[day] = (revenueByDay[day] || 0) + amount;
+        }
+
+        // Fill missing days with 0
+        const chartData = [];
+        for (let i = 0; i < days; i++) {
+          const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+          const day = date.toISOString().split('T')[0];
+          chartData.push({
+            date: day,
+            revenue: revenueByDay[day] || 0,
+          });
+        }
+
+        return reply.send({
+          success: true,
+          data: chartData,
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Failed to fetch revenue chart data');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'CHART_ERROR', message: 'Failed to fetch revenue chart data' },
+        });
+      }
+    }
+  );
 }
 
 // Helper functions
