@@ -92,7 +92,7 @@ export default async function signalSubscriptionRoutes(app: FastifyInstance) {
    * Create Stripe checkout session for signal subscription
    */
   const checkoutSchema = z.object({
-    tier: z.enum(['SIGNAL_BASIC', 'SIGNAL_PRO', 'SIGNAL_PRO_YEARLY']),
+    tier: z.enum(['SIGNAL_BASIC', 'SIGNAL_PRO']),
   });
 
   app.post(
