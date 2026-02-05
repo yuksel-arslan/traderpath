@@ -272,6 +272,9 @@ export default function ExplorePage() {
   const [topCoins, setTopCoins] = useState<TopCoin[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [flowError, setFlowError] = useState<string | null>(null)
+  const [coinsError, setCoinsError] = useState<string | null>(null)
 
   // Selected market for drill-down
   const [selectedMarket, setSelectedMarket] = useState<string | null>(null)
@@ -285,24 +288,48 @@ export default function ExplorePage() {
       if (refresh) setRefreshing(true)
       else setLoading(true)
 
-      const [flowRes, coinsRes] = await Promise.all([
-        authFetch('/api/capital-flow/summary'),
-        authFetch('/api/analysis/top-coins?limit=20')
+      // Clear previous errors
+      setError(null)
+      setFlowError(null)
+      setCoinsError(null)
+
+      // Fetch in parallel using Promise.allSettled to handle partial failures
+      const [flowResult, coinsResult] = await Promise.allSettled([
+        authFetch('/api/capital-flow/summary').then(res => res.json()),
+        authFetch('/api/analysis/top-coins?limit=20').then(res => res.json())
       ])
 
-      // Parse JSON responses
-      const flowData = await flowRes.json()
-      const coinsData = await coinsRes.json()
-
-      if (flowData.success) {
-        setCapitalFlow(flowData.data)
+      // Process Capital Flow result
+      if (flowResult.status === 'fulfilled') {
+        if (flowResult.value.success) {
+          setCapitalFlow(flowResult.value.data)
+        } else {
+          setFlowError(flowResult.value.error?.message || flowResult.value.error || 'Failed to load Capital Flow data')
+        }
+      } else {
+        console.error('[Explore] Capital Flow fetch failed:', flowResult.reason)
+        setFlowError('Failed to connect to Capital Flow service')
       }
 
-      if (coinsData.success) {
-        setTopCoins(coinsData.data?.coins || [])
+      // Process Top Coins result
+      if (coinsResult.status === 'fulfilled') {
+        if (coinsResult.value.success) {
+          setTopCoins(coinsResult.value.data?.coins || [])
+        } else {
+          setCoinsError(coinsResult.value.error?.message || coinsResult.value.error || 'Failed to load Top Coins data')
+        }
+      } else {
+        console.error('[Explore] Top Coins fetch failed:', coinsResult.reason)
+        setCoinsError('Failed to connect to Analysis service')
       }
-    } catch (error) {
-      console.error('Failed to fetch explore data:', error)
+
+      // Set general error if both failed
+      if (flowResult.status === 'rejected' && coinsResult.status === 'rejected') {
+        setError('Failed to load data. Please check your connection and try again.')
+      }
+    } catch (err) {
+      console.error('Failed to fetch explore data:', err)
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -336,6 +363,32 @@ export default function ExplorePage() {
           <div className="text-center">
             <Loader2 className="w-10 h-10 animate-spin text-blue-500 mx-auto mb-4" />
             <p className="text-slate-600 dark:text-slate-400 font-medium">Loading market data...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // General error state
+  if (error && !capitalFlow && topCoins.length === 0) {
+    return (
+      <div className="relative min-h-screen bg-slate-50 dark:bg-[#0B1120]">
+        <GrainOverlay />
+        <GradientOrbs />
+        <div className="relative z-10 flex items-center justify-center min-h-[60vh]">
+          <div className="text-center max-w-md mx-auto p-6">
+            <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+              <XCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Failed to Load Data</h2>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">{error}</p>
+            <button
+              onClick={() => fetchData(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-medium hover:opacity-90 transition-opacity"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Try Again
+            </button>
           </div>
         </div>
       </div>
@@ -411,6 +464,44 @@ export default function ExplorePage() {
         {/* Tab Content */}
         {activeTab === 'flow' && (
           <div className="space-y-6">
+            {/* Error Message */}
+            {flowError && (
+              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200/50 dark:border-red-500/30">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-red-800 dark:text-red-300">
+                      {flowError}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => fetchData(true)}
+                    className="px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 text-sm font-medium hover:bg-red-200 dark:hover:bg-red-500/30 transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* No data state */}
+            {!flowError && !capitalFlow && (
+              <div className="p-8 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 text-center">
+                <Globe className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">No Capital Flow Data</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                  Capital Flow data is not available right now. This could be due to API limitations or service maintenance.
+                </p>
+                <Link
+                  href="/capital-flow"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm font-medium hover:opacity-90 transition-opacity"
+                >
+                  <Globe className="w-4 h-4" />
+                  Go to Capital Flow Page
+                </Link>
+              </div>
+            )}
+
             {/* Global Liquidity Summary */}
             {capitalFlow?.globalLiquidity && (
               <div className="p-4 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
@@ -565,6 +656,26 @@ export default function ExplorePage() {
 
         {activeTab === 'analyze' && (
           <div className="space-y-6">
+            {/* Error Message */}
+            {coinsError && (
+              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200/50 dark:border-red-500/30">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-red-800 dark:text-red-300">
+                      {coinsError}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => fetchData(true)}
+                    className="px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 text-sm font-medium hover:bg-red-200 dark:hover:bg-red-500/30 transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -607,9 +718,43 @@ export default function ExplorePage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
+              <div className="p-8 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 text-center">
                 <BarChart3 className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-                <p className="text-slate-600 dark:text-slate-400">No coins found</p>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                  {searchQuery ? 'No coins match your search' : 'No Analysis Results Yet'}
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                  {searchQuery
+                    ? `No coins found matching "${searchQuery}". Try a different search term.`
+                    : 'The coin score cache is empty. Run a scan to populate the top coins list, or start a new analysis.'}
+                </p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  {searchQuery ? (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                    >
+                      Clear Search
+                    </button>
+                  ) : (
+                    <>
+                      <Link
+                        href="/analyze"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-medium hover:opacity-90 transition-opacity"
+                      >
+                        <Zap className="w-4 h-4" />
+                        Start Analysis
+                      </Link>
+                      <Link
+                        href="/top-coins"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        <Target className="w-4 h-4" />
+                        Scan Top Coins
+                      </Link>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -638,40 +783,56 @@ export default function ExplorePage() {
             {/* Recent Signals from Top Coins */}
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Latest Analysis Results</h3>
-              <div className="space-y-2">
-                {topCoins.slice(0, 10).map((coin) => (
-                  <Link
-                    key={coin.symbol}
-                    href={`/analyze/details/${coin.analysisId}`}
-                    className="flex items-center justify-between p-3 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 hover:border-violet-500/50 transition-all"
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={getCoinIcon(coin.symbol?.replace('USDT', '') || coin.symbol)}
-                        alt={coin.symbol}
-                        className="w-8 h-8 rounded-full"
-                        onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON }}
-                      />
-                      <div>
-                        <span className="font-bold text-slate-900 dark:text-white">{coin.symbol?.replace('USDT', '')}</span>
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className={cn(
-                            "px-1.5 py-0.5 rounded font-bold text-white",
-                            coin.verdict === 'GO' ? 'bg-emerald-500' : coin.verdict === 'CONDITIONAL_GO' ? 'bg-amber-500' : 'bg-slate-500'
-                          )}>
-                            {coin.verdict}
-                          </span>
-                          <span className="text-slate-500 capitalize">{coin.direction}</span>
+              {topCoins.length > 0 ? (
+                <div className="space-y-2">
+                  {topCoins.slice(0, 10).map((coin) => (
+                    <Link
+                      key={coin.symbol}
+                      href={`/analyze/details/${coin.analysisId}`}
+                      className="flex items-center justify-between p-3 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 hover:border-violet-500/50 transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={getCoinIcon(coin.symbol?.replace('USDT', '') || coin.symbol)}
+                          alt={coin.symbol}
+                          className="w-8 h-8 rounded-full"
+                          onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON }}
+                        />
+                        <div>
+                          <span className="font-bold text-slate-900 dark:text-white">{coin.symbol?.replace('USDT', '')}</span>
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className={cn(
+                              "px-1.5 py-0.5 rounded font-bold text-white",
+                              coin.verdict === 'GO' ? 'bg-emerald-500' : coin.verdict === 'CONDITIONAL_GO' ? 'bg-amber-500' : 'bg-slate-500'
+                            )}>
+                              {coin.verdict}
+                            </span>
+                            <span className="text-slate-500 capitalize">{coin.direction}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-slate-900 dark:text-white">{(coin.totalScore || 0).toFixed(1)}/10</div>
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
-                    </div>
+                      <div className="text-right">
+                        <div className="font-bold text-slate-900 dark:text-white">{(coin.totalScore || 0).toFixed(1)}/10</div>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 text-center">
+                  <Activity className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                    No analysis results to display. Run an analysis or scan top coins to see results here.
+                  </p>
+                  <Link
+                    href="/analyze"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-medium hover:opacity-90 transition-opacity"
+                  >
+                    <Zap className="w-4 h-4" />
+                    Start Analysis
                   </Link>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         )}
