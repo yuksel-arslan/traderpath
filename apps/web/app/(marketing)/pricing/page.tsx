@@ -559,9 +559,12 @@ export default function PricingPage() {
                                 /{period === 'monthly' ? 'mo' : 'yr'}
                               </span>
                             </div>
-                            <div className="flex items-center justify-center gap-2 mb-4">
-                              <Clock className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-sm text-muted-foreground">{plan.maxSignalsPerDay} signals/day</span>
+                            <div className="flex flex-col items-center gap-1 mb-4">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">{plan.maxSignalsPerDay} asset signals/day</span>
+                              </div>
+                              <span className="text-xs text-violet-500">Sent every 4 hours (6x daily)</span>
                             </div>
 
                             {/* Markets */}
@@ -745,7 +748,7 @@ export default function PricingPage() {
                 <div className="max-w-4xl mx-auto">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
                     {[
-                      { value: '10-20', label: 'Signals per day', desc: 'High-quality setups only' },
+                      { value: '5 Assets', label: 'Signals per day', desc: 'Sent every 4 hours (6x daily)' },
                       { value: '7-Step + MLIS', label: 'Analysis Method', desc: 'Full validation before signal' },
                       { value: '4 Markets', label: 'Coverage', desc: 'Crypto, Stocks, Metals, Bonds' },
                     ].map((item, index) => (

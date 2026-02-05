@@ -1,6 +1,8 @@
 /**
  * Signal Generator Job
- * Hourly cron that runs Capital Flow → Asset Analysis (7-Step + MLIS Pro) → Signal Generation
+ * Runs every 4 hours: Capital Flow → Asset Analysis (7-Step + MLIS Pro) → Signal Generation
+ *
+ * Schedule: 02:15, 06:15, 10:15, 14:15, 18:15, 22:15 UTC (6x daily)
  *
  * Note: MLIS Pro confirmation is integrated into the 7-Step Classic Analysis,
  * they are NOT separate analysis methods.
@@ -21,8 +23,8 @@ import type { SignalData, SignalGenerationResult } from './types';
 const TELEGRAM_BOT_TOKEN = process.env['TELEGRAM_BOT_TOKEN'];
 const TELEGRAM_CHANNEL_ID = process.env['TELEGRAM_SIGNAL_CHANNEL_ID']; // Public channel for signals
 
-// Cron schedule: Every hour at minute 15 (to allow data refresh)
-const CRON_SCHEDULE = '15 * * * *';
+// Cron schedule: Every 4 hours at minute 15 (02:15, 06:15, 10:15, 14:15, 18:15, 22:15 UTC)
+const CRON_SCHEDULE = '15 2,6,10,14,18,22 * * *';
 
 // Assets to scan per market
 const MARKET_ASSETS: Record<string, string[]> = {
