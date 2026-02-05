@@ -8,6 +8,7 @@ import { prisma } from '../../core/database';
 import { cache, cacheKeys } from '../../core/cache';
 import { calculateReportOutcome } from './outcome.service';
 import { logger } from '../../core/logger';
+import { detectAssetClass } from '../analysis/providers/symbol-resolver';
 
 interface LiveTrackingStatus {
   reportId: string;
@@ -49,54 +50,75 @@ interface BulkPriceData {
   [symbol: string]: number;
 }
 
-// Fetch multiple prices at once from Binance
+// Fetch multiple prices at once (crypto from Binance, others from Yahoo)
 async function fetchBulkPrices(symbols: string[]): Promise<BulkPriceData> {
   const prices: BulkPriceData = {};
 
   if (symbols.length === 0) return prices;
 
-  try {
-    // Use Binance ticker endpoint for multiple symbols
-    const pairs = symbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
-    const response = await fetch(
-      `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
-    );
+  // Separate crypto vs non-crypto
+  const cryptoSymbols = symbols.filter(s => detectAssetClass(s) === 'crypto');
+  const nonCryptoSymbols = symbols.filter(s => detectAssetClass(s) !== 'crypto');
 
-    if (!response.ok) return prices;
-
-    // Safely parse JSON response
-    const responseText = await response.text();
-    if (!responseText || responseText.trim() === '') {
-      return prices;
-    }
-
-    let data: Array<{ symbol: string; price: string }>;
+  // Fetch crypto prices from Binance
+  if (cryptoSymbols.length > 0) {
     try {
-      data = JSON.parse(responseText);
-    } catch {
-      logger.error('Invalid JSON response from Binance API');
-      return prices;
-    }
+      const pairs = cryptoSymbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
+      const response = await fetch(
+        `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
+      );
 
-    for (const item of data) {
-      const symbol = item.symbol.replace('USDT', '');
-      prices[symbol] = parseFloat(item.price);
+      if (response.ok) {
+        const responseText = await response.text();
+        if (responseText && responseText.trim() !== '') {
+          try {
+            const data: Array<{ symbol: string; price: string }> = JSON.parse(responseText);
+            for (const item of data) {
+              const symbol = item.symbol.replace('USDT', '');
+              prices[symbol] = parseFloat(item.price);
+            }
+          } catch {
+            logger.error('Invalid JSON response from Binance API');
+          }
+        }
+      }
+    } catch (error) {
+      logger.error({ error }, 'Failed to fetch crypto bulk prices');
     }
-  } catch (error) {
-    logger.error({ error }, 'Failed to fetch bulk prices');
+  }
+
+  // Fetch non-crypto prices from Yahoo via multi-asset provider
+  for (const sym of nonCryptoSymbols) {
+    try {
+      const { fetchTicker } = await import('../analysis/providers/multi-asset-data-provider');
+      const ticker = await fetchTicker(sym);
+      if (ticker?.price) {
+        prices[sym.toUpperCase().replace('.IS', '')] = ticker.price;
+      }
+    } catch (error) {
+      logger.error({ error, symbol: sym }, 'Failed to fetch non-crypto price');
+    }
   }
 
   return prices;
 }
 
-// Fetch single price
+// Fetch single price (multi-asset: crypto from Binance, others from Yahoo)
 async function fetchCurrentPrice(symbol: string): Promise<number | null> {
   try {
+    const assetClass = detectAssetClass(symbol);
+    if (assetClass !== 'crypto') {
+      // Non-crypto: use multi-asset provider (Yahoo Finance)
+      const { fetchTicker } = await import('../analysis/providers/multi-asset-data-provider');
+      const ticker = await fetchTicker(symbol);
+      return ticker?.price ?? null;
+    }
+
+    // Crypto: use Binance
     const pair = `${symbol.toUpperCase()}USDT`;
     const response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${pair}`);
     if (!response.ok) return null;
 
-    // Safely parse JSON response
     const responseText = await response.text();
     if (!responseText || responseText.trim() === '') {
       return null;
@@ -617,6 +639,29 @@ async function fetchKlines(
   const finalEndTime = endTime || Date.now();
 
   try {
+    // Non-crypto: use multi-asset provider for klines
+    const assetClass = detectAssetClass(symbol);
+    if (assetClass !== 'crypto') {
+      try {
+        const { fetchCandles } = await import('../analysis/providers/multi-asset-data-provider');
+        const candles = await fetchCandles(symbol, interval, 500);
+        return candles
+          .filter(c => c.timestamp >= startTime && c.timestamp <= finalEndTime)
+          .map(c => ({
+            openTime: c.timestamp,
+            open: c.open,
+            high: c.high,
+            low: c.low,
+            close: c.close,
+            volume: c.volume || 0,
+            closeTime: c.timestamp + 3600000,
+          }));
+      } catch (err) {
+        logger.error({ error: err, symbol }, '[Klines] Non-crypto klines fetch failed');
+        return allKlines;
+      }
+    }
+
     while (currentStartTime < finalEndTime) {
       const url = `https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}USDT&interval=${interval}&startTime=${currentStartTime}&endTime=${finalEndTime}&limit=${maxLimit}`;
 

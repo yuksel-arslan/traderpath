@@ -5,6 +5,30 @@
 
 import { config } from '../../core/config';
 
+// Crypto symbols get /USDT suffix, non-crypto (stocks, BIST, metals, bonds) don't
+const KNOWN_NON_CRYPTO = [
+  // BIST
+  'THYAO', 'GARAN', 'AKBNK', 'YKBNK', 'ISCTR', 'HALKB', 'VAKBN', 'TSKB', 'KCHOL', 'SAHOL',
+  'TAVHL', 'TKFEN', 'DOHOL', 'SISE', 'TOASO', 'FROTO', 'EREGL', 'KRDMD', 'TUPRS', 'PETKM',
+  'PGSUS', 'TCELL', 'TTKOM', 'BIMAS', 'MGROS', 'SOKM', 'ENKAI', 'EKGYO', 'ASELS', 'LOGO',
+  'ARCLK', 'VESTL', 'KOZAL', 'KOZAA', 'XU100',
+  // Stocks
+  'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'JPM', 'V', 'WMT',
+  'SPY', 'QQQ', 'DIA', 'IWM', 'VTI', 'VOO',
+  // Metals
+  'GLD', 'SLV', 'IAU', 'SGOL', 'XAUUSD', 'XAGUSD',
+  // Bonds
+  'TLT', 'IEF', 'SHY', 'BND', 'AGG', 'LQD', 'HYG',
+];
+
+function formatSymbolPair(symbol: string): string {
+  const upper = symbol.toUpperCase().replace('.IS', '');
+  if (KNOWN_NON_CRYPTO.includes(upper) || symbol.includes('.IS') || symbol.includes('.')) {
+    return upper;
+  }
+  return `${upper}/USDT`;
+}
+
 interface EmailOptions {
   to: string;
   subject: string;
@@ -448,7 +472,7 @@ TraderPath - Professional Trading Analysis
 
     const result = await this.sendEmail({
       to: email,
-      subject: `📊 TraderPath ${data.symbol}/USDT Analysis Report - ${data.verdict}`,
+      subject: `📊 TraderPath ${formatSymbolPair(data.symbol)} Analysis Report - ${data.verdict}`,
       html,
       text,
       attachments: [
@@ -513,7 +537,7 @@ TraderPath - Professional Trading Analysis
               </p>
 
               <p style="color: #64748b; font-size: 15px; margin: 0 0 30px; line-height: 1.6;">
-                Your requested <strong style="color: #1e293b;">${data.symbol}/USDT</strong> analysis report has been prepared and attached to this email.
+                Your requested <strong style="color: #1e293b;">${formatSymbolPair(data.symbol)}</strong> analysis report has been prepared and attached to this email.
               </p>
 
               <!-- Report Summary Card -->
@@ -524,7 +548,7 @@ TraderPath - Professional Trading Analysis
                       <tr>
                         <td width="50%" style="vertical-align: top;">
                           <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Analyzed</p>
-                          <p style="margin: 0; color: #1e293b; font-size: 28px; font-weight: bold;">${data.symbol}/USDT</p>
+                          <p style="margin: 0; color: #1e293b; font-size: 28px; font-weight: bold;">${formatSymbolPair(data.symbol)}</p>
                         </td>
                         <td width="50%" style="text-align: right; vertical-align: top;">
                           <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Direction</p>
@@ -643,10 +667,10 @@ TraderPath Analysis Report
 
 Hello ${data.userName},
 
-Your requested ${data.symbol}/USDT analysis report has been prepared and attached to this email.
+Your requested ${formatSymbolPair(data.symbol)} analysis report has been prepared and attached to this email.
 
 REPORT SUMMARY:
-• Coin: ${data.symbol}/USDT
+• Coin: ${formatSymbolPair(data.symbol)}
 • Direction: ${directionText}
 • Verdict: ${data.verdict}
 • Score: ${data.score}/100
@@ -1059,7 +1083,7 @@ TraderPath - Professional Trading Analysis
               </p>
 
               <p style="color: #64748b; font-size: 15px; margin: 0 0 20px; line-height: 1.6;">
-                Your analysis for <strong>${data.symbol}/USDT</strong> is complete! Here's a quick summary:
+                Your analysis for <strong>${formatSymbolPair(data.symbol)}</strong> is complete! Here's a quick summary:
               </p>
 
               <!-- Analysis Summary -->
@@ -1070,7 +1094,7 @@ TraderPath - Professional Trading Analysis
                       <strong style="color: #64748b;">Symbol</strong>
                     </td>
                     <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0; text-align: right; font-size: 18px; font-weight: bold; color: #1e293b;">
-                      ${data.symbol}/USDT
+                      ${formatSymbolPair(data.symbol)}
                     </td>
                   </tr>
                   <tr>
@@ -1156,10 +1180,10 @@ TraderPath - Analysis Complete!
 
 Hello ${userName},
 
-Your analysis for ${data.symbol}/USDT is complete!
+Your analysis for ${formatSymbolPair(data.symbol)} is complete!
 
 SUMMARY:
-- Symbol: ${data.symbol}/USDT
+- Symbol: ${formatSymbolPair(data.symbol)}
 - Verdict: ${data.verdict}
 - Score: ${data.score}/100
 - Direction: ${data.direction.toUpperCase()}
@@ -1179,7 +1203,7 @@ TraderPath - Professional Trading Analysis
 
     const result = await this.sendEmail({
       to: email,
-      subject: `${verdictEmoji} ${data.symbol}/USDT Analysis: ${data.verdict} (${data.score}/100) - TraderPath`,
+      subject: `${verdictEmoji} ${formatSymbolPair(data.symbol)} Analysis: ${data.verdict} (${data.score}/100) - TraderPath`,
       html,
       text,
     });
@@ -1527,7 +1551,7 @@ TraderPath - Professional Trading Analysis
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="color: white; font-size: 20px; font-weight: bold;">
-                    ${data.symbol}/USDT
+                    ${formatSymbolPair(data.symbol)}
                     <span style="font-size: 12px; color: ${directionColor}; margin-left: 10px; padding: 4px 8px; background: ${isLong ? 'rgba(20, 184, 166, 0.2)' : 'rgba(239, 68, 68, 0.2)'}; border-radius: 4px;">
                       ${directionIcon} ${directionText}
                     </span>
@@ -1548,7 +1572,7 @@ TraderPath - Professional Trading Analysis
                 Full analysis screenshot attached below
               </p>
               <p style="color: #64748b; font-size: 12px; margin: 0;">
-                Open the attachment to view your complete ${data.symbol}/USDT analysis with chart and trade plan
+                Open the attachment to view your complete ${formatSymbolPair(data.symbol)} analysis with chart and trade plan
               </p>
             </td>
           </tr>
@@ -1573,7 +1597,7 @@ TraderPath - Professional Trading Analysis
     `.trim();
 
     const text = `
-TraderPath Analysis - ${data.symbol}/USDT
+TraderPath Analysis - ${formatSymbolPair(data.symbol)}
 ==========================================
 
 Direction: ${directionText}
@@ -1591,7 +1615,7 @@ This is not investment advice. Do your own research before trading.
 
     const result = await this.sendEmail({
       to: email,
-      subject: `${data.symbol}/USDT ${directionText} - ${scorePercent}/100 Score | TraderPath`,
+      subject: `${formatSymbolPair(data.symbol)} ${directionText} - ${scorePercent}/100 Score | TraderPath`,
       html,
       text,
       attachments: [

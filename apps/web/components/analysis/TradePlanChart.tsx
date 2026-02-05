@@ -18,6 +18,30 @@ import {
   IPriceLine,
   SeriesMarker,
 } from 'lightweight-charts';
+
+// Known non-crypto symbols that should NOT have /USDT suffix
+const NON_CRYPTO_SYMBOLS = new Set([
+  // BIST
+  'THYAO','GARAN','AKBNK','YKBNK','ISCTR','HALKB','VAKBN','TSKB','KCHOL','SAHOL',
+  'TAVHL','TKFEN','DOHOL','SISE','TOASO','FROTO','EREGL','KRDMD','TUPRS','PETKM',
+  'PGSUS','TCELL','TTKOM','BIMAS','MGROS','SOKM','ENKAI','EKGYO','ASELS','LOGO',
+  'ARCLK','VESTL','KOZAL','KOZAA','XU100',
+  // Stocks
+  'AAPL','MSFT','GOOGL','AMZN','META','NVDA','TSLA','JPM','V','WMT',
+  'SPY','QQQ','DIA','IWM','VTI','VOO',
+  // Metals
+  'GLD','SLV','IAU','SGOL','XAUUSD','XAGUSD',
+  // Bonds
+  'TLT','IEF','SHY','BND','AGG','LQD','HYG',
+]);
+
+function formatSymbolPair(sym: string): string {
+  const upper = sym.toUpperCase().replace('.IS', '');
+  if (NON_CRYPTO_SYMBOLS.has(upper) || sym.includes('.')) {
+    return upper;
+  }
+  return `${upper}/USDT`;
+}
 import { Loader2, TrendingUp, TrendingDown, Target, AlertTriangle } from 'lucide-react';
 
 /**
@@ -486,7 +510,7 @@ export function TradePlanChart({
               )}
             </div>
             <div>
-              <h3 className="font-bold text-lg">{symbol}/USDT Trade Plan</h3>
+              <h3 className="font-bold text-lg">{formatSymbolPair(symbol)} Trade Plan</h3>
               <p className="text-sm text-muted-foreground">
                 {direction === 'long' ? 'Long Position' : 'Short Position'} • {intervalLabel} Chart
               </p>

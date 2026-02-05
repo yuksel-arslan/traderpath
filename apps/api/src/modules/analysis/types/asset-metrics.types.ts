@@ -3,7 +3,7 @@
 // Each asset class has its own relevant metrics
 // ===========================================
 
-export type AssetClass = 'crypto' | 'stocks' | 'metals' | 'bonds';
+export type AssetClass = 'crypto' | 'stocks' | 'metals' | 'bonds' | 'bist';
 
 // Signal direction
 export type SignalDirection = 'bullish' | 'bearish' | 'neutral';
@@ -253,6 +253,7 @@ export interface InterMarketContext {
     stocks: SignalDirection;
     metals: SignalDirection;
     bonds: SignalDirection;
+    bist: SignalDirection;
   };
 
   // Actual behavior (from price data)
@@ -294,6 +295,7 @@ export const REGIME_EXPECTATIONS: Record<MarketRegime, {
   stocks: SignalDirection;
   metals: SignalDirection;
   bonds: SignalDirection;
+  bist: SignalDirection;
   description: string;
 }> = {
   risk_on: {
@@ -301,6 +303,7 @@ export const REGIME_EXPECTATIONS: Record<MarketRegime, {
     stocks: 'bullish',
     metals: 'bearish',
     bonds: 'bearish',
+    bist: 'bullish',
     description: 'Risk appetite high, money flows to growth assets',
   },
   risk_off: {
@@ -308,6 +311,7 @@ export const REGIME_EXPECTATIONS: Record<MarketRegime, {
     stocks: 'bearish',
     metals: 'bullish',
     bonds: 'bullish',
+    bist: 'bearish',
     description: 'Fear dominates, flight to safety',
   },
   inflation: {
@@ -315,6 +319,7 @@ export const REGIME_EXPECTATIONS: Record<MarketRegime, {
     stocks: 'neutral',
     metals: 'bullish',
     bonds: 'bearish',
+    bist: 'bearish', // Turkish stocks suffer from high inflation
     description: 'Inflation hedges outperform, bonds suffer',
   },
   deflation: {
@@ -322,6 +327,7 @@ export const REGIME_EXPECTATIONS: Record<MarketRegime, {
     stocks: 'bearish',
     metals: 'neutral',
     bonds: 'bullish',
+    bist: 'bearish',
     description: 'Cash and bonds win, risk assets lose',
   },
   liquidity_crisis: {
@@ -329,6 +335,7 @@ export const REGIME_EXPECTATIONS: Record<MarketRegime, {
     stocks: 'bearish',
     metals: 'bearish',  // Initially, then recovers
     bonds: 'bullish',   // Flight to treasuries
+    bist: 'bearish',
     description: 'Everything sells off initially, cash is king',
   },
   transitioning: {
@@ -336,6 +343,7 @@ export const REGIME_EXPECTATIONS: Record<MarketRegime, {
     stocks: 'neutral',
     metals: 'neutral',
     bonds: 'neutral',
+    bist: 'neutral',
     description: 'Regime change in progress, high uncertainty',
   },
 };
@@ -370,6 +378,18 @@ export const STOCKS_INDICES = [
 
 export function detectAssetClass(symbol: string): AssetClass {
   const upperSymbol = symbol.toUpperCase().replace('USDT', '').replace('USD', '');
+
+  // Check BIST first (ends with .IS suffix or known BIST symbols)
+  if (upperSymbol.endsWith('.IS')) {
+    return 'bist';
+  }
+  const knownBist = ['THYAO', 'GARAN', 'AKBNK', 'YKBNK', 'ISCTR', 'HALKB', 'VAKBN', 'TSKB',
+    'KCHOL', 'SAHOL', 'TAVHL', 'TKFEN', 'DOHOL', 'SISE', 'TOASO', 'FROTO', 'EREGL', 'KRDMD',
+    'TUPRS', 'PETKM', 'PGSUS', 'TCELL', 'TTKOM', 'BIMAS', 'MGROS', 'SOKM', 'ENKAI', 'EKGYO',
+    'ASELS', 'LOGO', 'ARCLK', 'VESTL', 'KOZAL', 'KOZAA', 'XU100'];
+  if (knownBist.some(s => upperSymbol === s || upperSymbol === `${s}.IS`)) {
+    return 'bist';
+  }
 
   if (METALS_SYMBOLS.some(s => upperSymbol.includes(s.replace('=F', '').replace('USD', '')))) {
     return 'metals';
