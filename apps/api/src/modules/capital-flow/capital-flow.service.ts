@@ -1297,6 +1297,38 @@ const ASSET_DATABASE: Record<MarketType, Record<string, Array<{
       { symbol: 'DBP', name: 'Precious Metals ETF', riskLevel: 'medium', phases: ['early', 'mid', 'late'] },
     ],
   },
+  bist: {
+    Bankacılık: [
+      { symbol: 'GARAN', name: 'Garanti BBVA', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'AKBNK', name: 'Akbank', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'YKBNK', name: 'Yapı Kredi', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'ISCTR', name: 'İş Bankası', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'HALKB', name: 'Halkbank', riskLevel: 'medium', phases: ['early', 'mid'] },
+    ],
+    Holding: [
+      { symbol: 'KCHOL', name: 'Koç Holding', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'SAHOL', name: 'Sabancı Holding', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'TAVHL', name: 'TAV Havalimanları', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'TKFEN', name: 'Tekfen Holding', riskLevel: 'medium', phases: ['early', 'mid'] },
+    ],
+    Sanayi: [
+      { symbol: 'EREGL', name: 'Ereğli Demir Çelik', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'SISE', name: 'Şişecam', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'TOASO', name: 'Tofaş Oto', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'FROTO', name: 'Ford Otosan', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+    ],
+    Havacılık: [
+      { symbol: 'THYAO', name: 'Türk Hava Yolları', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'PGSUS', name: 'Pegasus', riskLevel: 'high', phases: ['early'] },
+    ],
+    default: [
+      { symbol: 'THYAO', name: 'Türk Hava Yolları', riskLevel: 'medium', phases: ['early', 'mid', 'late'] },
+      { symbol: 'GARAN', name: 'Garanti BBVA', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'KCHOL', name: 'Koç Holding', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'EREGL', name: 'Ereğli Demir Çelik', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'AKBNK', name: 'Akbank', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+    ],
+  },
 };
 
 /**
