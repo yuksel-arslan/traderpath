@@ -27,6 +27,8 @@ import {
   Gift,
   X,
   Shield,
+  Target,
+  Globe,
 } from 'lucide-react';
 import Link from 'next/link';
 import { authFetch } from '../../../lib/api';
