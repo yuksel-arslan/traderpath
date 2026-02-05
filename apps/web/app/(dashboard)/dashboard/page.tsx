@@ -3,6 +3,7 @@
 // ===========================================
 // Unified Dashboard - Capital Flow Integration
 // Platform Performance + My Performance
+// Traffic Light View + Classic View Toggle
 // ===========================================
 
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -41,7 +42,10 @@ import {
   ArrowDownRight,
   Minus,
   Clock,
+  LayoutGrid,
+  CircleDot,
 } from 'lucide-react';
+import { TrafficLight, useProactiveSignals } from '@/components/traffic-light';
 import { cn } from '../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
 import { getApiUrl, authFetch } from '../../../lib/api';
@@ -674,8 +678,24 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
 const CACHE_KEY = 'dashboard_unified_cache';
 const CACHE_DURATION = 5 * 60 * 1000;
 
+// View Mode Type
+type DashboardViewMode = 'traffic-light' | 'classic';
+
 export default function DashboardPage() {
   const router = useRouter();
+
+  // View mode state - persisted in localStorage
+  const [viewMode, setViewMode] = useState<DashboardViewMode>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('dashboard_view_mode');
+      return (saved as DashboardViewMode) || 'traffic-light';
+    }
+    return 'traffic-light';
+  });
+
+  // Traffic Light signals
+  const { signals: proactiveSignals, isLoading: signalsLoading } = useProactiveSignals();
+
   const [credits, setCredits] = useState(0);
   const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
@@ -687,6 +707,11 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const initialLoadDone = useRef(false);
+
+  // Save view mode preference
+  useEffect(() => {
+    localStorage.setItem('dashboard_view_mode', viewMode);
+  }, [viewMode]);
 
   const fetchData = useCallback(async (forceRefresh = false) => {
     try {
@@ -1142,8 +1167,115 @@ export default function DashboardPage() {
             <FeatureBadge icon={Brain} text="AI Insights" />
             <FeatureBadge icon={Zap} text="Real-time Data" />
           </div>
+
+          {/* View Mode Toggle */}
+          <div className="flex justify-center pt-4 animate-slide-up" style={{ animationDelay: '0.3s' }}>
+            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+              <button
+                onClick={() => setViewMode('traffic-light')}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                  viewMode === 'traffic-light'
+                    ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/25"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50"
+                )}
+              >
+                <CircleDot className="w-4 h-4" />
+                <span className="hidden sm:inline">Simple</span>
+              </button>
+              <button
+                onClick={() => setViewMode('classic')}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                  viewMode === 'classic'
+                    ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/25"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50"
+                )}
+              >
+                <LayoutGrid className="w-4 h-4" />
+                <span className="hidden sm:inline">Classic</span>
+              </button>
+            </div>
+          </div>
         </div>
 
+        {/* ===== TRAFFIC LIGHT VIEW ===== */}
+        {viewMode === 'traffic-light' && (
+          <div className="py-8">
+            {signalsLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="text-center">
+                  <Loader2 className="w-10 h-10 animate-spin text-emerald-500 mx-auto mb-4" />
+                  <p className="text-slate-600 dark:text-slate-400 font-medium">Scanning markets...</p>
+                </div>
+              </div>
+            ) : (
+              <TrafficLight
+                signals={proactiveSignals}
+                onNotifyMe={() => router.push('/settings?tab=notifications')}
+                onAnalyze={(asset) => router.push(`/analyze?symbol=${asset}`)}
+                streak={userStats?.goSignals || 0}
+                xp={userStats?.totalAnalyses ? userStats.totalAnalyses * 10 : 0}
+                level={Math.floor((userStats?.totalAnalyses || 0) / 10) + 1}
+                nextLevelXp={100}
+              />
+            )}
+
+            {/* Quick Stats below Traffic Light */}
+            <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto">
+              <div className="text-center p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
+                <div className="text-2xl font-bold text-slate-900 dark:text-white">{formatCredits(credits)}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Credits</div>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
+                <div className="text-2xl font-bold text-slate-900 dark:text-white">{userStats?.totalAnalyses || 0}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Analyses</div>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
+                <div className={cn(
+                  "text-2xl font-bold",
+                  (userStats?.accuracy || 0) >= 50 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-900 dark:text-white"
+                )}>
+                  {userStats?.verifiedAnalyses ? `${userStats.accuracy?.toFixed(0)}%` : '—'}
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Accuracy</div>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{userStats?.activeCount || 0}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Active</div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Link
+                href="/explore"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+              >
+                <Globe className="w-4 h-4 text-blue-500" />
+                Explore Markets
+              </Link>
+              <Link
+                href="/rewards"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+              >
+                <Award className="w-4 h-4 text-amber-500" />
+                Earn Rewards
+              </Link>
+              <Link
+                href="/reports"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+              >
+                <BarChart3 className="w-4 h-4 text-emerald-500" />
+                View Reports
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* ===== CLASSIC VIEW ===== */}
+        {viewMode === 'classic' && (
+          <>
         {/* ===== CREDITS SECTION ===== */}
         <div id="tour-credits" className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-amber-200/50 dark:border-slate-700/50 shadow-lg mb-6">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-yellow-500/5" />
@@ -1641,6 +1773,8 @@ export default function DashboardPage() {
               </div>
             </div>
           </section>
+        )}
+          </>
         )}
       </div>
     </div>
