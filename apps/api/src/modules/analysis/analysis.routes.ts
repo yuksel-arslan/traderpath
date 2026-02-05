@@ -831,6 +831,27 @@ Warn about potential traps and give protective advice.`;
 
         logger.info({ analysisId: savedAnalysis.id }, '[MLIS] Analysis saved to database');
 
+        // Achievement tracking: Analysis milestones
+        try {
+          const { achievementService } = await import('../achievements/achievement.service');
+          await achievementService.incrementProgress(userId, 'FIRST_ANALYSIS', 1);
+          await achievementService.incrementProgress(userId, 'ANALYSIS_10', 1);
+          await achievementService.incrementProgress(userId, 'ANALYSIS_50', 1);
+          await achievementService.incrementProgress(userId, 'ANALYSIS_100', 1);
+        } catch (achErr) {
+          logger.error({ error: achErr }, '[Achievement] Failed to track analysis milestone');
+        }
+
+        // XP Reward: Analysis completion
+        try {
+          await prisma.user.update({
+            where: { id: userId },
+            data: { xp: { increment: 10 } },
+          });
+        } catch (xpErr) {
+          logger.error({ error: xpErr }, '[XP] Failed to award analysis XP');
+        }
+
         // Return MLIS result
         const responseData = {
           analysisId: savedAnalysis.id,
@@ -1069,6 +1090,27 @@ Warn about potential traps and give protective advice.`;
           analysisId: savedAnalysis.id,
         }
       );
+
+      // Achievement tracking: Analysis milestones
+      try {
+        const { achievementService } = await import('../achievements/achievement.service');
+        await achievementService.incrementProgress(userId, 'FIRST_ANALYSIS', 1);
+        await achievementService.incrementProgress(userId, 'ANALYSIS_10', 1);
+        await achievementService.incrementProgress(userId, 'ANALYSIS_50', 1);
+        await achievementService.incrementProgress(userId, 'ANALYSIS_100', 1);
+      } catch (achErr) {
+        logger.error({ error: achErr }, '[Achievement] Failed to track analysis milestone');
+      }
+
+      // XP Reward: Analysis completion
+      try {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { xp: { increment: 10 } },
+        });
+      } catch (xpErr) {
+        logger.error({ error: xpErr }, '[XP] Failed to award analysis XP');
+      }
 
       // Send analysis completion notifications (Telegram, Discord only) - fire and forget
       // NOTE: Automatic email removed - users can send email manually from Recent Analyses

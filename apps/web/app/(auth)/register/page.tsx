@@ -114,7 +114,7 @@ export default function RegisterPage() {
           <div className="mb-6 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
             <div className="flex items-center gap-2 text-green-600">
               <Gift className="w-5 h-5" />
-              <span className="font-medium">Get 125 free credits! (25 on signup + 100 on first login)</span>
+              <span className="font-medium">Get 20 free credits on signup!</span>
             </div>
           </div>
 

@@ -21,10 +21,10 @@ const SEGMENTS = [
   { value: 2, color: '#8b5cf6', label: '2' },
   { value: 3, color: '#06b6d4', label: '3' },
   { value: 1, color: '#10b981', label: '1' },
-  { value: 5, color: '#f59e0b', label: '5' },
+  { value: 5, color: '#fbbf24', label: '5' },  // Jackpot!
   { value: 2, color: '#ef4444', label: '2' },
   { value: 3, color: '#ec4899', label: '3' },
-  { value: 10, color: '#fbbf24', label: '10' },
+  { value: 1, color: '#f59e0b', label: '1' },
 ];
 
 export function SpinWheel({ onSpin, disabled = false, className }: SpinWheelProps) {
@@ -41,11 +41,10 @@ export function SpinWheel({ onSpin, disabled = false, className }: SpinWheelProp
 
     // Calculate random result with weighted probability
     const weights = SEGMENTS.map((s) => {
-      if (s.value === 10) return 1;
-      if (s.value === 5) return 2;
-      if (s.value === 3) return 3;
-      if (s.value === 2) return 4;
-      return 5;
+      if (s.value === 5) return 1;   // 10% jackpot
+      if (s.value === 3) return 2;   // 20%
+      if (s.value === 2) return 3;   // 30%
+      return 4;                       // 40% for 1 credit
     });
     const totalWeight = weights.reduce((a, b) => a + b, 0);
     let random = Math.random() * totalWeight;
