@@ -551,6 +551,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-03 | Vercel build error: "Cannot find name 'layer3Unlocked'" | `layer3Unlocked` ve `layer4Unlocked` değişkenleri `SystemFlowChart` komponenti içinde kullanılıyordu ama ana komponentte tanımlıydı. Değişkenler props olarak `SystemFlowChart`'a aktarıldı | `capital-flow/page.tsx:1027-1041,2565-2578` |
 | 2026-02-05 | Explore sayfasında Capital Flow, Top Coins ve Signals sekmeleri boş görünüyordu | 1) Frontend: error state ve error UI eklendi (Promise.allSettled ile her API ayrı işleniyor), 2) Her sekme için hata mesajı ve retry butonu, 3) Boş durum için açıklayıcı mesajlar ve aksiyon butonları, 4) Backend: top-coins endpoint cache boşken recent analyses'a fallback yapıyor | `explore/page.tsx`, `analysis.routes.ts:5317-5376` |
 | 2026-02-05 | Capital Flow sayfası "Error Loading Data" gösteriyordu | `getCapitalFlowSummary()` içinde `determineLiquidityBias`, `generateRecommendation`, `detectActiveRotation` fonksiyonları try-catch olmadan çağrılıyordu. Hata fırlatınca tüm API 500 döndürüyordu. 1) Tüm riskli fonksiyonlar try-catch ile sarıldı, 2) `getFallbackRecommendation()` fonksiyonu eklendi, 3) Cache yazma hatası da yakalanıyor | `capital-flow.service.ts:118-198,1072-1084` |
+| 2026-02-05 | Trade plan entry/SL/TP seviyeleri güncel fiyattan çok uzaktaydı ve mantıksızdı (fiyat $112 iken entry $178, SL $188) | Trade plan mantığı tamamen yeniden yazıldı: 1) S/R seviyeleri artık analiz timeframe'inden (candlesPrimary) alınıyor (eskiden hep 1D), 2) Entry her zaman current price (pullback beklenmez), 3) SL = destek - 1 ATR (LONG) veya direnç + 1 ATR (SHORT), 4) TP1 = yakın direnç/destek, TP2 = uzak direnç/destek (yoksa 2R/3R fallback), 5) Fiyat S/R aralığının ortasındaysa "wait" durumu (entry koşulu karşılanmıyor), 6) Seviyeler yakınlığa göre sıralanıyor (güce göre değil), 7) >%10 uzaktaki seviyeler filtreleniyor, 8) DCA ve çoklu entry kaldırıldı, 9) TP dağılımı %60/%40 | `analysis.engine.ts:3682,5365-5565` |
 
 ---
 
@@ -1852,6 +1853,19 @@ Kullanıcı Hakları Aktif:
   - How It Works bölümü sinyal akışını açıklıyor
   - Comparison box ile kullanıcı kararına yardım
   - Dosyalar: `apps/web/lib/pricing-config.ts`, `apps/web/app/(marketing)/pricing/page.tsx`
+
+### 2026-02-05
+- **Trade Plan Pricing Logic Fix (Support/Resistance Level Filtering)**:
+  - **Sorun**: `findSupportResistance()` günlük mumlardan aylar öncesine ait destek/direnç seviyeleri tespit ediyordu. Örneğin fiyat $112 iken, aylar önceki ATH bölgesinden $178 direnç seviyesi tespit edilip SHORT entry olarak kullanılıyordu → Entry $178, SL $188, TP $162/$152 - tamamen saçma
+  - **Kök Neden**: S/R seviyeleri ile güncel fiyat arasındaki mesafe kontrol edilmiyordu
+  - **Çözüm**:
+    1. `levelWithinRange()` fonksiyonu eklendi - güncel fiyattan >%10 uzaktaki seviyeler `undefined`'a dönüştürülüyor
+    2. Tüm entry hesaplamalarında (LONG support, SHORT resistance) filtrelenmiş seviyeler kullanılıyor
+    3. Tüm SL hesaplamalarında (LONG support-based stop, SHORT resistance-based stop) filtrelenmiş seviyeler kullanılıyor
+    4. Tüm TP hesaplamalarında (LONG resistance targets, SHORT support targets) filtrelenmiş seviyeler kullanılıyor
+    5. `averageEntry` için son güvenlik kontrolü eklendi - %10 aşarsa entries sıfırlanıp current price kullanılıyor
+  - Filtrelenen seviyeler `undefined` olunca mevcut fallback mantığı devreye giriyor → current price kullanılıyor
+  - Dosya: `apps/api/src/modules/analysis/analysis.engine.ts:5371-5378,5530-5548`
 
 ---
 

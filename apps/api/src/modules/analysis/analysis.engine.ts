@@ -3678,8 +3678,8 @@ export const analysisEngine = {
     const ma50 = calculateSMA(prices4h, 50);
     const ma200 = calculateSMA(prices4h, Math.min(200, prices4h.length));
 
-    // Support/Resistance levels
-    const levels = findSupportResistance(candles1d);
+    // Support/Resistance levels - use primary timeframe candles (same timeframe as analysis)
+    const levels = findSupportResistance(candlesPrimary);
 
     // ===== TFT FORECAST (Primary) or Statistical Fallback =====
     // Try to get prediction from TFT service first
@@ -5362,242 +5362,113 @@ export const analysisEngine = {
       targets: []
     };
 
-    // ===== ENTRY LEVELS (based on Support/Resistance) =====
-    // Key principle: Entry should be at key support/resistance levels
-    // LONG: Enter near support (buy low)
-    // SHORT: Enter near resistance (sell high)
+    // ===== ENTRY / SL / TP TRADE PLAN =====
+    // Rules:
+    // LONG: Price near support → Entry = current price, SL = support - 1 ATR, TP1 = nearest resistance, TP2 = further resistance
+    // SHORT: Price near resistance → Entry = current price, SL = resistance + 1 ATR, TP1 = nearest support, TP2 = further support
+    // No pullback waiting - enter at current price immediately
     const entries: TradePlanResult['entries'] = [];
-    const supportLevel = assetScan.levels.support[0];
-    const supportLevel2 = assetScan.levels.support[1];
-    const resistanceLevel = assetScan.levels.resistance[0];
-    const resistanceLevel2 = assetScan.levels.resistance[1];
-    const atrForEntry = assetScan.indicators.atr || currentPrice * 0.02;
 
-    // Proximity threshold: price is "near" a level if within 1 ATR
-    const isNearLevel = (price: number, level: number) => Math.abs(price - level) <= atrForEntry;
+    // Filter levels >10% from current price (historical levels not actionable)
+    const MAX_LEVEL_DISTANCE_PERCENT = 10;
+    const levelWithinRange = (level: number | undefined): number | undefined => {
+      if (level === undefined) return undefined;
+      return Math.abs((level - currentPrice) / currentPrice * 100) <= MAX_LEVEL_DISTANCE_PERCENT ? level : undefined;
+    };
 
-    if (direction === 'long') {
-      // LONG: Primary entry at support level
-      if (supportLevel !== undefined) {
-        // Check if current price is near support (good entry) or above support (wait for pullback)
-        const priceNearSupport = isNearLevel(currentPrice, supportLevel);
+    // Sort levels by proximity to current price (nearest first)
+    const sortedSupports = assetScan.levels.support
+      .map(s => levelWithinRange(s))
+      .filter((s): s is number => s !== undefined)
+      .sort((a, b) => b - a); // descending: nearest (highest) support first
 
-        if (priceNearSupport) {
-          // Price is at support - enter now
-          entries.push({
-            price: roundPrice(currentPrice),
-            percentage: 70,
-            type: 'limit',
-            source: 'Current price at support zone'
-          });
-          sources.entries.push('Current price at support');
-        } else if (currentPrice > supportLevel) {
-          // Price above support - use support as limit order entry (wait for pullback)
-          entries.push({
-            price: roundPrice(supportLevel),
-            percentage: 70,
-            type: 'limit',
-            source: 'Support level (wait for pullback)'
-          });
-          sources.entries.push('Support level entry');
-        } else {
-          // Price below support (breakdown) - use current price
-          entries.push({
-            price: roundPrice(currentPrice),
-            percentage: 70,
-            type: 'limit',
-            source: 'Current price'
-          });
-          sources.entries.push('Current price');
-        }
+    const sortedResistances = assetScan.levels.resistance
+      .map(r => levelWithinRange(r))
+      .filter((r): r is number => r !== undefined)
+      .sort((a, b) => a - b); // ascending: nearest (lowest) resistance first
 
-        // Secondary entry at second support if available
-        if (supportLevel2 !== undefined && supportLevel2 < supportLevel) {
-          entries.push({
-            price: roundPrice(supportLevel2),
-            percentage: 30,
-            type: 'limit',
-            source: 'Second support level (DCA)'
-          });
-          sources.entries.push('Second support DCA');
-        } else {
-          // Fallback: slightly below primary entry
-          const dcaEntry = entries[0].price * 0.98;
-          entries.push({
-            price: roundPrice(dcaEntry),
-            percentage: 30,
-            type: 'limit',
-            source: 'DCA entry (-2%)'
-          });
-          sources.entries.push('DCA entry');
+    const nearestSupport = sortedSupports[0];
+    const furtherSupport = sortedSupports[1];
+    const nearestResistance = sortedResistances[0];
+    const furtherResistance = sortedResistances[1];
+    const atr = assetScan.indicators.atr || currentPrice * 0.02;
+
+    // ===== ENTRY: Always at current price (no pullback waiting) =====
+    entries.push({
+      price: roundPrice(currentPrice),
+      percentage: 100,
+      type: 'limit',
+      source: direction === 'long'
+        ? `Current price${nearestSupport ? ` near support $${nearestSupport.toFixed(2)}` : ''}`
+        : `Current price${nearestResistance ? ` near resistance $${nearestResistance.toFixed(2)}` : ''}`
+    });
+    sources.entries.push(direction === 'long' ? 'Near support' : 'Near resistance');
+
+    const averageEntry = roundPrice(currentPrice);
+
+    // Entry validation: price must be near the correct level (within 1 ATR)
+    // LONG: price should be near support (lower half of S/R range)
+    // SHORT: price should be near resistance (upper half of S/R range)
+    // If price is in the middle → WAIT, don't enter
+    const isNearLevel = (price: number, level: number) => Math.abs(price - level) <= atr;
+
+    let entryDistancePercent = 0;
+    let needsToWaitForEntry = false;
+    let entryStatus: 'immediate' | 'wait_for_pullback' | 'wait_for_rally' = 'immediate';
+
+    if (nearestSupport && nearestResistance) {
+      const range = nearestResistance - nearestSupport;
+      const midpoint = nearestSupport + range / 2;
+
+      if (direction === 'long') {
+        if (currentPrice > midpoint && !isNearLevel(currentPrice, nearestSupport)) {
+          // Price in upper half and not near support → wait for pullback to support
+          needsToWaitForEntry = true;
+          entryStatus = 'wait_for_pullback';
+          entryDistancePercent = parseFloat(((currentPrice - nearestSupport) / currentPrice * 100).toFixed(2));
         }
       } else {
-        // No support level found - use current price
-        entries.push({
-          price: roundPrice(currentPrice),
-          percentage: 100,
-          type: 'limit',
-          source: 'Current price (no support level)'
-        });
-        sources.entries.push('Current price');
-      }
-    } else {
-      // SHORT: Primary entry at resistance level
-      if (resistanceLevel !== undefined) {
-        // Check if current price is near resistance (good entry) or below resistance (wait for rally)
-        const priceNearResistance = isNearLevel(currentPrice, resistanceLevel);
-
-        if (priceNearResistance) {
-          // Price is at resistance - enter now
-          entries.push({
-            price: roundPrice(currentPrice),
-            percentage: 70,
-            type: 'limit',
-            source: 'Current price at resistance zone'
-          });
-          sources.entries.push('Current price at resistance');
-        } else if (currentPrice < resistanceLevel) {
-          // Price below resistance - use resistance as limit order entry (wait for rally)
-          entries.push({
-            price: roundPrice(resistanceLevel),
-            percentage: 70,
-            type: 'limit',
-            source: 'Resistance level (wait for rally)'
-          });
-          sources.entries.push('Resistance level entry');
-        } else {
-          // Price above resistance (breakout) - use current price
-          entries.push({
-            price: roundPrice(currentPrice),
-            percentage: 70,
-            type: 'limit',
-            source: 'Current price'
-          });
-          sources.entries.push('Current price');
+        if (currentPrice < midpoint && !isNearLevel(currentPrice, nearestResistance)) {
+          // Price in lower half and not near resistance → wait for rally to resistance
+          needsToWaitForEntry = true;
+          entryStatus = 'wait_for_rally';
+          entryDistancePercent = parseFloat(((nearestResistance - currentPrice) / currentPrice * 100).toFixed(2));
         }
-
-        // Secondary entry at second resistance if available
-        if (resistanceLevel2 !== undefined && resistanceLevel2 > resistanceLevel) {
-          entries.push({
-            price: roundPrice(resistanceLevel2),
-            percentage: 30,
-            type: 'limit',
-            source: 'Second resistance level (DCA)'
-          });
-          sources.entries.push('Second resistance DCA');
-        } else {
-          // Fallback: slightly above primary entry
-          const dcaEntry = entries[0].price * 1.02;
-          entries.push({
-            price: roundPrice(dcaEntry),
-            percentage: 30,
-            type: 'limit',
-            source: 'DCA entry (+2%)'
-          });
-          sources.entries.push('DCA entry');
-        }
-      } else {
-        // No resistance level found - use current price
-        entries.push({
-          price: roundPrice(currentPrice),
-          percentage: 100,
-          type: 'limit',
-          source: 'Current price (no resistance level)'
-        });
-        sources.entries.push('Current price');
       }
     }
 
-    // Normalize percentages if needed
-    const totalPct = entries.reduce((sum, e) => sum + e.percentage, 0);
-    if (totalPct !== 100) {
-      entries.forEach(e => e.percentage = Math.round(e.percentage / totalPct * 100));
-    }
-
-    // Calculate average entry
-    const averageEntry = roundPrice(
-      entries.reduce((sum, e) => sum + e.price * (e.percentage / 100), 0)
-    );
-
-    // Check if current price is far from entry (need to wait)
-    const entryDistancePercent = Math.abs((currentPrice - averageEntry) / averageEntry * 100);
-    const needsToWaitForEntry = entryDistancePercent > 1; // More than 1% away from entry
-
-    // Determine entry status based on price relationship
-    let entryStatus: 'immediate' | 'wait_for_pullback' | 'wait_for_rally';
-    if (!needsToWaitForEntry) {
-      entryStatus = 'immediate';
-    } else if (direction === 'long') {
-      // LONG position: if current price > entry, need to wait for pullback
-      entryStatus = currentPrice > averageEntry ? 'wait_for_pullback' : 'wait_for_rally';
-    } else {
-      // SHORT position: if current price < entry, need to wait for rally
-      entryStatus = currentPrice < averageEntry ? 'wait_for_rally' : 'wait_for_pullback';
-    }
-
-    // ===== STOP LOSS (from Safety Check + ATR + Trap Check) =====
-    const atr = assetScan.indicators.atr;
-
-    // Base ATR multiplier based on safety level
-    let atrMultiplier: number;
-    switch (safetyCheck.riskLevel) {
-      case 'low': atrMultiplier = 1.5; break;
-      case 'medium': atrMultiplier = 2.0; break;
-      case 'high': atrMultiplier = 2.5; break;
-      default: atrMultiplier = 2.0;
-    }
-    sources.stopLoss.push(`ATR × ${atrMultiplier} (Safety: ${safetyCheck.riskLevel})`);
-
+    // ===== STOP LOSS: Key level ± 1 ATR =====
+    // LONG: SL = nearest support - 1 ATR (below support)
+    // SHORT: SL = nearest resistance + 1 ATR (above resistance)
     let stopPrice: number;
     let safetyAdjusted = false;
 
     if (direction === 'long') {
-      // Base stop from ATR
-      stopPrice = averageEntry - (atr * atrMultiplier);
+      // SL below nearest support - 1 ATR
+      const slReference = nearestSupport ?? currentPrice;
+      stopPrice = slReference - atr;
+      sources.stopLoss.push(nearestSupport
+        ? `Below support $${nearestSupport.toFixed(2)} - 1 ATR ($${atr.toFixed(2)})`
+        : `Below current price - 1 ATR`);
 
-      // Adjust for trap zones - don't place stop inside trap zones
+      // Trap zone adjustment - don't place stop inside trap zones
       if (trapCheck.traps.stopHuntZones.length > 0) {
         const nearestStopHunt = trapCheck.traps.stopHuntZones.find(z => z < averageEntry && z > stopPrice);
         if (nearestStopHunt) {
-          stopPrice = nearestStopHunt - (atr * 0.5); // Place below the stop hunt zone
+          stopPrice = nearestStopHunt - (atr * 0.5);
           safetyAdjusted = true;
           sources.stopLoss.push('Adjusted below stop hunt zone');
         }
       }
-
-      // Use support level if it's BELOW ATR-based stop (safer for LONG)
-      // For LONG positions, SL must be BELOW key support to avoid false stops
-      const support1 = assetScan.levels.support[0];
-      const support2 = assetScan.levels.support[1];
-
-      // Find the lowest relevant support that's below entry
-      const relevantSupports = [support1, support2]
-        .filter((s): s is number => s !== undefined && s < averageEntry)
-        .sort((a, b) => a - b); // Sort ascending (lowest first)
-
-      if (relevantSupports.length > 0) {
-        // Use the lowest support - buffer
-        const lowestSupport = relevantSupports[0];
-        const supportStop = lowestSupport - (atr * 0.3);
-
-        // Always use support-based stop if it's lower (safer)
-        if (supportStop < stopPrice) {
-          stopPrice = supportStop;
-          sources.stopLoss.push('Asset Scanner support level (below support)');
-        }
-      }
-
-      // Ensure minimum stop distance (at least 1.5% for safety)
-      const minStopDistanceLong = averageEntry * 0.015;
-      if (averageEntry - stopPrice < minStopDistanceLong) {
-        stopPrice = averageEntry - minStopDistanceLong;
-        sources.stopLoss.push('Minimum 1.5% stop distance applied');
-      }
     } else {
-      // Short direction
-      stopPrice = averageEntry + (atr * atrMultiplier);
+      // SL above nearest resistance + 1 ATR
+      const slReference = nearestResistance ?? currentPrice;
+      stopPrice = slReference + atr;
+      sources.stopLoss.push(nearestResistance
+        ? `Above resistance $${nearestResistance.toFixed(2)} + 1 ATR ($${atr.toFixed(2)})`
+        : `Above current price + 1 ATR`);
 
-      // Adjust for trap zones
+      // Trap zone adjustment
       if (trapCheck.traps.stopHuntZones.length > 0) {
         const nearestStopHunt = trapCheck.traps.stopHuntZones.find(z => z > averageEntry && z < stopPrice);
         if (nearestStopHunt) {
@@ -5606,123 +5477,92 @@ export const analysisEngine = {
           sources.stopLoss.push('Adjusted above stop hunt zone');
         }
       }
-
-      // Use resistance level if it's ABOVE ATR-based stop (safer for SHORT)
-      // For SHORT positions, SL must be ABOVE key resistance to avoid false stops
-      const resistance1 = assetScan.levels.resistance[0];
-      const resistance2 = assetScan.levels.resistance[1];
-
-      // Find the highest relevant resistance that's above entry
-      const relevantResistances = [resistance1, resistance2]
-        .filter((r): r is number => r !== undefined && r > averageEntry)
-        .sort((a, b) => b - a); // Sort descending
-
-      if (relevantResistances.length > 0) {
-        // Use the highest resistance + buffer
-        const highestResistance = relevantResistances[0];
-        const resistanceStop = highestResistance + (atr * 0.3);
-
-        // Always use resistance-based stop if it's higher (safer)
-        if (resistanceStop > stopPrice) {
-          stopPrice = resistanceStop;
-          sources.stopLoss.push('Asset Scanner resistance level (above resistance)');
-        }
-      }
-
-      // Ensure minimum stop distance (at least 1.5% for safety)
-      const minStopDistance = averageEntry * 0.015;
-      if (stopPrice - averageEntry < minStopDistance) {
-        stopPrice = averageEntry + minStopDistance;
-        sources.stopLoss.push('Minimum 1.5% stop distance applied');
-      }
     }
 
-    // ===== MAXIMUM STOP LOSS DISTANCE (cap at 10% to prevent unrealistic stops) =====
-    const maxStopPercent = 10; // Maximum 10% stop loss for any trade type
-    const maxStopDistanceLong = averageEntry * (maxStopPercent / 100);
-    const maxStopDistanceShort = averageEntry * (maxStopPercent / 100);
-
+    // Enforce minimum 1.5% and maximum 10% stop distance
+    const minStopPct = 1.5;
+    const maxStopPct = 10;
     if (direction === 'long') {
-      const maxAllowedStopPrice = averageEntry - maxStopDistanceLong;
-      if (stopPrice < maxAllowedStopPrice) {
-        stopPrice = maxAllowedStopPrice;
-        sources.stopLoss.push(`Maximum ${maxStopPercent}% stop distance applied`);
+      if (averageEntry - stopPrice < averageEntry * minStopPct / 100) {
+        stopPrice = roundPrice(averageEntry * (1 - minStopPct / 100));
+        sources.stopLoss.push(`Minimum ${minStopPct}% stop distance applied`);
+      }
+      if (averageEntry - stopPrice > averageEntry * maxStopPct / 100) {
+        stopPrice = roundPrice(averageEntry * (1 - maxStopPct / 100));
+        sources.stopLoss.push(`Maximum ${maxStopPct}% stop distance applied`);
       }
     } else {
-      const maxAllowedStopPrice = averageEntry + maxStopDistanceShort;
-      if (stopPrice > maxAllowedStopPrice) {
-        stopPrice = maxAllowedStopPrice;
-        sources.stopLoss.push(`Maximum ${maxStopPercent}% stop distance applied`);
+      if (stopPrice - averageEntry < averageEntry * minStopPct / 100) {
+        stopPrice = roundPrice(averageEntry * (1 + minStopPct / 100));
+        sources.stopLoss.push(`Minimum ${minStopPct}% stop distance applied`);
+      }
+      if (stopPrice - averageEntry > averageEntry * maxStopPct / 100) {
+        stopPrice = roundPrice(averageEntry * (1 + maxStopPct / 100));
+        sources.stopLoss.push(`Maximum ${maxStopPct}% stop distance applied`);
       }
     }
 
+    stopPrice = roundPrice(stopPrice);
     const stopPercentage = Math.abs((stopPrice - averageEntry) / averageEntry * 100);
 
-    // ===== TAKE PROFIT (from Asset Scanner levels) =====
+    // ===== TAKE PROFIT: Opposite S/R levels =====
+    // LONG: TP1 = nearest resistance, TP2 = further resistance (with 2R/3R fallback)
+    // SHORT: TP1 = nearest support, TP2 = further support (with 2R/3R fallback)
     const takeProfits: TradePlanResult['takeProfits'] = [];
     const riskAmount = Math.abs(averageEntry - stopPrice);
 
     if (direction === 'long') {
-      // TP1: First resistance or 1.5R (50% of position)
-      const tp1FromResistance = assetScan.levels.resistance[0];
-      const tp1From15R = averageEntry + (riskAmount * 1.5);
-      const tp1 = tp1FromResistance && tp1FromResistance > averageEntry
-        ? Math.min(tp1FromResistance, tp1From15R)
-        : tp1From15R;
+      // TP1: nearest resistance or 2R fallback (60% of position)
+      const tp1Price = nearestResistance && nearestResistance > averageEntry
+        ? nearestResistance
+        : averageEntry + riskAmount * 2;
       takeProfits.push({
-        price: roundPrice(tp1),
-        percentage: 50,
-        reason: '1.5R or first resistance',
-        source: tp1FromResistance ? 'Asset Scanner resistance' : '1.5R calculation'
+        price: roundPrice(tp1Price),
+        percentage: 60,
+        reason: nearestResistance && nearestResistance > averageEntry ? 'Nearest resistance' : '2R target',
+        source: nearestResistance && nearestResistance > averageEntry ? 'Resistance level' : '2R calculation'
       });
-      sources.targets.push(tp1FromResistance ? 'Asset Scanner resistance 1' : '1.5R');
+      sources.targets.push(nearestResistance ? 'Nearest resistance' : '2R');
 
-      // TP2: Second resistance or 2.5R (50% of position)
-      const tp2FromResistance = assetScan.levels.resistance[1];
-      const tp2From25R = averageEntry + (riskAmount * 2.5);
-      const tp2 = tp2FromResistance && tp2FromResistance > tp1
-        ? Math.min(tp2FromResistance, tp2From25R)
-        : tp2From25R;
+      // TP2: further resistance or 3R fallback (40% of position)
+      const tp2Price = furtherResistance && furtherResistance > tp1Price
+        ? furtherResistance
+        : averageEntry + riskAmount * 3;
       takeProfits.push({
-        price: roundPrice(tp2),
-        percentage: 50,
-        reason: '2.5R or second resistance',
-        source: tp2FromResistance ? 'Asset Scanner resistance' : '2.5R calculation'
+        price: roundPrice(Math.max(tp2Price, tp1Price + atr * 0.5)),
+        percentage: 40,
+        reason: furtherResistance && furtherResistance > tp1Price ? 'Further resistance' : '3R target',
+        source: furtherResistance && furtherResistance > tp1Price ? 'Resistance level' : '3R calculation'
       });
-      sources.targets.push(tp2FromResistance ? 'Asset Scanner resistance 2' : '2.5R');
+      sources.targets.push(furtherResistance ? 'Further resistance' : '3R');
     } else {
-      // Short direction - use support levels
-      // TP1: First support or 1.5R (50% of position)
-      const tp1FromSupport = assetScan.levels.support[0];
-      const tp1From15R = averageEntry - (riskAmount * 1.5);
-      const tp1 = tp1FromSupport && tp1FromSupport < averageEntry
-        ? Math.max(tp1FromSupport, tp1From15R)
-        : tp1From15R;
+      // TP1: nearest support or 2R fallback (60% of position)
+      const tp1Price = nearestSupport && nearestSupport < averageEntry
+        ? nearestSupport
+        : averageEntry - riskAmount * 2;
       takeProfits.push({
-        price: roundPrice(tp1),
-        percentage: 50,
-        reason: '1.5R or first support',
-        source: tp1FromSupport ? 'Asset Scanner support' : '1.5R calculation'
+        price: roundPrice(tp1Price),
+        percentage: 60,
+        reason: nearestSupport && nearestSupport < averageEntry ? 'Nearest support' : '2R target',
+        source: nearestSupport && nearestSupport < averageEntry ? 'Support level' : '2R calculation'
       });
-      sources.targets.push(tp1FromSupport ? 'Asset Scanner support 1' : '1.5R');
+      sources.targets.push(nearestSupport ? 'Nearest support' : '2R');
 
-      // TP2: Second support or 2.5R (50% of position)
-      const tp2FromSupport = assetScan.levels.support[1];
-      const tp2From25R = averageEntry - (riskAmount * 2.5);
-      const tp2 = tp2FromSupport && tp2FromSupport < tp1
-        ? Math.max(tp2FromSupport, tp2From25R)
-        : tp2From25R;
+      // TP2: further support or 3R fallback (40% of position)
+      const tp2Price = furtherSupport && furtherSupport < tp1Price
+        ? furtherSupport
+        : averageEntry - riskAmount * 3;
       takeProfits.push({
-        price: roundPrice(tp2),
-        percentage: 50,
-        reason: '2.5R or second support',
-        source: tp2FromSupport ? 'Asset Scanner support' : '2.5R calculation'
+        price: roundPrice(Math.min(tp2Price, tp1Price - atr * 0.5)),
+        percentage: 40,
+        reason: furtherSupport && furtherSupport < tp1Price ? 'Further support' : '3R target',
+        source: furtherSupport && furtherSupport < tp1Price ? 'Support level' : '3R calculation'
       });
-      sources.targets.push(tp2FromSupport ? 'Asset Scanner support 2' : '2.5R');
+      sources.targets.push(furtherSupport ? 'Further support' : '3R');
     }
 
-    // ===== MAXIMUM TAKE PROFIT DISTANCE (cap at 20% to prevent unrealistic targets) =====
-    const maxTPPercent = 20; // Maximum 20% take profit for any trade type
+    // Maximum TP distance cap (20%)
+    const maxTPPercent = 20;
     takeProfits.forEach(tp => {
       const tpDistance = Math.abs((tp.price - averageEntry) / averageEntry * 100);
       if (tpDistance > maxTPPercent) {
