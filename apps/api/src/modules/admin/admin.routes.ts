@@ -1901,6 +1901,263 @@ export default async function adminRoutes(app: FastifyInstance) {
       }
     }
   );
+
+  // ===========================================
+  // REFUND MANAGEMENT
+  // ===========================================
+
+  /**
+   * GET /api/admin/refunds
+   * List all refund transactions
+   */
+  app.get(
+    '/refunds',
+    { preHandler: requireAdmin },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const query = request.query as { status?: string; limit?: string; offset?: string };
+        const limit = parseInt(query.limit || '50');
+        const offset = parseInt(query.offset || '0');
+
+        const refunds = await prisma.creditTransaction.findMany({
+          where: {
+            type: 'REFUND',
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+          skip: offset,
+        });
+
+        const total = await prisma.creditTransaction.count({
+          where: { type: 'REFUND' },
+        });
+
+        return reply.send({
+          success: true,
+          data: {
+            refunds: refunds.map((r) => ({
+              id: r.id,
+              userId: r.userId,
+              user: r.user,
+              amount: Math.abs(r.amount), // Convert negative to positive for display
+              source: r.source,
+              metadata: r.metadata,
+              createdAt: r.createdAt,
+            })),
+            pagination: {
+              total,
+              limit,
+              offset,
+              hasMore: offset + limit < total,
+            },
+          },
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Failed to fetch refunds');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'REFUNDS_ERROR', message: 'Failed to fetch refunds' },
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/admin/refunds/manual
+   * Process a manual refund
+   */
+  app.post(
+    '/refunds/manual',
+    { preHandler: requireAdmin },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = request.body as {
+          userId: string;
+          amount: number; // Credits to refund
+          reason: string;
+          notify?: boolean; // Send email notification
+        };
+
+        const { userId, amount, reason, notify = true } = body;
+
+        // Validate user exists
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true, name: true },
+        });
+
+        if (!user) {
+          return reply.status(404).send({
+            success: false,
+            error: { code: 'USER_NOT_FOUND', message: 'User not found' },
+          });
+        }
+
+        // Get user's credit balance
+        const creditBalance = await prisma.creditBalance.findUnique({
+          where: { userId },
+        });
+
+        if (!creditBalance) {
+          return reply.status(404).send({
+            success: false,
+            error: { code: 'BALANCE_NOT_FOUND', message: 'User credit balance not found' },
+          });
+        }
+
+        // Process refund in transaction
+        await prisma.$transaction(async (tx) => {
+          // Deduct credits
+          await tx.creditBalance.update({
+            where: { userId },
+            data: {
+              balance: { decrement: amount },
+              lifetimePurchased: { decrement: amount },
+            },
+          });
+
+          // Get updated balance
+          const updatedBalance = await tx.creditBalance.findUnique({
+            where: { userId },
+            select: { balance: true },
+          });
+
+          // Record refund transaction
+          await tx.creditTransaction.create({
+            data: {
+              userId,
+              amount: -amount, // Negative for refund
+              type: 'REFUND',
+              source: 'manual_admin_refund',
+              balanceAfter: updatedBalance?.balance || 0,
+              metadata: {
+                reason,
+                processedBy: 'admin',
+                processedAt: new Date().toISOString(),
+              },
+            },
+          });
+        });
+
+        // Send email notification if requested
+        if (notify) {
+          const { emailService } = await import('../email/email.service');
+          await emailService.sendEmail({
+            to: user.email,
+            subject: 'Refund Processed - TraderPath',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                  <h1 style="color: white; margin: 0;">Refund Processed</h1>
+                </div>
+                <div style="padding: 30px; background: white;">
+                  <p>Hi ${user.name || 'there'},</p>
+                  <p>Your refund has been processed successfully.</p>
+
+                  <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                    <tr style="background: #f7fafc;">
+                      <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>Credits Refunded:</strong></td>
+                      <td style="padding: 12px; border: 1px solid #e2e8f0;">${amount}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>Reason:</strong></td>
+                      <td style="padding: 12px; border: 1px solid #e2e8f0;">${reason}</td>
+                    </tr>
+                  </table>
+
+                  <p>If you have any questions, please contact our support team.</p>
+
+                  <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #718096; font-size: 14px;">
+                    <p>Best regards,<br>TraderPath Team</p>
+                    <p>Questions? Contact us at support@traderpath.io</p>
+                  </div>
+                </div>
+              </div>
+            `,
+            text: `Hi ${user.name || 'there'},\n\nYour refund has been processed successfully.\n\nCredits Refunded: ${amount}\nReason: ${reason}\n\nIf you have any questions, please contact our support team.\n\nBest regards,\nTraderPath Team`,
+          });
+        }
+
+        app.log.info({ userId, amount, reason }, 'Manual refund processed');
+
+        return reply.send({
+          success: true,
+          data: {
+            message: 'Refund processed successfully',
+            userId,
+            amount,
+            reason,
+            notified: notify,
+          },
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Failed to process manual refund');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'REFUND_ERROR', message: `Failed to process refund: ${error.message}` },
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /api/admin/refunds/pending
+   * List pending refund requests (transactions that might need review)
+   */
+  app.get(
+    '/refunds/pending',
+    { preHandler: requireAdmin },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        // Find users who had failed payments recently
+        const failedPayments = await prisma.subscription.findMany({
+          where: {
+            status: 'past_due',
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+              },
+            },
+          },
+          orderBy: { updatedAt: 'desc' },
+          take: 20,
+        });
+
+        return reply.send({
+          success: true,
+          data: {
+            pendingReviews: failedPayments.map((sub) => ({
+              userId: sub.userId,
+              user: sub.user,
+              subscriptionId: sub.id,
+              tier: sub.tier,
+              status: sub.status,
+              updatedAt: sub.updatedAt,
+            })),
+          },
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Failed to fetch pending refunds');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'PENDING_ERROR', message: 'Failed to fetch pending refunds' },
+        });
+      }
+    }
+  );
 }
 
 // Helper functions
