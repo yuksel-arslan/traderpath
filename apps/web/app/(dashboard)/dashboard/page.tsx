@@ -202,6 +202,26 @@ interface AIStats {
   };
 }
 
+interface SignalStats {
+  totalSignals: number;
+  activeSignals: number;
+  closedSignals: number;
+  winRate: number;
+  bestPerformer: {
+    symbol: string;
+    pnl: number;
+  } | null;
+  recentSignals: {
+    id: string;
+    symbol: string;
+    direction: 'long' | 'short';
+    verdict: string;
+    outcome: 'tp1_hit' | 'tp2_hit' | 'sl_hit' | 'expired' | null;
+    pnlPercent: number | null;
+    publishedAt: string;
+  }[];
+}
+
 // ===========================================
 // Helper Functions
 // ===========================================
@@ -439,6 +459,144 @@ function AIStatsCard({
   );
 }
 
+// Signal Stats Card
+function SignalStatsCard({
+  stats,
+  recentSignals,
+}: {
+  stats: SignalStats;
+  recentSignals: SignalStats['recentSignals'];
+}) {
+  const borderColor = stats.winRate >= 70 ? 'border-green-500/30' : stats.winRate >= 50 ? 'border-amber-500/30' : 'border-red-500/30';
+  const bgGradient = stats.winRate >= 70 ? 'from-green-500/10' : stats.winRate >= 50 ? 'from-amber-500/10' : 'from-red-500/10';
+
+  return (
+    <div className={cn(
+      'relative overflow-hidden rounded-xl border backdrop-blur-xl',
+      'bg-white/80 dark:bg-slate-900/80',
+      borderColor
+    )}>
+      <div className={cn('absolute inset-0 bg-gradient-to-br via-transparent to-transparent', bgGradient)} />
+      <div className="relative z-10 p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-teal-500" />
+            <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">My Signals Performance</h3>
+          </div>
+          <Link href="/signals" className="text-xs text-primary hover:underline flex items-center gap-1">
+            View All
+            <ArrowRight className="w-3 h-3" />
+          </Link>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="text-center">
+            <p className="text-lg font-bold text-slate-900 dark:text-white">{stats.totalSignals}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Total Signals</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{stats.activeSignals}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Active</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-bold text-gray-600 dark:text-gray-400">{stats.closedSignals}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Closed</p>
+          </div>
+          <div className="text-center">
+            <p className={cn(
+              "text-lg font-bold",
+              stats.winRate >= 70 ? "text-green-600 dark:text-green-400" :
+              stats.winRate >= 50 ? "text-amber-600 dark:text-amber-400" :
+              "text-red-600 dark:text-red-400"
+            )}>
+              {stats.closedSignals > 0 ? `${stats.winRate.toFixed(0)}%` : '—'}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Win Rate</p>
+          </div>
+        </div>
+
+        {/* Best Performer */}
+        {stats.bestPerformer && (
+          <div className="mb-4 p-2 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Award className="w-3 h-3 text-green-600 dark:text-green-400" />
+                <span className="text-xs font-medium text-green-700 dark:text-green-300">Best Performer</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-green-700 dark:text-green-300">{stats.bestPerformer.symbol}</span>
+                <span className="text-xs font-bold text-green-600 dark:text-green-400">
+                  +{stats.bestPerformer.pnl.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Recent Signals */}
+        {recentSignals.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">Recent Signals</p>
+            {recentSignals.map((signal) => (
+              <Link
+                key={signal.id}
+                href={`/signals/${signal.id}`}
+                className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">{signal.symbol}</span>
+                  <span className={cn(
+                    "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                    signal.direction === 'long'
+                      ? "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300"
+                      : "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300"
+                  )}>
+                    {signal.direction.toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {signal.outcome ? (
+                    <>
+                      {(signal.outcome === 'tp1_hit' || signal.outcome === 'tp2_hit') && (
+                        <CheckCircle2 className="w-3 h-3 text-green-500" />
+                      )}
+                      {signal.outcome === 'sl_hit' && (
+                        <XCircle className="w-3 h-3 text-red-500" />
+                      )}
+                      {signal.pnlPercent !== null && (
+                        <span className={cn(
+                          "text-xs font-bold",
+                          signal.pnlPercent >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                        )}>
+                          {signal.pnlPercent >= 0 ? '+' : ''}{signal.pnlPercent.toFixed(1)}%
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Live</span>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {recentSignals.length === 0 && (
+          <div className="text-center py-4">
+            <Activity className="w-6 h-6 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+            <p className="text-xs text-slate-500 dark:text-slate-400">No signals yet</p>
+            <Link href="/settings?tab=signals" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+              Configure preferences
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Active Trade Card
 function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
   const pnlValue = trade.unrealizedPnL;
@@ -525,6 +683,7 @@ export default function DashboardPage() {
   const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
   const [capitalFlow, setCapitalFlow] = useState<CapitalFlowSummary | null>(null);
   const [aiStats, setAIStats] = useState<AIStats | null>(null);
+  const [signalStats, setSignalStats] = useState<SignalStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const initialLoadDone = useRef(false);
@@ -545,6 +704,7 @@ export default function DashboardPage() {
               setPerformanceData(data.performanceData || null);
               setCapitalFlow(data.capitalFlow || null);
               setAIStats(data.aiStats || null);
+              setSignalStats(data.signalStats || null);
               setLoading(false);
               return;
             }
@@ -552,13 +712,14 @@ export default function DashboardPage() {
         } catch {}
       }
 
-      const [creditsRes, platformRes, statsRes, livePricesRes, perfHistoryRes, capitalFlowRes] = await Promise.all([
+      const [creditsRes, platformRes, statsRes, livePricesRes, perfHistoryRes, capitalFlowRes, signalStatsRes] = await Promise.all([
         authFetch('/api/user/credits'),
         fetch(getApiUrl('/api/analysis/platform-stats')),
         authFetch('/api/analysis/statistics'),
         authFetch('/api/analysis/live-prices'),
         authFetch('/api/analysis/performance-history?days=30'),
         authFetch('/api/capital-flow/summary'),
+        authFetch('/api/v1/signals/stats'),
       ]);
 
       let newCredits = 0;
@@ -568,6 +729,7 @@ export default function DashboardPage() {
       let newPerformanceData: PerformanceData | null = null;
       let newCapitalFlow: CapitalFlowSummary | null = null;
       let newAIStats: AIStats | null = null;
+      let newSignalStats: SignalStats | null = null;
 
       if (creditsRes.ok) {
         const data = await creditsRes.json();
@@ -658,6 +820,44 @@ export default function DashboardPage() {
       };
       setAIStats(newAIStats);
 
+      // Process signal stats
+      if (signalStatsRes.ok) {
+        const data = await signalStatsRes.json();
+        if (data.success && data.data) {
+          const signalsData = data.data;
+          const closedSignals = signalsData.byOutcome || {};
+          const totalClosed = (closedSignals.tp1_hit || 0) + (closedSignals.tp2_hit || 0) + (closedSignals.sl_hit || 0);
+          const wins = (closedSignals.tp1_hit || 0) + (closedSignals.tp2_hit || 0);
+          const winRate = totalClosed > 0 ? (wins / totalClosed) * 100 : 0;
+
+          // Get recent signals
+          const recentSignals = await authFetch('/api/v1/signals?limit=3');
+          let recentSignalsData: any[] = [];
+          if (recentSignals.ok) {
+            const signalsJson = await recentSignals.json();
+            recentSignalsData = signalsJson.data?.signals || [];
+          }
+
+          newSignalStats = {
+            totalSignals: signalsData.total || 0,
+            activeSignals: signalsData.byStatus?.published || 0,
+            closedSignals: totalClosed,
+            winRate,
+            bestPerformer: signalsData.bestPerformer || null,
+            recentSignals: recentSignalsData.map((s: any) => ({
+              id: s.id,
+              symbol: s.symbol,
+              direction: s.direction,
+              verdict: s.classicVerdict,
+              outcome: s.outcome,
+              pnlPercent: s.pnlPercent,
+              publishedAt: s.publishedAt,
+            })),
+          };
+          setSignalStats(newSignalStats);
+        }
+      }
+
       // Save to cache
       try {
         sessionStorage.setItem(CACHE_KEY, JSON.stringify({
@@ -669,6 +869,7 @@ export default function DashboardPage() {
             performanceData: newPerformanceData,
             capitalFlow: newCapitalFlow,
             aiStats: newAIStats,
+            signalStats: newSignalStats,
           },
           timestamp: Date.now(),
         }));
@@ -1342,29 +1543,36 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* My AI Stats */}
-          {aiStats && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <AIStatsCard
-                title="My AI Concierge Usage"
-                icon={Bot}
-                color="teal"
-                stats={[
-                  { label: 'Messages Sent', value: formatNumber(aiStats.user.conciergeMessages) },
-                  { label: 'Analyses via Chat', value: formatNumber(Math.floor(aiStats.user.conciergeMessages * 0.4)) },
-                ]}
-              />
-              <AIStatsCard
-                title="My AI Expert Usage"
-                icon={Brain}
-                color="purple"
-                stats={[
-                  { label: 'Questions Asked', value: formatNumber(aiStats.user.expertQuestions) },
-                  { label: 'Free Remaining', value: Math.max(0, (userStats?.totalAnalyses || 0) * 3 - aiStats.user.expertQuestions) },
-                ]}
-              />
-            </div>
-          )}
+          {/* My AI Stats & Signals */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {aiStats && (
+              <>
+                <AIStatsCard
+                  title="My AI Concierge Usage"
+                  icon={Bot}
+                  color="teal"
+                  stats={[
+                    { label: 'Messages Sent', value: formatNumber(aiStats.user.conciergeMessages) },
+                    { label: 'Analyses via Chat', value: formatNumber(Math.floor(aiStats.user.conciergeMessages * 0.4)) },
+                  ]}
+                />
+                <AIStatsCard
+                  title="My AI Expert Usage"
+                  icon={Brain}
+                  color="purple"
+                  stats={[
+                    { label: 'Questions Asked', value: formatNumber(aiStats.user.expertQuestions) },
+                    { label: 'Free Remaining', value: Math.max(0, (userStats?.totalAnalyses || 0) * 3 - aiStats.user.expertQuestions) },
+                  ]}
+                />
+              </>
+            )}
+
+            {/* Signal Stats Card */}
+            {signalStats && (
+              <SignalStatsCard stats={signalStats} recentSignals={signalStats.recentSignals} />
+            )}
+          </div>
         </section>
 
         {/* ===== ACTIVE TRADES SECTION ===== */}

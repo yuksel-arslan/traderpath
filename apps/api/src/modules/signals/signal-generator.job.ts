@@ -14,6 +14,7 @@ import { analysisEngine } from '../analysis/analysis.engine';
 import { analyzeMLIS } from '../analysis/services/mlis.service';
 import { signalService } from './signal.service';
 import { formatTelegramSignal } from './telegram-formatter';
+import { signalMonitoring } from './signal-monitoring.service';
 import type { SignalData, SignalGenerationResult } from './types';
 
 // Telegram bot configuration
@@ -44,6 +45,7 @@ let cronJob: cron.ScheduledTask | null = null;
  * Main signal generation function
  */
 export async function generateSignals(): Promise<SignalGenerationResult> {
+  const startTime = Date.now();
   const result: SignalGenerationResult = {
     processed: 0,
     generated: 0,
@@ -209,10 +211,33 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
       );
     }
 
+    // Record successful execution metrics
+    const duration = Date.now() - startTime;
+    const avgConfidence = result.published > 0
+      ? result.generated / result.published * 75 // Approximate average confidence
+      : 0;
+
+    await signalMonitoring.recordGeneratorRun({
+      success: true,
+      duration,
+      signalsGenerated: result.generated,
+      signalsPublished: result.published,
+      averageConfidence: avgConfidence,
+    });
+
     return result;
 
   } catch (error) {
     console.error('[SignalGenerator] Fatal error:', error);
+
+    // Record failure metrics
+    const duration = Date.now() - startTime;
+    await signalMonitoring.recordGeneratorRun({
+      success: false,
+      duration,
+      error: error instanceof Error ? error : new Error(String(error)),
+    });
+
     throw error;
   } finally {
     // Release lock

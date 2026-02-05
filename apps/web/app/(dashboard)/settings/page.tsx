@@ -31,6 +31,9 @@ import {
   ShieldOff,
   QrCode,
   X,
+  Activity,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { authFetch } from '../../../lib/api';
@@ -155,6 +158,27 @@ export default function SettingsPage() {
   const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const [totalTransactions, setTotalTransactions] = useState(0);
+
+  // Signal Preferences State
+  const [signalPreferences, setSignalPreferences] = useState({
+    enabledMarkets: ['crypto', 'stocks', 'metals', 'bonds'],
+    enabledAssetClasses: [] as string[],
+    minConfidence: 70,
+    minClassicScore: 7.0,
+    requireMlisConfirm: true,
+    allowedVerdicts: ['GO', 'CONDITIONAL_GO'],
+    telegramEnabled: false,
+    telegramChatId: '',
+    discordEnabled: false,
+    discordWebhookUrl: '',
+    emailEnabled: false,
+    quietHoursEnabled: false,
+    quietHoursStart: 22,
+    quietHoursEnd: 7,
+  });
+  const [isLoadingSignalPrefs, setIsLoadingSignalPrefs] = useState(true);
+  const [isSavingSignalPrefs, setIsSavingSignalPrefs] = useState(false);
+  const [signalPrefsSaveStatus, setSignalPrefsSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   // Subscription hook
   const {
@@ -582,6 +606,7 @@ export default function SettingsPage() {
   const sections = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'signals', label: 'Signals', icon: Activity },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'appearance', label: 'Appearance', icon: Palette },
@@ -639,6 +664,68 @@ export default function SettingsPage() {
       }
     } catch (error) {
       alert(`Failed to send test notification.`);
+    }
+  };
+
+  // Fetch signal preferences when signals section is active
+  useEffect(() => {
+    if (activeSection !== 'signals') return;
+
+    const fetchSignalPreferences = async () => {
+      setIsLoadingSignalPrefs(true);
+      try {
+        const response = await authFetch('/api/v1/signals/preferences');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setSignalPreferences({
+              enabledMarkets: data.data.enabledMarkets || ['crypto', 'stocks', 'metals', 'bonds'],
+              enabledAssetClasses: data.data.enabledAssetClasses || [],
+              minConfidence: data.data.minConfidence || 70,
+              minClassicScore: data.data.minClassicScore || 7.0,
+              requireMlisConfirm: data.data.requireMlisConfirm ?? true,
+              allowedVerdicts: data.data.allowedVerdicts || ['GO', 'CONDITIONAL_GO'],
+              telegramEnabled: data.data.telegramEnabled || false,
+              telegramChatId: data.data.telegramChatId || '',
+              discordEnabled: data.data.discordEnabled || false,
+              discordWebhookUrl: data.data.discordWebhookUrl || '',
+              emailEnabled: data.data.emailEnabled || false,
+              quietHoursEnabled: data.data.quietHoursEnabled || false,
+              quietHoursStart: data.data.quietHoursStart ?? 22,
+              quietHoursEnd: data.data.quietHoursEnd ?? 7,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch signal preferences:', error);
+      } finally {
+        setIsLoadingSignalPrefs(false);
+      }
+    };
+
+    fetchSignalPreferences();
+  }, [activeSection]);
+
+  const handleSaveSignalPreferences = async () => {
+    setIsSavingSignalPrefs(true);
+    setSignalPrefsSaveStatus('idle');
+    try {
+      const response = await authFetch('/api/v1/signals/preferences', {
+        method: 'PATCH',
+        body: JSON.stringify(signalPreferences),
+      });
+
+      if (response.ok) {
+        setSignalPrefsSaveStatus('success');
+        setTimeout(() => setSignalPrefsSaveStatus('idle'), 3000);
+      } else {
+        setSignalPrefsSaveStatus('error');
+      }
+    } catch (error) {
+      console.error('Failed to save signal preferences:', error);
+      setSignalPrefsSaveStatus('error');
+    } finally {
+      setIsSavingSignalPrefs(false);
     }
   };
 
@@ -1191,6 +1278,378 @@ export default function SettingsPage() {
                       </span>
                     )}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Signals Section */}
+            {activeSection === 'signals' && (
+              <div className="space-y-8">
+                <div>
+                  <h2 className="text-xl font-semibold mb-2">Signal Preferences</h2>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Configure which types of signals you want to receive and how you want to be notified
+                  </p>
+
+                  {isLoadingSignalPrefs ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Enabled Markets */}
+                      <div className="p-4 bg-background rounded-lg border">
+                        <h3 className="font-medium mb-4">Markets</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Select which markets you want to receive signals for
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {['crypto', 'stocks', 'metals', 'bonds'].map((market) => (
+                            <label
+                              key={market}
+                              className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg cursor-pointer hover:bg-muted/50 transition"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={signalPreferences.enabledMarkets.includes(market)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSignalPreferences({
+                                      ...signalPreferences,
+                                      enabledMarkets: [...signalPreferences.enabledMarkets, market]
+                                    });
+                                  } else {
+                                    setSignalPreferences({
+                                      ...signalPreferences,
+                                      enabledMarkets: signalPreferences.enabledMarkets.filter(m => m !== market)
+                                    });
+                                  }
+                                }}
+                                className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                              />
+                              <span className="capitalize">{market}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Quality Filters */}
+                      <div className="p-4 bg-background rounded-lg border">
+                        <h3 className="font-medium mb-4">Quality Filters</h3>
+                        <div className="space-y-4">
+                          {/* Minimum Confidence */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="text-sm font-medium">Minimum Confidence</label>
+                              <span className="text-sm text-primary font-semibold">{signalPreferences.minConfidence}%</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="50"
+                              max="100"
+                              step="5"
+                              value={signalPreferences.minConfidence}
+                              onChange={(e) => setSignalPreferences({
+                                ...signalPreferences,
+                                minConfidence: parseInt(e.target.value)
+                              })}
+                              className="w-full"
+                            />
+                            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                              <span>50%</span>
+                              <span>100%</span>
+                            </div>
+                          </div>
+
+                          {/* Minimum Classic Score */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="text-sm font-medium">Minimum Classic Score</label>
+                              <span className="text-sm text-primary font-semibold">{signalPreferences.minClassicScore.toFixed(1)}/10</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="5"
+                              max="10"
+                              step="0.5"
+                              value={signalPreferences.minClassicScore}
+                              onChange={(e) => setSignalPreferences({
+                                ...signalPreferences,
+                                minClassicScore: parseFloat(e.target.value)
+                              })}
+                              className="w-full"
+                            />
+                            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                              <span>5.0</span>
+                              <span>10.0</span>
+                            </div>
+                          </div>
+
+                          {/* Require MLIS Confirmation */}
+                          <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                            <div>
+                              <p className="font-medium text-sm">Require MLIS Pro Confirmation</p>
+                              <p className="text-xs text-muted-foreground">Only receive signals confirmed by MLIS Pro</p>
+                            </div>
+                            <button
+                              onClick={() => setSignalPreferences({
+                                ...signalPreferences,
+                                requireMlisConfirm: !signalPreferences.requireMlisConfirm
+                              })}
+                              className={`w-12 h-6 rounded-full transition-colors ${
+                                signalPreferences.requireMlisConfirm ? 'bg-primary' : 'bg-gray-300'
+                              }`}
+                            >
+                              <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                                signalPreferences.requireMlisConfirm ? 'translate-x-6' : 'translate-x-0.5'
+                              }`} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Allowed Verdicts */}
+                      <div className="p-4 bg-background rounded-lg border">
+                        <h3 className="font-medium mb-4">Allowed Verdicts</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Select which verdict types you want to receive
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {[
+                            { value: 'GO', label: 'GO', color: 'text-green-500 bg-green-500/10' },
+                            { value: 'CONDITIONAL_GO', label: 'Conditional GO', color: 'text-amber-500 bg-amber-500/10' },
+                            { value: 'WAIT', label: 'WAIT', color: 'text-orange-500 bg-orange-500/10' },
+                            { value: 'AVOID', label: 'AVOID', color: 'text-red-500 bg-red-500/10' },
+                          ].map((verdict) => (
+                            <label
+                              key={verdict.value}
+                              className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:opacity-80 transition ${verdict.color}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={signalPreferences.allowedVerdicts.includes(verdict.value)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSignalPreferences({
+                                      ...signalPreferences,
+                                      allowedVerdicts: [...signalPreferences.allowedVerdicts, verdict.value]
+                                    });
+                                  } else {
+                                    setSignalPreferences({
+                                      ...signalPreferences,
+                                      allowedVerdicts: signalPreferences.allowedVerdicts.filter(v => v !== verdict.value)
+                                    });
+                                  }
+                                }}
+                                className="w-4 h-4 rounded border-gray-300 focus:ring-primary"
+                              />
+                              <span className="font-medium">{verdict.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Notification Channels */}
+                      <div className="p-4 bg-background rounded-lg border">
+                        <h3 className="font-medium mb-4">Notification Channels</h3>
+                        <div className="space-y-4">
+                          {/* Telegram */}
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <Send className="w-4 h-4 text-blue-500" />
+                                <span className="font-medium">Telegram</span>
+                              </div>
+                              <button
+                                onClick={() => setSignalPreferences({
+                                  ...signalPreferences,
+                                  telegramEnabled: !signalPreferences.telegramEnabled
+                                })}
+                                className={`w-12 h-6 rounded-full transition-colors ${
+                                  signalPreferences.telegramEnabled ? 'bg-blue-500' : 'bg-gray-300'
+                                }`}
+                              >
+                                <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                                  signalPreferences.telegramEnabled ? 'translate-x-6' : 'translate-x-0.5'
+                                }`} />
+                              </button>
+                            </div>
+                            {signalPreferences.telegramEnabled && (
+                              <div>
+                                <label className="block text-sm font-medium mb-1">Chat ID</label>
+                                <input
+                                  type="text"
+                                  value={signalPreferences.telegramChatId}
+                                  onChange={(e) => setSignalPreferences({
+                                    ...signalPreferences,
+                                    telegramChatId: e.target.value
+                                  })}
+                                  placeholder="-1001234567890"
+                                  className="w-full px-3 py-2 bg-card border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Get your chat ID from @userinfobot on Telegram
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Discord */}
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <MessageSquare className="w-4 h-4 text-indigo-500" />
+                                <span className="font-medium">Discord</span>
+                              </div>
+                              <button
+                                onClick={() => setSignalPreferences({
+                                  ...signalPreferences,
+                                  discordEnabled: !signalPreferences.discordEnabled
+                                })}
+                                className={`w-12 h-6 rounded-full transition-colors ${
+                                  signalPreferences.discordEnabled ? 'bg-indigo-500' : 'bg-gray-300'
+                                }`}
+                              >
+                                <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                                  signalPreferences.discordEnabled ? 'translate-x-6' : 'translate-x-0.5'
+                                }`} />
+                              </button>
+                            </div>
+                            {signalPreferences.discordEnabled && (
+                              <div>
+                                <label className="block text-sm font-medium mb-1">Webhook URL</label>
+                                <input
+                                  type="url"
+                                  value={signalPreferences.discordWebhookUrl}
+                                  onChange={(e) => setSignalPreferences({
+                                    ...signalPreferences,
+                                    discordWebhookUrl: e.target.value
+                                  })}
+                                  placeholder="https://discord.com/api/webhooks/..."
+                                  className="w-full px-3 py-2 bg-card border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none text-sm"
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Create a webhook in your Discord server settings
+                                </p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Email */}
+                          <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <Mail className="w-4 h-4 text-emerald-500" />
+                              <span className="font-medium">Email</span>
+                            </div>
+                            <button
+                              onClick={() => setSignalPreferences({
+                                ...signalPreferences,
+                                emailEnabled: !signalPreferences.emailEnabled
+                              })}
+                              className={`w-12 h-6 rounded-full transition-colors ${
+                                signalPreferences.emailEnabled ? 'bg-emerald-500' : 'bg-gray-300'
+                              }`}
+                            >
+                              <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                                signalPreferences.emailEnabled ? 'translate-x-6' : 'translate-x-0.5'
+                              }`} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quiet Hours */}
+                      <div className="p-4 bg-background rounded-lg border">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <Moon className="w-4 h-4 text-primary" />
+                            <h3 className="font-medium">Quiet Hours</h3>
+                          </div>
+                          <button
+                            onClick={() => setSignalPreferences({
+                              ...signalPreferences,
+                              quietHoursEnabled: !signalPreferences.quietHoursEnabled
+                            })}
+                            className={`w-12 h-6 rounded-full transition-colors ${
+                              signalPreferences.quietHoursEnabled ? 'bg-primary' : 'bg-gray-300'
+                            }`}
+                          >
+                            <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                              signalPreferences.quietHoursEnabled ? 'translate-x-6' : 'translate-x-0.5'
+                            }`} />
+                          </button>
+                        </div>
+
+                        {signalPreferences.quietHoursEnabled && (
+                          <div className="space-y-4">
+                            <p className="text-sm text-muted-foreground">
+                              Signals will not be sent during these hours
+                            </p>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium mb-2">Start Hour (UTC)</label>
+                                <select
+                                  value={signalPreferences.quietHoursStart}
+                                  onChange={(e) => setSignalPreferences({
+                                    ...signalPreferences,
+                                    quietHoursStart: parseInt(e.target.value)
+                                  })}
+                                  className="w-full px-3 py-2 bg-card border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                                >
+                                  {Array.from({ length: 24 }, (_, i) => (
+                                    <option key={i} value={i}>
+                                      {i.toString().padStart(2, '0')}:00
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium mb-2">End Hour (UTC)</label>
+                                <select
+                                  value={signalPreferences.quietHoursEnd}
+                                  onChange={(e) => setSignalPreferences({
+                                    ...signalPreferences,
+                                    quietHoursEnd: parseInt(e.target.value)
+                                  })}
+                                  className="w-full px-3 py-2 bg-card border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                                >
+                                  {Array.from({ length: 24 }, (_, i) => (
+                                    <option key={i} value={i}>
+                                      {i.toString().padStart(2, '0')}:00
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Save Button */}
+                      <div className="flex items-center gap-4 pt-4">
+                        <button
+                          onClick={handleSaveSignalPreferences}
+                          disabled={isSavingSignalPrefs}
+                          className="px-6 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {isSavingSignalPrefs && <Loader2 className="w-4 h-4 animate-spin" />}
+                          {isSavingSignalPrefs ? 'Saving...' : 'Save Preferences'}
+                        </button>
+                        {signalPrefsSaveStatus === 'success' && (
+                          <span className="text-sm text-green-500 flex items-center gap-1">
+                            <Check className="w-4 h-4" />
+                            Settings saved!
+                          </span>
+                        )}
+                        {signalPrefsSaveStatus === 'error' && (
+                          <span className="text-sm text-red-500 flex items-center gap-1">
+                            <AlertCircle className="w-4 h-4" />
+                            Failed to save
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -6,6 +6,8 @@
 import { FastifyInstance } from 'fastify';
 import { signalService } from './signal.service';
 import { runSignalGenerationManually } from './signal-generator.job';
+import { runSignalOutcomeTrackerManually } from './signal-outcome-tracker.job';
+import { signalMonitoring } from './signal-monitoring.service';
 import type { SignalFilterCriteria } from './types';
 
 export async function signalRoutes(fastify: FastifyInstance) {
@@ -257,6 +259,51 @@ export async function signalRoutes(fastify: FastifyInstance) {
   // =====================================================
 
   /**
+   * Get signal system health status
+   * GET /api/signals/admin/health
+   */
+  fastify.get(
+    '/signals/admin/health',
+    {
+      preHandler: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      const user = request.user as any;
+
+      // Admin only
+      if (!user.isAdmin) {
+        return reply.status(403).send({
+          success: false,
+          error: 'Admin access required',
+        });
+      }
+
+      try {
+        const health = await signalMonitoring.getSystemHealth();
+        const generatorMetrics = await signalMonitoring.getGeneratorMetrics();
+        const trackerMetrics = await signalMonitoring.getTrackerMetrics();
+
+        return reply.send({
+          success: true,
+          data: {
+            ...health,
+            metrics: {
+              generator: generatorMetrics,
+              tracker: trackerMetrics,
+            },
+          },
+        });
+      } catch (error) {
+        console.error('[SignalRoutes] Health check error:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error instanceof Error ? error.message : 'Health check failed',
+        });
+      }
+    }
+  );
+
+  /**
    * Trigger manual signal generation
    * POST /api/signals/admin/generate
    */
@@ -376,6 +423,42 @@ export async function signalRoutes(fastify: FastifyInstance) {
         return reply.status(500).send({
           success: false,
           error: error instanceof Error ? error.message : 'Expire failed',
+        });
+      }
+    }
+  );
+
+  /**
+   * Track signal outcomes manually (check TP/SL hits)
+   * POST /api/signals/admin/track-outcomes
+   */
+  fastify.post(
+    '/signals/admin/track-outcomes',
+    {
+      preHandler: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      const user = request.user as any;
+
+      if (!user.isAdmin) {
+        return reply.status(403).send({
+          success: false,
+          error: 'Admin access required',
+        });
+      }
+
+      try {
+        const result = await runSignalOutcomeTrackerManually();
+
+        return reply.send({
+          success: true,
+          data: result,
+        });
+      } catch (error) {
+        console.error('[SignalRoutes] Outcome tracking error:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error instanceof Error ? error.message : 'Tracking failed',
         });
       }
     }

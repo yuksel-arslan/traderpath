@@ -111,6 +111,7 @@ model User {
   scheduledReports ScheduledReport[]
   dailyPasses      DailyPass[]
   signalPreferences UserSignalPreferences?
+  signalSubscription SignalSubscription?
   subscription     Subscription?
 
   @@map("users")
@@ -1125,4 +1126,52 @@ model UserSignalPreferences {
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_signal_preferences")
+}
+
+// ===========================================
+// Signal Subscriptions
+// Separate subscription for automated signal delivery
+// ===========================================
+
+model SignalSubscription {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @unique @map("user_id") @db.Uuid
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Stripe identifiers
+  stripeCustomerId     String?  @unique @map("stripe_customer_id") @db.VarChar(255)
+  stripeSubscriptionId String?  @unique @map("stripe_subscription_id") @db.VarChar(255)
+  stripePriceId        String?  @map("stripe_price_id") @db.VarChar(255)
+
+  // Subscription tier
+  tier         SignalSubscriptionTier @default(SIGNAL_FREE)
+  status       SubscriptionStatus @default(INACTIVE)
+
+  // Billing period
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+  cancelAtPeriodEnd  Boolean   @default(false) @map("cancel_at_period_end")
+
+  // Features (tier-specific defaults set by service)
+  enabledMarkets      String[]  @default(["crypto"]) @map("enabled_markets") // markets user receives signals for
+  maxSignalsPerDay    Int       @default(10) @map("max_signals_per_day")
+  telegramDelivery    Boolean   @default(true) @map("telegram_delivery")
+  discordDelivery     Boolean   @default(false) @map("discord_delivery")
+  emailDelivery       Boolean   @default(false) @map("email_delivery")
+
+  // Timestamps
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([tier])
+  @@index([status])
+  @@index([stripeCustomerId])
+  @@map("signal_subscriptions")
+}
+
+enum SignalSubscriptionTier {
+  SIGNAL_FREE         // No signal access
+  SIGNAL_BASIC        // $9/mo - Crypto only, 5-10 signals/day
+  SIGNAL_PRO          // $19/mo - All markets, 10-20 signals/day
+  SIGNAL_PRO_YEARLY   // $149/yr - All markets, 10-20 signals/day
 }

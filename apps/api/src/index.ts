@@ -50,7 +50,14 @@ import { initializeAssetLogos } from './modules/asset-logos/asset-logos.service'
 import { bilgeRoutes } from './modules/bilge/bilge.routes';
 import { initializeBilgeService, collectError } from './modules/bilge/bilge.service';
 import { startBilgeWeeklyReportJob, stopBilgeWeeklyReportJob } from './modules/bilge/bilge-cron.job';
-import { signalRoutes, startSignalGeneratorJob, stopSignalGeneratorJob } from './modules/signals';
+import {
+  signalRoutes,
+  signalSubscriptionRoutes,
+  startSignalGeneratorJob,
+  stopSignalGeneratorJob,
+  startSignalOutcomeTracker,
+  stopSignalOutcomeTracker,
+} from './modules/signals';
 import subscriptionRoutes from './modules/subscriptions/subscription.routes';
 import { startDailyCreditsJob, stopDailyCreditsJob } from './modules/subscriptions/subscription-cron.job';
 import { startReconciliationJob, stopReconciliationJob } from './modules/admin/reconciliation.cron';
@@ -416,7 +423,9 @@ app.register(bilgeRoutes);
 // Signal System routes (proactive trading signals)
 app.register(signalRoutes, { prefix: '/api/v1' });
 app.register(signalRoutes, { prefix: '/api' }); // Legacy
-// Subscription management routes
+// Signal Subscription routes
+app.register(signalSubscriptionRoutes, { prefix: '/api/v1/signals' });
+// Subscription management routes (credit-based)
 app.register(subscriptionRoutes, { prefix: '/api/v1/subscriptions' });
 app.register(subscriptionRoutes, { prefix: '/api/subscriptions' }); // Legacy
 
@@ -586,6 +595,11 @@ const start = async () => {
     // Start Signal Generator cron job (hourly at :15)
     startSignalGeneratorJob();
     logger.info('✓ Signal generator cron started');
+
+    // Start Signal Outcome Tracker cron job (every 15 minutes)
+    startSignalOutcomeTracker();
+    logger.info('✓ Signal outcome tracker cron started');
+
     // Start subscription daily credits cron job (00:00 UTC)
     startDailyCreditsJob();
     logger.info('✓ Subscription daily credits cron started');
@@ -649,6 +663,11 @@ const shutdown = async (signal: string) => {
     // Stop Signal Generator cron
     stopSignalGeneratorJob();
     logger.info('✓ Signal generator cron stopped');
+
+    // Stop Signal Outcome Tracker cron
+    stopSignalOutcomeTracker();
+    logger.info('✓ Signal outcome tracker cron stopped');
+
     // Stop subscription daily credits cron
     stopDailyCreditsJob();
     logger.info('✓ Subscription daily credits cron stopped');
