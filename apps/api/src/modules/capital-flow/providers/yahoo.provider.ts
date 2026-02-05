@@ -59,6 +59,20 @@ const SYMBOLS = {
   XLB: 'XLB',                // Materials
   XLRE: 'XLRE',              // Real Estate
   XLC: 'XLC',                // Communication
+
+  // BIST (Borsa İstanbul) symbols
+  XU100: 'XU100.IS',         // BIST 100 Index
+  GARAN: 'GARAN.IS',         // Garanti BBVA (Banking)
+  AKBNK: 'AKBNK.IS',         // Akbank (Banking)
+  THYAO: 'THYAO.IS',         // Turkish Airlines (Aviation)
+  KCHOL: 'KCHOL.IS',         // Koç Holding
+  SAHOL: 'SAHOL.IS',         // Sabancı Holding
+  EREGL: 'EREGL.IS',         // Ereğli Demir Çelik (Industrial)
+  SISE: 'SISE.IS',           // Şişecam (Industrial)
+  TCELL: 'TCELL.IS',         // Turkcell (Telecom)
+  BIMAS: 'BIMAS.IS',         // BİM (Retail)
+  TUPRS: 'TUPRS.IS',         // Tüpraş (Energy)
+  ASELS: 'ASELS.IS',         // Aselsan (Technology)
 } as const;
 
 const YAHOO_BASE_URL = 'https://query1.finance.yahoo.com/v8/finance/chart';
@@ -831,14 +845,239 @@ function getSectorTopAssets(sector: string): string[] {
 }
 
 /**
+ * Get BIST (Borsa İstanbul) Flow data
+ * Uses XU100 index as the main indicator
+ */
+export async function getBistFlow(): Promise<Omit<MarketFlow, 'phase' | 'daysInPhase' | 'phaseStartDate' | 'avgPhaseDuration' | 'rotationSignal' | 'rotationTarget' | 'rotationConfidence'>> {
+  const [xu100Quote, xu100History] = await Promise.all([
+    fetchYahooQuote(SYMBOLS.XU100),
+    fetchYahooHistory(SYMBOLS.XU100, '3mo'),
+  ]);
+
+  if (!xu100Quote) {
+    return {
+      market: 'bist',
+      currentValue: 10000,
+      flow7d: 0,
+      flow30d: 0,
+      flowVelocity: 0,
+      flowHistory: [],
+      velocityHistory: [],
+      sectors: [],
+      lastUpdated: new Date(),
+    };
+  }
+
+  const sevenDaysAgo = xu100History.find((d, i) => i >= 5);
+  const thirtyDaysAgo = xu100History.find((d, i) => i >= 22);
+  const fourteenDaysAgo = xu100History.find((d, i) => i >= 10);
+
+  const flow7d = sevenDaysAgo
+    ? ((xu100Quote.price - sevenDaysAgo.close) / sevenDaysAgo.close) * 100
+    : 0;
+
+  const flow30d = thirtyDaysAgo
+    ? ((xu100Quote.price - thirtyDaysAgo.close) / thirtyDaysAgo.close) * 100
+    : 0;
+
+  const previousFlow7d = fourteenDaysAgo && sevenDaysAgo
+    ? ((sevenDaysAgo.close - fourteenDaysAgo.close) / fourteenDaysAgo.close) * 100
+    : 0;
+
+  const flowVelocity = flow7d - previousFlow7d;
+
+  // Get BIST sectors data
+  const sectors = await getBistSectors(flow7d, flow30d);
+
+  // Generate flow history from historical data
+  const flowHistory: FlowDataPoint[] = xu100History.slice(-30).map((d, i, arr) => {
+    if (i < 7) return { date: d.date.toISOString().split('T')[0], value: 0 };
+    const prevClose = arr[i - 7]?.close || d.close;
+    return {
+      date: d.date.toISOString().split('T')[0],
+      value: ((d.close - prevClose) / prevClose) * 100,
+    };
+  }).filter(d => d.value !== 0);
+
+  // Generate velocity history
+  const velocityHistory: FlowDataPoint[] = flowHistory.slice(7).map((d, i) => ({
+    date: d.date,
+    value: d.value - (flowHistory[i]?.value || 0),
+  }));
+
+  return {
+    market: 'bist',
+    currentValue: xu100Quote.price,
+    flow7d: parseFloat(flow7d.toFixed(2)),
+    flow30d: parseFloat(flow30d.toFixed(2)),
+    flowVelocity: parseFloat(flowVelocity.toFixed(2)),
+    flowHistory,
+    velocityHistory,
+    sectors,
+    lastUpdated: new Date(),
+  };
+}
+
+/**
+ * Get BIST sectors data
+ */
+async function getBistSectors(indexFlow7d: number, indexFlow30d: number): Promise<SectorFlow[]> {
+  // Fetch key sector representatives
+  const [
+    garanQuote, garanHistory,
+    thyaoQuote, thyaoHistory,
+    ereglQuote, ereglHistory,
+    tcellQuote, tcellHistory,
+    bimasQuote, bimasHistory,
+    tuprsQuote, tuprsHistory,
+  ] = await Promise.all([
+    fetchYahooQuote(SYMBOLS.GARAN),
+    fetchYahooHistory(SYMBOLS.GARAN, '1mo'),
+    fetchYahooQuote(SYMBOLS.THYAO),
+    fetchYahooHistory(SYMBOLS.THYAO, '1mo'),
+    fetchYahooQuote(SYMBOLS.EREGL),
+    fetchYahooHistory(SYMBOLS.EREGL, '1mo'),
+    fetchYahooQuote(SYMBOLS.TCELL),
+    fetchYahooHistory(SYMBOLS.TCELL, '1mo'),
+    fetchYahooQuote(SYMBOLS.BIMAS),
+    fetchYahooHistory(SYMBOLS.BIMAS, '1mo'),
+    fetchYahooQuote(SYMBOLS.TUPRS),
+    fetchYahooHistory(SYMBOLS.TUPRS, '1mo'),
+  ]);
+
+  const calculateFlow = (quote: typeof garanQuote, history: typeof garanHistory) => {
+    if (!quote || history.length < 7) return { flow7d: 0, flow30d: 0 };
+    const sevenDaysAgo = history.find((d, i) => i >= 5);
+    const flow7d = sevenDaysAgo
+      ? ((quote.price - sevenDaysAgo.close) / sevenDaysAgo.close) * 100
+      : 0;
+    return { flow7d: parseFloat(flow7d.toFixed(2)), flow30d: indexFlow30d };
+  };
+
+  const bankingFlow = calculateFlow(garanQuote, garanHistory);
+  const aviationFlow = calculateFlow(thyaoQuote, thyaoHistory);
+  const industrialFlow = calculateFlow(ereglQuote, ereglHistory);
+  const telecomFlow = calculateFlow(tcellQuote, tcellHistory);
+  const retailFlow = calculateFlow(bimasQuote, bimasHistory);
+  const energyFlow = calculateFlow(tuprsQuote, tuprsHistory);
+
+  const sectors: SectorFlow[] = [
+    {
+      name: 'Bankacılık',  // Banking
+      flow7d: bankingFlow.flow7d,
+      flow30d: bankingFlow.flow30d,
+      dominance: 35, // Banks dominate BIST
+      trending: bankingFlow.flow7d > 1 ? 'up' : bankingFlow.flow7d < -1 ? 'down' : 'stable',
+      topAssets: ['GARAN', 'AKBNK', 'YKBNK', 'ISCTR', 'HALKB'],
+    },
+    {
+      name: 'Holding',
+      flow7d: (bankingFlow.flow7d + industrialFlow.flow7d) / 2, // Holdings are diversified
+      flow30d: indexFlow30d,
+      dominance: 15,
+      trending: indexFlow7d > 1 ? 'up' : indexFlow7d < -1 ? 'down' : 'stable',
+      topAssets: ['KCHOL', 'SAHOL', 'TAVHL', 'TKFEN', 'DOHOL'],
+    },
+    {
+      name: 'Sanayi',  // Industrial
+      flow7d: industrialFlow.flow7d,
+      flow30d: industrialFlow.flow30d,
+      dominance: 20,
+      trending: industrialFlow.flow7d > 1 ? 'up' : industrialFlow.flow7d < -1 ? 'down' : 'stable',
+      topAssets: ['EREGL', 'SISE', 'TOASO', 'FROTO', 'TUPRS'],
+    },
+    {
+      name: 'Havacılık',  // Aviation
+      flow7d: aviationFlow.flow7d,
+      flow30d: aviationFlow.flow30d,
+      dominance: 10,
+      trending: aviationFlow.flow7d > 1 ? 'up' : aviationFlow.flow7d < -1 ? 'down' : 'stable',
+      topAssets: ['THYAO', 'PGSUS'],
+    },
+    {
+      name: 'Telekom',  // Telecom
+      flow7d: telecomFlow.flow7d,
+      flow30d: telecomFlow.flow30d,
+      dominance: 8,
+      trending: telecomFlow.flow7d > 1 ? 'up' : telecomFlow.flow7d < -1 ? 'down' : 'stable',
+      topAssets: ['TCELL', 'TTKOM'],
+    },
+    {
+      name: 'Perakende',  // Retail
+      flow7d: retailFlow.flow7d,
+      flow30d: retailFlow.flow30d,
+      dominance: 7,
+      trending: retailFlow.flow7d > 1 ? 'up' : retailFlow.flow7d < -1 ? 'down' : 'stable',
+      topAssets: ['BIMAS', 'MGROS', 'SOKM'],
+    },
+    {
+      name: 'Teknoloji',  // Technology
+      flow7d: (industrialFlow.flow7d + telecomFlow.flow7d) / 2, // No pure tech sector, use proxy
+      flow30d: indexFlow30d,
+      dominance: 5,
+      trending: indexFlow7d > 1 ? 'up' : indexFlow7d < -1 ? 'down' : 'stable',
+      topAssets: ['ASELS', 'LOGO', 'ARENA'],
+    },
+  ];
+
+  return sectors;
+}
+
+/**
+ * Get BIST flow data using volume-weighted analysis
+ */
+export async function getBistFlowData(): Promise<{
+  flowHistory: FlowDataPoint[];
+  velocityHistory: FlowDataPoint[];
+  flow7d: number;
+  flow30d: number;
+  flowVelocity: number;
+  sectorRotation: 'risk_on' | 'defensive' | 'neutral';
+  bySymbol: Map<string, { flow7d: number; flow30d: number }>;
+}> {
+  // Main BIST stocks for flow analysis
+  const bistStocks = [
+    SYMBOLS.XU100,
+    SYMBOLS.GARAN,
+    SYMBOLS.AKBNK,
+    SYMBOLS.THYAO,
+    SYMBOLS.KCHOL,
+    SYMBOLS.EREGL,
+    SYMBOLS.TCELL,
+    SYMBOLS.BIMAS,
+  ];
+
+  const flowData = await getETFFlowData(bistStocks);
+
+  // Risk-on vs defensive: Banking/Aviation vs Retail/Telecom
+  const riskOnStocks = [SYMBOLS.GARAN, SYMBOLS.AKBNK, SYMBOLS.THYAO];
+  const defensiveStocks = [SYMBOLS.BIMAS, SYMBOLS.TCELL];
+
+  const [riskOnFlow, defensiveFlow] = await Promise.all([
+    getETFFlowData(riskOnStocks),
+    getETFFlowData(defensiveStocks),
+  ]);
+
+  const rotationDiff = riskOnFlow.flow7d - defensiveFlow.flow7d;
+  const sectorRotation = rotationDiff > 3 ? 'risk_on' :
+    rotationDiff < -3 ? 'defensive' : 'neutral';
+
+  return {
+    ...flowData,
+    sectorRotation,
+  };
+}
+
+/**
  * Get all Yahoo data in one call
  */
 export async function getAllYahooData() {
-  const [dxy, vix, stocks, metals] = await Promise.all([
+  const [dxy, vix, stocks, metals, bist] = await Promise.all([
     getDxyData(),
     getVixData(),
     getStocksFlow(),
     getMetalsFlow(),
+    getBistFlow(),
   ]);
 
   return {
@@ -846,5 +1085,6 @@ export async function getAllYahooData() {
     vix,
     stocks,
     metals,
+    bist,
   };
 }

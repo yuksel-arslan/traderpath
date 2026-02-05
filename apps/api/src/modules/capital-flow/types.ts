@@ -6,7 +6,7 @@
  */
 
 // Market Types
-export type MarketType = 'crypto' | 'stocks' | 'bonds' | 'metals';
+export type MarketType = 'crypto' | 'stocks' | 'bonds' | 'metals' | 'bist';
 export type Phase = 'early' | 'mid' | 'late' | 'exit';
 export type RotationSignal = 'entering' | 'stable' | 'exiting' | null;
 export type LiquidityBias = 'risk_on' | 'risk_off' | 'neutral';

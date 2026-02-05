@@ -49,6 +49,8 @@ import {
   getBondsFlowData,
   getMetalsFlowData,
   getStocksFlowData,
+  getBistFlow,
+  getBistFlowData,
 } from './providers/yahoo.provider';
 import { getAllDefiLlamaData, getCryptoSectors, getDeFiTvl, getStablecoinMarketCap } from './providers/defillama.provider';
 import { getCompleteCryptoFlowData } from './providers/binance.provider';
@@ -256,10 +258,11 @@ export async function getAllMarketFlows(): Promise<MarketFlow[]> {
       getStocksMarketFlow(),
       getBondsFlow(),
       getMetalsMarketFlow(),
+      getBistMarketFlow(),
     ]);
 
     // Log failures for debugging
-    const marketNames = ['crypto', 'stocks', 'bonds', 'metals'];
+    const marketNames = ['crypto', 'stocks', 'bonds', 'metals', 'bist'];
     results.forEach((result, index) => {
       if (result.status === 'rejected') {
         console.error(`[CapitalFlow] ${marketNames[index]} flow fetch failed:`, result.reason);
@@ -310,6 +313,9 @@ export async function getMarketFlow(market: MarketType): Promise<MarketFlow> {
       break;
     case 'metals':
       flow = await getMetalsMarketFlow();
+      break;
+    case 'bist':
+      flow = await getBistMarketFlow();
       break;
     default:
       throw new Error(`Unknown market: ${market}`);
@@ -563,6 +569,43 @@ async function getMetalsMarketFlow(): Promise<MarketFlow> {
     // Additional real data
     goldSilverRatio: metalsFlowData.goldSilverRatio,
     safeHavenFlow: metalsFlowData.safeHavenFlow,
+    lastUpdated: new Date(),
+  };
+
+  const phase = detectPhase(baseFlow);
+  const phaseInfo = getPhaseInfo(phase, baseFlow);
+
+  return {
+    ...baseFlow,
+    ...phaseInfo,
+    rotationSignal: detectRotationSignal(baseFlow),
+    rotationTarget: null,
+    rotationConfidence: 0,
+  };
+}
+
+/**
+ * Get BIST (Borsa İstanbul) market flow
+ * Uses XU100 index and volume-weighted sector analysis
+ */
+async function getBistMarketFlow(): Promise<MarketFlow> {
+  // Fetch REAL volume-weighted flow from BIST stocks
+  const [bistFlowData, bistData] = await Promise.all([
+    getBistFlowData(),
+    getBistFlow(),
+  ]);
+
+  const baseFlow = {
+    market: 'bist' as const,
+    currentValue: bistData.currentValue,
+    flow7d: bistFlowData.flow7d,
+    flow30d: bistFlowData.flow30d,
+    flowVelocity: bistFlowData.flowVelocity,
+    flowHistory: bistFlowData.flowHistory,
+    velocityHistory: bistFlowData.velocityHistory,
+    sectors: bistData.sectors,
+    // Additional real data
+    sectorRotation: bistFlowData.sectorRotation,
     lastUpdated: new Date(),
   };
 
@@ -908,6 +951,49 @@ function getFallbackMarketFlows(): MarketFlow[] {
       rotationTarget: null,
       rotationConfidence: 60,
       sectors: [],
+      lastUpdated: now,
+    },
+    {
+      market: 'bist' as MarketType,
+      currentValue: 10000, // XU100 index value
+      flow7d: 1.2,
+      flow30d: 4.5,
+      flowVelocity: 0.4,
+      flowHistory: generateHistory(4.5),
+      velocityHistory: generateHistory(0.4),
+      phase: 'mid' as Phase,
+      daysInPhase: 20,
+      phaseStartDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
+      avgPhaseDuration: 35,
+      rotationSignal: 'stable',
+      rotationTarget: null,
+      rotationConfidence: 55,
+      sectors: [
+        {
+          name: 'Bankacılık',
+          flow7d: 1.5,
+          flow30d: 5.0,
+          dominance: 35,
+          trending: 'up' as const,
+          topAssets: ['GARAN', 'AKBNK', 'YKBNK', 'ISCTR', 'HALKB'],
+        },
+        {
+          name: 'Holding',
+          flow7d: 1.0,
+          flow30d: 3.5,
+          dominance: 15,
+          trending: 'stable' as const,
+          topAssets: ['KCHOL', 'SAHOL', 'TAVHL', 'TKFEN'],
+        },
+        {
+          name: 'Sanayi',
+          flow7d: 0.8,
+          flow30d: 3.0,
+          dominance: 20,
+          trending: 'stable' as const,
+          topAssets: ['EREGL', 'SISE', 'TOASO', 'FROTO'],
+        },
+      ],
       lastUpdated: now,
     },
   ];

@@ -26,7 +26,18 @@ const TREASURY_YIELDS = ['US10Y', 'US2Y', 'US30Y', 'US5Y', 'US3M', 'US1Y'];
 export function detectAssetClass(symbol: string): AssetClass {
   const upper = symbol.toUpperCase().trim();
 
-  // Check metals first (specific patterns)
+  // Check BIST first (ends with .IS suffix)
+  if (upper.endsWith('.IS')) {
+    return 'bist';
+  }
+
+  // Check BIST symbols (without suffix too, for convenience)
+  const bistSymbols = SUPPORTED_SYMBOLS.bist.map(s => s.toUpperCase());
+  if (bistSymbols.includes(upper) || bistSymbols.includes(`${upper}.IS`)) {
+    return 'bist';
+  }
+
+  // Check metals (specific patterns)
   if (METALS_SPOT.includes(upper) ||
       upper.startsWith('XAU') ||
       upper.startsWith('XAG') ||
@@ -99,6 +110,8 @@ export function resolveSymbol(symbol: string): ResolvedSymbol {
       return resolveBondSymbol(upper);
     case 'metals':
       return resolveMetalsSymbol(upper);
+    case 'bist':
+      return resolveBistSymbol(upper);
     default:
       return {
         original: symbol,
@@ -219,6 +232,72 @@ function resolveMetalsSymbol(symbol: string): ResolvedSymbol {
     normalized: symbol,
     assetClass: 'metals',
     displayName: metalNames[symbol] || symbol,
+  };
+}
+
+/**
+ * Resolve BIST (Borsa İstanbul) symbol
+ */
+function resolveBistSymbol(symbol: string): ResolvedSymbol {
+  // Ensure .IS suffix for Yahoo Finance
+  const normalized = symbol.endsWith('.IS') ? symbol : `${symbol}.IS`;
+  const base = symbol.replace('.IS', '');
+
+  // BIST company names (Turkish)
+  const bistNames: Record<string, string> = {
+    // Index
+    'XU100': 'BIST 100 Endeks',
+    // Banking
+    'GARAN': 'Garanti BBVA',
+    'AKBNK': 'Akbank',
+    'YKBNK': 'Yapı Kredi',
+    'ISCTR': 'İş Bankası',
+    'HALKB': 'Halkbank',
+    'VAKBN': 'Vakıfbank',
+    'TSKB': 'TSKB',
+    // Holding
+    'KCHOL': 'Koç Holding',
+    'SAHOL': 'Sabancı Holding',
+    'TAVHL': 'TAV Havalimanları',
+    'TKFEN': 'Tekfen Holding',
+    'DOHOL': 'Doğan Holding',
+    // Industrial
+    'SISE': 'Şişecam',
+    'TOASO': 'Tofaş Oto',
+    'FROTO': 'Ford Otosan',
+    'EREGL': 'Ereğli Demir Çelik',
+    'KRDMD': 'Kardemir',
+    'TUPRS': 'Tüpraş',
+    'PETKM': 'Petkim',
+    // Aviation
+    'THYAO': 'Türk Hava Yolları',
+    'PGSUS': 'Pegasus',
+    // Telecom
+    'TCELL': 'Turkcell',
+    'TTKOM': 'Türk Telekom',
+    // Retail
+    'BIMAS': 'BİM Mağazalar',
+    'MGROS': 'Migros',
+    'SOKM': 'Şok Market',
+    // Construction
+    'ENKAI': 'Enka İnşaat',
+    'EKGYO': 'Emlak Konut GYO',
+    // Technology
+    'ASELS': 'Aselsan',
+    'LOGO': 'Logo Yazılım',
+    // Other
+    'ARCLK': 'Arçelik',
+    'VESTL': 'Vestel',
+    'KOZAL': 'Koza Altın',
+    'KOZAA': 'Koza Anadolu',
+  };
+
+  return {
+    original: symbol,
+    normalized: normalized,
+    assetClass: 'bist',
+    exchange: 'bist',
+    displayName: bistNames[base] || base,
   };
 }
 
