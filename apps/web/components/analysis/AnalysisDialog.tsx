@@ -419,16 +419,23 @@ export function AnalysisDialog({
     }
   }, [completedSteps.length, saveReportToDatabase, analysisMethod, results]);
 
-  // Auto-generate PDF when analysis is saved
+  // Auto-redirect to analysis details after celebration modal
+  // Wait for celebration modal to display (1.5s delay + 4s display = 5.5s total)
   useEffect(() => {
     if (reportSaved && savedAnalysisId && !pdfGeneratedRef.current) {
       pdfGeneratedRef.current = true;
       setPdfGenerating(true);
 
-      // Poll to verify analysis exists in database before redirecting
+      // Wait for celebration modal to finish before redirecting
+      // Celebration shows after 1.5s and displays for ~4s
+      const celebrationWaitTime = 5500; // 1500ms delay + 4000ms display time
+
       const verifyAndRedirect = async () => {
-        const maxAttempts = 10;
-        const delayMs = 1000; // 1 second between attempts
+        // First wait for celebration modal to finish
+        await new Promise(resolve => setTimeout(resolve, celebrationWaitTime));
+
+        const maxAttempts = 5;
+        const delayMs = 500; // 500ms between attempts (faster polling after celebration)
 
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
           try {
@@ -438,9 +445,9 @@ export function AnalysisDialog({
             });
 
             if (response.ok) {
-              // Analysis found in database, safe to redirect
+              // Analysis found in database, redirect to details page
               onClose();
-              router.push(`/analyze/details/${savedAnalysisId}?pdf=true`);
+              router.push(`/analyze/details/${savedAnalysisId}`);
               return;
             }
           } catch {
@@ -453,7 +460,7 @@ export function AnalysisDialog({
 
         // If still not found after max attempts, redirect anyway (fallback)
         onClose();
-        router.push(`/analyze/details/${savedAnalysisId}?pdf=true`);
+        router.push(`/analyze/details/${savedAnalysisId}`);
       };
 
       verifyAndRedirect();
@@ -987,21 +994,21 @@ export function AnalysisDialog({
                   className="rounded-xl p-5"
                   style={{
                     background: pdfGenerating
-                      ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.05))'
+                      ? 'linear-gradient(135deg, rgba(45, 212, 191, 0.1), rgba(20, 184, 166, 0.05))'
                       : 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.05))',
                     border: pdfGenerating
-                      ? '1px solid rgba(239, 68, 68, 0.2)'
+                      ? '1px solid rgba(45, 212, 191, 0.2)'
                       : '1px solid rgba(34, 197, 94, 0.2)',
                   }}
                 >
                   {pdfGenerating ? (
                     <>
-                      <div className="flex items-center justify-center gap-2 text-red-400 mb-3">
+                      <div className="flex items-center justify-center gap-2 text-teal-400 mb-3">
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        <span className="font-semibold">Generating PDF Report...</span>
+                        <span className="font-semibold">Opening Analysis Details...</span>
                       </div>
                       <p className="text-sm text-slate-400 text-center">
-                        Your analysis is complete! Preparing your PDF report for download...
+                        Your analysis is complete! You will be redirected to the details page shortly...
                       </p>
                     </>
                   ) : (

@@ -703,9 +703,12 @@ Warn about potential traps and give protective advice.`;
     const body = fullAnalysisSchema.parse(request.body);
     // Resolve tradeType from interval if provided
     const tradeType = resolveTradeType(body.interval, body.tradeType as TradeType);
-    // Use the interval if provided, otherwise derive from tradeType
-    // Mapping: scalping=15m, dayTrade=1h, swing=1d
-    const interval = body.interval || (tradeType === 'scalping' ? '15m' : tradeType === 'dayTrade' ? '1h' : '1d');
+    // IMPORTANT: Use the interval exactly as provided by frontend, with fallback for legacy clients
+    // Frontend MUST send interval (5m, 15m, 30m, 1h, 2h, 4h, 1d, 1W)
+    const interval = body.interval || (tradeType === 'scalping' ? '15m' : tradeType === 'dayTrade' ? '4h' : '1d');
+
+    // Debug log to track interval issues
+    console.log(`[ANALYSIS] Symbol: ${body.symbol}, Requested interval: ${body.interval}, Resolved interval: ${interval}, TradeType: ${tradeType}`);
 
     // Check for Daily Pass system (100 credits/day, max 10 analyses)
     // Admin users bypass the daily pass system

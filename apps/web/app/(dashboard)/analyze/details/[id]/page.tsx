@@ -641,8 +641,12 @@ export default function AnalysisDetailsPage() {
                 }}
               />
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{analysis.symbol}/USDT Analysis</h1>
+                  {/* Timeframe Badge */}
+                  <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-full uppercase">
+                    {analysis.interval || '4H'}
+                  </span>
                   {isMLIS && (
                     <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-full">
                       MLIS Pro
