@@ -34,7 +34,6 @@ import { cn } from '../../../lib/utils';
 import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost, SIGNAL_SUBSCRIPTIONS, DAILY_PASS_COSTS } from '../../../lib/pricing-config';
 import { authFetch, getAuthToken, apiBaseUrl } from '../../../lib/api';
 import { Footer } from '../../../components/common/Footer';
-import { SubscriptionTiers } from '../../../components/pricing/SubscriptionTiers';
 
 // Format credits with full number display (1000087 → 1,000,087)
 function formatCredits(num: number): string {
@@ -269,27 +268,6 @@ export default function PricingPage() {
                 <span className="hidden sm:inline text-xs bg-violet-500/10 text-violet-600 px-2 py-0.5 rounded-full">Subscription</span>
               </button>
             </div>
-          </div>
-        </section>
-
-        {/* Subscription Plans */}
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-violet-500/10 border border-violet-500/20 rounded-full mb-4">
-                <Sparkles className="w-4 h-4 text-violet-500" />
-                <span className="text-sm font-medium text-violet-600 dark:text-violet-400">
-                  Subscription Plans
-                </span>
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                Daily Credits, Premium Features
-              </h2>
-              <p className="text-muted-foreground max-w-xl mx-auto">
-                Get fresh credits every day and unlock advanced analysis tools
-              </p>
-            </div>
-            <SubscriptionTiers variant="page" />
           </div>
         </section>
 
