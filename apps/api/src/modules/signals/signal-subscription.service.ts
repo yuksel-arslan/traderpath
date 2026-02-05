@@ -187,6 +187,7 @@ export const signalSubscriptionService = {
 
   /**
    * Get or create Stripe price for signal tier
+   * Prices are cached in Redis for 30 days to avoid creating duplicates
    */
   async getOrCreateStripePrice(
     tier: Exclude<SignalSubscriptionTier, 'SIGNAL_FREE'>,
@@ -194,12 +195,19 @@ export const signalSubscriptionService = {
     interval: 'month' | 'year'
   ): Promise<string> {
     const config = SIGNAL_TIER_CONFIG[tier];
+    const cacheKey = `signal-price:${tier}:${interval}`;
 
-    // Try to find existing price in Stripe
+    // Try to get from cache first
+    if (cache) {
+      const cachedPriceId = await cache.get(cacheKey);
+      if (cachedPriceId) {
+        console.log(`[SignalSubscription] Using cached price ID for ${tier} ${interval}:`, cachedPriceId);
+        return cachedPriceId;
+      }
+    }
+
+    // Create new price in Stripe
     const productName = `TraderPath ${config.name}`;
-    // For now, create new price each time
-    // TODO: Store price IDs in database or config
-
     const price = await stripeService.createPrice({
       productName,
       unitAmount: amount,
@@ -207,6 +215,13 @@ export const signalSubscriptionService = {
       interval,
       metadata: { tier },
     });
+
+    console.log(`[SignalSubscription] Created new Stripe price for ${tier} ${interval}:`, price.id);
+
+    // Cache for 30 days
+    if (cache) {
+      await cache.setex(cacheKey, 30 * 24 * 60 * 60, price.id);
+    }
 
     return price.id;
   },
