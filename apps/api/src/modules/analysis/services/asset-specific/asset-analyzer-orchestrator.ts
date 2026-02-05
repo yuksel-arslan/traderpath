@@ -40,6 +40,9 @@ export class AssetAnalyzerOrchestrator {
         return metalsAnalyzer.analyze(symbol);
       case 'stocks':
         return stocksAnalyzer.analyze(symbol);
+      case 'bist':
+        // BIST (Borsa Istanbul) is a stock exchange - use stocks analyzer
+        return stocksAnalyzer.analyze(symbol);
       case 'bonds':
         return bondsAnalyzer.analyze(symbol);
       case 'crypto':
@@ -87,6 +90,7 @@ export class AssetAnalyzerOrchestrator {
         stocks: expectedBehavior.stocks,
         metals: expectedBehavior.metals,
         bonds: expectedBehavior.bonds,
+        bist: expectedBehavior.bist,
       },
       actualBehavior,
       correlations: {

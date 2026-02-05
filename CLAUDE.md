@@ -552,6 +552,9 @@ Kullanıcı Hakları Aktif:
 | 2026-02-05 | Explore sayfasında Capital Flow, Top Coins ve Signals sekmeleri boş görünüyordu | 1) Frontend: error state ve error UI eklendi (Promise.allSettled ile her API ayrı işleniyor), 2) Her sekme için hata mesajı ve retry butonu, 3) Boş durum için açıklayıcı mesajlar ve aksiyon butonları, 4) Backend: top-coins endpoint cache boşken recent analyses'a fallback yapıyor | `explore/page.tsx`, `analysis.routes.ts:5317-5376` |
 | 2026-02-05 | Capital Flow sayfası "Error Loading Data" gösteriyordu | `getCapitalFlowSummary()` içinde `determineLiquidityBias`, `generateRecommendation`, `detectActiveRotation` fonksiyonları try-catch olmadan çağrılıyordu. Hata fırlatınca tüm API 500 döndürüyordu. 1) Tüm riskli fonksiyonlar try-catch ile sarıldı, 2) `getFallbackRecommendation()` fonksiyonu eklendi, 3) Cache yazma hatası da yakalanıyor | `capital-flow.service.ts:118-198,1072-1084` |
 | 2026-02-05 | Trade plan entry/SL/TP seviyeleri güncel fiyattan çok uzaktaydı ve mantıksızdı (fiyat $112 iken entry $178, SL $188) | Trade plan mantığı tamamen yeniden yazıldı: 1) S/R seviyeleri artık analiz timeframe'inden (candlesPrimary) alınıyor (eskiden hep 1D), 2) Entry her zaman current price (pullback beklenmez), 3) SL = destek - 1 ATR (LONG) veya direnç + 1 ATR (SHORT), 4) TP1 = yakın direnç/destek, TP2 = uzak direnç/destek (yoksa 2R/3R fallback), 5) Fiyat S/R aralığının ortasındaysa "wait" durumu (entry koşulu karşılanmıyor), 6) Seviyeler yakınlığa göre sıralanıyor (güce göre değil), 7) >%10 uzaktaki seviyeler filtreleniyor, 8) DCA ve çoklu entry kaldırıldı, 9) TP dağılımı %60/%40 | `analysis.engine.ts:3682,5365-5565` |
+| 2026-02-05 | BIST (Borsa Istanbul) analizi "Unknown asset class: bist" hatası veriyordu | 1) `asset-metrics.types.ts`'de AssetClass'a 'bist' eklendi, 2) `detectAssetClass()`'a BIST detection eklendi (35 sembol + .IS suffix), 3) Orchestrator'da BIST → stocks analyzer routing eklendi, 4) REGIME_EXPECTATIONS ve InterMarketContext'e 'bist' eklendi | `asset-metrics.types.ts`, `asset-analyzer-orchestrator.ts` |
+| 2026-02-05 | Non-crypto varlıklarda (BIST, Stocks, Metals, Bonds) email/download/chart "SYMBOL/USDT" gösteriyordu | 14 yerde hardcoded `/USDT` kaldırıldı. `formatSymbolPair()` helper eklendi - crypto'ya /USDT ekler, non-crypto'ya eklemez. Email subject, body, chart title düzeltildi | `email.service.ts`, `report.routes.ts`, `TradePlanChart.tsx` |
+| 2026-02-05 | Non-crypto varlıklarda fiyat takibi (live-tracking, outcome) başarısız oluyordu (Binance'de THYAOUSDT yok) | fetchBulkPrices, fetchCurrentPrice, fetchOHLCData, fetchKlines fonksiyonları multi-asset provider kullanacak şekilde güncellendi. Crypto→Binance, non-crypto→Yahoo Finance routing eklendi | `live-tracking.service.ts`, `outcome.service.ts`, `report.routes.ts` |
 
 ---
 
@@ -1855,6 +1858,47 @@ Kullanıcı Hakları Aktif:
   - Dosyalar: `apps/web/lib/pricing-config.ts`, `apps/web/app/(marketing)/pricing/page.tsx`
 
 ### 2026-02-05
+- **AI Price Predictor Service (Gemini-based TP/SL Prediction)**:
+  - **Yeni Dosya**: `apps/api/src/modules/analysis/services/ai-price-predictor.service.ts`
+  - Gemini 2.5 Pro kullanarak TFT model benzeri fiyat tahmini yapıyor
+  - **Input**: Son 30 mum OHLCV, 40+ teknik indikatör, mum formasyonları, destek/direnç, hacim profili, diverjanslar, market context
+  - **Output**: TP1/TP2 fiyat hedefleri (confidence %), SL seviyesi, invalidation price, time horizon
+  - Prompt TFT stilinde: hidden patterns, indicator confluence, momentum, volume confirmation, MA alignment, BB position
+  - Sanity checks: direction validation, max distance caps (TP1: 20%, TP2: 30%, SL: 15%)
+  - ATR-based fallback mekanizması (Gemini başarısız olursa)
+  - `predictPriceTargets()` fonksiyonu `callGeminiWithRetry()` ile 'expert' model kullanıyor
+- **AI Predictions → Trade Plan Integration**:
+  - `integratedTradePlan()` metodu artık AI price prediction çağırıyor
+  - Mekanik S/R yerleştirme yerine Gemini tahminleri kullanılıyor (confidence >= 40% ise)
+  - AI prediction < 40% confidence → mevcut S/R fallback devam ediyor
+  - SL: AI önerisi mevcut SL'den sıkıysa ve %1.5-%10 aralığındaysa kullanılıyor
+  - `TradePlanResult` interface'ine `aiPrediction` field eklendi:
+    - `usedAIPrediction`: boolean (AI tahmininin gerçekten kullanılıp kullanılmadığı)
+    - TP1/TP2 confidence, expected candles, reasoning
+    - invalidation price ve reason
+    - expected move %, direction, time horizon
+  - 50 mum `fetchMultiAssetCandles()` ile çekiliyor (crypto→Binance, non-crypto→Yahoo)
+  - Extended indikatörler indicatorDetails'den: stochastic (K/D from metadata), ADX, CCI, Williams %R, MFI, OBV, VWAP, CMF
+  - Dosya: `apps/api/src/modules/analysis/analysis.engine.ts:5598-5806`
+- **Capital Flow Trade Monitor Service**:
+  - **Yeni Dosya**: `apps/api/src/modules/capital-flow/capital-flow-monitor.service.ts`
+  - Açık işlemlerin hedefe ulaşmasını beklerken para akışını izliyor
+  - **6 Alert Tipi**: capital_outflow, phase_change, rotation_detected, liquidity_shift, velocity_reversal, regime_change
+  - **Flow Health Score** (0-100): flow direction, velocity, phase, rotation, liquidity bias faktörlerine göre hesaplanıyor
+  - **Hold Recommendation**: hold / tighten_stop / take_profit / close_position
+  - LONG pozisyon + capital outflow = warning; SHORT pozisyon + capital inflow = warning
+  - EXIT phase + LONG = take_profit önerisi; LATE phase + rotation exiting = tighten_stop
+  - `checkTradeFlowHealth()`: Tek trade için flow health kontrolü
+  - `checkBulkTradeFlowHealth()`: Birden fazla trade için toplu kontrol (tek `getCapitalFlowSummary()` çağrısı)
+  - `runFlowHealthCheck()`: Cron job için tüm aktif trade'lerin kontrolü
+  - Redis cache: 5 dakika TTL
+- **Live Tracking + Capital Flow Integration**:
+  - `LiveTrackingStatus` interface'ine `flowHealth` field eklendi
+  - `getUserActiveTrades()` fonksiyonu artık flow health verisi ile zenginleştirilmiş döndürüyor
+  - Mevcut `/api/reports/live-tracking` endpoint'i otomatik olarak flow health data içeriyor
+  - `checkActiveTradesFlowHealth()` fonksiyonu: tüm aktif analizler için periyodik flow health kontrolü
+  - 10 dakikalık cron job'a capital flow monitor eklendi (historical outcome check ile birlikte)
+  - Dosyalar: `live-tracking.service.ts`, `index.ts`
 - **Trade Plan Pricing Logic Fix (Support/Resistance Level Filtering)**:
   - **Sorun**: `findSupportResistance()` günlük mumlardan aylar öncesine ait destek/direnç seviyeleri tespit ediyordu. Örneğin fiyat $112 iken, aylar önceki ATH bölgesinden $178 direnç seviyesi tespit edilip SHORT entry olarak kullanılıyordu → Entry $178, SL $188, TP $162/$152 - tamamen saçma
   - **Kök Neden**: S/R seviyeleri ile güncel fiyat arasındaki mesafe kontrol edilmiyordu

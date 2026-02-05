@@ -5,6 +5,7 @@
 // ===========================================
 
 import { prisma } from '../../core/database';
+import { detectAssetClass } from '../analysis/providers/symbol-resolver';
 
 interface OutcomeResult {
   outcome: 'correct' | 'incorrect' | 'pending';
@@ -42,14 +43,22 @@ interface KlineData {
   closeTime: number;
 }
 
-// Fetch current price from Binance
+// Fetch current price (multi-asset: crypto from Binance, others from Yahoo)
 async function fetchCurrentPrice(symbol: string): Promise<number | null> {
   try {
+    const assetClass = detectAssetClass(symbol);
+    if (assetClass !== 'crypto') {
+      // Non-crypto: use multi-asset provider (Yahoo Finance)
+      const { fetchTicker } = await import('../analysis/providers/multi-asset-data-provider');
+      const ticker = await fetchTicker(symbol);
+      return ticker?.price ?? null;
+    }
+
+    // Crypto: use Binance
     const pair = `${symbol.toUpperCase()}USDT`;
     const response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${pair}`);
     if (!response.ok) return null;
 
-    // Safely parse JSON response
     const responseText = await response.text();
     if (!responseText || responseText.trim() === '') {
       return null;
@@ -68,7 +77,7 @@ async function fetchCurrentPrice(symbol: string): Promise<number | null> {
   }
 }
 
-// Fetch historical OHLC data from Binance
+// Fetch historical OHLC data (multi-asset: crypto from Binance, others from Yahoo)
 async function fetchOHLCData(
   symbol: string,
   startTime: Date,
@@ -76,13 +85,35 @@ async function fetchOHLCData(
   interval: string = '1h'
 ): Promise<KlineData[]> {
   try {
+    const assetClass = detectAssetClass(symbol);
+
+    // Non-crypto: use multi-asset provider
+    if (assetClass !== 'crypto') {
+      try {
+        const { fetchCandles } = await import('../analysis/providers/multi-asset-data-provider');
+        const candles = await fetchCandles(symbol, interval === '1h' ? '1h' : interval, 500);
+        return candles
+          .filter(c => c.timestamp >= startTime.getTime() && c.timestamp <= endTime.getTime())
+          .map(c => ({
+            openTime: c.timestamp,
+            open: c.open,
+            high: c.high,
+            low: c.low,
+            close: c.close,
+            closeTime: c.timestamp + 3600000,
+          }));
+      } catch {
+        return [];
+      }
+    }
+
+    // Crypto: use Binance
     const pair = `${symbol.toUpperCase()}USDT`;
     const url = `https://api.binance.com/api/v3/klines?symbol=${pair}&interval=${interval}&startTime=${startTime.getTime()}&endTime=${endTime.getTime()}&limit=1000`;
 
     const response = await fetch(url);
     if (!response.ok) return [];
 
-    // Safely parse JSON response
     const responseText = await response.text();
     if (!responseText || responseText.trim() === '') {
       return [];

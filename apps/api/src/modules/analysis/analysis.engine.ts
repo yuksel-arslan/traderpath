@@ -41,6 +41,9 @@ import {
   AssetClass,
 } from './providers/multi-asset-data-provider';
 
+// NEW: AI Price Predictor import
+import { predictPriceTargets, PricePrediction, PricePredictionInput } from './services/ai-price-predictor.service';
+
 // NEW: Asset-Specific Analyzers import
 import {
   assetAnalyzerOrchestrator,
@@ -2081,6 +2084,20 @@ interface TradePlanResult {
   };
   // New: Confidence from integrated analysis
   confidence: number;
+  // AI Price Prediction (Gemini-based)
+  aiPrediction?: {
+    tp1: { price: number; confidence: number; expectedTimeCandles: number; reasoning: string };
+    tp2: { price: number; confidence: number; expectedTimeCandles: number; reasoning: string };
+    stopLoss: { price: number; reasoning: string };
+    predictionConfidence: number;
+    predictionBasis: string[];
+    invalidationPrice: number;
+    invalidationReason: string;
+    expectedMovePercent: number;
+    expectedMoveDirection: 'up' | 'down';
+    timeHorizon: string;
+    usedAIPrediction: boolean; // Whether AI prediction was actually used for targets
+  };
   // Gate evaluation result
   gate: {
     canProceed: boolean;
@@ -5503,7 +5520,7 @@ export const analysisEngine = {
     }
 
     stopPrice = roundPrice(stopPrice);
-    const stopPercentage = Math.abs((stopPrice - averageEntry) / averageEntry * 100);
+    let stopPercentage = Math.abs((stopPrice - averageEntry) / averageEntry * 100);
 
     // ===== TAKE PROFIT: Opposite S/R levels =====
     // LONG: TP1 = nearest resistance, TP2 = further resistance (with 2R/3R fallback)
@@ -5575,12 +5592,231 @@ export const analysisEngine = {
       }
     });
 
+    // ===== AI PRICE PREDICTION (Gemini) =====
+    // Uses all technical data to predict REALISTIC price targets
+    // Overrides mechanical S/R targets when AI confidence is sufficient
+    let aiPrediction: PricePrediction | null = null;
+    let usedAIPrediction = false;
+
+    try {
+      // Determine timeframe for candle fetch
+      const assetClass = getAssetClass(symbol);
+      const tfMap: Record<string, string> = { scalping: '15m', dayTrade: '4h', swing: '1d' };
+      // Infer trade type from ATR% - scalping has tighter ATR%
+      const atrPercent = atr / currentPrice * 100;
+      const inferredTF = atrPercent < 0.5 ? '15m' : atrPercent < 2 ? '4h' : '1d';
+
+      // Fetch 50 candles for AI analysis
+      const aiCandles = await fetchMultiAssetCandles(symbol, inferredTF, 50).catch(() => null);
+
+      if (aiCandles && aiCandles.length >= 20) {
+        // Extract extended indicators from indicatorDetails
+        const indicatorDetails = assetScan.indicatorDetails;
+        const extendedIndicators: PricePredictionInput['indicators'] = {
+          rsi: assetScan.indicators.rsi,
+          macd: assetScan.indicators.macd,
+          bollingerBands: assetScan.indicators.bollingerBands,
+          atr: assetScan.indicators.atr || atr,
+          movingAverages: assetScan.indicators.movingAverages,
+        };
+
+        // Add extended indicators from indicatorDetails if available
+        if (indicatorDetails) {
+          if (indicatorDetails.momentum?.stochastic?.metadata) {
+            const meta = indicatorDetails.momentum.stochastic.metadata as { k?: number; d?: number };
+            if (meta.k !== undefined && meta.d !== undefined) {
+              extendedIndicators.stochastic = { k: meta.k, d: meta.d };
+            }
+          }
+          if (indicatorDetails.trend?.adx?.value) {
+            extendedIndicators.adx = Number(indicatorDetails.trend.adx.value) || undefined;
+          }
+          if (indicatorDetails.momentum?.cci?.value) {
+            extendedIndicators.cci = Number(indicatorDetails.momentum.cci.value) || undefined;
+          }
+          if (indicatorDetails.momentum?.williamsR?.value) {
+            extendedIndicators.williamsR = Number(indicatorDetails.momentum.williamsR.value) || undefined;
+          }
+          if (indicatorDetails.momentum?.mfi?.value) {
+            extendedIndicators.mfi = Number(indicatorDetails.momentum.mfi.value) || undefined;
+          }
+          if (indicatorDetails.volume?.obv?.value) {
+            extendedIndicators.obv = Number(indicatorDetails.volume.obv.value) || undefined;
+          }
+          if (indicatorDetails.volume?.vwap?.value) {
+            extendedIndicators.vwap = Number(indicatorDetails.volume.vwap.value) || undefined;
+          }
+          if (indicatorDetails.volume?.cmf?.value) {
+            extendedIndicators.cmf = Number(indicatorDetails.volume.cmf.value) || undefined;
+          }
+        }
+
+        // Build candlestick patterns
+        const candlestickPatterns: PricePredictionInput['candlestickPatterns'] = [];
+        const patternsData = assetScan.indicators?.candlestickPatterns;
+        if (patternsData?.all) {
+          for (const p of patternsData.all) {
+            candlestickPatterns.push({
+              name: p.name,
+              direction: p.direction as 'bullish' | 'bearish',
+              significance: (p.significance || 'medium') as 'high' | 'medium' | 'low',
+            });
+          }
+        }
+
+        // Build divergences from indicatorDetails
+        const divergences: PricePredictionInput['divergences'] = [];
+        if (indicatorDetails?.divergences) {
+          for (const d of indicatorDetails.divergences) {
+            if (d.type === 'bullish' || d.type === 'bearish') {
+              divergences.push({
+                indicator: d.indicator,
+                type: d.type,
+                strength: d.reliability || 'medium',
+              });
+            }
+          }
+        }
+
+        // Build volume profile
+        const avgVolume = aiCandles.reduce((s, c) => s + c.volume, 0) / aiCandles.length;
+        const currentVolume = aiCandles[aiCandles.length - 1]?.volume || avgVolume;
+        const volumeRatio = avgVolume > 0 ? currentVolume / avgVolume : 1;
+
+        // Build indicator summary
+        const summary = indicatorDetails?.summary || {
+          bullishIndicators: 0,
+          bearishIndicators: 0,
+          neutralIndicators: 0,
+          totalIndicatorsUsed: 0,
+          overallSignal: 'neutral' as const,
+          signalConfidence: 50,
+          leadingIndicatorsSignal: 'neutral' as const,
+        };
+
+        // Build market context
+        const marketContext: PricePredictionInput['marketContext'] = {
+          regime: marketPulse.marketRegime || 'neutral',
+          fearGreedIndex: marketPulse.fearGreedIndex || 50,
+          btcTrend: marketPulse.trend?.direction || 'neutral',
+          marketTrend: assetScan.timeframes?.[0]?.trend || 'neutral',
+          trendStrength: assetScan.timeframes?.[0]?.strength || 50,
+        };
+
+        // Build prediction input
+        const predictionInput: PricePredictionInput = {
+          symbol,
+          direction: direction as 'long' | 'short',
+          currentPrice,
+          timeframe: inferredTF,
+          candles: aiCandles.map(c => ({
+            time: c.timestamp,
+            open: c.open,
+            high: c.high,
+            low: c.low,
+            close: c.close,
+            volume: c.volume,
+          })),
+          indicators: extendedIndicators,
+          candlestickPatterns,
+          supportLevels: sortedSupports,
+          resistanceLevels: sortedResistances,
+          poc: assetScan.levels.poc || currentPrice,
+          volumeProfile: {
+            avgVolume,
+            currentVolume,
+            volumeRatio: parseFloat(volumeRatio.toFixed(2)),
+            isVolumeSpike: volumeRatio > 2,
+          },
+          indicatorSummary: {
+            bullishCount: summary.bullishIndicators,
+            bearishCount: summary.bearishIndicators,
+            neutralCount: summary.neutralIndicators,
+            totalUsed: summary.totalIndicatorsUsed,
+            overallSignal: summary.overallSignal,
+            signalConfidence: summary.signalConfidence,
+            leadingSignal: summary.leadingIndicatorsSignal || summary.overallSignal,
+          },
+          marketContext,
+          divergences,
+        };
+
+        // Call AI predictor
+        logger.info({ symbol, direction, timeframe: inferredTF }, '[Trade Plan] Running AI price prediction');
+        aiPrediction = await predictPriceTargets(predictionInput);
+
+        // Use AI prediction if confidence > 40%
+        if (aiPrediction && aiPrediction.predictionConfidence >= 40) {
+          usedAIPrediction = true;
+
+          // Override TP1 with AI prediction
+          if (takeProfits.length >= 1) {
+            takeProfits[0].price = roundPrice(aiPrediction.tp1.price);
+            takeProfits[0].reason = `AI: ${aiPrediction.tp1.reasoning} (${aiPrediction.tp1.confidence}% conf)`;
+            takeProfits[0].source = 'AI Price Prediction';
+          }
+
+          // Override TP2 with AI prediction
+          if (takeProfits.length >= 2) {
+            takeProfits[1].price = roundPrice(aiPrediction.tp2.price);
+            takeProfits[1].reason = `AI: ${aiPrediction.tp2.reasoning} (${aiPrediction.tp2.confidence}% conf)`;
+            takeProfits[1].source = 'AI Price Prediction';
+          }
+
+          // Override SL only if AI suggests a tighter stop AND it's within acceptable range
+          const aiSlDist = Math.abs((aiPrediction.stopLoss.price - averageEntry) / averageEntry * 100);
+          const currentSlDist = Math.abs((stopPrice - averageEntry) / averageEntry * 100);
+
+          // Use AI stop if it's tighter but still respects minimum distance
+          if (aiSlDist >= 1.5 && aiSlDist <= 10 && aiSlDist < currentSlDist) {
+            stopPrice = roundPrice(aiPrediction.stopLoss.price);
+            sources.stopLoss.push(`AI: ${aiPrediction.stopLoss.reasoning}`);
+          }
+
+          sources.targets = ['AI Price Prediction (Gemini)', ...sources.targets.map(t => `Fallback: ${t}`)];
+
+          logger.info({
+            symbol,
+            aiTP1: aiPrediction.tp1.price,
+            aiTP2: aiPrediction.tp2.price,
+            aiSL: aiPrediction.stopLoss.price,
+            confidence: aiPrediction.predictionConfidence,
+          }, '[Trade Plan] AI prediction applied to trade plan');
+        } else {
+          logger.info({
+            symbol,
+            confidence: aiPrediction?.predictionConfidence || 0,
+          }, '[Trade Plan] AI prediction confidence too low, using S/R targets');
+        }
+      }
+    } catch (aiError) {
+      logger.warn({ error: aiError, symbol }, '[Trade Plan] AI prediction failed, using mechanical targets');
+    }
+
+    // Re-apply TP cap after AI override
+    takeProfits.forEach(tp => {
+      const tpDistance = Math.abs((tp.price - averageEntry) / averageEntry * 100);
+      if (tpDistance > maxTPPercent) {
+        if (direction === 'long') {
+          tp.price = roundPrice(averageEntry * (1 + maxTPPercent / 100));
+        } else {
+          tp.price = roundPrice(averageEntry * (1 - maxTPPercent / 100));
+        }
+        tp.reason += ` (capped at ${maxTPPercent}%)`;
+      }
+    });
+
+    // Recalculate stop percentage after potential AI override
+    stopPercentage = Math.abs((stopPrice - averageEntry) / averageEntry * 100);
+
     // ===== RISK/REWARD CALCULATION =====
+    // Recalculate riskAmount since stopPrice may have been updated by AI prediction
+    const finalRiskAmount = Math.abs(averageEntry - stopPrice);
     const avgTP = takeProfits.reduce(
       (sum, tp) => sum + Math.abs(tp.price - averageEntry) * (tp.percentage / 100),
       0
     );
-    const riskReward = parseFloat((avgTP / riskAmount).toFixed(2));
+    const riskReward = parseFloat((avgTP / (finalRiskAmount || riskAmount)).toFixed(2));
 
     // ===== POSITION SIZE (from Safety + Confidence) =====
     let baseRiskPercent = 2.0; // Base 2% risk
@@ -5682,6 +5918,20 @@ export const analysisEngine = {
       score,
       sources,
       confidence: preliminaryVerdict.confidence,
+      // AI Price Prediction data
+      aiPrediction: aiPrediction ? {
+        tp1: aiPrediction.tp1,
+        tp2: aiPrediction.tp2,
+        stopLoss: aiPrediction.stopLoss,
+        predictionConfidence: aiPrediction.predictionConfidence,
+        predictionBasis: aiPrediction.predictionBasis,
+        invalidationPrice: aiPrediction.invalidationPrice,
+        invalidationReason: aiPrediction.invalidationReason,
+        expectedMovePercent: aiPrediction.expectedMovePercent,
+        expectedMoveDirection: aiPrediction.expectedMoveDirection,
+        timeHorizon: aiPrediction.timeHorizon,
+        usedAIPrediction,
+      } : undefined,
       // Gate evaluation for integrated trade plan
       gate: {
         canProceed: riskReward >= 1.5 && winRateEstimate >= 45,

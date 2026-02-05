@@ -461,7 +461,7 @@ app.setErrorHandler(errorHandler);
 let outcomeTrackerInterval: NodeJS.Timeout | null = null;
 
 async function startOutcomeTracker() {
-  const { checkAndUpdateOutcomes, checkAndUpdateAnalysisOutcomes, checkAllHistoricalOutcomes } = await import('./modules/reports/live-tracking.service');
+  const { checkAndUpdateOutcomes, checkAndUpdateAnalysisOutcomes, checkAllHistoricalOutcomes, checkActiveTradesFlowHealth } = await import('./modules/reports/live-tracking.service');
   const { calculateExpiredOutcomes, calculateCautionOutcomes } = await import('./modules/reports/outcome.service');
 
   // ONE-TIME: Fix all historical analyses that never had outcomes recorded
@@ -516,6 +516,16 @@ async function startOutcomeTracker() {
       }
     } catch (error) {
       logger.error(error, 'Historical outcome check failed');
+    }
+
+    // Capital Flow Health Monitor - check flow health for all active trades
+    try {
+      const flowResult = await checkActiveTradesFlowHealth();
+      if (flowResult.adverseCount > 0 || flowResult.alertCount > 0) {
+        logger.info(flowResult, 'Capital Flow Monitor: alerts generated for active trades');
+      }
+    } catch (error) {
+      logger.warn(error, 'Capital Flow Monitor check failed');
     }
   }, 10 * 60 * 1000); // 10 minutes
 

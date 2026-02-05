@@ -8,6 +8,13 @@ import { prisma } from '../../core/database';
 import { cache, cacheKeys } from '../../core/cache';
 import { calculateReportOutcome } from './outcome.service';
 import { logger } from '../../core/logger';
+import { detectAssetClass } from '../analysis/providers/symbol-resolver';
+import {
+  checkBulkTradeFlowHealth,
+  TradeFlowStatus,
+  FlowAlert,
+  ActiveTradeInput,
+} from '../capital-flow/capital-flow-monitor.service';
 
 interface LiveTrackingStatus {
   reportId: string;
@@ -39,6 +46,17 @@ interface LiveTrackingStatus {
   // Profit/Loss if position was taken
   unrealizedPnL: number; // % gain/loss
 
+  // Capital Flow Health (monitors money flow for open trades)
+  flowHealth?: {
+    health: 'healthy' | 'weakening' | 'adverse';
+    score: number; // 0-100
+    reason: string;
+    phase: string;
+    flow7d: number;
+    recommendation: 'hold' | 'tighten_stop' | 'take_profit' | 'close_position';
+    alerts: FlowAlert[];
+  };
+
   // Timestamps
   analysisDate: string;
   expiresAt: string;
@@ -49,54 +67,75 @@ interface BulkPriceData {
   [symbol: string]: number;
 }
 
-// Fetch multiple prices at once from Binance
+// Fetch multiple prices at once (crypto from Binance, others from Yahoo)
 async function fetchBulkPrices(symbols: string[]): Promise<BulkPriceData> {
   const prices: BulkPriceData = {};
 
   if (symbols.length === 0) return prices;
 
-  try {
-    // Use Binance ticker endpoint for multiple symbols
-    const pairs = symbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
-    const response = await fetch(
-      `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
-    );
+  // Separate crypto vs non-crypto
+  const cryptoSymbols = symbols.filter(s => detectAssetClass(s) === 'crypto');
+  const nonCryptoSymbols = symbols.filter(s => detectAssetClass(s) !== 'crypto');
 
-    if (!response.ok) return prices;
-
-    // Safely parse JSON response
-    const responseText = await response.text();
-    if (!responseText || responseText.trim() === '') {
-      return prices;
-    }
-
-    let data: Array<{ symbol: string; price: string }>;
+  // Fetch crypto prices from Binance
+  if (cryptoSymbols.length > 0) {
     try {
-      data = JSON.parse(responseText);
-    } catch {
-      logger.error('Invalid JSON response from Binance API');
-      return prices;
-    }
+      const pairs = cryptoSymbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
+      const response = await fetch(
+        `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
+      );
 
-    for (const item of data) {
-      const symbol = item.symbol.replace('USDT', '');
-      prices[symbol] = parseFloat(item.price);
+      if (response.ok) {
+        const responseText = await response.text();
+        if (responseText && responseText.trim() !== '') {
+          try {
+            const data: Array<{ symbol: string; price: string }> = JSON.parse(responseText);
+            for (const item of data) {
+              const symbol = item.symbol.replace('USDT', '');
+              prices[symbol] = parseFloat(item.price);
+            }
+          } catch {
+            logger.error('Invalid JSON response from Binance API');
+          }
+        }
+      }
+    } catch (error) {
+      logger.error({ error }, 'Failed to fetch crypto bulk prices');
     }
-  } catch (error) {
-    logger.error({ error }, 'Failed to fetch bulk prices');
+  }
+
+  // Fetch non-crypto prices from Yahoo via multi-asset provider
+  for (const sym of nonCryptoSymbols) {
+    try {
+      const { fetchTicker } = await import('../analysis/providers/multi-asset-data-provider');
+      const ticker = await fetchTicker(sym);
+      if (ticker?.price) {
+        prices[sym.toUpperCase().replace('.IS', '')] = ticker.price;
+      }
+    } catch (error) {
+      logger.error({ error, symbol: sym }, 'Failed to fetch non-crypto price');
+    }
   }
 
   return prices;
 }
 
-// Fetch single price
+// Fetch single price (multi-asset: crypto from Binance, others from Yahoo)
 async function fetchCurrentPrice(symbol: string): Promise<number | null> {
   try {
+    const assetClass = detectAssetClass(symbol);
+    if (assetClass !== 'crypto') {
+      // Non-crypto: use multi-asset provider (Yahoo Finance)
+      const { fetchTicker } = await import('../analysis/providers/multi-asset-data-provider');
+      const ticker = await fetchTicker(symbol);
+      return ticker?.price ?? null;
+    }
+
+    // Crypto: use Binance
     const pair = `${symbol.toUpperCase()}USDT`;
     const response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${pair}`);
     if (!response.ok) return null;
 
-    // Safely parse JSON response
     const responseText = await response.text();
     if (!responseText || responseText.trim() === '') {
       return null;
@@ -386,6 +425,41 @@ export async function getUserActiveTrades(userId: string): Promise<LiveTrackingS
     });
   }
 
+  // Enrich with capital flow health data (fire-and-forget style)
+  try {
+    if (results.length > 0) {
+      const tradeInputs: ActiveTradeInput[] = results.map(r => ({
+        analysisId: r.reportId,
+        symbol: r.symbol,
+        direction: r.direction,
+        entryPrice: r.entryPrice,
+        stopLoss: r.stopLoss.price,
+        takeProfits: r.takeProfits.map(tp => tp.price),
+        createdAt: new Date(r.analysisDate),
+      }));
+
+      const flowStatuses = await checkBulkTradeFlowHealth(tradeInputs);
+
+      // Merge flow health into results
+      for (let i = 0; i < results.length; i++) {
+        const flowStatus = flowStatuses.find(f => f.analysisId === results[i].reportId);
+        if (flowStatus) {
+          results[i].flowHealth = {
+            health: flowStatus.flowHealth,
+            score: flowStatus.flowHealthScore,
+            reason: flowStatus.flowHealthReason,
+            phase: flowStatus.marketFlow.phase,
+            flow7d: flowStatus.marketFlow.flow7d,
+            recommendation: flowStatus.holdRecommendation,
+            alerts: flowStatus.alerts,
+          };
+        }
+      }
+    }
+  } catch (flowError) {
+    logger.warn({ error: flowError }, '[LiveTracking] Failed to enrich with capital flow data');
+  }
+
   // Cache for 30 seconds
   await cache.set(cacheKey, results, 30);
 
@@ -617,6 +691,29 @@ async function fetchKlines(
   const finalEndTime = endTime || Date.now();
 
   try {
+    // Non-crypto: use multi-asset provider for klines
+    const assetClass = detectAssetClass(symbol);
+    if (assetClass !== 'crypto') {
+      try {
+        const { fetchCandles } = await import('../analysis/providers/multi-asset-data-provider');
+        const candles = await fetchCandles(symbol, interval, 500);
+        return candles
+          .filter(c => c.timestamp >= startTime && c.timestamp <= finalEndTime)
+          .map(c => ({
+            openTime: c.timestamp,
+            open: c.open,
+            high: c.high,
+            low: c.low,
+            close: c.close,
+            volume: c.volume || 0,
+            closeTime: c.timestamp + 3600000,
+          }));
+      } catch (err) {
+        logger.error({ error: err, symbol }, '[Klines] Non-crypto klines fetch failed');
+        return allKlines;
+      }
+    }
+
     while (currentStartTime < finalEndTime) {
       const url = `https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}USDT&interval=${interval}&startTime=${currentStartTime}&endTime=${finalEndTime}&limit=${maxLimit}`;
 
@@ -862,4 +959,96 @@ export async function checkAllHistoricalOutcomes(): Promise<{
     skipped,
     stillActive,
   };
+}
+
+// ===========================================
+// CAPITAL FLOW HEALTH CHECK FOR ALL ACTIVE TRADES
+// Called periodically (every 10 minutes) alongside outcome checks
+// ===========================================
+
+export async function checkActiveTradesFlowHealth(): Promise<{
+  checked: number;
+  healthyCount: number;
+  weakeningCount: number;
+  adverseCount: number;
+  alertCount: number;
+}> {
+  try {
+    // Get all active analyses with trade plans
+    const analyses = await prisma.analysis.findMany({
+      where: {
+        outcome: null,
+        step5Result: { not: null },
+        expiresAt: { gt: new Date() },
+      },
+      select: {
+        id: true,
+        symbol: true,
+        step5Result: true,
+        createdAt: true,
+      },
+      take: 100,
+    });
+
+    if (analyses.length === 0) {
+      return { checked: 0, healthyCount: 0, weakeningCount: 0, adverseCount: 0, alertCount: 0 };
+    }
+
+    // Build trade inputs from analyses
+    const tradeInputs: ActiveTradeInput[] = [];
+    for (const analysis of analyses) {
+      const tradePlan = analysis.step5Result as Record<string, unknown> | null;
+      if (!tradePlan) continue;
+
+      const direction = ((tradePlan.direction as string) || 'long').toLowerCase() as 'long' | 'short';
+      const entryPrice = Number(tradePlan.averageEntry || tradePlan.entryPrice) || 0;
+      const stopLossData = tradePlan.stopLoss as { price?: number } | number | undefined;
+      const stopLoss = typeof stopLossData === 'object' ? Number(stopLossData?.price) : Number(stopLossData) || 0;
+      const takeProfits = tradePlan.takeProfits as Array<{ price: number }> | undefined;
+      const tpPrices = (takeProfits || []).map(tp => Number(tp.price)).filter(p => p > 0);
+
+      if (!entryPrice) continue;
+
+      tradeInputs.push({
+        analysisId: analysis.id,
+        symbol: analysis.symbol,
+        direction,
+        entryPrice,
+        stopLoss,
+        takeProfits: tpPrices,
+        createdAt: analysis.createdAt,
+      });
+    }
+
+    if (tradeInputs.length === 0) {
+      return { checked: 0, healthyCount: 0, weakeningCount: 0, adverseCount: 0, alertCount: 0 };
+    }
+
+    // Check flow health for all trades
+    const flowStatuses = await checkBulkTradeFlowHealth(tradeInputs);
+
+    const healthyCount = flowStatuses.filter(s => s.flowHealth === 'healthy').length;
+    const weakeningCount = flowStatuses.filter(s => s.flowHealth === 'weakening').length;
+    const adverseCount = flowStatuses.filter(s => s.flowHealth === 'adverse').length;
+    const alertCount = flowStatuses.reduce((sum, s) => sum + s.alerts.length, 0);
+
+    logger.info({
+      checked: flowStatuses.length,
+      healthyCount,
+      weakeningCount,
+      adverseCount,
+      alertCount,
+    }, '[FlowMonitor] Periodic flow health check completed');
+
+    return {
+      checked: flowStatuses.length,
+      healthyCount,
+      weakeningCount,
+      adverseCount,
+      alertCount,
+    };
+  } catch (error) {
+    logger.warn({ error }, '[FlowMonitor] Periodic flow health check failed');
+    return { checked: 0, healthyCount: 0, weakeningCount: 0, adverseCount: 0, alertCount: 0 };
+  }
 }

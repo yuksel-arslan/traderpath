@@ -11,6 +11,16 @@ import { notificationService } from '../notifications/notification.service';
 import { emailService } from '../email/email.service';
 import { creditService } from '../credits/credit.service';
 import { logger } from '../../core/logger';
+import { detectAssetClass } from '../analysis/providers/symbol-resolver';
+
+// Helper: format symbol pair (crypto gets /USDT, non-crypto doesn't)
+function formatSymbolPair(symbol: string): string {
+  const assetClass = detectAssetClass(symbol);
+  if (assetClass !== 'crypto') {
+    return symbol.toUpperCase().replace('.IS', '');
+  }
+  return `${symbol.toUpperCase()}/USDT`;
+}
 
 // Constants for free usage limits per analysis
 const FREE_PDF_DOWNLOADS_PER_ANALYSIS = 2;
@@ -356,25 +366,45 @@ export async function reportRoutes(fastify: FastifyInstance) {
           return new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime();
         });
 
-        // Fetch current prices for all symbols
+        // Fetch current prices for all symbols (multi-asset: crypto from Binance, others from Yahoo)
         const symbols = [...new Set(reports.map(r => r.symbol))];
         const prices: Record<string, number> = {};
 
         if (symbols.length > 0) {
-          try {
-            const pairs = symbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
-            const priceResponse = await fetch(
-              `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
-            );
-            if (priceResponse.ok) {
-              const priceData = await priceResponse.json();
-              for (const item of priceData) {
-                const symbol = item.symbol.replace('USDT', '');
-                prices[symbol] = parseFloat(item.price);
+          // Separate crypto vs non-crypto symbols
+          const cryptoSymbols = symbols.filter(s => detectAssetClass(s) === 'crypto');
+          const nonCryptoSymbols = symbols.filter(s => detectAssetClass(s) !== 'crypto');
+
+          // Fetch crypto prices from Binance
+          if (cryptoSymbols.length > 0) {
+            try {
+              const pairs = cryptoSymbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
+              const priceResponse = await fetch(
+                `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
+              );
+              if (priceResponse.ok) {
+                const priceData = await priceResponse.json();
+                for (const item of priceData) {
+                  const sym = item.symbol.replace('USDT', '');
+                  prices[sym] = parseFloat(item.price);
+                }
               }
+            } catch (err) {
+              fastify.log.error({ error: err }, 'Failed to fetch crypto prices');
             }
-          } catch (err) {
-            fastify.log.error({ error: err }, 'Failed to fetch prices');
+          }
+
+          // Fetch non-crypto prices from Yahoo Finance
+          for (const sym of nonCryptoSymbols) {
+            try {
+              const { fetchTicker } = await import('../analysis/providers/multi-asset-data-provider');
+              const ticker = await fetchTicker(sym);
+              if (ticker?.price) {
+                prices[sym.toUpperCase().replace('.IS', '')] = ticker.price;
+              }
+            } catch (err) {
+              fastify.log.error({ error: err, symbol: sym }, 'Failed to fetch non-crypto price');
+            }
           }
         }
 
@@ -1419,9 +1449,9 @@ export async function reportRoutes(fastify: FastifyInstance) {
         // Send the email
         const result = await emailService.sendEmail({
           to: user.email,
-          subject: `${reportData.symbol}/USDT Analysis Report - TraderPath`,
+          subject: `${formatSymbolPair(reportData.symbol)} Analysis Report - TraderPath`,
           html: htmlContent,
-          text: `Your ${reportData.symbol}/USDT analysis report from TraderPath. View this email in HTML format for best experience.`,
+          text: `Your ${formatSymbolPair(reportData.symbol)} analysis report from TraderPath. View this email in HTML format for best experience.`,
         });
 
         if (!result.success) {
@@ -1999,7 +2029,7 @@ function generateReportHtmlEmail(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${symbol}/USDT Analysis Report</title>
+  <title>${formatSymbolPair(symbol)} Analysis Report</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #0f172a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #0f172a; padding: 20px 0;">
@@ -2023,7 +2053,7 @@ function generateReportHtmlEmail(
           <tr>
             <td style="background: linear-gradient(135deg, ${isLong ? '#10b981' : '#ef4444'} 0%, ${isLong ? '#059669' : '#dc2626'} 100%); padding: 20px; text-align: center;">
               <h2 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: bold;">
-                ${symbol}/USDT Analysis
+                ${formatSymbolPair(symbol)} Analysis
               </h2>
               <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 13px;">
                 <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-weight: 600;">${interval.toUpperCase()}</span>
