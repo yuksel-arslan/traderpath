@@ -33,7 +33,7 @@ interface CapitalFlowSummary {
     confidence: number
     reason: string
     sectors?: string[]
-    suggestedAssets?: string[]
+    suggestedAssets?: Array<{ symbol: string; name: string; market: string; riskLevel?: string; reason?: string }>
   }
   sellRecommendation?: {
     action: string
@@ -42,7 +42,7 @@ interface CapitalFlowSummary {
     confidence: number
     reason: string
     sectors?: string[]
-    suggestedAssets?: string[]
+    suggestedAssets?: Array<{ symbol: string; name: string; market: string; riskLevel?: string; reason?: string }>
   }
 }
 
@@ -117,17 +117,18 @@ export function useProactiveSignals(): UseProactiveSignalsResult {
 
         if (isPositive && rec.suggestedAssets && rec.suggestedAssets.length > 0) {
           // Create signals for each suggested asset
-          for (const asset of rec.suggestedAssets.slice(0, 3)) {
+          for (const assetObj of rec.suggestedAssets.slice(0, 3)) {
+            const assetSymbol = assetObj.symbol
             // Check if we have a pre-analyzed version from top coins
             const preAnalyzed = topCoins.find(
-              c => c.symbol?.replace('USDT', '') === asset || c.symbol === asset
+              c => c.symbol?.replace('USDT', '') === assetSymbol || c.symbol === assetSymbol
             )
 
             newSignals.push({
-              id: `buy-${asset}-${Date.now()}`,
+              id: `buy-${assetSymbol}-${Date.now()}`,
               color: 'green',
               action: 'BUY',
-              asset: asset,
+              asset: assetSymbol,
               assetClass: rec.primaryMarket as any || 'crypto',
               score: preAnalyzed?.totalScore || (rec.confidence / 10),
               confidence: rec.confidence,
@@ -144,7 +145,7 @@ export function useProactiveSignals(): UseProactiveSignalsResult {
           }
         } else if (!isPositive && !isNegative) {
           // WATCH state - conditions forming
-          const watchAsset = rec.suggestedAssets?.[0] || rec.primaryMarket?.toUpperCase() || 'MARKET'
+          const watchAsset = rec.suggestedAssets?.[0]?.symbol || rec.primaryMarket?.toUpperCase() || 'MARKET'
           newSignals.push({
             id: `watch-${watchAsset}-${Date.now()}`,
             color: 'yellow',
@@ -172,12 +173,13 @@ export function useProactiveSignals(): UseProactiveSignalsResult {
         )
 
         if (sell.suggestedAssets && sell.suggestedAssets.length > 0) {
-          for (const asset of sell.suggestedAssets.slice(0, 2)) {
+          for (const assetObj of sell.suggestedAssets.slice(0, 2)) {
+            const assetSymbol = assetObj.symbol
             newSignals.push({
-              id: `sell-${asset}-${Date.now()}`,
+              id: `sell-${assetSymbol}-${Date.now()}`,
               color: 'red',
               action: 'SELL',
-              asset: asset,
+              asset: assetSymbol,
               assetClass: sell.primaryMarket as any || 'crypto',
               score: sell.confidence / 10,
               confidence: sell.confidence,
