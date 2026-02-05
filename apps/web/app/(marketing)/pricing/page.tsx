@@ -28,7 +28,6 @@ import {
   Target,
   Sparkles,
   Calendar,
-  Gift,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost, SIGNAL_SUBSCRIPTIONS, DAILY_PASS_COSTS } from '../../../lib/pricing-config';
@@ -519,14 +518,11 @@ export default function PricingPage() {
                     No signal plans available at the moment.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
                     {signalPlans.map((plan, index) => {
                       const isBasic = plan.tier === 'SIGNAL_BASIC';
                       const isPro = plan.tier === 'SIGNAL_PRO';
-                      const isAnnual = plan.tier === 'SIGNAL_PRO_YEARLY';
-                      const displayPrice = plan.price.monthly || plan.price.yearly;
-                      const period = plan.price.monthly ? 'monthly' : 'yearly';
-                      const savings = isAnnual ? `Save $${(plan.price.monthly * 12) - plan.price.yearly}` : null;
+                      const displayPrice = plan.price.monthly;
 
                       return (
                         <div
@@ -543,11 +539,6 @@ export default function PricingPage() {
                               MOST POPULAR
                             </div>
                           )}
-                          {savings && (
-                            <div className="absolute -top-3 right-4 px-3 py-1 bg-emerald-500 text-white text-xs font-semibold rounded-full">
-                              {savings}
-                            </div>
-                          )}
                           <div className="text-center">
                             <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-violet-500/10 flex items-center justify-center">
                               <Radio className="w-6 h-6 text-violet-500" />
@@ -555,9 +546,7 @@ export default function PricingPage() {
                             <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">{plan.name}</h3>
                             <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
                               {'$'}{displayPrice}
-                              <span className="text-base font-normal text-muted-foreground">
-                                /{period === 'monthly' ? 'mo' : 'yr'}
-                              </span>
+                              <span className="text-base font-normal text-muted-foreground">/mo</span>
                             </div>
                             <div className="flex flex-col items-center gap-1 mb-4">
                               <div className="flex items-center gap-2">
@@ -616,14 +605,6 @@ export default function PricingPage() {
                                   <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
                                   <span className="text-slate-600 dark:text-slate-400">
                                     Email delivery
-                                  </span>
-                                </li>
-                              )}
-                              {isAnnual && (
-                                <li className="flex items-start gap-2 text-sm">
-                                  <Gift className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                                  <span className="text-amber-600 dark:text-amber-400 font-medium">
-                                    2 months free
                                   </span>
                                 </li>
                               )}
