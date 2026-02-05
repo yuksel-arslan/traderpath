@@ -519,7 +519,9 @@ export default function PricingPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                    {signalPlans.map((plan, index) => {
+                    {signalPlans
+                      .filter((plan: any) => plan.tier !== 'SIGNAL_PRO_YEARLY') // Only monthly plans
+                      .map((plan, index) => {
                       const isBasic = plan.tier === 'SIGNAL_BASIC';
                       const isPro = plan.tier === 'SIGNAL_PRO';
                       const displayPrice = plan.price.monthly;
