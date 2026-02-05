@@ -12,13 +12,14 @@ import {
   Zap,
   Users,
   Cpu,
-  Globe,
   Activity,
   Clock,
   Layers,
+  Radio,
+  CreditCard,
 } from 'lucide-react';
 import Link from 'next/link';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Area, ComposedChart, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Area, ComposedChart, BarChart, Bar, Legend, PieChart, Pie, Cell } from 'recharts';
 
 // ===========================================
 // Types
@@ -45,16 +46,25 @@ interface SimulationConfig {
   // Credit Pricing
   creditPriceUsd: number;
 
+  // Signal Service Pricing
+  signalBasicPrice: number;
+  signalProPrice: number;
+
   // User Projections
   weeklyNewUsers: number;
   userRetentionRate: number;
   dailyActiveRate: number;
 
-  // Usage Distribution
+  // Usage Distribution (Daily Pass)
   layer3UsageRate: number;
   layer4UsageRate: number;
   analysisUsageRate: number;
   avgAnalysesPerActiveUser: number;
+
+  // Signal Service Projections
+  signalConversionRate: number;
+  signalBasicRatio: number;
+  signalChurnRate: number;
 }
 
 interface WeeklyData {
@@ -62,9 +72,17 @@ interface WeeklyData {
   weekNum: number;
   totalUsers: number;
   avgDailyActiveUsers: number;
+  // Daily Pass Revenue
   layer3Revenue: number;
   layer4Revenue: number;
   analysisRevenue: number;
+  dailyPassRevenue: number;
+  // Signal Service Revenue
+  signalBasicSubs: number;
+  signalProSubs: number;
+  signalMRR: number;
+  signalWeeklyRevenue: number;
+  // Totals
   totalRevenue: number;
   fixedCost: number;
   aiCost: number;
@@ -94,13 +112,22 @@ const defaultConfig: SimulationConfig = {
   layer4PassCredits: 25,
   analysisPassCredits: 100,
   creditPriceUsd: 0.10,
+  // Signal Service
+  signalBasicPrice: 9,
+  signalProPrice: 19,
+  // Users
   weeklyNewUsers: 10,
   userRetentionRate: 70,
   dailyActiveRate: 25,
+  // Daily Pass Usage
   layer3UsageRate: 60,
   layer4UsageRate: 40,
   analysisUsageRate: 30,
   avgAnalysesPerActiveUser: 3,
+  // Signal Service Usage
+  signalConversionRate: 8,
+  signalBasicRatio: 40,
+  signalChurnRate: 10,
 };
 
 // ===========================================
@@ -159,6 +186,8 @@ export default function SimulationPage() {
     const data: WeeklyData[] = [];
     let totalUsers = 0;
     let cumProfit = 0;
+    let signalBasicSubs = 0;
+    let signalProSubs = 0;
     const weeklyFixedCost = (config.claudeCodeCost + config.vercelCost + config.railwayCost + config.neonDbCost) / 4;
 
     for (let i = 1; i <= weeks; i++) {
@@ -169,6 +198,7 @@ export default function SimulationPage() {
       const avgDailyActiveUsers = Math.round(totalUsers * (config.dailyActiveRate / 100));
       const activeDaysPerWeek = 7;
 
+      // Daily Pass Revenue
       const l3UsersPerDay = Math.round(avgDailyActiveUsers * (config.layer3UsageRate / 100));
       const l3DailyRevenue = l3UsersPerDay * config.layer3PassCredits * config.creditPriceUsd;
 
@@ -181,7 +211,23 @@ export default function SimulationPage() {
       const layer3Revenue = l3DailyRevenue * activeDaysPerWeek;
       const layer4Revenue = l4DailyRevenue * activeDaysPerWeek;
       const analysisRevenue = analysisDailyRevenue * activeDaysPerWeek;
-      const totalRevenue = layer3Revenue + layer4Revenue + analysisRevenue;
+      const dailyPassRevenue = layer3Revenue + layer4Revenue + analysisRevenue;
+
+      // Signal Service Subscriptions
+      const newSignalSubs = Math.round(newUsers * (config.signalConversionRate / 100));
+      const churnedBasic = Math.round(signalBasicSubs * (config.signalChurnRate / 100) / 4); // Weekly churn
+      const churnedPro = Math.round(signalProSubs * (config.signalChurnRate / 100) / 4);
+
+      const newBasicSubs = Math.round(newSignalSubs * (config.signalBasicRatio / 100));
+      const newProSubs = newSignalSubs - newBasicSubs;
+
+      signalBasicSubs = Math.max(0, signalBasicSubs + newBasicSubs - churnedBasic);
+      signalProSubs = Math.max(0, signalProSubs + newProSubs - churnedPro);
+
+      const signalMRR = (signalBasicSubs * config.signalBasicPrice) + (signalProSubs * config.signalProPrice);
+      const signalWeeklyRevenue = signalMRR / 4; // Monthly to weekly
+
+      const totalRevenue = dailyPassRevenue + signalWeeklyRevenue;
 
       const totalAnalyses = Math.round(analysisUsersPerDay * config.avgAnalysesPerActiveUser * activeDaysPerWeek);
       const aiCost = totalAnalyses * config.aiCostPerAnalysis;
@@ -199,6 +245,11 @@ export default function SimulationPage() {
         layer3Revenue: Number(layer3Revenue.toFixed(2)),
         layer4Revenue: Number(layer4Revenue.toFixed(2)),
         analysisRevenue: Number(analysisRevenue.toFixed(2)),
+        dailyPassRevenue: Number(dailyPassRevenue.toFixed(2)),
+        signalBasicSubs,
+        signalProSubs,
+        signalMRR: Number(signalMRR.toFixed(2)),
+        signalWeeklyRevenue: Number(signalWeeklyRevenue.toFixed(2)),
         totalRevenue: Number(totalRevenue.toFixed(2)),
         fixedCost: Number(fixedCost.toFixed(2)),
         aiCost: Number(aiCost.toFixed(2)),
@@ -220,12 +271,24 @@ export default function SimulationPage() {
     const totalProfit = totalRevenue - totalCost;
     const breakEvenWeek = weeklyData.findIndex(w => w.cumProfit >= 0) + 1;
 
+    // Daily Pass
     const l3Total = weeklyData.reduce((sum, w) => sum + w.layer3Revenue, 0);
     const l4Total = weeklyData.reduce((sum, w) => sum + w.layer4Revenue, 0);
     const analysisTotal = weeklyData.reduce((sum, w) => sum + w.analysisRevenue, 0);
+    const dailyPassTotal = l3Total + l4Total + analysisTotal;
 
-    const dailyPassTotal = config.layer3PassCredits + config.layer4PassCredits + config.analysisPassCredits;
-    const dailyPassUsd = dailyPassTotal * config.creditPriceUsd;
+    // Signal Service
+    const signalTotal = weeklyData.reduce((sum, w) => sum + w.signalWeeklyRevenue, 0);
+    const finalMRR = lastWeek?.signalMRR || 0;
+    const finalBasicSubs = lastWeek?.signalBasicSubs || 0;
+    const finalProSubs = lastWeek?.signalProSubs || 0;
+
+    const dailyPassCreditsTotal = config.layer3PassCredits + config.layer4PassCredits + config.analysisPassCredits;
+    const dailyPassUsd = dailyPassCreditsTotal * config.creditPriceUsd;
+
+    // Revenue split
+    const dailyPassPercent = totalRevenue > 0 ? (dailyPassTotal / totalRevenue) * 100 : 0;
+    const signalPercent = totalRevenue > 0 ? (signalTotal / totalRevenue) * 100 : 0;
 
     return {
       totalRevenue,
@@ -233,13 +296,29 @@ export default function SimulationPage() {
       totalProfit,
       breakEvenWeek: breakEvenWeek > 0 ? breakEvenWeek : 'N/A',
       finalUsers: lastWeek?.totalUsers || 0,
+      // Daily Pass
       l3Total,
       l4Total,
       analysisTotal,
       dailyPassTotal,
+      dailyPassCreditsTotal,
       dailyPassUsd,
+      // Signal Service
+      signalTotal,
+      finalMRR,
+      finalBasicSubs,
+      finalProSubs,
+      // Revenue split
+      dailyPassPercent,
+      signalPercent,
     };
   }, [weeklyData, config]);
+
+  // Revenue distribution for pie chart
+  const revenueDistribution = useMemo(() => [
+    { name: 'Daily Pass', value: summary.dailyPassTotal, color: '#8b5cf6' },
+    { name: 'Signal Service', value: summary.signalTotal, color: '#14b8a6' },
+  ], [summary]);
 
   const handleReset = () => setConfig(defaultConfig);
 
@@ -268,7 +347,7 @@ export default function SimulationPage() {
               <Calculator className="w-7 h-7 text-primary" />
               Revenue Simulation
             </h1>
-            <p className="text-sm text-muted-foreground">Daily Pass Model</p>
+            <p className="text-sm text-muted-foreground">Daily Pass + Signal Service</p>
           </div>
         </div>
         <button
@@ -281,7 +360,7 @@ export default function SimulationPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
         <div className="bg-card border rounded-lg p-3">
           <div className="flex items-center gap-2 mb-1">
             <DollarSign className="w-4 h-4 text-green-500" />
@@ -316,8 +395,15 @@ export default function SimulationPage() {
         </div>
         <div className="bg-card border rounded-lg p-3">
           <div className="flex items-center gap-2 mb-1">
+            <Radio className="w-4 h-4 text-teal-500" />
+            <span className="text-xs text-muted-foreground">Signal MRR</span>
+          </div>
+          <p className="text-xl font-bold text-teal-500">${summary.finalMRR.toFixed(0)}</p>
+        </div>
+        <div className="bg-card border rounded-lg p-3">
+          <div className="flex items-center gap-2 mb-1">
             <Users className="w-4 h-4 text-purple-500" />
-            <span className="text-xs text-muted-foreground">Final Users</span>
+            <span className="text-xs text-muted-foreground">Users</span>
           </div>
           <p className="text-xl font-bold text-purple-500">{summary.finalUsers}</p>
         </div>
@@ -326,6 +412,64 @@ export default function SimulationPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Settings Panel */}
         <div className="space-y-4">
+          {/* Signal Service Pricing */}
+          <div className="bg-gradient-to-br from-teal-500/10 to-cyan-500/10 border border-teal-500/20 rounded-lg p-4">
+            <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+              <Radio className="w-4 h-4 text-teal-500" />
+              Signal Service
+            </h3>
+            <div className="space-y-3">
+              <NumberInput
+                label="Basic Signals"
+                value={config.signalBasicPrice}
+                onChange={(v) => updateConfig('signalBasicPrice', v)}
+                min={1}
+                max={50}
+                prefix="$"
+                suffix="/mo"
+              />
+              <NumberInput
+                label="Pro Signals"
+                value={config.signalProPrice}
+                onChange={(v) => updateConfig('signalProPrice', v)}
+                min={1}
+                max={100}
+                prefix="$"
+                suffix="/mo"
+              />
+              <div className="pt-2 border-t border-teal-500/20">
+                <NumberInput
+                  label="Conversion Rate"
+                  value={config.signalConversionRate}
+                  onChange={(v) => updateConfig('signalConversionRate', v)}
+                  min={1}
+                  max={50}
+                  suffix="%"
+                />
+              </div>
+              <NumberInput
+                label="Basic vs Pro"
+                value={config.signalBasicRatio}
+                onChange={(v) => updateConfig('signalBasicRatio', v)}
+                min={0}
+                max={100}
+                suffix="% Basic"
+              />
+              <NumberInput
+                label="Monthly Churn"
+                value={config.signalChurnRate}
+                onChange={(v) => updateConfig('signalChurnRate', v)}
+                min={0}
+                max={50}
+                suffix="%"
+              />
+              <div className="pt-2 border-t border-teal-500/20 text-xs text-muted-foreground">
+                <p>• 5 asset signals/day</p>
+                <p>• Sent every 4 hours (6x daily)</p>
+              </div>
+            </div>
+          </div>
+
           {/* Daily Pass Pricing */}
           <div className="bg-card border rounded-lg p-4">
             <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
@@ -359,7 +503,7 @@ export default function SimulationPage() {
               />
               <div className="pt-2 border-t flex justify-between text-sm">
                 <span className="font-medium">Total/Day</span>
-                <span className="font-mono text-amber-500">{summary.dailyPassTotal} cr (${summary.dailyPassUsd.toFixed(2)})</span>
+                <span className="font-mono text-amber-500">{summary.dailyPassCreditsTotal} cr (${summary.dailyPassUsd.toFixed(2)})</span>
               </div>
             </div>
           </div>
@@ -367,7 +511,7 @@ export default function SimulationPage() {
           {/* Credit Pricing */}
           <div className="bg-card border rounded-lg p-4">
             <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
-              <DollarSign className="w-4 h-4 text-green-500" />
+              <CreditCard className="w-4 h-4 text-green-500" />
               Credit Pricing
             </h3>
             <NumberInput
@@ -453,7 +597,7 @@ export default function SimulationPage() {
           <div className="bg-card border rounded-lg p-4">
             <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
               <Activity className="w-4 h-4 text-teal-500" />
-              Usage Distribution
+              Daily Pass Usage
             </h3>
             <div className="space-y-3">
               <NumberInput label="L3 Usage" value={config.layer3UsageRate} onChange={(v) => updateConfig('layer3UsageRate', v)} min={0} max={100} suffix="%" />
@@ -471,11 +615,37 @@ export default function SimulationPage() {
 
         {/* Charts Panel */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Revenue by Pass Type */}
+          {/* Revenue Split Summary */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gradient-to-br from-violet-500/10 to-purple-500/10 border border-violet-500/20 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-muted-foreground">Daily Pass Revenue</span>
+                <span className="text-xs text-violet-400">{summary.dailyPassPercent.toFixed(0)}%</span>
+              </div>
+              <p className="text-2xl font-bold text-violet-400">${summary.dailyPassTotal.toFixed(0)}</p>
+              <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                <p>L3: ${summary.l3Total.toFixed(0)} • L4: ${summary.l4Total.toFixed(0)}</p>
+                <p>Analysis: ${summary.analysisTotal.toFixed(0)}</p>
+              </div>
+            </div>
+            <div className="bg-gradient-to-br from-teal-500/10 to-cyan-500/10 border border-teal-500/20 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-muted-foreground">Signal Service Revenue</span>
+                <span className="text-xs text-teal-400">{summary.signalPercent.toFixed(0)}%</span>
+              </div>
+              <p className="text-2xl font-bold text-teal-400">${summary.signalTotal.toFixed(0)}</p>
+              <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                <p>Basic: {summary.finalBasicSubs} subs @ ${config.signalBasicPrice}</p>
+                <p>Pro: {summary.finalProSubs} subs @ ${config.signalProPrice}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Revenue by Source */}
           <div className="bg-card border rounded-lg p-4">
             <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
               <Layers className="w-4 h-4 text-primary" />
-              Weekly Revenue by Pass Type
+              Weekly Revenue by Source
             </h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -486,20 +656,55 @@ export default function SimulationPage() {
                   <Tooltip
                     contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.95)', border: '1px solid #374151', borderRadius: '8px' }}
                     formatter={(value: number, name: string) => {
-                      const labels: Record<string, string> = { layer3Revenue: 'L3', layer4Revenue: 'L4', analysisRevenue: 'Analysis' };
+                      const labels: Record<string, string> = {
+                        dailyPassRevenue: 'Daily Pass',
+                        signalWeeklyRevenue: 'Signal Service',
+                      };
                       return [`$${value.toFixed(2)}`, labels[name] || name];
                     }}
                   />
-                  <Bar dataKey="layer3Revenue" stackId="a" fill="#a855f7" />
-                  <Bar dataKey="layer4Revenue" stackId="a" fill="#f59e0b" />
-                  <Bar dataKey="analysisRevenue" stackId="a" fill="#8b5cf6" />
+                  <Bar dataKey="dailyPassRevenue" stackId="a" fill="#8b5cf6" name="Daily Pass" />
+                  <Bar dataKey="signalWeeklyRevenue" stackId="a" fill="#14b8a6" name="Signal Service" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex justify-center gap-4 mt-2 text-xs">
-              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-purple-500 rounded" /><span>L3 (${summary.l3Total.toFixed(0)})</span></div>
-              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-amber-500 rounded" /><span>L4 (${summary.l4Total.toFixed(0)})</span></div>
-              <div className="flex items-center gap-1"><div className="w-3 h-3 bg-violet-500 rounded" /><span>Analysis (${summary.analysisTotal.toFixed(0)})</span></div>
+            <div className="flex justify-center gap-6 mt-2 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-violet-500 rounded" />
+                <span>Daily Pass (${summary.dailyPassTotal.toFixed(0)})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-teal-500 rounded" />
+                <span>Signal Service (${summary.signalTotal.toFixed(0)})</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Signal Service Growth */}
+          <div className="bg-card border rounded-lg p-4">
+            <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+              <Radio className="w-4 h-4 text-teal-500" />
+              Signal Subscribers & MRR
+            </h3>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={weeklyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                  <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                  <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#9ca3af' }} tickFormatter={(v) => `$${v}`} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.95)', border: '1px solid #374151', borderRadius: '8px' }}
+                    formatter={(value: number, name: string) => {
+                      if (name === 'signalMRR') return [`$${value.toFixed(0)}`, 'MRR'];
+                      return [value, name === 'signalBasicSubs' ? 'Basic Subs' : 'Pro Subs'];
+                    }}
+                  />
+                  <Bar yAxisId="left" dataKey="signalBasicSubs" fill="#22d3ee" name="Basic Subs" />
+                  <Bar yAxisId="left" dataKey="signalProSubs" fill="#2dd4bf" name="Pro Subs" />
+                  <Line yAxisId="right" type="monotone" dataKey="signalMRR" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 3 }} name="MRR" />
+                </ComposedChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
@@ -596,8 +801,9 @@ export default function SimulationPage() {
                     <th className="text-left p-2">Week</th>
                     <th className="text-right p-2">Users</th>
                     <th className="text-right p-2">DAU</th>
-                    <th className="text-right p-2">Revenue</th>
-                    <th className="text-right p-2">Cost</th>
+                    <th className="text-right p-2">Pass $</th>
+                    <th className="text-right p-2">Signal $</th>
+                    <th className="text-right p-2">Total $</th>
                     <th className="text-right p-2">Profit</th>
                     <th className="text-right p-2">Cum.</th>
                   </tr>
@@ -608,8 +814,9 @@ export default function SimulationPage() {
                       <td className="p-2 font-medium">{w.week}</td>
                       <td className="p-2 text-right">{w.totalUsers}</td>
                       <td className="p-2 text-right text-pink-400">{w.avgDailyActiveUsers}</td>
+                      <td className="p-2 text-right font-mono text-violet-400">${w.dailyPassRevenue}</td>
+                      <td className="p-2 text-right font-mono text-teal-400">${w.signalWeeklyRevenue}</td>
                       <td className="p-2 text-right font-mono text-green-500">${w.totalRevenue}</td>
-                      <td className="p-2 text-right font-mono text-red-500">${w.totalCost}</td>
                       <td className={`p-2 text-right font-mono ${w.profit >= 0 ? 'text-blue-500' : 'text-red-500'}`}>${w.profit}</td>
                       <td className={`p-2 text-right font-mono ${w.cumProfit >= 0 ? 'text-amber-500' : 'text-red-500'}`}>${w.cumProfit}</td>
                     </tr>
