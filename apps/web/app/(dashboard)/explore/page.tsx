@@ -282,12 +282,16 @@ export default function ExplorePage() {
         authFetch('/api/analysis/top-coins?limit=20')
       ])
 
-      if (flowRes.success) {
-        setCapitalFlow(flowRes.data)
+      // Parse JSON responses
+      const flowData = await flowRes.json()
+      const coinsData = await coinsRes.json()
+
+      if (flowData.success) {
+        setCapitalFlow(flowData.data)
       }
 
-      if (coinsRes.success) {
-        setTopCoins(coinsRes.data?.coins || [])
+      if (coinsData.success) {
+        setTopCoins(coinsData.data?.coins || [])
       }
     } catch (error) {
       console.error('Failed to fetch explore data:', error)
