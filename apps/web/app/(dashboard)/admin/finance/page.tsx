@@ -86,6 +86,9 @@ export default function FinancePage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Signal Service Pricing
+  const [signalPlans, setSignalPlans] = useState<any[]>([]);
+
 
   // ===========================================
   // Data Fetching
@@ -96,9 +99,10 @@ export default function FinancePage() {
     setError(null);
 
     try {
-      const [costsRes, packagesRes] = await Promise.all([
+      const [costsRes, packagesRes, signalPlansRes] = await Promise.all([
         authFetch('/api/admin/credit-costs'),
         authFetch('/api/admin/packages'),
+        authFetch('/api/v1/signals/subscription/plans'),
       ]);
 
       if (costsRes.status === 403) {
@@ -117,6 +121,13 @@ export default function FinancePage() {
       if (packagesRes.ok) {
         const data = await packagesRes.json();
         setPackages(data.data.packages || []);
+      }
+
+      if (signalPlansRes.ok) {
+        const data = await signalPlansRes.json();
+        if (data.success && data.data?.plans) {
+          setSignalPlans(data.data.plans);
+        }
       }
     } catch (err) {
       setError('Failed to fetch data');
@@ -517,6 +528,102 @@ export default function FinancePage() {
                     <span className="font-mono font-medium">{editingCosts.creditCostAiConcierge ?? 5} cr</span>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Signal Service Subscription Pricing Section */}
+          <div className="bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-blue-500/10 border border-blue-500/30 rounded-lg p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/20 rounded-lg">
+                  <Activity className="w-5 h-5 text-blue-500" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-lg">Signal Service Subscription Pricing</h4>
+                  <p className="text-sm text-muted-foreground">Monthly subscription plans for automated trading signals</p>
+                </div>
+              </div>
+              <span className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
+                SUBSCRIPTION MODEL
+              </span>
+            </div>
+
+            {signalPlans.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {signalPlans.map((plan, index) => {
+                  const isBasic = plan.tier === 'SIGNAL_BASIC';
+                  const isPro = plan.tier === 'SIGNAL_PRO';
+                  const isAnnual = plan.tier === 'SIGNAL_PRO_YEARLY';
+
+                  return (
+                    <div
+                      key={plan.tier}
+                      className={`bg-card rounded-lg p-4 relative ${
+                        isBasic ? 'border border-blue-200 dark:border-blue-800' :
+                        isPro ? 'border border-indigo-200 dark:border-indigo-700' :
+                        'bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/30'
+                      }`}
+                    >
+                      {isPro && (
+                        <span className="absolute -top-2 right-4 bg-indigo-500 text-white text-xs font-bold px-2 py-0.5 rounded">POPULAR</span>
+                      )}
+                      {isAnnual && (
+                        <span className="absolute -top-2 right-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold px-2 py-0.5 rounded">BEST VALUE</span>
+                      )}
+
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`p-2 rounded-lg ${
+                          isBasic ? 'bg-blue-500/10' :
+                          isPro ? 'bg-indigo-500/10' :
+                          'bg-indigo-500/10'
+                        }`}>
+                          {isBasic ? <Target className="w-5 h-5 text-blue-500" /> :
+                           isPro ? <Zap className="w-5 h-5 text-indigo-500" /> :
+                           <Crown className="w-5 h-5 text-indigo-500" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">{plan.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {isBasic ? 'Crypto only' :
+                             isPro ? 'All markets' :
+                             '2 months free'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="text-2xl font-bold">
+                          ${plan.price.monthly || plan.price.yearly}
+                          <span className="text-sm font-normal text-muted-foreground">
+                            /{isAnnual ? 'yr' : 'mo'}
+                          </span>
+                        </div>
+                        <ul className="text-xs space-y-1 text-muted-foreground">
+                          <li>• {plan.markets.length === 1 ? 'Crypto market only' : `All markets (${plan.markets.length})`}</li>
+                          <li>• {plan.maxSignalsPerDay} signals/day</li>
+                          <li>• {Object.entries(plan.deliveryChannels).filter(([k, v]) => v).map(([k]) => k.charAt(0).toUpperCase() + k.slice(1)).join(' + ')}</li>
+                          {isAnnual && <li>• Save ${(plan.price.monthly * 12) - plan.price.yearly}/year</li>}
+                        </ul>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
+
+            {/* Info Box */}
+            <div className="mt-4 p-3 bg-card/50 rounded-lg border border-dashed">
+              <div className="flex items-center gap-2 text-sm flex-wrap">
+                <div className="w-2 h-2 rounded-full bg-blue-500" />
+                <span className="text-muted-foreground">Signal subscriptions managed via Stripe webhooks</span>
+                <span className="text-muted-foreground mx-1">•</span>
+                <span className="text-muted-foreground">Plans configured in</span>
+                <code className="bg-blue-500/20 px-1.5 py-0.5 rounded text-xs">signal-subscription.service.ts</code>
               </div>
             </div>
           </div>
