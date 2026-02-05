@@ -685,13 +685,9 @@ export default function DashboardPage() {
   const router = useRouter();
 
   // View mode state - persisted in localStorage
-  const [viewMode, setViewMode] = useState<DashboardViewMode>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('dashboard_view_mode');
-      return (saved as DashboardViewMode) || 'traffic-light';
-    }
-    return 'traffic-light';
-  });
+  // Initialize with default, then hydrate from localStorage in useEffect
+  const [viewMode, setViewMode] = useState<DashboardViewMode>('traffic-light');
+  const [isHydrated, setIsHydrated] = useState(false);
 
   // Traffic Light signals
   const { signals: proactiveSignals, isLoading: signalsLoading } = useProactiveSignals();
@@ -708,10 +704,21 @@ export default function DashboardPage() {
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const initialLoadDone = useRef(false);
 
-  // Save view mode preference
+  // Hydrate view mode from localStorage after mount
   useEffect(() => {
-    localStorage.setItem('dashboard_view_mode', viewMode);
-  }, [viewMode]);
+    const saved = localStorage.getItem('dashboard_view_mode');
+    if (saved === 'classic' || saved === 'traffic-light') {
+      setViewMode(saved);
+    }
+    setIsHydrated(true);
+  }, []);
+
+  // Save view mode preference when it changes (after hydration)
+  useEffect(() => {
+    if (isHydrated) {
+      localStorage.setItem('dashboard_view_mode', viewMode);
+    }
+  }, [viewMode, isHydrated]);
 
   const fetchData = useCallback(async (forceRefresh = false) => {
     try {
