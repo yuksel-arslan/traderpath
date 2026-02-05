@@ -914,6 +914,49 @@ function getFallbackMarketFlows(): MarketFlow[] {
 }
 
 /**
+ * Fallback for a single market when API calls fail
+ */
+function getFallbackMarketFlow(market: MarketType): MarketFlow {
+  const allFallbacks = getFallbackMarketFlows();
+  const found = allFallbacks.find(m => m.market === market);
+  if (found) return found;
+
+  // Default fallback if market not found
+  const now = new Date();
+  const generateHistory = (baseValue: number) => {
+    const history: FlowDataPoint[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      history.push({
+        date: date.toISOString().split('T')[0],
+        value: baseValue + (Math.random() - 0.5) * 2,
+      });
+    }
+    return history;
+  };
+
+  return {
+    market,
+    currentValue: 0,
+    flow7d: 0,
+    flow30d: 0,
+    flowVelocity: 0,
+    flowHistory: generateHistory(0),
+    velocityHistory: generateHistory(0),
+    phase: 'mid' as Phase,
+    daysInPhase: 30,
+    phaseStartDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+    avgPhaseDuration: 45,
+    rotationSignal: 'stable',
+    rotationTarget: null,
+    rotationConfidence: 50,
+    sectors: [],
+    lastUpdated: now,
+  };
+}
+
+/**
  * Determine overall liquidity bias
  * Uses Net Liquidity as the primary indicator
  */
@@ -2212,16 +2255,37 @@ export async function getMarketAnalysis(market: MarketType): Promise<{
 }> {
   // Cache key for market analysis
   const cacheKey = `capital-flow:analysis:${market}`;
-  const cached = await redis?.get(cacheKey);
-  if (cached) {
-    return JSON.parse(cached);
+  try {
+    const cached = await redis?.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (cacheError) {
+    console.error('[CapitalFlow] Cache read error:', cacheError);
   }
 
-  // Get market data and global liquidity
-  const [marketFlow, liquidity] = await Promise.all([
+  // Get market data and global liquidity with fallback
+  const [marketFlowResult, liquidityResult] = await Promise.allSettled([
     getMarketFlow(market),
     getGlobalLiquidity(),
   ]);
+
+  // Extract results or use fallbacks
+  const marketFlow = marketFlowResult.status === 'fulfilled'
+    ? marketFlowResult.value
+    : getFallbackMarketFlow(market);
+
+  const liquidity = liquidityResult.status === 'fulfilled'
+    ? liquidityResult.value
+    : getFallbackGlobalLiquidity();
+
+  // Log any failures for debugging
+  if (marketFlowResult.status === 'rejected') {
+    console.error(`[CapitalFlow] getMarketFlow(${market}) failed:`, marketFlowResult.reason);
+  }
+  if (liquidityResult.status === 'rejected') {
+    console.error(`[CapitalFlow] getGlobalLiquidity() failed:`, liquidityResult.reason);
+  }
 
   // Build key metrics based on market type
   const keyMetrics: Array<{ label: string; value: string; status: 'positive' | 'negative' | 'neutral' }> = [];
