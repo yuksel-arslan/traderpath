@@ -14,6 +14,12 @@ export {
   generateSignals,
 } from './signal-generator.job';
 export {
+  startSignalOutcomeTracker,
+  stopSignalOutcomeTracker,
+  runSignalOutcomeTrackerManually,
+  trackSignalOutcomes,
+} from './signal-outcome-tracker.job';
+export {
   formatTelegramSignal,
   formatSignalUpdate,
   formatDailySummary,
