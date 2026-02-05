@@ -59,6 +59,14 @@ interface MarketFlow {
   sectors?: Array<{ name: string; flow7d: number; trending: string }>
 }
 
+interface SuggestedAsset {
+  symbol: string
+  name: string
+  market: string
+  riskLevel?: string
+  reason?: string
+}
+
 interface Recommendation {
   action: string
   direction: string
@@ -66,7 +74,7 @@ interface Recommendation {
   confidence: number
   reason: string
   sectors?: string[]
-  suggestedAssets?: string[]
+  suggestedAssets?: SuggestedAsset[]
 }
 
 interface CapitalFlowData {
@@ -492,11 +500,11 @@ export default function ExplorePage() {
                   <div className="flex flex-wrap gap-2">
                     {capitalFlow.recommendation.suggestedAssets.map((asset) => (
                       <Link
-                        key={asset}
-                        href={`/analyze?symbol=${asset}`}
+                        key={asset.symbol}
+                        href={`/analyze?symbol=${asset.symbol}`}
                         className="px-3 py-1.5 rounded-lg bg-white/80 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 text-sm font-medium text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 transition-colors"
                       >
-                        {asset}
+                        {asset.symbol}
                       </Link>
                     ))}
                   </div>
