@@ -29,7 +29,7 @@ interface SignalTierConfig {
 export const SIGNAL_SCHEDULE_HOURS = [2, 6, 10, 14, 18, 22]; // 6 delivery windows per day
 
 export const SIGNAL_TIER_CONFIG: Record<
-  Exclude<SignalSubscriptionTier, 'SIGNAL_FREE'>,
+  Exclude<SignalSubscriptionTier, 'SIGNAL_FREE' | 'SIGNAL_PRO_YEARLY'>,
   SignalTierConfig
 > = {
   SIGNAL_BASIC: {
@@ -51,18 +51,7 @@ export const SIGNAL_TIER_CONFIG: Record<
     deliveryChannels: {
       telegram: true,
       discord: true,
-      email: false,
-    },
-  },
-  SIGNAL_PRO_YEARLY: {
-    name: 'Pro Signals (Annual)',
-    price: { yearly: 14900 }, // $149/yr
-    markets: ['crypto', 'stocks', 'metals', 'bonds'],
-    maxSignalsPerDay: 5, // 5 asset signals distributed across 6 delivery windows
-    deliveryChannels: {
-      telegram: true,
-      discord: true,
-      email: true,
+      email: true, // Email delivery included in Pro
     },
   },
 };
