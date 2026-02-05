@@ -5314,6 +5314,56 @@ Explain the key risks and what conditions would need to change before trading th
       // Check if cache is stale
       const cacheStats = await coinScoreCacheService.getCacheStats();
 
+      // Fallback: If cache is empty, fetch recent analyses
+      if (coins.length === 0) {
+        logger.info('[TopCoins] Cache empty, fetching recent analyses as fallback');
+        try {
+          const recentAnalyses = await prisma.analysis.findMany({
+            where: {
+              step7Result: { not: null },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+            select: {
+              id: true,
+              symbol: true,
+              totalScore: true,
+              interval: true,
+              createdAt: true,
+              step5Result: true,
+              step7Result: true,
+            },
+          });
+
+          coins = recentAnalyses.map((analysis) => {
+            const step7 = analysis.step7Result as Record<string, unknown> | null;
+            const step5 = analysis.step5Result as Record<string, unknown> | null;
+            return {
+              symbol: analysis.symbol,
+              totalScore: Number(analysis.totalScore || 0),
+              reliabilityScore: Number(analysis.totalScore || 0) * 10,
+              liquidityScore: 50,
+              volatilityScore: 50,
+              trendScore: 50,
+              momentumScore: 50,
+              verdict: String(step7?.verdict || 'WAIT'),
+              direction: String(step7?.direction || step5?.direction || null),
+              confidence: Number(step7?.confidence || 50),
+              price: 0,
+              priceChange24h: 0,
+              volume24h: 0,
+              marketCap: 0,
+              analysisId: analysis.id,
+              interval: analysis.interval || '4h',
+              scannedAt: analysis.createdAt,
+              expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            };
+          });
+        } catch (fallbackError) {
+          logger.error({ error: fallbackError }, 'Fallback to recent analyses failed');
+        }
+      }
+
       return reply.send({
         success: true,
         data: {
@@ -5323,6 +5373,7 @@ Explain the key risks and what conditions would need to change before trading th
             totalCoinsInCache: cacheStats.totalCoins,
             freshCoins: cacheStats.freshCoins,
             isStale: cacheStats.staleCoins > cacheStats.freshCoins,
+            isFallback: coins.length > 0 && cacheStats.totalCoins === 0,
           },
         },
       });
