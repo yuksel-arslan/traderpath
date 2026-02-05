@@ -2,9 +2,15 @@
 -- Signal subscriptions are separate from credit-based subscriptions
 -- Users can subscribe to receive automated trading signals
 
-CREATE TYPE "SignalSubscriptionTier" AS ENUM ('SIGNAL_BASIC', 'SIGNAL_PRO', 'SIGNAL_PRO_YEARLY');
+-- Create enum only if not exists
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'SignalSubscriptionTier') THEN
+    CREATE TYPE "SignalSubscriptionTier" AS ENUM ('SIGNAL_FREE', 'SIGNAL_BASIC', 'SIGNAL_PRO', 'SIGNAL_PRO_YEARLY');
+  END IF;
+END $$;
 
-CREATE TABLE "signal_subscriptions" (
+CREATE TABLE IF NOT EXISTS "signal_subscriptions" (
   "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "user_id" UUID NOT NULL UNIQUE REFERENCES "users"("id") ON DELETE CASCADE,
 
@@ -14,7 +20,7 @@ CREATE TABLE "signal_subscriptions" (
   "stripe_price_id" VARCHAR(255),
 
   -- Subscription tier
-  "tier" "SignalSubscriptionTier" NOT NULL,
+  "tier" "SignalSubscriptionTier" NOT NULL DEFAULT 'SIGNAL_FREE',
   "status" "SubscriptionStatus" NOT NULL DEFAULT 'INACTIVE',
 
   -- Billing period
@@ -36,11 +42,11 @@ CREATE TABLE "signal_subscriptions" (
   CONSTRAINT "signal_subscriptions_user_id_key" UNIQUE("user_id")
 );
 
--- Indexes
-CREATE INDEX "signal_subscriptions_tier_idx" ON "signal_subscriptions"("tier");
-CREATE INDEX "signal_subscriptions_status_idx" ON "signal_subscriptions"("status");
-CREATE INDEX "signal_subscriptions_stripe_customer_id_idx" ON "signal_subscriptions"("stripe_customer_id");
-CREATE INDEX "signal_subscriptions_stripe_subscription_id_idx" ON "signal_subscriptions"("stripe_subscription_id");
+-- Indexes (IF NOT EXISTS)
+CREATE INDEX IF NOT EXISTS "signal_subscriptions_tier_idx" ON "signal_subscriptions"("tier");
+CREATE INDEX IF NOT EXISTS "signal_subscriptions_status_idx" ON "signal_subscriptions"("status");
+CREATE INDEX IF NOT EXISTS "signal_subscriptions_stripe_customer_id_idx" ON "signal_subscriptions"("stripe_customer_id");
+CREATE INDEX IF NOT EXISTS "signal_subscriptions_stripe_subscription_id_idx" ON "signal_subscriptions"("stripe_subscription_id");
 
 -- Add update trigger for updated_at
 CREATE OR REPLACE FUNCTION update_signal_subscription_updated_at()
@@ -51,6 +57,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Create trigger if not exists
+DROP TRIGGER IF EXISTS signal_subscription_updated_at ON "signal_subscriptions";
 CREATE TRIGGER signal_subscription_updated_at
   BEFORE UPDATE ON "signal_subscriptions"
   FOR EACH ROW
