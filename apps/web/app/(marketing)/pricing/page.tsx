@@ -559,9 +559,12 @@ export default function PricingPage() {
                                 /{period === 'monthly' ? 'mo' : 'yr'}
                               </span>
                             </div>
-                            <div className="flex items-center justify-center gap-2 mb-4">
-                              <Clock className="w-4 h-4 text-muted-foreground" />
-                              <span className="text-sm text-muted-foreground">{plan.maxSignalsPerDay} signals/day</span>
+                            <div className="flex flex-col items-center gap-1 mb-4">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">{plan.maxSignalsPerDay} asset signals/day</span>
+                              </div>
+                              <span className="text-xs text-violet-500">Sent every 4 hours (6x daily)</span>
                             </div>
 
                             {/* Markets */}
