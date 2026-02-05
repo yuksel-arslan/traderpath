@@ -7,6 +7,13 @@
 
 export { signalService, SignalService } from './signal.service';
 export { signalRoutes } from './signal.routes';
+export { signalSubscriptionService, SIGNAL_TIER_CONFIG } from './signal-subscription.service';
+export { default as signalSubscriptionRoutes } from './signal-subscription.routes';
+export {
+  requireSignalSubscription,
+  requireMarketAccess,
+  attachSignalSubscription,
+} from './signal-subscription.middleware';
 export {
   startSignalGeneratorJob,
   stopSignalGeneratorJob,

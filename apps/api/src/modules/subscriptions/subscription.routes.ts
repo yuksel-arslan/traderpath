@@ -354,23 +354,53 @@ export default async function subscriptionRoutes(app: FastifyInstance) {
           case 'customer.subscription.created':
           case 'customer.subscription.updated': {
             const subscription = event.data.object;
-            await subscriptionService.handleSubscriptionWebhook(
-              subscription,
-              subscription.customer as string
-            );
-            app.log.info(
-              { subscriptionId: subscription.id },
-              `Subscription ${event.type.split('.').pop()}`
-            );
+
+            // Check if this is a signal subscription or credit subscription
+            const isSignalSubscription = subscription.metadata?.subscriptionType === 'signal';
+
+            if (isSignalSubscription) {
+              const { signalSubscriptionService } = await import('../signals');
+              await signalSubscriptionService.handleSignalSubscriptionWebhook(
+                subscription,
+                subscription.customer as string
+              );
+              app.log.info(
+                { subscriptionId: subscription.id },
+                `Signal subscription ${event.type.split('.').pop()}`
+              );
+            } else {
+              await subscriptionService.handleSubscriptionWebhook(
+                subscription,
+                subscription.customer as string
+              );
+              app.log.info(
+                { subscriptionId: subscription.id },
+                `Credit subscription ${event.type.split('.').pop()}`
+              );
+            }
             break;
           }
 
           case 'customer.subscription.deleted': {
             const subscription = event.data.object;
-            await subscriptionService.handleSubscriptionDeleted(
-              subscription,
-              subscription.customer as string
-            );
+
+            // Check if this is a signal subscription or credit subscription
+            const isSignalSubscription = subscription.metadata?.subscriptionType === 'signal';
+
+            if (isSignalSubscription) {
+              const { signalSubscriptionService } = await import('../signals');
+              await signalSubscriptionService.handleSignalSubscriptionDeleted(
+                subscription,
+                subscription.customer as string
+              );
+              app.log.info({ subscriptionId: subscription.id }, 'Signal subscription deleted');
+            } else {
+              await subscriptionService.handleSubscriptionDeleted(
+                subscription,
+                subscription.customer as string
+              );
+              app.log.info({ subscriptionId: subscription.id }, 'Credit subscription deleted');
+            }
 
             // Notify user of cancellation
             const userId = subscription.metadata.userId;
@@ -379,7 +409,6 @@ export default async function subscriptionRoutes(app: FastifyInstance) {
               await paymentNotificationService.notifySubscriptionCanceled(userId);
             }
 
-            app.log.info({ subscriptionId: subscription.id }, 'Subscription deleted');
             break;
           }
 

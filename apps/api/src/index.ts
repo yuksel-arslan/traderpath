@@ -52,6 +52,7 @@ import { initializeBilgeService, collectError } from './modules/bilge/bilge.serv
 import { startBilgeWeeklyReportJob, stopBilgeWeeklyReportJob } from './modules/bilge/bilge-cron.job';
 import {
   signalRoutes,
+  signalSubscriptionRoutes,
   startSignalGeneratorJob,
   stopSignalGeneratorJob,
   startSignalOutcomeTracker,
@@ -422,7 +423,9 @@ app.register(bilgeRoutes);
 // Signal System routes (proactive trading signals)
 app.register(signalRoutes, { prefix: '/api/v1' });
 app.register(signalRoutes, { prefix: '/api' }); // Legacy
-// Subscription management routes
+// Signal Subscription routes
+app.register(signalSubscriptionRoutes, { prefix: '/api/v1/signals' });
+// Subscription management routes (credit-based)
 app.register(subscriptionRoutes, { prefix: '/api/v1/subscriptions' });
 app.register(subscriptionRoutes, { prefix: '/api/subscriptions' }); // Legacy
 
