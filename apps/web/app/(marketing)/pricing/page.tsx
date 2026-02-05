@@ -272,27 +272,6 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* Subscription Plans */}
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-violet-500/10 border border-violet-500/20 rounded-full mb-4">
-                <Sparkles className="w-4 h-4 text-violet-500" />
-                <span className="text-sm font-medium text-violet-600 dark:text-violet-400">
-                  Subscription Plans
-                </span>
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                Daily Credits, Premium Features
-              </h2>
-              <p className="text-muted-foreground max-w-xl mx-auto">
-                Get fresh credits every day and unlock advanced analysis tools
-              </p>
-            </div>
-            <SubscriptionTiers variant="page" />
-          </div>
-        </section>
-
         {/* Current Balance - Only for logged in users */}
         {isLoggedIn && balance !== null && (
           <section className="py-6 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
@@ -326,6 +305,27 @@ export default function PricingPage() {
         {/* ==================== ACTIVE TRADING MODE ==================== */}
         {pricingMode === 'active' && (
           <>
+            {/* Subscription Plans */}
+            <section className="py-16">
+              <div className="container mx-auto px-4">
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-violet-500/10 border border-violet-500/20 rounded-full mb-4">
+                    <Sparkles className="w-4 h-4 text-violet-500" />
+                    <span className="text-sm font-medium text-violet-600 dark:text-violet-400">
+                      Subscription Plans
+                    </span>
+                  </div>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                    Daily Credits, Premium Features
+                  </h2>
+                  <p className="text-muted-foreground max-w-xl mx-auto">
+                    Get fresh credits every day and unlock advanced analysis tools
+                  </p>
+                </div>
+                <SubscriptionTiers variant="page" />
+              </div>
+            </section>
+
             {/* Credit Packages */}
             <section className="py-16 bg-slate-50/50 dark:bg-slate-900/30">
               <div className="container mx-auto px-4">
