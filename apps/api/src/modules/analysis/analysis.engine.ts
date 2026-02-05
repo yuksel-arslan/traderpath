@@ -5,6 +5,7 @@
 
 import { randomUUID } from 'crypto';
 import { config } from '../../core/config';
+import { logger } from '../../core/logger';
 import { callGeminiWithRetry } from '../../core/gemini';
 import { contractSecurityService } from '../security/contract-security.service';
 import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig, getMaxStopLossPercent, getMaxTakeProfitPercent } from './config/trade-config';
