@@ -220,7 +220,7 @@ export async function predictPriceTargets(input: PricePredictionInput): Promise<
       },
       3,
       'ai_price_prediction',
-      'expert' // Use expert model for better accuracy
+      'default' // Gemini 2.5 Flash - cost-effective, structured JSON output
     );
 
     const text = response.text || response.candidates?.[0]?.content?.parts?.[0]?.text || '';
