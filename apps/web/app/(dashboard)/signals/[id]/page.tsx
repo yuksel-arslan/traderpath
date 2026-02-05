@@ -113,7 +113,8 @@ export default function SignalDetailPage() {
     setError(null);
 
     try {
-      const response = await authFetch<SignalResponse>(`/api/v1/signals/${signalId}`);
+      const res = await authFetch(`/api/v1/signals/${signalId}`);
+      const response = await res.json() as SignalResponse;
 
       if (response.success && response.data) {
         setSignal(response.data);

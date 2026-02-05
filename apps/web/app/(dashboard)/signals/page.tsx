@@ -152,7 +152,8 @@ export default function SignalsPage() {
       params.append('limit', limit.toString());
       params.append('offset', ((page - 1) * limit).toString());
 
-      const response = await authFetch<SignalsResponse>(`/api/v1/signals?${params.toString()}`);
+      const res = await authFetch(`/api/v1/signals?${params.toString()}`);
+      const response = await res.json() as SignalsResponse;
 
       if (response.success && response.data) {
         setSignals(response.data.signals);
@@ -170,7 +171,8 @@ export default function SignalsPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await authFetch<StatsResponse>('/api/v1/signals/stats');
+      const res = await authFetch('/api/v1/signals/stats');
+      const response = await res.json() as StatsResponse;
       if (response.success && response.data) {
         setStats(response.data);
       }
