@@ -5367,10 +5367,20 @@ export const analysisEngine = {
     // LONG: Enter near support (buy low)
     // SHORT: Enter near resistance (sell high)
     const entries: TradePlanResult['entries'] = [];
-    const supportLevel = assetScan.levels.support[0];
-    const supportLevel2 = assetScan.levels.support[1];
-    const resistanceLevel = assetScan.levels.resistance[0];
-    const resistanceLevel2 = assetScan.levels.resistance[1];
+
+    // Filter support/resistance levels: discard levels >10% from current price.
+    // Historical levels (e.g., ATH area from months ago) are not actionable
+    // for current trade planning and lead to absurd entry/SL/TP levels.
+    const MAX_LEVEL_DISTANCE_PERCENT = 10;
+    const levelWithinRange = (level: number | undefined): number | undefined => {
+      if (level === undefined) return undefined;
+      return Math.abs((level - currentPrice) / currentPrice * 100) <= MAX_LEVEL_DISTANCE_PERCENT ? level : undefined;
+    };
+
+    const supportLevel = levelWithinRange(assetScan.levels.support[0]);
+    const supportLevel2 = levelWithinRange(assetScan.levels.support[1]);
+    const resistanceLevel = levelWithinRange(assetScan.levels.resistance[0]);
+    const resistanceLevel2 = levelWithinRange(assetScan.levels.resistance[1]);
     const atrForEntry = assetScan.indicators.atr || currentPrice * 0.02;
 
     // Proximity threshold: price is "near" a level if within 1 ATR
@@ -5515,9 +5525,30 @@ export const analysisEngine = {
     }
 
     // Calculate average entry
-    const averageEntry = roundPrice(
+    let averageEntry = roundPrice(
       entries.reduce((sum, e) => sum + e.price * (e.percentage / 100), 0)
     );
+
+    // ===== ENTRY SANITY CHECK (safety net) =====
+    // Even after level filtering, ensure entry is within 10% of current price.
+    // If not, reset to current price-based entries.
+    const entryGapPercent = Math.abs((averageEntry - currentPrice) / currentPrice * 100);
+    if (entryGapPercent > MAX_LEVEL_DISTANCE_PERCENT) {
+      console.warn(`[TradePlan] Entry $${averageEntry.toFixed(2)} is ${entryGapPercent.toFixed(1)}% from current price $${currentPrice.toFixed(2)} - resetting to current price`);
+      entries.length = 0;
+      if (direction === 'long') {
+        entries.push({ price: roundPrice(currentPrice * 0.998), percentage: 70, type: 'limit', source: 'Current price (level too far)' });
+        entries.push({ price: roundPrice(currentPrice * 0.978), percentage: 30, type: 'limit', source: 'DCA -2% (level too far)' });
+      } else {
+        entries.push({ price: roundPrice(currentPrice * 1.002), percentage: 70, type: 'limit', source: 'Current price (level too far)' });
+        entries.push({ price: roundPrice(currentPrice * 1.022), percentage: 30, type: 'limit', source: 'DCA +2% (level too far)' });
+      }
+      sources.entries.length = 0;
+      sources.entries.push('Current price (levels too far from market)');
+      averageEntry = roundPrice(
+        entries.reduce((sum, e) => sum + e.price * (e.percentage / 100), 0)
+      );
+    }
 
     // Check if current price is far from entry (need to wait)
     const entryDistancePercent = Math.abs((currentPrice - averageEntry) / averageEntry * 100);
@@ -5567,8 +5598,8 @@ export const analysisEngine = {
 
       // Use support level if it's BELOW ATR-based stop (safer for LONG)
       // For LONG positions, SL must be BELOW key support to avoid false stops
-      const support1 = assetScan.levels.support[0];
-      const support2 = assetScan.levels.support[1];
+      const support1 = levelWithinRange(assetScan.levels.support[0]);
+      const support2 = levelWithinRange(assetScan.levels.support[1]);
 
       // Find the lowest relevant support that's below entry
       const relevantSupports = [support1, support2]
@@ -5609,8 +5640,8 @@ export const analysisEngine = {
 
       // Use resistance level if it's ABOVE ATR-based stop (safer for SHORT)
       // For SHORT positions, SL must be ABOVE key resistance to avoid false stops
-      const resistance1 = assetScan.levels.resistance[0];
-      const resistance2 = assetScan.levels.resistance[1];
+      const resistance1 = levelWithinRange(assetScan.levels.resistance[0]);
+      const resistance2 = levelWithinRange(assetScan.levels.resistance[1]);
 
       // Find the highest relevant resistance that's above entry
       const relevantResistances = [resistance1, resistance2]
@@ -5664,7 +5695,7 @@ export const analysisEngine = {
 
     if (direction === 'long') {
       // TP1: First resistance or 1.5R (50% of position)
-      const tp1FromResistance = assetScan.levels.resistance[0];
+      const tp1FromResistance = levelWithinRange(assetScan.levels.resistance[0]);
       const tp1From15R = averageEntry + (riskAmount * 1.5);
       const tp1 = tp1FromResistance && tp1FromResistance > averageEntry
         ? Math.min(tp1FromResistance, tp1From15R)
@@ -5678,7 +5709,7 @@ export const analysisEngine = {
       sources.targets.push(tp1FromResistance ? 'Asset Scanner resistance 1' : '1.5R');
 
       // TP2: Second resistance or 2.5R (50% of position)
-      const tp2FromResistance = assetScan.levels.resistance[1];
+      const tp2FromResistance = levelWithinRange(assetScan.levels.resistance[1]);
       const tp2From25R = averageEntry + (riskAmount * 2.5);
       const tp2 = tp2FromResistance && tp2FromResistance > tp1
         ? Math.min(tp2FromResistance, tp2From25R)
@@ -5693,7 +5724,7 @@ export const analysisEngine = {
     } else {
       // Short direction - use support levels
       // TP1: First support or 1.5R (50% of position)
-      const tp1FromSupport = assetScan.levels.support[0];
+      const tp1FromSupport = levelWithinRange(assetScan.levels.support[0]);
       const tp1From15R = averageEntry - (riskAmount * 1.5);
       const tp1 = tp1FromSupport && tp1FromSupport < averageEntry
         ? Math.max(tp1FromSupport, tp1From15R)
@@ -5707,7 +5738,7 @@ export const analysisEngine = {
       sources.targets.push(tp1FromSupport ? 'Asset Scanner support 1' : '1.5R');
 
       // TP2: Second support or 2.5R (50% of position)
-      const tp2FromSupport = assetScan.levels.support[1];
+      const tp2FromSupport = levelWithinRange(assetScan.levels.support[1]);
       const tp2From25R = averageEntry - (riskAmount * 2.5);
       const tp2 = tp2FromSupport && tp2FromSupport < tp1
         ? Math.max(tp2FromSupport, tp2From25R)
