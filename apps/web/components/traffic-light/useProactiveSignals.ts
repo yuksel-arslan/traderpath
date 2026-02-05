@@ -80,8 +80,12 @@ export function useProactiveSignals(): UseProactiveSignalsResult {
         authFetch('/api/analysis/top-coins?limit=5&tradeableOnly=true')
       ])
 
-      const capitalFlow: CapitalFlowSummary = capitalFlowRes.success ? capitalFlowRes.data : null
-      const topCoins: TopCoin[] = topCoinsRes.success ? (topCoinsRes.data?.coins || []) : []
+      // Parse JSON responses
+      const capitalFlowData = await capitalFlowRes.json()
+      const topCoinsData = await topCoinsRes.json()
+
+      const capitalFlow: CapitalFlowSummary | null = capitalFlowData.success ? capitalFlowData.data : null
+      const topCoins: TopCoin[] = topCoinsData.success ? (topCoinsData.data?.coins || []) : []
 
       const newSignals: TrafficLightSignal[] = []
 
