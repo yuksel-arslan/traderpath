@@ -24,6 +24,7 @@ import {
   Calendar,
   Bot,
   Globe,
+  Activity,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -58,6 +59,7 @@ const dropdownNav = [
     name: 'Tools',
     icon: Settings,
     items: [
+      { name: 'Signals', href: '/signals', icon: Activity },
       { name: 'Scheduled', href: '/scheduled', icon: Calendar },
       { name: 'Alerts', href: '/alerts', icon: Bell },
     ],
