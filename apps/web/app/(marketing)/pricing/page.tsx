@@ -75,10 +75,13 @@ export default function PricingPage() {
   const [packagesLoading, setPackagesLoading] = useState(true);
   const [packagesFromApi, setPackagesFromApi] = useState(false);
   const [pricingMode, setPricingMode] = useState<PricingMode>('active');
+  const [signalPlans, setSignalPlans] = useState<any[]>([]);
+  const [signalPlansLoading, setSignalPlansLoading] = useState(true);
 
   useEffect(() => {
     checkAuthStatus();
     fetchPackages();
+    fetchSignalPlans();
   }, []);
 
   const fetchPackages = async () => {
@@ -119,6 +122,22 @@ export default function PricingPage() {
       setPackagesFromApi(false);
     } finally {
       setPackagesLoading(false);
+    }
+  };
+
+  const fetchSignalPlans = async () => {
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/v1/signals/subscription/plans`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data?.plans) {
+          setSignalPlans(data.data.plans);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch signal plans:', err);
+    } finally {
+      setSignalPlansLoading(false);
     }
   };
 
@@ -513,93 +532,202 @@ export default function PricingPage() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-                  {SIGNAL_SUBSCRIPTIONS.map((sub) => (
-                    <div
-                      key={sub.id}
-                      className={cn(
-                        'bg-white dark:bg-slate-900 rounded-xl border p-6 relative transition-all duration-200',
-                        sub.popular
-                          ? 'border-violet-500 shadow-lg shadow-violet-500/10'
-                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                      )}
-                    >
-                      {sub.popular && (
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-violet-500 text-white text-xs font-semibold rounded-full">
-                          MOST POPULAR
-                        </div>
-                      )}
-                      {sub.savings && (
-                        <div className="absolute -top-3 right-4 px-3 py-1 bg-emerald-500 text-white text-xs font-semibold rounded-full">
-                          {sub.savings}
-                        </div>
-                      )}
-                      <div className="text-center">
-                        <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                          <Radio className="w-6 h-6 text-violet-500" />
-                        </div>
-                        <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">{sub.name}</h3>
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
-                          {'$'}{sub.price}
-                          <span className="text-base font-normal text-muted-foreground">
-                            /{sub.period === 'monthly' ? 'mo' : 'yr'}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-center gap-2 mb-4">
-                          <Clock className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">{sub.signalsPerDay} signals/day</span>
-                        </div>
+                {signalPlansLoading ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
+                  </div>
+                ) : signalPlans.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    No signal plans available at the moment.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                    {signalPlans.map((plan, index) => {
+                      const isBasic = plan.tier === 'SIGNAL_BASIC';
+                      const isPro = plan.tier === 'SIGNAL_PRO';
+                      const isAnnual = plan.tier === 'SIGNAL_PRO_YEARLY';
+                      const displayPrice = plan.price.monthly || plan.price.yearly;
+                      const period = plan.price.monthly ? 'monthly' : 'yearly';
+                      const savings = isAnnual ? `Save $${(plan.price.monthly * 12) - plan.price.yearly}` : null;
 
-                        {/* Markets */}
-                        <div className="py-3 border-t border-slate-200 dark:border-slate-800 mb-4">
-                          <div className="flex flex-wrap justify-center gap-1">
-                            {sub.markets.map((market) => (
-                              <span
-                                key={market}
-                                className="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full"
-                              >
-                                {market}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Features */}
-                        <ul className="text-left space-y-2 mb-6">
-                          {sub.features.map((feature, i) => (
-                            <li key={i} className="flex items-start gap-2 text-sm">
-                              <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                              <span className="text-slate-600 dark:text-slate-400">{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
-
-                        <button
-                          onClick={() => {
-                            if (!isLoggedIn) {
-                              router.push('/register');
-                            } else {
-                              // TODO: Signal subscription checkout
-                              router.push(`/settings?subscribe=${sub.id}`);
-                            }
-                          }}
+                      return (
+                        <div
+                          key={plan.tier}
                           className={cn(
-                            'w-full py-3 rounded-lg font-medium text-center transition flex items-center justify-center gap-2',
-                            sub.popular
-                              ? 'bg-violet-500 text-white hover:bg-violet-600'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'
+                            'bg-white dark:bg-slate-900 rounded-xl border p-6 relative transition-all duration-200',
+                            isPro
+                              ? 'border-violet-500 shadow-lg shadow-violet-500/10'
+                              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
                           )}
                         >
-                          <Send className="w-4 h-4" />
-                          {isLoggedIn ? 'Subscribe Now' : 'Get Started'}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                          {isPro && (
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-violet-500 text-white text-xs font-semibold rounded-full">
+                              MOST POPULAR
+                            </div>
+                          )}
+                          {savings && (
+                            <div className="absolute -top-3 right-4 px-3 py-1 bg-emerald-500 text-white text-xs font-semibold rounded-full">
+                              {savings}
+                            </div>
+                          )}
+                          <div className="text-center">
+                            <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                              <Radio className="w-6 h-6 text-violet-500" />
+                            </div>
+                            <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">{plan.name}</h3>
+                            <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
+                              {'$'}{displayPrice}
+                              <span className="text-base font-normal text-muted-foreground">
+                                /{period === 'monthly' ? 'mo' : 'yr'}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-center gap-2 mb-4">
+                              <Clock className="w-4 h-4 text-muted-foreground" />
+                              <span className="text-sm text-muted-foreground">{plan.maxSignalsPerDay} signals/day</span>
+                            </div>
+
+                            {/* Markets */}
+                            <div className="py-3 border-t border-slate-200 dark:border-slate-800 mb-4">
+                              <div className="flex flex-wrap justify-center gap-1">
+                                {plan.markets.map((market: string) => (
+                                  <span
+                                    key={market}
+                                    className="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full"
+                                  >
+                                    {market.toUpperCase()}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Features */}
+                            <ul className="text-left space-y-2 mb-6">
+                              <li className="flex items-start gap-2 text-sm">
+                                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                <span className="text-slate-600 dark:text-slate-400">
+                                  {plan.markets.length === 1 ? 'Crypto market only' : `All ${plan.markets.length} markets`}
+                                </span>
+                              </li>
+                              <li className="flex items-start gap-2 text-sm">
+                                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                <span className="text-slate-600 dark:text-slate-400">
+                                  7-Step + MLIS Pro analysis
+                                </span>
+                              </li>
+                              {plan.deliveryChannels.telegram && (
+                                <li className="flex items-start gap-2 text-sm">
+                                  <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                  <span className="text-slate-600 dark:text-slate-400">
+                                    Telegram delivery
+                                  </span>
+                                </li>
+                              )}
+                              {plan.deliveryChannels.discord && (
+                                <li className="flex items-start gap-2 text-sm">
+                                  <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                  <span className="text-slate-600 dark:text-slate-400">
+                                    Discord delivery
+                                  </span>
+                                </li>
+                              )}
+                              {plan.deliveryChannels.email && (
+                                <li className="flex items-start gap-2 text-sm">
+                                  <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                  <span className="text-slate-600 dark:text-slate-400">
+                                    Email delivery
+                                  </span>
+                                </li>
+                              )}
+                              {isAnnual && (
+                                <li className="flex items-start gap-2 text-sm">
+                                  <Gift className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                                  <span className="text-amber-600 dark:text-amber-400 font-medium">
+                                    2 months free
+                                  </span>
+                                </li>
+                              )}
+                            </ul>
+
+                            <button
+                              onClick={() => {
+                                if (!isLoggedIn) {
+                                  router.push('/register');
+                                } else {
+                                  router.push(`/settings?subscribe=${plan.tier}`);
+                                }
+                              }}
+                              className={cn(
+                                'w-full py-3 rounded-lg font-medium text-center transition flex items-center justify-center gap-2',
+                                isPro
+                                  ? 'bg-violet-500 text-white hover:bg-violet-600'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'
+                              )}
+                            >
+                              <Send className="w-4 h-4" />
+                              {isLoggedIn ? 'Subscribe Now' : 'Get Started'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <p className="text-center text-xs text-muted-foreground mt-8">
                   Cancel anytime. Secure payment processing by Lemon Squeezy.
                 </p>
+              </div>
+            </section>
+
+            {/* What Signals Get You */}
+            <section className="py-16 bg-slate-50 dark:bg-slate-900/50">
+              <div className="container mx-auto px-4">
+                <div className="text-center mb-12">
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                    What Your Subscription Includes
+                  </h2>
+                  <p className="text-muted-foreground">Complete trading signals with all the details you need</p>
+                </div>
+                <div className="max-w-4xl mx-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      { Icon: Globe, title: 'Capital Flow Analysis', desc: 'Every signal starts with global market flow analysis', badge: 'INCLUDED', badgeColor: 'violet' },
+                      { Icon: Brain, title: '7-Step + MLIS Validation', desc: 'Full AI-powered analysis validates each opportunity', badge: 'INCLUDED', badgeColor: 'violet' },
+                      { Icon: Target, title: 'Entry, SL, TP Levels', desc: 'Precise entry price, stop loss, and take profit targets', badge: 'INCLUDED', badgeColor: 'violet' },
+                      { Icon: Clock, title: 'Real-Time Delivery', desc: 'Signals delivered instantly to Telegram/Discord/Email', badge: 'INCLUDED', badgeColor: 'violet' },
+                      { Icon: BarChart3, title: 'Multi-Market Coverage', desc: 'Signals across Crypto, Stocks, Metals, and Bonds', badge: 'PRO', badgeColor: 'amber' },
+                      { Icon: TrendingUp, title: 'Win Rate Tracking', desc: 'Track signal performance and success rates', badge: 'INCLUDED', badgeColor: 'violet' },
+                      { Icon: Bell, title: 'Outcome Notifications', desc: 'Get notified when TP or SL is hit', badge: 'INCLUDED', badgeColor: 'violet' },
+                      { Icon: Calendar, title: 'Signal History', desc: 'Access your past signals and outcomes', badge: 'INCLUDED', badgeColor: 'violet' },
+                    ].map((item, index) => (
+                      <div key={index} className="flex items-start gap-4 p-4 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                        <div className={cn(
+                          "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                          item.badgeColor === 'violet' && "bg-violet-500/10",
+                          item.badgeColor === 'amber' && "bg-amber-500/10"
+                        )}>
+                          <item.Icon className={cn(
+                            'w-5 h-5',
+                            item.badgeColor === 'violet' && "text-violet-500",
+                            item.badgeColor === 'amber' && "text-amber-500"
+                          )} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-slate-900 dark:text-white">{item.title}</p>
+                            <span className={cn(
+                              "px-2 py-0.5 text-[10px] font-semibold rounded-full",
+                              item.badgeColor === 'violet' && "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+                              item.badgeColor === 'amber' && "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                            )}>
+                              {item.badge}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{item.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </section>
 
