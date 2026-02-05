@@ -9,6 +9,12 @@ import { cache, cacheKeys } from '../../core/cache';
 import { calculateReportOutcome } from './outcome.service';
 import { logger } from '../../core/logger';
 import { detectAssetClass } from '../analysis/providers/symbol-resolver';
+import {
+  checkBulkTradeFlowHealth,
+  TradeFlowStatus,
+  FlowAlert,
+  ActiveTradeInput,
+} from '../capital-flow/capital-flow-monitor.service';
 
 interface LiveTrackingStatus {
   reportId: string;
@@ -39,6 +45,17 @@ interface LiveTrackingStatus {
 
   // Profit/Loss if position was taken
   unrealizedPnL: number; // % gain/loss
+
+  // Capital Flow Health (monitors money flow for open trades)
+  flowHealth?: {
+    health: 'healthy' | 'weakening' | 'adverse';
+    score: number; // 0-100
+    reason: string;
+    phase: string;
+    flow7d: number;
+    recommendation: 'hold' | 'tighten_stop' | 'take_profit' | 'close_position';
+    alerts: FlowAlert[];
+  };
 
   // Timestamps
   analysisDate: string;
@@ -406,6 +423,41 @@ export async function getUserActiveTrades(userId: string): Promise<LiveTrackingS
       expiresAt: report.expiresAt.toISOString(),
       lastUpdated: new Date().toISOString(),
     });
+  }
+
+  // Enrich with capital flow health data (fire-and-forget style)
+  try {
+    if (results.length > 0) {
+      const tradeInputs: ActiveTradeInput[] = results.map(r => ({
+        analysisId: r.reportId,
+        symbol: r.symbol,
+        direction: r.direction,
+        entryPrice: r.entryPrice,
+        stopLoss: r.stopLoss.price,
+        takeProfits: r.takeProfits.map(tp => tp.price),
+        createdAt: new Date(r.analysisDate),
+      }));
+
+      const flowStatuses = await checkBulkTradeFlowHealth(tradeInputs);
+
+      // Merge flow health into results
+      for (let i = 0; i < results.length; i++) {
+        const flowStatus = flowStatuses.find(f => f.analysisId === results[i].reportId);
+        if (flowStatus) {
+          results[i].flowHealth = {
+            health: flowStatus.flowHealth,
+            score: flowStatus.flowHealthScore,
+            reason: flowStatus.flowHealthReason,
+            phase: flowStatus.marketFlow.phase,
+            flow7d: flowStatus.marketFlow.flow7d,
+            recommendation: flowStatus.holdRecommendation,
+            alerts: flowStatus.alerts,
+          };
+        }
+      }
+    }
+  } catch (flowError) {
+    logger.warn({ error: flowError }, '[LiveTracking] Failed to enrich with capital flow data');
   }
 
   // Cache for 30 seconds
@@ -907,4 +959,96 @@ export async function checkAllHistoricalOutcomes(): Promise<{
     skipped,
     stillActive,
   };
+}
+
+// ===========================================
+// CAPITAL FLOW HEALTH CHECK FOR ALL ACTIVE TRADES
+// Called periodically (every 10 minutes) alongside outcome checks
+// ===========================================
+
+export async function checkActiveTradesFlowHealth(): Promise<{
+  checked: number;
+  healthyCount: number;
+  weakeningCount: number;
+  adverseCount: number;
+  alertCount: number;
+}> {
+  try {
+    // Get all active analyses with trade plans
+    const analyses = await prisma.analysis.findMany({
+      where: {
+        outcome: null,
+        step5Result: { not: null },
+        expiresAt: { gt: new Date() },
+      },
+      select: {
+        id: true,
+        symbol: true,
+        step5Result: true,
+        createdAt: true,
+      },
+      take: 100,
+    });
+
+    if (analyses.length === 0) {
+      return { checked: 0, healthyCount: 0, weakeningCount: 0, adverseCount: 0, alertCount: 0 };
+    }
+
+    // Build trade inputs from analyses
+    const tradeInputs: ActiveTradeInput[] = [];
+    for (const analysis of analyses) {
+      const tradePlan = analysis.step5Result as Record<string, unknown> | null;
+      if (!tradePlan) continue;
+
+      const direction = ((tradePlan.direction as string) || 'long').toLowerCase() as 'long' | 'short';
+      const entryPrice = Number(tradePlan.averageEntry || tradePlan.entryPrice) || 0;
+      const stopLossData = tradePlan.stopLoss as { price?: number } | number | undefined;
+      const stopLoss = typeof stopLossData === 'object' ? Number(stopLossData?.price) : Number(stopLossData) || 0;
+      const takeProfits = tradePlan.takeProfits as Array<{ price: number }> | undefined;
+      const tpPrices = (takeProfits || []).map(tp => Number(tp.price)).filter(p => p > 0);
+
+      if (!entryPrice) continue;
+
+      tradeInputs.push({
+        analysisId: analysis.id,
+        symbol: analysis.symbol,
+        direction,
+        entryPrice,
+        stopLoss,
+        takeProfits: tpPrices,
+        createdAt: analysis.createdAt,
+      });
+    }
+
+    if (tradeInputs.length === 0) {
+      return { checked: 0, healthyCount: 0, weakeningCount: 0, adverseCount: 0, alertCount: 0 };
+    }
+
+    // Check flow health for all trades
+    const flowStatuses = await checkBulkTradeFlowHealth(tradeInputs);
+
+    const healthyCount = flowStatuses.filter(s => s.flowHealth === 'healthy').length;
+    const weakeningCount = flowStatuses.filter(s => s.flowHealth === 'weakening').length;
+    const adverseCount = flowStatuses.filter(s => s.flowHealth === 'adverse').length;
+    const alertCount = flowStatuses.reduce((sum, s) => sum + s.alerts.length, 0);
+
+    logger.info({
+      checked: flowStatuses.length,
+      healthyCount,
+      weakeningCount,
+      adverseCount,
+      alertCount,
+    }, '[FlowMonitor] Periodic flow health check completed');
+
+    return {
+      checked: flowStatuses.length,
+      healthyCount,
+      weakeningCount,
+      adverseCount,
+      alertCount,
+    };
+  } catch (error) {
+    logger.warn({ error }, '[FlowMonitor] Periodic flow health check failed');
+    return { checked: 0, healthyCount: 0, weakeningCount: 0, adverseCount: 0, alertCount: 0 };
+  }
 }
