@@ -113,6 +113,92 @@ export const FEATURE_COSTS = [
 export const FREE_SIGNUP_CREDITS = 25;
 
 // ==========================================
+// ACTIVE USER MONTHLY SUBSCRIPTIONS
+// ==========================================
+export interface ActiveSubscription {
+  id: string;
+  tier: 'starter' | 'pro' | 'elite';
+  name: string;
+  price: number;
+  priceDisplay: string;
+  dailyCredits: number;
+  features: string[];
+  limits: {
+    maxDailyAnalyses: number | 'unlimited';
+    maxScheduledReports: number | 'unlimited';
+    maxAlerts: number | 'unlimited';
+  };
+  popular?: boolean;
+}
+
+export const ACTIVE_SUBSCRIPTIONS: ActiveSubscription[] = [
+  {
+    id: 'sub_starter',
+    tier: 'starter',
+    name: 'Starter',
+    price: 29,
+    priceDisplay: '$29/mo',
+    dailyCredits: 50,
+    features: [
+      'Capital Flow L1-L4 (full access)',
+      '50 credits/day included',
+      'PDF & Email reports',
+      'Scheduled reports (3 max)',
+      'Price alerts (10 max)',
+      'Daily rewards system',
+    ],
+    limits: {
+      maxDailyAnalyses: 0,
+      maxScheduledReports: 3,
+      maxAlerts: 10,
+    },
+  },
+  {
+    id: 'sub_pro',
+    tier: 'pro',
+    name: 'Pro',
+    price: 59,
+    priceDisplay: '$59/mo',
+    dailyCredits: 100,
+    popular: true,
+    features: [
+      'Everything in Starter',
+      '100 credits/day included',
+      '7-Step + MLIS Pro analysis',
+      '5 analyses/day included',
+      'Scheduled reports (5 max)',
+      'Priority support',
+    ],
+    limits: {
+      maxDailyAnalyses: 5,
+      maxScheduledReports: 5,
+      maxAlerts: 10,
+    },
+  },
+  {
+    id: 'sub_elite',
+    tier: 'elite',
+    name: 'Elite',
+    price: 79,
+    priceDisplay: '$79/mo',
+    dailyCredits: 200,
+    features: [
+      'Everything in Pro',
+      '200 credits/day included',
+      'AI Concierge (unlimited)',
+      'AI Expert questions (unlimited)',
+      'Unlimited analyses',
+      'Unlimited scheduled reports',
+    ],
+    limits: {
+      maxDailyAnalyses: 'unlimited',
+      maxScheduledReports: 'unlimited',
+      maxAlerts: 'unlimited',
+    },
+  },
+];
+
+// ==========================================
 // SIGNAL SERVICE SUBSCRIPTION TIERS
 // ==========================================
 export interface SignalSubscription {
@@ -168,9 +254,9 @@ export const SIGNAL_SUBSCRIPTIONS: SignalSubscription[] = [
   },
 ];
 
-// Daily Pass costs (for active traders who want to do their own analysis)
+// Per-use costs (for active traders who want to do their own analysis)
 export const DAILY_PASS_COSTS = {
-  CAPITAL_FLOW_L3: { cost: 25, name: 'Sector Analysis', description: 'Layer 3 - Sector drill-down' },
-  CAPITAL_FLOW_L4: { cost: 25, name: 'AI Recommendations', description: 'Layer 4 - BUY/SELL signals' },
-  ASSET_ANALYSIS: { cost: 100, name: 'Asset Analysis', description: '7-Step + MLIS Pro (max 10/day)' },
+  CAPITAL_FLOW_L3: { cost: 5, name: 'Sector Analysis', description: 'Layer 3 - Sector drill-down' },
+  CAPITAL_FLOW_L4: { cost: 5, name: 'AI Recommendations', description: 'Layer 4 - BUY/SELL signals' },
+  ASSET_ANALYSIS: { cost: 10, name: 'Asset Analysis', description: '7-Step + MLIS Pro analysis' },
 };

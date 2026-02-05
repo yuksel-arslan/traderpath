@@ -30,7 +30,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost, SIGNAL_SUBSCRIPTIONS, DAILY_PASS_COSTS } from '../../../lib/pricing-config';
+import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost, SIGNAL_SUBSCRIPTIONS, DAILY_PASS_COSTS, ACTIVE_SUBSCRIPTIONS } from '../../../lib/pricing-config';
 import { authFetch, getAuthToken, apiBaseUrl } from '../../../lib/api';
 import { Footer } from '../../../components/common/Footer';
 
@@ -303,6 +303,106 @@ export default function PricingPage() {
         {/* ==================== ACTIVE TRADING MODE ==================== */}
         {pricingMode === 'active' && (
           <>
+            {/* Monthly Subscriptions */}
+            <section className="py-16">
+              <div className="container mx-auto px-4">
+                <div className="text-center mb-12">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full mb-4">
+                    <Calendar className="w-4 h-4 text-emerald-500" />
+                    <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                      Monthly Subscription
+                    </span>
+                  </div>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                    Active User Plans
+                  </h2>
+                  <p className="text-muted-foreground max-w-lg mx-auto">
+                    Get daily credits automatically. Best value for regular traders who analyze markets daily.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                  {ACTIVE_SUBSCRIPTIONS.map((sub) => (
+                    <div
+                      key={sub.id}
+                      className={cn(
+                        'bg-white dark:bg-slate-900 rounded-xl border p-6 relative transition-all duration-200',
+                        sub.popular
+                          ? 'border-emerald-500 shadow-lg shadow-emerald-500/10'
+                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                      )}
+                    >
+                      {sub.popular && (
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-500 text-white text-xs font-semibold rounded-full">
+                          BEST VALUE
+                        </div>
+                      )}
+                      <div className="text-center">
+                        <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                          {sub.tier === 'starter' && <Zap className="w-6 h-6 text-emerald-500" />}
+                          {sub.tier === 'pro' && <Star className="w-6 h-6 text-emerald-500" />}
+                          {sub.tier === 'elite' && <Crown className="w-6 h-6 text-emerald-500" />}
+                        </div>
+                        <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">{sub.name}</h3>
+                        <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
+                          ${sub.price}
+                          <span className="text-base font-normal text-muted-foreground">/mo</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-2 mb-4">
+                          <Gem className="w-4 h-4 text-amber-500" />
+                          <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
+                            {sub.dailyCredits} credits/day
+                          </span>
+                        </div>
+
+                        {/* Features */}
+                        <ul className="text-left space-y-2 mb-6 border-t border-slate-200 dark:border-slate-800 pt-4">
+                          {sub.features.map((feature, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-sm">
+                              <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                              <span className="text-slate-600 dark:text-slate-400">{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+
+                        <button
+                          onClick={() => {
+                            if (!isLoggedIn) {
+                              router.push('/register');
+                            } else {
+                              router.push(`/settings?subscribe=${sub.tier}`);
+                            }
+                          }}
+                          className={cn(
+                            'w-full py-3 rounded-lg font-medium text-center transition flex items-center justify-center gap-2',
+                            sub.popular
+                              ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'
+                          )}
+                        >
+                          <CreditCard className="w-4 h-4" />
+                          {isLoggedIn ? 'Subscribe Now' : 'Get Started'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-center text-xs text-muted-foreground mt-8">
+                  Cancel anytime. Credits reset daily. Secure payment by Lemon Squeezy.
+                </p>
+              </div>
+            </section>
+
+            {/* Divider */}
+            <div className="container mx-auto px-4">
+              <div className="max-w-2xl mx-auto flex items-center gap-4 py-8">
+                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+                <span className="text-sm text-muted-foreground">or buy credits once</span>
+                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+              </div>
+            </div>
+
             {/* Credit Packages */}
             <section className="py-16 bg-slate-50/50 dark:bg-slate-900/30">
               <div className="container mx-auto px-4">
@@ -422,7 +522,7 @@ export default function PricingPage() {
                       { Icon: Globe, title: 'Global Capital Flow', desc: 'Layer 1-2: Track money flow across markets', badge: 'FREE', badgeColor: 'emerald' },
                       { Icon: Layers, title: 'Sector Analysis', desc: 'Layer 3: Drill down into market sectors', badge: '5 credits/use', badgeColor: 'slate' },
                       { Icon: Brain, title: 'AI Recommendations', desc: 'Layer 4: BUY/SELL signals with confidence scores', badge: '5 credits/use', badgeColor: 'slate' },
-                      { Icon: BarChart3, title: 'Asset Analysis', desc: '7-Step Analysis with MLIS Pro AI confirmation', badge: '10 credits/analysis', badgeColor: 'slate' },
+                      { Icon: BarChart3, title: 'Asset Analysis', desc: '7-Step + MLIS Pro analysis', badge: '10 credits/analysis', badgeColor: 'slate' },
                       { Icon: Bot, title: 'AI Expert Consultation', desc: '3 free questions per analysis, then 5 credits each', badge: null, badgeColor: null },
                       { Icon: FileText, title: 'PDF Reports', desc: 'Download and share detailed analysis reports', badge: null, badgeColor: null },
                       { Icon: Bell, title: 'Price Alerts', desc: 'Get notified when price targets are hit', badge: null, badgeColor: null },

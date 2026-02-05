@@ -170,21 +170,18 @@ export const STRIPE_PRODUCTS: Record<Exclude<SubscriptionTier, 'free'>, StripePr
 };
 
 // =============================================================================
-// STRIPE PRICES (in cents)
+// STRIPE PRICES (in cents) - Monthly only, no yearly option
 // =============================================================================
 
 export const STRIPE_PRICES: StripePriceConfig[] = [
-  // Starter
+  // Starter - $29/month
   { product: 'starter', unitAmount: 2900, currency: 'usd', interval: 'month' },
-  { product: 'starter', unitAmount: 29000, currency: 'usd', interval: 'year' },
 
-  // Pro
+  // Pro - $59/month
   { product: 'pro', unitAmount: 5900, currency: 'usd', interval: 'month' },
-  { product: 'pro', unitAmount: 59000, currency: 'usd', interval: 'year' },
 
-  // Elite
+  // Elite - $79/month
   { product: 'elite', unitAmount: 7900, currency: 'usd', interval: 'month' },
-  { product: 'elite', unitAmount: 79000, currency: 'usd', interval: 'year' },
 ];
 
 // =============================================================================
@@ -313,23 +310,20 @@ export function getMonthlyPrice(tier: Exclude<SubscriptionTier, 'free'>): number
 
 /**
  * Get the yearly price in dollars for a tier
+ * @deprecated Yearly pricing has been removed - returns 0
  */
 export function getYearlyPrice(tier: Exclude<SubscriptionTier, 'free'>): number {
-  const price = STRIPE_PRICES.find(p => p.product === tier && p.interval === 'year');
-  return price ? price.unitAmount / 100 : 0;
+  // Yearly pricing removed - only monthly available
+  return 0;
 }
 
 /**
  * Calculate yearly savings percentage
+ * @deprecated Yearly pricing has been removed - returns 0
  */
 export function getYearlySavings(tier: Exclude<SubscriptionTier, 'free'>): number {
-  const monthly = getMonthlyPrice(tier);
-  const yearly = getYearlyPrice(tier);
-  const monthlyTotal = monthly * 12;
-
-  if (monthlyTotal === 0) return 0;
-
-  return Math.round(((monthlyTotal - yearly) / monthlyTotal) * 100);
+  // Yearly pricing removed - only monthly available
+  return 0;
 }
 
 /**
