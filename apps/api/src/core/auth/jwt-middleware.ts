@@ -5,9 +5,9 @@
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../database';
+import { isAdminEmail } from '../../config/admin';
 
-// Admin emails with free unlimited access
-const ADMIN_EMAILS = ['contact@yukselarslan.com'];
+// Admin emails with free unlimited access (now configurable via ADMIN_EMAILS env variable)
 
 /**
  * Authentication middleware
@@ -54,7 +54,7 @@ export async function authenticate(
     }
 
     // Check if user is admin (from DB or hardcoded list)
-    const isAdmin = user.isAdmin || ADMIN_EMAILS.includes(user.email);
+    const isAdmin = user.isAdmin || isAdminEmail(user.email);
 
     // Attach user to request
     request.user = {
@@ -106,7 +106,7 @@ export async function optionalAuth(
     });
 
     if (user) {
-      const isAdmin = user.isAdmin || ADMIN_EMAILS.includes(user.email);
+      const isAdmin = user.isAdmin || isAdminEmail(user.email);
       request.user = {
         ...user,
         isAdmin,

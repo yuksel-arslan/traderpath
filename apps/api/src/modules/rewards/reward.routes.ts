@@ -125,7 +125,7 @@ export default async function rewardRoutes(app: FastifyInstance) {
     }
 
     // Calculate credits
-    let credits = 3; // Base login credit
+    let credits = 5; // Base login credit
     const streakBonus = calculateStreakBonus(newStreak);
     if ([7, 14, 21, 28, 30].includes(newStreak)) {
       credits += streakBonus;
@@ -161,6 +161,30 @@ export default async function rewardRoutes(app: FastifyInstance) {
     await creditService.add(userId, credits, 'REWARD', 'daily_login', {
       streakDays: newStreak,
     });
+
+    // Achievement tracking: Streak milestones
+    try {
+      const { achievementService } = await import('../achievements/achievement.service');
+      if (newStreak === 7) {
+        await achievementService.checkSingleEvent(userId, 'STREAK_7');
+      } else if (newStreak === 30) {
+        await achievementService.checkSingleEvent(userId, 'STREAK_30');
+      } else if (newStreak === 100) {
+        await achievementService.checkSingleEvent(userId, 'STREAK_100');
+      }
+    } catch (achErr) {
+      console.error('[Achievement] Failed to track streak milestone:', achErr);
+    }
+
+    // XP Reward: Daily login
+    try {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { xp: { increment: 5 } },
+      });
+    } catch (xpErr) {
+      console.error('[XP] Failed to award login XP:', xpErr);
+    }
 
     return reply.send({
       success: true,
@@ -301,6 +325,26 @@ export default async function rewardRoutes(app: FastifyInstance) {
     // Add credits if correct
     if (isCorrect) {
       await creditService.add(userId, credits, 'REWARD', 'daily_quiz');
+
+      // Achievement tracking: Quiz milestones
+      try {
+        const { achievementService } = await import('../achievements/achievement.service');
+        await achievementService.incrementProgress(userId, 'QUIZ_MASTER_10', 1);
+        await achievementService.incrementProgress(userId, 'QUIZ_MASTER_25', 1);
+        await achievementService.incrementProgress(userId, 'QUIZ_MASTER_100', 1);
+      } catch (achErr) {
+        console.error('[Achievement] Failed to track quiz milestone:', achErr);
+      }
+
+      // XP Reward: Quiz correct answer
+      try {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { xp: { increment: 15 } },
+        });
+      } catch (xpErr) {
+        console.error('[XP] Failed to award quiz XP:', xpErr);
+      }
     }
 
     return reply.send({
@@ -355,11 +399,8 @@ function calculateStreakBonus(days: number): number {
 
 function generateSpinResult(): number {
   const random = Math.random();
-  if (random < 0.01) return 20; // 1% jackpot
-  if (random < 0.05) return 10; // 4%
-  if (random < 0.13) return 7;  // 8%
-  if (random < 0.25) return 5;  // 12%
-  if (random < 0.45) return 3;  // 20%
-  if (random < 0.70) return 2;  // 25%
-  return 1; // 30%
+  if (random < 0.10) return 5;  // 10% jackpot
+  if (random < 0.30) return 3;  // 20%
+  if (random < 0.60) return 2;  // 30%
+  return 1; // 40%
 }

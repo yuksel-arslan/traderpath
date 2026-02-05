@@ -6,9 +6,9 @@
 import { prisma } from '../../core/database';
 import { creditService } from '../credits/credit.service';
 import { DailyPassType } from '@prisma/client';
+import { isAdminEmail } from '../../config/admin';
 
-// Admin emails - same as auth.routes.ts
-const ADMIN_EMAILS = ['contact@yukselarslan.com'];
+// Admin emails - now configurable via ADMIN_EMAILS env variable
 
 // Pass pricing configuration
 export const DAILY_PASS_CONFIG = {
@@ -86,7 +86,7 @@ class DailyPassService {
       where: { id: userId },
       select: { email: true },
     });
-    return user ? ADMIN_EMAILS.includes(user.email.toLowerCase()) : false;
+    return user ? isAdminEmail(user.email) : false;
   }
 
   /**

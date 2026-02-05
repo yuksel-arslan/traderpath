@@ -7,7 +7,7 @@ import { cache, cacheKeys, cacheTTL } from '../../core/cache';
 import { CREDIT_COSTS, type CreditBalance, type CreditTransaction } from '@traderpath/types';
 
 // Admin emails with free unlimited access
-const ADMIN_EMAILS = ['contact@yukselarslan.com'];
+import { isAdminEmail } from '../../config/admin';
 
 export class CreditService {
   /**
@@ -18,7 +18,7 @@ export class CreditService {
       where: { id: userId },
       select: { email: true },
     });
-    return user ? ADMIN_EMAILS.includes(user.email) : false;
+    return user ? isAdminEmail(user.email) : false;
   }
   /**
    * Get user's credit balance
@@ -38,7 +38,7 @@ export class CreditService {
       balance = await prisma.creditBalance.create({
         data: {
           userId,
-          balance: 25, // Welcome bonus
+          balance: 20, // Welcome bonus
         },
       });
     }
