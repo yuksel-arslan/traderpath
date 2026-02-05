@@ -103,6 +103,19 @@ interface AppStats {
   topCoins: Array<{ symbol: string; count: number }>;
 }
 
+interface SignalStats {
+  total: number;
+  published: number;
+  outcomes: {
+    tp1Hit: number;
+    tp2Hit: number;
+    slHit: number;
+    expired: number;
+  };
+  winRate: number;
+  byMarket: Array<{ market: string; count: number }>;
+}
+
 interface UserData {
   id: string;
   email: string;
@@ -131,6 +144,7 @@ export default function AdminPage() {
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [system, setSystem] = useState<SystemMetrics | null>(null);
   const [stats, setStats] = useState<AppStats | null>(null);
+  const [signalStats, setSignalStats] = useState<SignalStats | null>(null);
   const [users, setUsers] = useState<UserData[]>([]);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -154,11 +168,12 @@ export default function AdminPage() {
     setError(null);
 
     try {
-      const [healthRes, systemRes, statsRes, activityRes] = await Promise.all([
+      const [healthRes, systemRes, statsRes, activityRes, signalStatsRes] = await Promise.all([
         authFetch('/api/admin/health'),
         authFetch('/api/admin/system'),
         authFetch('/api/admin/stats'),
         authFetch('/api/admin/activity'),
+        authFetch('/api/v1/signals/stats'),
       ]);
 
       if (healthRes.status === 403) {
@@ -181,6 +196,12 @@ export default function AdminPage() {
       if (activityRes.ok) {
         const data = await activityRes.json();
         setActivity(data.data.activity);
+      }
+      if (signalStatsRes.ok) {
+        const data = await signalStatsRes.json();
+        if (data.success && data.data) {
+          setSignalStats(data.data);
+        }
       }
     } catch (err) {
       setError('Failed to fetch admin data');
@@ -510,6 +531,77 @@ export default function AdminPage() {
               <p className="text-sm text-muted-foreground">{stats?.reports.expired || 0} expired</p>
             </div>
           </div>
+
+          {/* Signal Service Stats */}
+          {signalStats && (
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Activity className="w-5 h-5 text-indigo-500" />
+                Signal Service Statistics
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-card border rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-indigo-500/10 rounded-lg">
+                      <Activity className="w-5 h-5 text-indigo-500" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">Total Signals</span>
+                  </div>
+                  <p className="text-3xl font-bold">{signalStats.total}</p>
+                  <p className="text-sm text-muted-foreground">{signalStats.published} published</p>
+                </div>
+
+                <div className="bg-card border rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-green-500/10 rounded-lg">
+                      <TrendingUp className="w-5 h-5 text-green-500" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">Win Rate</span>
+                  </div>
+                  <p className="text-3xl font-bold">{signalStats.winRate.toFixed(1)}%</p>
+                  <p className="text-sm text-green-500">
+                    {signalStats.outcomes.tp1Hit + signalStats.outcomes.tp2Hit} wins
+                  </p>
+                </div>
+
+                <div className="bg-card border rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-amber-500/10 rounded-lg">
+                      <Target className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">Outcomes</span>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm">
+                      <span className="text-green-500">✓ TP1:</span> {signalStats.outcomes.tp1Hit}
+                    </p>
+                    <p className="text-sm">
+                      <span className="text-green-400">✓ TP2:</span> {signalStats.outcomes.tp2Hit}
+                    </p>
+                    <p className="text-sm">
+                      <span className="text-red-500">✗ SL:</span> {signalStats.outcomes.slHit}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-card border rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-teal-500/10 rounded-lg">
+                      <Globe className="w-5 h-5 text-teal-500" />
+                    </div>
+                    <span className="text-sm text-muted-foreground">Top Markets</span>
+                  </div>
+                  <div className="space-y-1">
+                    {signalStats.byMarket.slice(0, 3).map((m) => (
+                      <p key={m.market} className="text-sm">
+                        <span className="font-medium">{m.market}:</span> {m.count}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* System Metrics */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
