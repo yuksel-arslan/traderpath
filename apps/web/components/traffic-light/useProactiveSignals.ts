@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { authFetch } from '@/lib/auth-fetch'
+import { authFetch } from '@/lib/api'
 import type { TrafficLightSignal } from './TrafficLight'
 
 interface CapitalFlowSummary {
