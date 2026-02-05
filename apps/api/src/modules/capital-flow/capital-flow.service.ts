@@ -115,8 +115,13 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
     console.error('[CapitalFlow] Failed to fetch market flows:', results[1].reason);
   }
 
-  // Determine liquidity bias
-  const liquidityBias = determineLiquidityBias(globalLiquidity);
+  // Determine liquidity bias with error handling
+  let liquidityBias: LiquidityBias = 'neutral';
+  try {
+    liquidityBias = determineLiquidityBias(globalLiquidity);
+  } catch (error) {
+    console.error('[CapitalFlow] Error determining liquidity bias:', error);
+  }
 
   // Calculate market correlations first (needed for 5-factor scoring)
   let correlations: CorrelationMatrix | undefined;
@@ -126,14 +131,29 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
     console.error('[CapitalFlow] Error calculating correlations:', error);
   }
 
-  // Generate BUY recommendation using 5-FACTOR SCORING SYSTEM
-  const recommendation = generateRecommendation(globalLiquidity, markets, liquidityBias, correlations);
+  // Generate BUY recommendation using 5-FACTOR SCORING SYSTEM with error handling
+  let recommendation: FlowRecommendation = getFallbackRecommendation();
+  try {
+    recommendation = generateRecommendation(globalLiquidity, markets, liquidityBias, correlations);
+  } catch (error) {
+    console.error('[CapitalFlow] Error generating recommendation:', error);
+  }
 
-  // Generate SELL recommendation using 5-FACTOR SCORING SYSTEM
-  const sellRecommendation = generateSellRecommendation(markets, liquidityBias, globalLiquidity, correlations);
+  // Generate SELL recommendation using 5-FACTOR SCORING SYSTEM with error handling
+  let sellRecommendation: FlowRecommendation | null = null;
+  try {
+    sellRecommendation = generateSellRecommendation(markets, liquidityBias, globalLiquidity, correlations);
+  } catch (error) {
+    console.error('[CapitalFlow] Error generating sell recommendation:', error);
+  }
 
-  // Detect active rotation
-  const activeRotation = detectActiveRotation(markets);
+  // Detect active rotation with error handling
+  let activeRotation: ActiveRotation | undefined;
+  try {
+    activeRotation = detectActiveRotation(markets);
+  } catch (error) {
+    console.error('[CapitalFlow] Error detecting active rotation:', error);
+  }
 
   // Note: correlations already calculated above for 5-factor scoring
 
@@ -169,8 +189,12 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
   };
 
   // Cache the result
-  if (redis) {
-    await redis.setex(CACHE_KEYS.CAPITAL_FLOW, CACHE_TTL.SUMMARY, JSON.stringify(summary));
+  try {
+    if (redis) {
+      await redis.setex(CACHE_KEYS.CAPITAL_FLOW, CACHE_TTL.SUMMARY, JSON.stringify(summary));
+    }
+  } catch (cacheError) {
+    console.error('[CapitalFlow] Error caching summary:', cacheError);
   }
 
   return summary;
@@ -1039,6 +1063,23 @@ function getFallbackMarketFlow(market: MarketType): MarketFlow {
     rotationConfidence: 50,
     sectors: [],
     lastUpdated: now,
+  };
+}
+
+/**
+ * Fallback recommendation when generation fails
+ */
+function getFallbackRecommendation(): FlowRecommendation {
+  return {
+    action: 'wait',
+    direction: 'neutral',
+    primaryMarket: 'crypto',
+    confidence: 50,
+    reason: 'Data temporarily unavailable. Please refresh.',
+    phase: 'mid',
+    sectors: [],
+    suggestedAssets: [],
+    riskLevel: 'medium',
   };
 }
 
