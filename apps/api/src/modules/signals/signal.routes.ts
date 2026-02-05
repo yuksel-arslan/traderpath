@@ -7,6 +7,7 @@ import { FastifyInstance } from 'fastify';
 import { signalService } from './signal.service';
 import { runSignalGenerationManually } from './signal-generator.job';
 import { runSignalOutcomeTrackerManually } from './signal-outcome-tracker.job';
+import { signalMonitoring } from './signal-monitoring.service';
 import type { SignalFilterCriteria } from './types';
 
 export async function signalRoutes(fastify: FastifyInstance) {
@@ -256,6 +257,51 @@ export async function signalRoutes(fastify: FastifyInstance) {
   // =====================================================
   // ADMIN ENDPOINTS
   // =====================================================
+
+  /**
+   * Get signal system health status
+   * GET /api/signals/admin/health
+   */
+  fastify.get(
+    '/signals/admin/health',
+    {
+      preHandler: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      const user = request.user as any;
+
+      // Admin only
+      if (!user.isAdmin) {
+        return reply.status(403).send({
+          success: false,
+          error: 'Admin access required',
+        });
+      }
+
+      try {
+        const health = await signalMonitoring.getSystemHealth();
+        const generatorMetrics = await signalMonitoring.getGeneratorMetrics();
+        const trackerMetrics = await signalMonitoring.getTrackerMetrics();
+
+        return reply.send({
+          success: true,
+          data: {
+            ...health,
+            metrics: {
+              generator: generatorMetrics,
+              tracker: trackerMetrics,
+            },
+          },
+        });
+      } catch (error) {
+        console.error('[SignalRoutes] Health check error:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error instanceof Error ? error.message : 'Health check failed',
+        });
+      }
+    }
+  );
 
   /**
    * Trigger manual signal generation

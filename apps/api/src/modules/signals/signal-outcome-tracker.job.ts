@@ -8,6 +8,7 @@ import cron from 'node-cron';
 import { prisma } from '../../core/database';
 import { redis } from '../../core/cache';
 import { formatSignalUpdate } from './telegram-formatter';
+import { signalMonitoring } from './signal-monitoring.service';
 import type { SignalOutcome } from './types';
 
 const CRON_SCHEDULE = '*/15 * * * *'; // Every 15 minutes
@@ -216,6 +217,7 @@ async function sendUserNotifications(
 
 // Main tracking function
 export async function trackSignalOutcomes() {
+  const startTime = Date.now();
   console.log('[OutcomeTracker] Starting outcome tracking...');
 
   // Acquire distributed lock
@@ -318,6 +320,16 @@ export async function trackSignalOutcomes() {
       }
     }
 
+    // Record successful execution metrics
+    const duration = Date.now() - startTime;
+    await signalMonitoring.recordTrackerRun({
+      success: true,
+      duration,
+      checked: checkedCount,
+      updated: updatedCount,
+      errors: errorCount,
+    });
+
     return {
       success: true,
       checked: checkedCount,
@@ -327,6 +339,15 @@ export async function trackSignalOutcomes() {
     };
   } catch (error) {
     console.error('[OutcomeTracker] Fatal error:', error);
+
+    // Record failure metrics
+    const duration = Date.now() - startTime;
+    await signalMonitoring.recordTrackerRun({
+      success: false,
+      duration,
+      error: error instanceof Error ? error : new Error(String(error)),
+    });
+
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

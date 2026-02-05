@@ -32,4 +32,5 @@ export {
   formatDailySummary,
   formatCapitalFlowAlert,
 } from './telegram-formatter';
+export { signalMonitoring } from './signal-monitoring.service';
 export * from './types';
