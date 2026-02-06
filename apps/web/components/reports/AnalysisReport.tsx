@@ -191,6 +191,45 @@ export interface AnalysisReportData {
     divergences?: Array<{ type: 'bullish' | 'bearish' | 'none'; indicator: string; description: string; reliability: 'high' | 'medium' | 'low'; isEarlySignal: boolean }>;
     summary?: { bullishIndicators: number; bearishIndicators: number; neutralIndicators: number; totalIndicatorsUsed: number; overallSignal: 'bullish' | 'bearish' | 'neutral'; signalConfidence: number; leadingIndicatorsSignal: 'bullish' | 'bearish' | 'neutral' | 'mixed'; leadingIndicatorsCount?: number; laggingIndicatorsCount?: number };
   };
+
+  // RAG Enrichment Layer
+  ragEnrichment?: {
+    research?: {
+      mode: 'fast' | 'news' | 'deep';
+      summary?: string | null;
+      sentiment?: { label: string; score: number } | null;
+      citations?: Array<{ source: string; title: string; sentiment?: string; reliability: number }>;
+    } | null;
+    forecastBands?: Array<{
+      horizon: string;
+      label: string;
+      barsAhead: number;
+      p10: number;
+      p50: number;
+      p90: number;
+      bandWidthPercent: number;
+      drivers: string[];
+    }> | null;
+    strategies?: {
+      recommended: string;
+      strategies: Array<{
+        id: string;
+        label: string;
+        applicability: number;
+        direction: string;
+        entry: { price: number; type: string };
+        stopLoss: { price: number };
+        takeProfits: Array<{ price: number; label: string; weight: number }>;
+        riskReward: number;
+        counterFlow?: boolean;
+      }>;
+    } | null;
+    validation?: {
+      passed: boolean;
+      summary: string;
+    } | null;
+    capitalFlowAligned?: boolean;
+  };
 }
 
 interface IndicatorDetailItem {
@@ -1960,6 +1999,136 @@ interface PdfResult {
 }
 
 // ===========================================
+// PAGE 8: RAG INTELLIGENCE LAYER
+// Forecast Bands, Multi-Strategy, Web Research, Validation
+// ===========================================
+
+function generatePageRAG(data: AnalysisReportData, totalPages: number): string {
+  const rag = data.ragEnrichment;
+  if (!rag) return '';
+
+  const bands = rag.forecastBands || [];
+  const strategies = rag.strategies?.strategies || [];
+  const research = rag.research;
+  const validation = rag.validation;
+  const recommended = rag.strategies?.recommended || '';
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
+  <div class="page">
+    <!-- Header -->
+    <div style="text-align:center;padding:12px 0 15px;border-bottom:2px solid #1a1a1a;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1a1a1a;">RAG Intelligence Layer</div>
+      <div style="font-size:7px;color:#666;margin-top:3px;">${data.symbol} | Page 8 of ${totalPages}</div>
+    </div>
+
+    ${validation ? `
+    <!-- Validation Badge -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:6px 10px;border-radius:6px;border:1px solid ${validation.passed ? '#86efac' : '#fca5a5'};background:${validation.passed ? '#f0fdf4' : '#fef2f2'};">
+      <span style="font-size:12px;">${validation.passed ? '✓' : '✗'}</span>
+      <span style="font-size:8px;font-weight:600;color:${validation.passed ? '#16a34a' : '#dc2626'};">${validation.passed ? 'Plan Validated' : 'Validation Issues Found'}</span>
+      ${rag.capitalFlowAligned != null ? `<span style="margin-left:auto;font-size:6px;font-weight:600;color:${rag.capitalFlowAligned ? '#16a34a' : '#dc2626'};padding:2px 6px;border-radius:3px;background:${rag.capitalFlowAligned ? '#dcfce7' : '#fee2e2'};">${rag.capitalFlowAligned ? 'Flow Aligned' : 'Counter-Flow'}</span>` : ''}
+    </div>
+    ${validation.summary ? `<div style="font-size:7px;color:#666;margin-bottom:10px;padding:4px 8px;background:#fafafa;border-radius:4px;">${validation.summary}</div>` : ''}
+    ` : ''}
+
+    ${bands.length > 0 ? `
+    <!-- Forecast Bands -->
+    <div class="section">
+      <div class="section-header"><span class="section-title">AI Forecast Bands (P10 / P50 / P90)</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+        ${bands.map((b: { horizon: string; label: string; p10: number; p50: number; p90: number; bandWidthPercent: number; drivers: string[] }) => {
+          const horizonColor = b.horizon === 'short' ? '#16a34a' : b.horizon === 'medium' ? '#2563eb' : '#7c3aed';
+          return `
+          <div style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 8px;background:#fafafa;">
+            <div style="font-size:7px;font-weight:600;color:${horizonColor};text-transform:uppercase;margin-bottom:4px;">${b.label || b.horizon}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;text-align:center;">
+              <div><div style="font-size:5px;color:#999;">P10</div><div style="font-size:8px;font-weight:600;color:#dc2626;">${formatPrice(b.p10)}</div></div>
+              <div style="background:#f0fdf4;border-radius:3px;padding:2px;"><div style="font-size:5px;color:#999;">P50</div><div style="font-size:10px;font-weight:700;color:#1a1a1a;">${formatPrice(b.p50)}</div></div>
+              <div><div style="font-size:5px;color:#999;">P90</div><div style="font-size:8px;font-weight:600;color:#16a34a;">${formatPrice(b.p90)}</div></div>
+            </div>
+            <div style="font-size:6px;color:#888;margin-top:3px;text-align:center;">Band: ${b.bandWidthPercent?.toFixed(1) || '0'}%</div>
+            ${b.drivers?.length ? `<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px;">${b.drivers.slice(0, 3).map((d: string) => `<span style="font-size:5px;padding:1px 4px;background:#e0e7ff;border-radius:2px;color:#3730a3;">${d}</span>`).join('')}</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    ` : ''}
+
+    ${strategies.length > 0 ? `
+    <!-- Multi-Strategy Plans -->
+    <div class="section">
+      <div class="section-header"><span class="section-title">Multi-Strategy Plans (${strategies.length} strategies)</span></div>
+      <table class="table" style="margin-top:4px;">
+        <thead>
+          <tr>
+            <th style="width:22%;">Strategy</th>
+            <th style="width:10%;">Dir</th>
+            <th style="width:13%;">Entry</th>
+            <th style="width:13%;">Stop Loss</th>
+            <th style="width:17%;">Take Profits</th>
+            <th style="width:8%;">R:R</th>
+            <th style="width:17%;">Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${strategies.map((s: { id: string; label: string; direction: string; entry: { price: number; type: string }; stopLoss: { price: number }; takeProfits: Array<{ price: number; label: string }>; riskReward: number; applicability: number; counterFlow?: boolean }) => {
+            const isRec = s.id === recommended;
+            return `
+            <tr style="${isRec ? 'background:#f0fdf4;font-weight:600;' : ''}">
+              <td>
+                ${s.label}${isRec ? ' ★' : ''}${s.counterFlow ? ' ⚠️' : ''}
+              </td>
+              <td><span style="color:${s.direction === 'long' ? '#16a34a' : '#dc2626'};font-weight:600;">${s.direction.toUpperCase()}</span></td>
+              <td>${formatPrice(s.entry?.price)} <span style="color:#888;font-size:5px;">(${s.entry?.type || 'market'})</span></td>
+              <td style="color:#dc2626;">${formatPrice(s.stopLoss?.price)}</td>
+              <td>${s.takeProfits?.map((tp: { price: number; label: string }) => `${formatPrice(tp.price)}`).join(' / ') || '-'}</td>
+              <td style="font-weight:600;">${s.riskReward?.toFixed(1) || '-'}:1</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:3px;">
+                  <div style="flex:1;height:4px;background:#e5e7eb;border-radius:2px;overflow:hidden;"><div style="width:${s.applicability || 0}%;height:100%;background:${(s.applicability || 0) >= 70 ? '#16a34a' : (s.applicability || 0) >= 40 ? '#d97706' : '#dc2626'};border-radius:2px;"></div></div>
+                  <span style="font-size:6px;min-width:22px;text-align:right;">${s.applicability || 0}%</span>
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+    ` : ''}
+
+    ${research ? `
+    <!-- Web Research -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Web Research</span>
+        <span style="font-size:6px;padding:1px 5px;border-radius:3px;background:${research.mode === 'deep' ? '#ede9fe' : research.mode === 'news' ? '#dbeafe' : '#f3f4f6'};color:${research.mode === 'deep' ? '#6d28d9' : research.mode === 'news' ? '#1d4ed8' : '#4b5563'};font-weight:600;">${research.mode?.toUpperCase()}</span>
+        ${research.sentiment ? `<span style="font-size:6px;margin-left:auto;color:${research.sentiment.label === 'bullish' ? '#16a34a' : research.sentiment.label === 'bearish' ? '#dc2626' : '#d97706'};font-weight:600;">${research.sentiment.label?.toUpperCase()} (${research.sentiment.score}/100)</span>` : ''}
+      </div>
+      ${research.summary ? `<div style="font-size:7px;color:#374151;line-height:1.5;margin-bottom:6px;padding:6px 8px;background:#f9fafb;border-radius:4px;">${research.summary}</div>` : ''}
+      ${research.citations?.length ? `
+      <div style="font-size:6px;color:#666;font-weight:600;margin-bottom:3px;">Sources (${research.citations.length})</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
+        ${research.citations.slice(0, 6).map((c: { source: string; title: string; sentiment?: string; reliability: number }, i: number) => `
+        <div style="font-size:6px;padding:3px 5px;background:#fafafa;border:1px solid #eee;border-radius:3px;">
+          <span style="font-weight:600;">[${i + 1}] ${c.source}</span>
+          <span style="color:${c.sentiment === 'bullish' ? '#16a34a' : c.sentiment === 'bearish' ? '#dc2626' : '#666'}; margin-left:3px;">${c.sentiment || ''}</span>
+          <div style="color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.title || ''}</div>
+        </div>`).join('')}
+      </div>
+      ` : ''}
+    </div>
+    ` : ''}
+
+    <!-- Footer -->
+    <div style="position:absolute;bottom:15px;left:24px;right:24px;display:flex;justify-content:space-between;font-size:6px;color:#999;border-top:1px solid #eee;padding-top:6px;">
+      <span>TraderPath RAG Intelligence Layer</span>
+      <span>Page 8 of ${totalPages}</span>
+    </div>
+  </div>
+  </body></html>`;
+}
+
+// ===========================================
 // SINGLE PAGE REPORT FORMAT
 // Section 1: Capital Flow Analysis Summary (4 layer boxes 2x2)
 // Section 2: 7 Step Analysis (2-column layout + Trade Decision + ML Confirmation + Trade Plan)
@@ -2425,8 +2594,9 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
       return { base64: pdfBase64, fileName };
     }
 
-    // MULTI-PAGE FORMAT - Detailed 7 page report
-    const totalPages = 7;
+    // MULTI-PAGE FORMAT - Detailed report (7 pages + optional RAG page)
+    const hasRAG = !!data.ragEnrichment;
+    const totalPages = hasRAG ? 8 : 7;
 
     // Page 1: Executive Summary
     console.log('[PDF] Generating page 1: Executive Summary');
@@ -2469,11 +2639,19 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
     const canvas7 = await renderPageToCanvas(generatePageVerdict(data, totalPages));
     pdf.addImage(canvas7.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
+    // Page 8: RAG Intelligence Layer (optional - only if RAG enrichment data exists)
+    if (hasRAG) {
+      console.log('[PDF] Generating page 8: RAG Intelligence Layer');
+      pdf.addPage();
+      const canvas8 = await renderPageToCanvas(generatePageRAG(data, totalPages));
+      pdf.addImage(canvas8.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    }
+
     const fileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_${new Date().toISOString().split('T')[0]}.pdf`;
     const pdfBase64 = pdf.output('datauristring').split(',')[1];
     pdf.save(fileName);
 
-    console.log(`[TraderPath] Report generated successfully: 7 pages`);
+    console.log(`[TraderPath] Report generated successfully: ${totalPages} pages`);
 
     return { base64: pdfBase64, fileName };
   } catch (error) {

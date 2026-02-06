@@ -26,7 +26,11 @@ import {
   AgreementLevel,
   MLIS_CONFIRMATION_WEIGHTS,
   VERDICT_TO_MLIS_MAP,
+  Phase,
+  LiquidityBias,
 } from '../capital-flow/types';
+import { ragOrchestrator } from '../rag';
+import type { RAGEnrichmentResult, ResearchMode } from '../rag/types';
 
 // User type from JWT
 interface JwtUser {
@@ -1035,10 +1039,86 @@ Warn about potential traps and give protective advice.`;
         }
       }
 
+      // Step 9: RAG Enrichment - Web Research, Forecast Bands, Multi-Strategy, Validation
+      // Adds contextual intelligence on top of core analysis (non-blocking)
+      let ragEnrichment: RAGEnrichmentResult | null = null;
+      try {
+        // Determine research mode from request or default to 'fast'
+        const ragMode: ResearchMode = (body as Record<string, unknown>).ragMode as ResearchMode || 'fast';
+        const assetClass = getAssetClass(body.symbol);
+
+        // Build engine output for RAG orchestrator (read-only view of core analysis)
+        const engineOutputForRAG = {
+          currentPrice: assetScan.currentPrice,
+          atr: assetScan.indicators?.atr || assetScan.currentPrice * 0.02,
+          direction: (tradePlan?.direction?.toLowerCase() || preliminaryVerdict.direction?.toLowerCase() || 'neutral') as 'long' | 'short' | 'neutral',
+          confidence: tradePlan?.confidence ?? preliminaryVerdict.confidence ?? 50,
+          supports: assetScan.keyLevels?.supports || [],
+          resistances: assetScan.keyLevels?.resistances || [],
+          rsi: assetScan.indicators?.rsi,
+          adx: assetScan.indicators?.adx,
+          bbWidth: assetScan.indicators?.bollingerBands?.bandwidth,
+          trendStrength: assetScan.indicators?.trendStrength,
+          volume24hRatio: assetScan.volume24hRatio,
+          macdHistogram: assetScan.indicators?.macd?.histogram,
+          tradePlan: tradePlan ? {
+            direction: tradePlan.direction,
+            averageEntry: tradePlan.averageEntry,
+            stopLoss: tradePlan.stopLoss,
+            takeProfits: tradePlan.takeProfits,
+            riskReward: tradePlan.riskReward,
+          } : null,
+          news: marketPulse.news ? {
+            items: (marketPulse.news.items || []).map((n: Record<string, unknown>) => ({
+              title: String(n.title || ''),
+              url: String(n.url || ''),
+              source: String(n.source || ''),
+              publishedAt: n.publishedAt as Date || new Date(),
+              sentiment: String(n.sentiment || 'neutral'),
+            })),
+            sentiment: marketPulse.news.sentiment || { overall: 'neutral', score: 50 },
+          } : undefined,
+          economicCalendar: timing.economicCalendar || undefined,
+        };
+
+        // Capital Flow context for RAG (if available)
+        const cfCtx = capitalFlowModifier ? {
+          phase: (capitalFlowModifier.phase || 'mid') as Phase,
+          bias: (capitalFlowModifier.action === 'avoid' ? 'risk_off' : capitalFlowModifier.action === 'analyze' ? 'risk_on' : 'neutral') as LiquidityBias,
+          direction: capitalFlowModifier.marketAlignment === 'aligned' ? 'entering' as const : capitalFlowModifier.marketAlignment === 'counter' ? 'exiting' as const : 'stable' as const,
+        } : undefined;
+
+        ragEnrichment = await ragOrchestrator.enrichAnalysis(
+          body.symbol,
+          assetClass,
+          engineOutputForRAG,
+          cfCtx,
+          ragMode,
+        );
+
+        logger.info({
+          symbol: body.symbol,
+          mode: ragMode,
+          hasResearch: !!ragEnrichment.research,
+          hasForecast: !!ragEnrichment.forecastBands,
+          strategyCount: ragEnrichment.strategies?.strategies?.length || 0,
+          validationPassed: ragEnrichment.validation?.passed,
+          capitalFlowAligned: ragEnrichment.capitalFlowAligned,
+          costUsd: ragEnrichment.totalCostUsd,
+        }, '[Analysis] Step 9: RAG enrichment completed');
+      } catch (ragError) {
+        // RAG enrichment is non-blocking - analysis continues without it
+        logger.warn({ error: ragError, symbol: body.symbol }, '[Analysis] RAG enrichment failed, proceeding without');
+      }
+
       // Save analysis to database (regardless of verdict)
       // Use the interval from request, not derived from tradeConfig
-      // stepsCompleted now includes step 8 if MLIS confirmation was generated
-      const stepsCompleted = mlisConfirmation ? [1, 2, 3, 4, 5, 6, 7, 8] : [1, 2, 3, 4, 5, 6, 7];
+      // stepsCompleted now includes step 8 if MLIS confirmation was generated, step 9 if RAG enrichment succeeded
+      const stepsCompleted = [
+        1, 2, 3, 4, 5, 6, 7,
+        ...(mlisConfirmation ? [8] : []),
+        ...(ragEnrichment ? [9] : []),
+      ];
 
       const savedAnalysis = await prisma.analysis.create({
         data: {
@@ -1067,6 +1147,35 @@ Warn about potential traps and give protective advice.`;
               alignedSignals: mlisConfirmation.alignedSignals,
               conflictingSignals: mlisConfirmation.conflictingSignals,
               warningMessage: mlisConfirmation.warningMessage,
+            } : null,
+            ragEnrichment: ragEnrichment ? {
+              research: ragEnrichment.research ? {
+                mode: ragEnrichment.research.mode,
+                summary: ragEnrichment.research.summary,
+                sentiment: ragEnrichment.research.sentiment,
+                citations: ragEnrichment.research.citations?.slice(0, 8),
+              } : null,
+              forecastBands: ragEnrichment.forecastBands?.bands || null,
+              strategies: ragEnrichment.strategies ? {
+                recommended: ragEnrichment.strategies.recommended,
+                strategies: ragEnrichment.strategies.strategies.map(s => ({
+                  id: s.id,
+                  label: s.label,
+                  applicability: s.applicability,
+                  direction: s.direction,
+                  entry: s.entry,
+                  stopLoss: s.stopLoss,
+                  takeProfits: s.takeProfits,
+                  riskReward: s.riskReward,
+                  counterFlow: s.counterFlow,
+                })),
+              } : null,
+              validation: ragEnrichment.validation ? {
+                passed: ragEnrichment.validation.passed,
+                checks: ragEnrichment.validation.checks,
+                summary: ragEnrichment.validation.summary,
+              } : null,
+              capitalFlowAligned: ragEnrichment.capitalFlowAligned,
             } : null,
           } as object,
           totalScore: verdict.overallScore,
@@ -1248,6 +1357,43 @@ Explain the key risks and what conditions would need to change before trading th
             preliminaryVerdict, // New: includes direction sources and reasons
             verdict: { ...verdict, aiVerdict },
           },
+          // RAG enrichment layer (Step 9) - web research, forecast bands, multi-strategy
+          ragEnrichment: ragEnrichment ? {
+            research: ragEnrichment.research ? {
+              mode: ragEnrichment.research.mode,
+              summary: ragEnrichment.research.summary,
+              sentiment: ragEnrichment.research.sentiment,
+              citationCount: ragEnrichment.research.citations?.length || 0,
+              citations: ragEnrichment.research.citations?.slice(0, 5).map(c => ({
+                source: c.sourceName,
+                title: c.title,
+                sentiment: c.sentiment,
+                reliability: c.reliability,
+              })),
+            } : null,
+            forecastBands: ragEnrichment.forecastBands?.bands || null,
+            strategies: ragEnrichment.strategies ? {
+              recommended: ragEnrichment.strategies.recommended,
+              strategies: ragEnrichment.strategies.strategies.map(s => ({
+                id: s.id,
+                label: s.label,
+                applicability: s.applicability,
+                direction: s.direction,
+                entry: s.entry,
+                stopLoss: s.stopLoss,
+                takeProfits: s.takeProfits,
+                riskReward: s.riskReward,
+                counterFlow: s.counterFlow,
+              })),
+            } : null,
+            validation: ragEnrichment.validation ? {
+              passed: ragEnrichment.validation.passed,
+              blockers: ragEnrichment.validation.checks.filter(c => c.severity === 'block' && !c.passed).length,
+              warnings: ragEnrichment.validation.checks.filter(c => c.severity === 'warn' && !c.passed).length,
+              summary: ragEnrichment.validation.summary,
+            } : null,
+            capitalFlowAligned: ragEnrichment.capitalFlowAligned,
+          } : null,
         },
         creditsSpent: cost,
         remainingCredits: creditBalance?.balance ?? 0,

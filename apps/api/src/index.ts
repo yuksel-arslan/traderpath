@@ -62,6 +62,7 @@ import subscriptionRoutes from './modules/subscriptions/subscription.routes';
 import { startDailyCreditsJob, stopDailyCreditsJob } from './modules/subscriptions/subscription-cron.job';
 import { startReconciliationJob, stopReconciliationJob } from './modules/admin/reconciliation.cron';
 import { unifiedAnalysisRoutes } from './modules/unified-analysis';
+import { ragRoutes } from './modules/rag';
 
 // ===========================================
 // Server Configuration
@@ -433,6 +434,10 @@ app.register(subscriptionRoutes, { prefix: '/api/subscriptions' }); // Legacy
 // Unified Analysis Pipeline routes
 app.register(unifiedAnalysisRoutes, { prefix: '/api/v1/unified-analysis' });
 app.register(unifiedAnalysisRoutes, { prefix: '/api/unified-analysis' }); // Legacy
+
+// RAG (Retrieval-Augmented Generation) enrichment routes
+app.register(ragRoutes, { prefix: '/api/v1/rag' });
+app.register(ragRoutes, { prefix: '/api/rag' }); // Legacy
 
 // ===========================================
 // 404 Handler
