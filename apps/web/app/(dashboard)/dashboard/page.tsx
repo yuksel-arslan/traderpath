@@ -1,55 +1,39 @@
 'use client';
 
 // ===========================================
-// Unified Dashboard - Capital Flow Integration
-// Platform Performance + My Performance
-// Traffic Light View + Classic View Toggle
+// Dashboard - Focus Mode
+// Clean terminal design with progressive disclosure
 // ===========================================
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import {
   Gem,
   Plus,
   ChevronRight,
+  ChevronDown,
   TrendingUp,
   TrendingDown,
   Target,
   Activity,
   BarChart3,
   Loader2,
-  LineChart,
   CheckCircle2,
   XCircle,
   ArrowRight,
-  Users,
-  Zap,
   Award,
   Brain,
-  AlertTriangle,
-  Sparkles,
   Globe,
-  Landmark,
-  Coins,
-  DollarSign,
-  MessageSquare,
   Bot,
-  HelpCircle,
-  Layers,
-  ArrowUpRight,
-  ArrowDownRight,
   Minus,
-  Clock,
-  LayoutGrid,
-  CircleDot,
 } from 'lucide-react';
-import { TrafficLight, useProactiveSignals } from '@/components/traffic-light';
 import { cn } from '../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
 import { getApiUrl, authFetch } from '../../../lib/api';
 import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
+import { MetricCard, LiquidityGauge, MarketBiasBar } from '@/components/dashboard/MetricCard';
+import { MarketFilter, useMarketFilter } from '@/components/dashboard/MarketFilter';
 
 // Lazy load chart component
 const PnLChart = dynamic(
@@ -58,7 +42,7 @@ const PnLChart = dynamic(
     ssr: false,
     loading: () => (
       <div className="h-full flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-[#5EEDC3]/30 border-t-[#5EEDC3] rounded-full animate-spin" />
       </div>
     )
   }
@@ -245,357 +229,58 @@ function formatCredits(num: number): string {
 }
 
 // ===========================================
-// UI Components
+// Collapsible Section
 // ===========================================
 
-function GrainOverlay() {
-  return (
-    <div
-      className="pointer-events-none fixed inset-0 z-50 opacity-[0.02]"
-      style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-        backgroundRepeat: 'repeat',
-      }}
-    />
-  );
-}
-
-function GradientOrbs() {
-  return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none">
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-teal-500/20 dark:bg-teal-500/10 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute top-1/3 -left-20 w-72 h-72 bg-red-500/20 dark:bg-red-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-      <div className="absolute -bottom-20 right-1/4 w-80 h-80 bg-amber-500/20 dark:bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
-    </div>
-  );
-}
-
-function FeatureBadge({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
-  return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm">
-      <Icon className="w-3.5 h-3.5 text-teal-500" />
-      <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{text}</span>
-    </div>
-  );
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  subValue,
-  color = 'gray',
-  href
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-  subValue?: string;
-  color?: 'gray' | 'emerald' | 'purple' | 'blue' | 'amber' | 'red' | 'green' | 'cyan' | 'teal';
-  href?: string;
-}) {
-  const colorClasses = {
-    gray: 'bg-gray-100/80 dark:bg-white/5 border-gray-200 dark:border-white/10',
-    emerald: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200/50 dark:border-emerald-500/20',
-    purple: 'bg-purple-50 dark:bg-purple-500/10 border-purple-200/50 dark:border-purple-500/20',
-    blue: 'bg-blue-50 dark:bg-blue-500/10 border-blue-200/50 dark:border-blue-500/20',
-    amber: 'bg-amber-50 dark:bg-amber-500/10 border-amber-200/50 dark:border-amber-500/20',
-    red: 'bg-red-50 dark:bg-red-500/10 border-red-200/50 dark:border-red-500/20',
-    green: 'bg-green-50 dark:bg-green-500/10 border-green-200/50 dark:border-green-500/20',
-    cyan: 'bg-cyan-50 dark:bg-cyan-500/10 border-cyan-200/50 dark:border-cyan-500/20',
-    teal: 'bg-teal-50 dark:bg-teal-500/10 border-teal-200/50 dark:border-teal-500/20',
-  };
-
-  const iconColors = {
-    gray: 'text-gray-500',
-    emerald: 'text-emerald-500',
-    purple: 'text-purple-500',
-    blue: 'text-blue-500',
-    amber: 'text-amber-500',
-    red: 'text-red-500',
-    green: 'text-green-500',
-    cyan: 'text-cyan-500',
-    teal: 'text-teal-500',
-  };
-
-  const content = (
-    <div className={cn(
-      "relative overflow-hidden rounded-xl p-4 border transition-all shadow-sm",
-      colorClasses[color],
-      href && "hover:scale-[1.02] cursor-pointer"
-    )}>
-      <div className="flex items-center gap-2 mb-1">
-        <Icon className={cn("w-4 h-4", iconColors[color])} />
-        <span className="text-xs font-medium text-gray-600 dark:text-slate-400">{label}</span>
-      </div>
-      <p className="text-2xl font-bold text-gray-800 dark:text-white">{value}</p>
-      {subValue && (
-        <p className="text-xs text-gray-600 dark:text-slate-500 mt-0.5">{subValue}</p>
-      )}
-    </div>
-  );
-
-  if (href) {
-    return <Link href={href}>{content}</Link>;
-  }
-  return content;
-}
-
-// Capital Flow Layer Card
-function LayerCard({
-  layerNum,
-  title,
-  status,
-  statusType,
-  details,
-  icon: Icon,
-  color,
-  href,
-}: {
-  layerNum: number;
-  title: string;
-  status: string;
-  statusType: 'positive' | 'negative' | 'neutral' | 'warning';
-  details: string;
-  icon: React.ElementType;
-  color: 'blue' | 'emerald' | 'purple' | 'amber';
-  href: string;
-}) {
-  const statusColors = {
-    positive: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
-    negative: 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300',
-    neutral: 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300',
-    warning: 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300',
-  };
-
-  const bgColors: Record<string, string> = {
-    blue: 'from-blue-500/10 to-indigo-500/10 border-blue-500/30 hover:border-blue-500/50',
-    emerald: 'from-emerald-500/10 to-teal-500/10 border-emerald-500/30 hover:border-emerald-500/50',
-    purple: 'from-purple-500/10 to-violet-500/10 border-purple-500/30 hover:border-purple-500/50',
-    amber: 'from-amber-500/10 to-orange-500/10 border-amber-500/30 hover:border-amber-500/50',
-  };
-
-  const numColors: Record<string, string> = {
-    blue: 'bg-blue-500',
-    emerald: 'bg-emerald-500',
-    purple: 'bg-purple-500',
-    amber: 'bg-amber-500',
-  };
-
-  return (
-    <Link
-      href={href}
-      className={cn(
-        'block backdrop-blur-xl bg-gradient-to-br border rounded-xl p-3 hover:shadow-lg transition-all',
-        bgColors[color]
-      )}
-    >
-      <div className="flex items-start gap-2">
-        <div className={cn('w-6 h-6 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0', numColors[color])}>
-          {layerNum}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <Icon className="w-3.5 h-3.5 text-slate-500" />
-            <span className="text-xs font-medium text-slate-600 dark:text-slate-400 truncate">{title}</span>
-          </div>
-          <div className={cn('inline-flex px-2 py-0.5 rounded-full text-xs font-bold mb-1', statusColors[statusType])}>
-            {status}
-          </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{details}</p>
-        </div>
-        <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
-      </div>
-    </Link>
-  );
-}
-
-// AI Stats Card
-function AIStatsCard({
+function CollapsibleSection({
   title,
   icon: Icon,
-  stats,
-  color = 'purple',
+  defaultOpen = false,
+  children,
+  badge,
 }: {
   title: string;
   icon: React.ElementType;
-  stats: { label: string; value: string | number }[];
-  color?: 'purple' | 'teal';
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+  badge?: string;
 }) {
-  const colorConfig = {
-    purple: {
-      bg: 'from-purple-500/10 to-violet-500/10',
-      border: 'border-purple-200/50 dark:border-purple-500/30',
-      iconBg: 'from-purple-400 to-violet-500',
-      iconShadow: 'shadow-purple-500/30',
-    },
-    teal: {
-      bg: 'from-teal-500/10 to-emerald-500/10',
-      border: 'border-teal-200/50 dark:border-teal-500/30',
-      iconBg: 'from-teal-400 to-emerald-500',
-      iconShadow: 'shadow-teal-500/30',
-    },
-  };
-
-  const config = colorConfig[color];
+  const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className={cn(
-      "relative overflow-hidden rounded-xl backdrop-blur-xl bg-gradient-to-br border p-4",
-      config.bg,
-      config.border
-    )}>
-      <div className="flex items-center gap-3 mb-3">
-        <div className={cn("w-9 h-9 rounded-lg bg-gradient-to-br flex items-center justify-center shadow-lg", config.iconBg, config.iconShadow)}>
-          <Icon className="w-4.5 h-4.5 text-white" />
+    <div className="rounded-lg border border-[#1E293B] bg-[#0F1629] overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Icon className="w-4 h-4 text-gray-400" />
+          <span className="text-sm font-medium text-white">{title}</span>
+          {badge && (
+            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#5EEDC3]/10 text-[#5EEDC3] border border-[#5EEDC3]/20">
+              {badge}
+            </span>
+          )}
         </div>
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">{title}</h3>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {stats.map((stat, idx) => (
-          <div key={idx} className="text-center">
-            <p className="text-lg font-bold text-slate-900 dark:text-white">{stat.value}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">{stat.label}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Signal Stats Card
-function SignalStatsCard({
-  stats,
-  recentSignals,
-}: {
-  stats: SignalStats;
-  recentSignals: SignalStats['recentSignals'];
-}) {
-  const borderColor = stats.winRate >= 70 ? 'border-green-500/30' : stats.winRate >= 50 ? 'border-amber-500/30' : 'border-red-500/30';
-  const bgGradient = stats.winRate >= 70 ? 'from-green-500/10' : stats.winRate >= 50 ? 'from-amber-500/10' : 'from-red-500/10';
-
-  return (
-    <div className={cn(
-      'relative overflow-hidden rounded-xl border backdrop-blur-xl',
-      'bg-white/80 dark:bg-slate-900/80',
-      borderColor
-    )}>
-      <div className={cn('absolute inset-0 bg-gradient-to-br via-transparent to-transparent', bgGradient)} />
-      <div className="relative z-10 p-4">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-teal-500" />
-            <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">My Signals Performance</h3>
-          </div>
-          <Link href="/signals" className="text-xs text-primary hover:underline flex items-center gap-1">
-            View All
-            <ArrowRight className="w-3 h-3" />
-          </Link>
+        <div className="flex items-center gap-2">
+          {!open && (
+            <span className="text-xs text-gray-500">View</span>
+          )}
+          <ChevronDown
+            className={cn(
+              'w-4 h-4 text-gray-500 transition-transform duration-300',
+              open && 'rotate-180'
+            )}
+          />
         </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="text-center">
-            <p className="text-lg font-bold text-slate-900 dark:text-white">{stats.totalSignals}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Total Signals</p>
-          </div>
-          <div className="text-center">
-            <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{stats.activeSignals}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Active</p>
-          </div>
-          <div className="text-center">
-            <p className="text-lg font-bold text-gray-600 dark:text-gray-400">{stats.closedSignals}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Closed</p>
-          </div>
-          <div className="text-center">
-            <p className={cn(
-              "text-lg font-bold",
-              stats.winRate >= 70 ? "text-green-600 dark:text-green-400" :
-              stats.winRate >= 50 ? "text-amber-600 dark:text-amber-400" :
-              "text-red-600 dark:text-red-400"
-            )}>
-              {stats.closedSignals > 0 ? `${stats.winRate.toFixed(0)}%` : '—'}
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Win Rate</p>
-          </div>
-        </div>
-
-        {/* Best Performer */}
-        {stats.bestPerformer && (
-          <div className="mb-4 p-2 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Award className="w-3 h-3 text-green-600 dark:text-green-400" />
-                <span className="text-xs font-medium text-green-700 dark:text-green-300">Best Performer</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-green-700 dark:text-green-300">{stats.bestPerformer.symbol}</span>
-                <span className="text-xs font-bold text-green-600 dark:text-green-400">
-                  +{stats.bestPerformer.pnl.toFixed(1)}%
-                </span>
-              </div>
-            </div>
-          </div>
+      </button>
+      <div
+        className={cn(
+          'transition-all duration-300 ease-in-out overflow-hidden',
+          open ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
         )}
-
-        {/* Recent Signals */}
-        {recentSignals.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">Recent Signals</p>
-            {recentSignals.map((signal) => (
-              <Link
-                key={signal.id}
-                href={`/signals/${signal.id}`}
-                className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white">{signal.symbol}</span>
-                  <span className={cn(
-                    "px-1.5 py-0.5 rounded text-[10px] font-bold",
-                    signal.direction === 'long'
-                      ? "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300"
-                      : "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300"
-                  )}>
-                    {signal.direction.toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {signal.outcome ? (
-                    <>
-                      {(signal.outcome === 'tp1_hit' || signal.outcome === 'tp2_hit') && (
-                        <CheckCircle2 className="w-3 h-3 text-green-500" />
-                      )}
-                      {signal.outcome === 'sl_hit' && (
-                        <XCircle className="w-3 h-3 text-red-500" />
-                      )}
-                      {signal.pnlPercent !== null && (
-                        <span className={cn(
-                          "text-xs font-bold",
-                          signal.pnlPercent >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                        )}>
-                          {signal.pnlPercent >= 0 ? '+' : ''}{signal.pnlPercent.toFixed(1)}%
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Live</span>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-
-        {recentSignals.length === 0 && (
-          <div className="text-center py-4">
-            <Activity className="w-6 h-6 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
-            <p className="text-xs text-slate-500 dark:text-slate-400">No signals yet</p>
-            <Link href="/settings?tab=signals" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-              Configure preferences
-              <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-        )}
+      >
+        <div className="p-6 pt-2 border-t border-[#1E293B]">{children}</div>
       </div>
     </div>
   );
@@ -607,26 +292,26 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
   const hasValidPnL = pnlValue !== null && pnlValue !== undefined;
   const isProfit = hasValidPnL && pnlValue >= 0;
   const verdictConfig = {
-    go: { bg: 'bg-green-500', text: 'GO' },
+    go: { bg: 'bg-emerald-500', text: 'GO' },
     conditional_go: { bg: 'bg-yellow-500', text: 'C-GO' },
     wait: { bg: 'bg-gray-500', text: 'WAIT' },
-    avoid: { bg: 'bg-red-500', text: 'AVOID' },
+    avoid: { bg: 'bg-[#EF5A6F]', text: 'AVOID' },
   };
 
   return (
     <Link
       href={`/analyze/details/${trade.id}`}
-      className="flex-shrink-0 w-[200px] bg-white dark:bg-slate-800 rounded-xl border border-gray-300 dark:border-slate-700 p-3 hover:border-primary/50 transition-colors shadow-sm"
+      className="flex-shrink-0 w-[200px] rounded-lg border border-[#1E293B] bg-[#0F1629] p-3 hover:border-[#5EEDC3]/30 transition-colors"
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <img
             src={getCoinIcon(trade.symbol)}
             alt={trade.symbol}
-            className="w-6 h-6 rounded-full"
+            className="w-5 h-5 rounded-full"
             onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON; }}
           />
-          <span className="font-bold text-gray-800 dark:text-white text-sm">{trade.symbol}</span>
+          <span className="font-bold text-white text-sm">{trade.symbol}</span>
         </div>
         <span className={cn(
           "px-1.5 py-0.5 rounded text-[10px] font-bold text-white",
@@ -637,18 +322,20 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 text-xs font-medium text-gray-600 dark:text-slate-400">
+        <div className="flex items-center gap-1 text-xs font-medium text-gray-400">
           {trade.direction?.toLowerCase() === 'long' ? (
-            <TrendingUp className="w-3 h-3 text-green-500" />
+            <TrendingUp className="w-3 h-3 text-[#5EEDC3]" />
+          ) : trade.direction?.toLowerCase() === 'short' ? (
+            <TrendingDown className="w-3 h-3 text-[#EF5A6F]" />
           ) : (
-            <TrendingDown className="w-3 h-3 text-red-500" />
+            <Minus className="w-3 h-3 text-gray-400" />
           )}
-          {trade.direction?.toLowerCase() || 'long'}
+          {trade.direction?.toLowerCase() || 'neutral'}
         </div>
         <span className={cn(
           "font-bold text-sm",
-          !hasValidPnL ? "text-gray-500 dark:text-slate-500" :
-          isProfit ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+          !hasValidPnL ? "text-gray-500" :
+          isProfit ? "text-[#5EEDC3]" : "text-[#EF5A6F]"
         )}>
           {hasValidPnL ? `${isProfit ? '+' : ''}${pnlValue!.toFixed(1)}%` : 'N/A'}
         </span>
@@ -658,8 +345,8 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
         <div className={cn(
           "mt-2 pt-2 border-t flex items-center justify-center gap-1 text-xs font-semibold",
           trade.outcome === 'correct'
-            ? "border-green-200 dark:border-green-500/20 text-green-600 dark:text-green-400"
-            : "border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400"
+            ? "border-emerald-500/20 text-[#5EEDC3]"
+            : "border-red-500/20 text-[#EF5A6F]"
         )}>
           {trade.outcome === 'correct' ? (
             <><CheckCircle2 className="w-3 h-3" /> TP Hit</>
@@ -678,19 +365,9 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
 const CACHE_KEY = 'dashboard_unified_cache';
 const CACHE_DURATION = 5 * 60 * 1000;
 
-// View Mode Type
-type DashboardViewMode = 'traffic-light' | 'classic';
-
 export default function DashboardPage() {
-  const router = useRouter();
-
-  // View mode state - persisted in localStorage
-  // Initialize with default, then hydrate from localStorage in useEffect
-  const [viewMode, setViewMode] = useState<DashboardViewMode>('traffic-light');
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  // Traffic Light signals
-  const { signals: proactiveSignals, isLoading: signalsLoading } = useProactiveSignals();
+  // Market filter state
+  const [selectedMarkets, setSelectedMarkets] = useMarketFilter();
 
   const [credits, setCredits] = useState(0);
   const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
@@ -703,22 +380,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const initialLoadDone = useRef(false);
-
-  // Hydrate view mode from localStorage after mount
-  useEffect(() => {
-    const saved = localStorage.getItem('dashboard_view_mode');
-    if (saved === 'classic' || saved === 'traffic-light') {
-      setViewMode(saved);
-    }
-    setIsHydrated(true);
-  }, []);
-
-  // Save view mode preference when it changes (after hydration)
-  useEffect(() => {
-    if (isHydrated) {
-      localStorage.setItem('dashboard_view_mode', viewMode);
-    }
-  }, [viewMode, isHydrated]);
 
   const fetchData = useCallback(async (forceRefresh = false) => {
     try {
@@ -784,7 +445,7 @@ export default function DashboardPage() {
       if (livePricesRes.ok) {
         const data = await livePricesRes.json();
         const analyses = data.data?.analyses || [];
-        newRecentAnalyses = analyses.map((a: any) => {
+        newRecentAnalyses = analyses.map((a: Record<string, any>) => {
           const rawVerdict = (a.verdict || '').toLowerCase().replace(/[^a-z_]/g, '');
           let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
           if (rawVerdict === 'go' || rawVerdict === 'go!') verdict = 'go';
@@ -835,8 +496,6 @@ export default function DashboardPage() {
       }
 
       // Calculate AI Stats from available data
-      // Platform stats: estimate based on total analyses (real tracking TBD)
-      // User stats: use real aiExpertQuestionsTotal from statistics API
       newAIStats = {
         platform: {
           totalExpertQuestions: newPlatformStats?.platform?.totalAnalyses ? Math.floor(newPlatformStats.platform.totalAnalyses * 0.8) : 0,
@@ -847,7 +506,7 @@ export default function DashboardPage() {
         },
         user: {
           expertQuestions: newUserStats?.aiExpertQuestionsTotal || 0,
-          conciergeMessages: Math.floor((newUserStats?.totalAnalyses || 0) * 1.0), // Estimate: ~1 message per analysis
+          conciergeMessages: Math.floor((newUserStats?.totalAnalyses || 0) * 1.0),
         },
       };
       setAIStats(newAIStats);
@@ -862,9 +521,8 @@ export default function DashboardPage() {
           const wins = (closedSignals.tp1_hit || 0) + (closedSignals.tp2_hit || 0);
           const winRate = totalClosed > 0 ? (wins / totalClosed) * 100 : 0;
 
-          // Get recent signals
           const recentSignals = await authFetch('/api/v1/signals?limit=3');
-          let recentSignalsData: any[] = [];
+          let recentSignalsData: Record<string, any>[] = [];
           if (recentSignals.ok) {
             const signalsJson = await recentSignals.json();
             recentSignalsData = signalsJson.data?.signals || [];
@@ -876,7 +534,7 @@ export default function DashboardPage() {
             closedSignals: totalClosed,
             winRate,
             bestPerformer: signalsData.bestPerformer || null,
-            recentSignals: recentSignalsData.map((s: any) => ({
+            recentSignals: recentSignalsData.map((s) => ({
               id: s.id,
               symbol: s.symbol,
               direction: s.direction,
@@ -977,7 +635,6 @@ export default function DashboardPage() {
       const currentHour = today.getHours();
       const currentBucket = Math.floor(currentHour / 3) * 3;
       const totalDayPnl = todayData?.total || 0;
-      const dayTrades = todayData?.trades || 0;
 
       return hours.map(h => {
         const isCurrentOrPast = h <= currentBucket;
@@ -988,7 +645,7 @@ export default function DashboardPage() {
           pnl: Number(pnl.toFixed(2)),
           positive: Math.max(0, pnl),
           negative: Math.min(0, pnl),
-          count: h === currentBucket ? dayTrades : 0,
+          count: 0,
         };
       });
     }
@@ -1078,37 +735,23 @@ export default function DashboardPage() {
   // Dashboard tour steps
   const dashboardTourSteps: TourStep[] = [
     {
-      target: '#tour-dashboard-hero',
-      title: 'Welcome to Dashboard',
-      content: 'Your trading command center. Monitor performance, track positions, and follow market flows all in one place.',
+      target: '#tour-focus-metrics',
+      title: 'Key Metrics',
+      content: 'Global liquidity status, market bias, and your credit balance at a glance.',
       placement: 'bottom',
-      spotlightPadding: 20,
+      spotlightPadding: 12,
     },
     {
-      target: '#tour-credits',
-      title: 'Your Credits',
-      content: 'Credits are used for analyses and premium features. Buy more credits or earn free credits through rewards.',
-      placement: 'bottom',
-      spotlightPadding: 8,
-    },
-    {
-      target: '#tour-capital-flow',
-      title: 'Capital Flow Summary',
-      content: 'Quick overview of the 4-layer Capital Flow system. See global liquidity, market flow, sector activity, and AI recommendations at a glance.',
+      target: '#tour-market-filter',
+      title: 'Market Filter',
+      content: 'Filter markets you care about. Your selection is saved across sessions.',
       placement: 'bottom',
       spotlightPadding: 8,
     },
     {
-      target: '#tour-platform-performance',
-      title: 'Platform Performance',
-      content: 'See how the platform is performing overall. Track platform accuracy, total analyses, and active users.',
-      placement: 'bottom',
-      spotlightPadding: 8,
-    },
-    {
-      target: '#tour-my-performance',
-      title: 'My Performance',
-      content: 'Track your personal trading performance. See your accuracy, P/L chart, and active trades.',
+      target: '#tour-sections',
+      title: 'Expandable Sections',
+      content: 'Click any section header to expand and see details. Everything stays collapsed by default for a clean view.',
       placement: 'top',
       spotlightPadding: 8,
     },
@@ -1116,13 +759,11 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="relative min-h-screen bg-slate-50 dark:bg-[#0B1120]">
-        <GrainOverlay />
-        <GradientOrbs />
+      <div className="relative min-h-screen bg-[#0A0E27]">
         <div className="relative z-10 flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <Loader2 className="w-10 h-10 animate-spin text-teal-500 mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-slate-400 font-medium">Loading dashboard...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-[#5EEDC3] mx-auto mb-4" />
+            <p className="text-gray-400 text-sm">Loading dashboard...</p>
           </div>
         </div>
       </div>
@@ -1130,469 +771,286 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-slate-50 dark:bg-[#0B1120]">
+    <div className="relative min-h-screen bg-[#0A0E27]">
       {/* Onboarding Tour */}
       <OnboardingTour
         steps={dashboardTourSteps}
-        tourId="dashboard"
+        tourId="dashboard-focus"
         autoStart={true}
       />
 
-      <GrainOverlay />
-      <GradientOrbs />
+      <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
 
-      <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        {/* ===== HERO SECTION ===== */}
-        <div id="tour-dashboard-hero" className="text-center space-y-3 sm:space-y-4 py-4 sm:py-6 mb-8">
-          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-teal-500/10 to-red-500/10 border border-teal-500/20 backdrop-blur-sm animate-blur-in">
-            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-teal-500 animate-pulse" />
-            <span className="text-xs sm:text-sm font-medium bg-gradient-to-r from-teal-500 to-red-500 bg-clip-text text-transparent">
-              Your Trading Command Center
-            </span>
-          </div>
+        {/* ===== TOP 3 METRIC CARDS ===== */}
+        <div id="tour-focus-metrics" className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
 
-          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold">
-            <span className="bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">
-              Trading
-            </span>
-            <br />
-            <span className="relative inline-block">
-              <span className="bg-gradient-to-r from-teal-500 via-red-400 to-teal-500 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer" style={{ animationDelay: '0.5s' }}>
-                Dashboard
-              </span>
-              <span className="absolute -bottom-1 sm:-bottom-2 left-0 right-0 h-0.5 sm:h-1 bg-gradient-to-r from-teal-500 via-red-400 to-teal-500 rounded-full opacity-50 animate-pulse" />
-            </span>
-          </h1>
-
-          <p className="text-sm sm:text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto animate-slide-up px-2">
-            Monitor your portfolio, track performance, and follow the money flow
-          </p>
-
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pt-2 sm:pt-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <FeatureBadge icon={Globe} text="Capital Flow" />
-            <FeatureBadge icon={BarChart3} text="P/L Analytics" />
-            <FeatureBadge icon={Brain} text="AI Insights" />
-            <FeatureBadge icon={Zap} text="Real-time Data" />
-          </div>
-
-          {/* View Mode Toggle */}
-          <div className="flex justify-center pt-4 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
-              <button
-                onClick={() => setViewMode('traffic-light')}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
-                  viewMode === 'traffic-light'
-                    ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/25"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50"
-                )}
-              >
-                <CircleDot className="w-4 h-4" />
-                <span className="hidden sm:inline">Simple</span>
-              </button>
-              <button
-                onClick={() => setViewMode('classic')}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
-                  viewMode === 'classic'
-                    ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/25"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-700/50"
-                )}
-              >
-                <LayoutGrid className="w-4 h-4" />
-                <span className="hidden sm:inline">Classic</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* ===== TRAFFIC LIGHT VIEW ===== */}
-        {viewMode === 'traffic-light' && (
-          <div className="py-8">
-            {signalsLoading ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="text-center">
-                  <Loader2 className="w-10 h-10 animate-spin text-emerald-500 mx-auto mb-4" />
-                  <p className="text-slate-600 dark:text-slate-400 font-medium">Scanning markets...</p>
-                </div>
-              </div>
-            ) : (
-              <TrafficLight
-                signals={proactiveSignals}
-                onNotifyMe={() => router.push('/settings?tab=notifications')}
-                onAnalyze={(asset) => router.push(`/analyze?symbol=${asset}`)}
-                streak={userStats?.goSignals || 0}
-                xp={userStats?.totalAnalyses ? userStats.totalAnalyses * 10 : 0}
-                level={Math.floor((userStats?.totalAnalyses || 0) / 10) + 1}
-                nextLevelXp={100}
+          {/* L1: Global Liquidity Status */}
+          <MetricCard title="Global Liquidity">
+            {capitalFlow ? (
+              <LiquidityGauge
+                bias={capitalFlow.liquidityBias}
+                fedTrend={capitalFlow.globalLiquidity.fedBalanceSheet.trend}
+                dxyValue={capitalFlow.globalLiquidity.dxy.value}
+                vixLevel={capitalFlow.globalLiquidity.vix.level}
               />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-4">
+                <Globe className="w-6 h-6 text-gray-600 mb-2" />
+                <p className="text-xs text-gray-500">No data</p>
+                <Link href="/capital-flow" className="mt-2 text-xs text-[#5EEDC3] hover:underline">
+                  View Capital Flow
+                </Link>
+              </div>
             )}
+          </MetricCard>
 
-            {/* Quick Stats below Traffic Light */}
-            <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto">
-              <div className="text-center p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
-                <div className="text-2xl font-bold text-slate-900 dark:text-white">{formatCredits(credits)}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Credits</div>
+          {/* L2: Market Bias Indicator */}
+          <MetricCard title="Market Bias">
+            {capitalFlow && capitalFlow.markets.length > 0 ? (
+              <MarketBiasBar
+                markets={capitalFlow.markets
+                  .filter(m => m && m.market)
+                  .map(m => ({
+                    market: m.market,
+                    flow7d: m.flow7d ?? 0,
+                    phase: m.phase || 'mid',
+                  }))}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-4">
+                <BarChart3 className="w-6 h-6 text-gray-600 mb-2" />
+                <p className="text-xs text-gray-500">No data</p>
+                <Link href="/capital-flow" className="mt-2 text-xs text-[#5EEDC3] hover:underline">
+                  View Capital Flow
+                </Link>
               </div>
-              <div className="text-center p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
-                <div className="text-2xl font-bold text-slate-900 dark:text-white">{userStats?.totalAnalyses || 0}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Analyses</div>
-              </div>
-              <div className="text-center p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
-                <div className={cn(
-                  "text-2xl font-bold",
-                  (userStats?.accuracy || 0) >= 50 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-900 dark:text-white"
-                )}>
-                  {userStats?.verifiedAnalyses ? `${userStats.accuracy?.toFixed(0)}%` : '—'}
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Accuracy</div>
-              </div>
-              <div className="text-center p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{userStats?.activeCount || 0}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">Active</div>
-              </div>
-            </div>
+            )}
+          </MetricCard>
 
-            {/* Quick Actions */}
-            <div className="mt-6 flex flex-wrap justify-center gap-3">
+          {/* Credits Balance */}
+          <MetricCard title="Credits Balance">
+            <div className="flex flex-col items-center">
+              <div className="flex items-baseline gap-2 mb-1">
+                <Gem className="w-5 h-5 text-amber-400" />
+                <span className="text-3xl font-black text-white tabular-nums">{formatCredits(credits)}</span>
+              </div>
+              {credits < 10 && credits > 0 && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 mb-3">
+                  Running low
+                </span>
+              )}
+              {credits === 0 && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#EF5A6F]/20 text-[#EF5A6F] mb-3">
+                  No credits
+                </span>
+              )}
+              {credits >= 10 && <div className="mb-3" />}
               <Link
-                href="/explore"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+                href="/pricing"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#5EEDC3] text-[#0A0E27] text-sm font-semibold hover:bg-[#5EEDC3]/90 transition"
               >
-                <Globe className="w-4 h-4 text-blue-500" />
-                Explore Markets
+                <Plus className="w-3.5 h-3.5" />
+                Buy More
               </Link>
               <Link
                 href="/rewards"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+                className="mt-2 text-xs text-gray-400 hover:text-[#5EEDC3] transition"
               >
-                <Award className="w-4 h-4 text-amber-500" />
-                Earn Rewards
-              </Link>
-              <Link
-                href="/reports"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-colors"
-              >
-                <BarChart3 className="w-4 h-4 text-emerald-500" />
-                View Reports
+                Earn free credits
               </Link>
             </div>
-          </div>
-        )}
-
-        {/* ===== CLASSIC VIEW ===== */}
-        {viewMode === 'classic' && (
-          <>
-        {/* ===== CREDITS SECTION ===== */}
-        <div id="tour-credits" className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-amber-200/50 dark:border-slate-700/50 shadow-lg mb-6">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-yellow-500/5" />
-          <div className="relative z-10 p-5">
-            <div className="flex items-center gap-4">
-              <div className="relative shrink-0">
-                <div className="absolute inset-0 bg-amber-500/30 dark:bg-amber-500/40 blur-xl rounded-full animate-pulse" />
-                <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-500 flex items-center justify-center shadow-lg">
-                  <Gem className="w-7 h-7 text-white" />
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-amber-700 dark:text-slate-400 uppercase tracking-wider">Credits</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-gray-800 dark:text-white">{formatCredits(credits)}</span>
-                  {credits < 10 && credits > 0 && (
-                    <span className="text-xs px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded-full animate-pulse">Low</span>
-                  )}
-                  {credits === 0 && (
-                    <span className="text-xs px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full animate-pulse">Empty</span>
-                  )}
-                </div>
-              </div>
-              <div className="ml-auto flex items-center gap-3">
-                <Link href="/pricing" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-sm font-medium hover:opacity-90 transition">
-                  <Plus className="w-3.5 h-3.5" />
-                  Buy
-                </Link>
-                <Link href="/rewards" className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300">
-                  Earn free
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            </div>
-            {credits < 10 && (
-              <div className={cn(
-                "mt-3 p-2 rounded-lg text-xs font-medium flex items-center gap-2",
-                credits === 0
-                  ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                  : "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-              )}>
-                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                {credits === 0 ? "No credits left! Buy or earn credits to continue." : `Running low on credits (${formatCredits(credits)} remaining)`}
-              </div>
-            )}
-          </div>
+          </MetricCard>
         </div>
 
-        {/* ===== PLATFORM PERFORMANCE SECTION ===== */}
-        <section id="tour-platform-performance" className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <Globe className="w-4.5 h-4.5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">Platform Performance</h2>
-              <p className="text-xs text-gray-500 dark:text-slate-400">Global insights and Capital Flow</p>
-            </div>
-            {/* Tour Trigger Button */}
-            <div className="ml-auto">
-              <TourTriggerButton tourId="dashboard" />
-            </div>
-          </div>
+        {/* ===== MARKET FILTER ===== */}
+        <div id="tour-market-filter" className="mb-6">
+          <MarketFilter selected={selectedMarkets} onChange={setSelectedMarkets} />
+        </div>
 
-          {/* Capital Flow 4-Layer Summary */}
+        {/* Tour trigger */}
+        <div className="flex justify-end mb-4">
+          <TourTriggerButton tourId="dashboard-focus" />
+        </div>
+
+        {/* ===== COLLAPSIBLE SECTIONS ===== */}
+        <div id="tour-sections" className="space-y-4">
+
+          {/* Capital Flow Summary */}
           {capitalFlow && (
-            <div id="tour-capital-flow" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-              <LayerCard
-                layerNum={1}
-                title="Global Liquidity"
-                status={
-                  capitalFlow.globalLiquidity.fedBalanceSheet.trend === 'expanding' ? 'EXPANDING' :
-                  capitalFlow.globalLiquidity.fedBalanceSheet.trend === 'contracting' ? 'CONTRACTING' : 'STABLE'
-                }
-                statusType={
-                  capitalFlow.globalLiquidity.fedBalanceSheet.trend === 'expanding' ? 'positive' :
-                  capitalFlow.globalLiquidity.fedBalanceSheet.trend === 'contracting' ? 'negative' : 'neutral'
-                }
-                details={`Fed: ${capitalFlow.globalLiquidity.fedBalanceSheet.value.toFixed(1)}T • DXY: ${capitalFlow.globalLiquidity.dxy.value.toFixed(1)}`}
-                icon={Landmark}
-                color="blue"
-                href="/capital-flow"
-              />
+            <CollapsibleSection
+              title="Capital Flow"
+              icon={Globe}
+              badge={capitalFlow.recommendation?.action === 'analyze' ? 'OPPORTUNITY' : undefined}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* L1 */}
+                <Link href="/capital-flow" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white">1</div>
+                    <span className="text-xs text-gray-400">Global Liquidity</span>
+                  </div>
+                  <span className={cn(
+                    'text-sm font-bold',
+                    capitalFlow.liquidityBias === 'risk_on' ? 'text-[#5EEDC3]' :
+                    capitalFlow.liquidityBias === 'risk_off' ? 'text-[#EF5A6F]' : 'text-gray-400'
+                  )}>
+                    {capitalFlow.liquidityBias === 'risk_on' ? 'RISK ON' :
+                     capitalFlow.liquidityBias === 'risk_off' ? 'RISK OFF' : 'NEUTRAL'}
+                  </span>
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Fed: {capitalFlow.globalLiquidity.fedBalanceSheet.value.toFixed(1)}T
+                  </p>
+                </Link>
 
-              <LayerCard
-                layerNum={2}
-                title="Market Flow"
-                status={(() => {
-                  const topMarket = capitalFlow.markets.reduce((prev, curr) =>
-                    curr.flow7d > prev.flow7d ? curr : prev
-                  );
-                  return `${topMarket.market.toUpperCase()} LEADS`;
-                })()}
-                statusType={(() => {
-                  const topMarket = capitalFlow.markets.reduce((prev, curr) =>
-                    curr.flow7d > prev.flow7d ? curr : prev
-                  );
-                  return topMarket.flow7d > 2 ? 'positive' : topMarket.flow7d > 0 ? 'neutral' : 'warning';
-                })()}
-                details={`${capitalFlow.markets.filter(m => m.flow7d > 0).length}/4 markets inflow`}
-                icon={BarChart3}
-                color="emerald"
-                href="/capital-flow"
-              />
+                {/* L2 */}
+                <Link href="/capital-flow" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded bg-emerald-500 flex items-center justify-center text-[10px] font-bold text-white">2</div>
+                    <span className="text-xs text-gray-400">Market Flow</span>
+                  </div>
+                  <span className="text-sm font-bold text-white">
+                    {(() => {
+                      const valid = capitalFlow.markets.filter(m => m && m.market);
+                      if (valid.length === 0) return 'N/A';
+                      const top = valid.reduce((a, b) => (b.flow7d ?? 0) > (a.flow7d ?? 0) ? b : a);
+                      return `${(top.market || '').toUpperCase()} LEADS`;
+                    })()}
+                  </span>
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    {capitalFlow.markets.filter(m => (m.flow7d ?? 0) > 0).length}/{capitalFlow.markets.length} inflow
+                  </p>
+                </Link>
 
-              <LayerCard
-                layerNum={3}
-                title="Sector Activity"
-                status={(() => {
-                  const phase = capitalFlow.markets.find(m => m.market === capitalFlow.recommendation?.primaryMarket)?.phase;
-                  return phase ? `${phase.toUpperCase()} PHASE` : 'ANALYZING';
-                })()}
-                statusType={
-                  capitalFlow.markets.find(m => m.market === capitalFlow.recommendation?.primaryMarket)?.phase === 'early' ? 'positive' :
-                  capitalFlow.markets.find(m => m.market === capitalFlow.recommendation?.primaryMarket)?.phase === 'mid' ? 'neutral' : 'warning'
-                }
-                details={`${capitalFlow.recommendation?.primaryMarket || 'Market'} recommended`}
-                icon={Activity}
-                color="purple"
-                href="/capital-flow"
-              />
+                {/* L3 */}
+                <Link href="/capital-flow" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded bg-purple-500 flex items-center justify-center text-[10px] font-bold text-white">3</div>
+                    <span className="text-xs text-gray-400">Sector</span>
+                  </div>
+                  <span className="text-sm font-bold text-white">
+                    {(() => {
+                      const rec = capitalFlow.recommendation;
+                      const market = capitalFlow.markets.find(m => m.market === rec?.primaryMarket);
+                      return market ? `${(market.phase || 'mid').toUpperCase()} PHASE` : 'ANALYZING';
+                    })()}
+                  </span>
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    {capitalFlow.recommendation?.primaryMarket || 'Market'} recommended
+                  </p>
+                </Link>
 
-              <LayerCard
-                layerNum={4}
-                title="Recommendation"
-                status={`${(capitalFlow.recommendation?.action || 'wait').toUpperCase()} ${(capitalFlow.recommendation?.primaryMarket || 'MARKET').toUpperCase()}`}
-                statusType={
-                  capitalFlow.recommendation?.action === 'analyze' ? 'positive' :
-                  capitalFlow.recommendation?.action === 'wait' ? 'warning' : 'negative'
-                }
-                details={`${capitalFlow.recommendation?.confidence || 0}% confidence`}
-                icon={Target}
-                color="amber"
-                href="/capital-flow"
-              />
-            </div>
+                {/* L4 */}
+                <Link href="/capital-flow" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded bg-amber-500 flex items-center justify-center text-[10px] font-bold text-white">4</div>
+                    <span className="text-xs text-gray-400">Recommendation</span>
+                  </div>
+                  <span className={cn(
+                    'text-sm font-bold',
+                    capitalFlow.recommendation?.action === 'analyze' ? 'text-[#5EEDC3]' :
+                    capitalFlow.recommendation?.action === 'wait' ? 'text-amber-400' : 'text-[#EF5A6F]'
+                  )}>
+                    {(capitalFlow.recommendation?.action || 'wait').toUpperCase()} {(capitalFlow.recommendation?.primaryMarket || '').toUpperCase()}
+                  </span>
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    {capitalFlow.recommendation?.confidence || 0}% confidence
+                  </p>
+                </Link>
+              </div>
+            </CollapsibleSection>
           )}
 
-          {/* Platform Performance Chart */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-            <div className="lg:col-span-2 relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500/5 dark:from-blue-500/10 via-transparent to-transparent" />
-              <div className="relative z-10 p-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                      <LineChart className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white">Platform P/L</h3>
-                      <p className="text-xs text-gray-500 dark:text-slate-400">All verified trades</p>
-                    </div>
-                  </div>
+          {/* Platform Performance */}
+          <CollapsibleSection title="Platform Performance" icon={Target}>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Platform P/L Chart */}
+              <div className="lg:col-span-2 rounded-lg border border-[#1E293B] bg-[#0A0E27] p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-white">Platform P/L</span>
                   <div className={cn(
-                    "px-2.5 py-1 rounded-lg font-bold text-sm",
+                    "px-2 py-0.5 rounded text-xs font-bold",
                     (performanceData?.summary?.totalRealizedPnL || 0) >= 0
-                      ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                      : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                      ? "bg-emerald-500/20 text-[#5EEDC3]"
+                      : "bg-red-500/20 text-[#EF5A6F]"
                   )}>
                     {performanceData?.summary?.totalRealizedPnL !== undefined
                       ? `${(performanceData.summary.totalRealizedPnL >= 0 ? '+' : '')}${performanceData.summary.totalRealizedPnL.toFixed(1)}%`
-                      : '—'}
+                      : '--'}
                   </div>
                 </div>
-                <div className="h-40">
+                <div className="h-36">
                   {!hasChartData ? (
-                    <div className="h-full flex flex-col items-center justify-center">
-                      <LineChart className="w-8 h-8 text-gray-300 dark:text-slate-600 mb-2" />
-                      <p className="text-sm text-gray-500 dark:text-slate-400">No trading data yet</p>
+                    <div className="h-full flex items-center justify-center">
+                      <p className="text-xs text-gray-500">No trading data yet</p>
                     </div>
                   ) : (
                     <PnLChart chartData={chartData} />
                   )}
                 </div>
               </div>
-            </div>
 
-            {/* Platform Stats */}
-            <div className="space-y-3">
-              <StatCard
-                icon={Target}
-                label="Platform Accuracy"
-                value={platformStats?.accuracy?.overall ? `${platformStats.accuracy.overall}%` : '—'}
-                subValue={`${formatNumber(platformStats?.accuracy?.sampleSize || 0)} verified`}
-                color="emerald"
-              />
-              <StatCard
-                icon={BarChart3}
-                label="Total Analyses"
-                value={formatNumber(platformStats?.platform?.totalAnalyses || 0)}
-                subValue={`${formatNumber(platformStats?.platform?.weeklyAnalyses || 0)} this week`}
-                color="blue"
-              />
-              <StatCard
-                icon={Users}
-                label="Platform Users"
-                value={formatNumber(platformStats?.platform?.totalUsers || 0)}
-                color="purple"
-              />
+              {/* Platform Stats */}
+              <div className="space-y-3">
+                <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
+                  <p className="text-xs text-gray-400 mb-1">Accuracy</p>
+                  <p className="text-xl font-bold text-white">{platformStats?.accuracy?.overall ? `${platformStats.accuracy.overall}%` : '--'}</p>
+                  <p className="text-[10px] text-gray-500">{formatNumber(platformStats?.accuracy?.sampleSize || 0)} verified</p>
+                </div>
+                <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
+                  <p className="text-xs text-gray-400 mb-1">Total Analyses</p>
+                  <p className="text-xl font-bold text-white">{formatNumber(platformStats?.platform?.totalAnalyses || 0)}</p>
+                  <p className="text-[10px] text-gray-500">{formatNumber(platformStats?.platform?.weeklyAnalyses || 0)} this week</p>
+                </div>
+                <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
+                  <p className="text-xs text-gray-400 mb-1">Users</p>
+                  <p className="text-xl font-bold text-white">{formatNumber(platformStats?.platform?.totalUsers || 0)}</p>
+                </div>
+              </div>
             </div>
-          </div>
+          </CollapsibleSection>
 
-          {/* Platform AI Stats */}
-          {aiStats && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <AIStatsCard
-                title="AI Concierge (Platform)"
-                icon={Bot}
-                color="teal"
-                stats={[
-                  { label: 'Total Messages', value: formatNumber(aiStats.platform.totalConciergeMessages) },
-                  { label: 'Avg per User', value: aiStats.platform.avgQuestionsPerUser.toFixed(1) },
-                ]}
-              />
-              <AIStatsCard
-                title="AI Experts (Platform)"
-                icon={Brain}
-                color="purple"
-                stats={[
-                  { label: 'Total Questions', value: formatNumber(aiStats.platform.totalExpertQuestions) },
-                  { label: 'This Week', value: formatNumber(Math.floor(aiStats.platform.totalExpertQuestions * 0.15)) },
-                ]}
-              />
-            </div>
-          )}
-        </section>
-
-        {/* ===== MY PERFORMANCE SECTION ===== */}
-        <section id="tour-my-performance" className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
-              <Award className="w-4.5 h-4.5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold bg-gradient-to-r from-amber-600 via-orange-500 to-amber-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer">My Performance</h2>
-              <p className="text-xs text-gray-500 dark:text-slate-400">Your trading statistics</p>
-            </div>
-          </div>
-
-          {/* My Performance Chart and Stats */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-            {/* Performance Chart */}
-            <div className="lg:col-span-2 relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
-              <div className="relative z-10 p-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                      <LineChart className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white">My P/L</h3>
-                      <p className="text-xs text-gray-500 dark:text-slate-400">Your trade results</p>
-                    </div>
-                  </div>
-
+          {/* My Performance */}
+          <CollapsibleSection
+            title="My Performance"
+            icon={Award}
+            badge={userStats?.verifiedAnalyses && userStats.accuracy >= 70 ? 'TOP' : undefined}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+              {/* My P/L Chart */}
+              <div className="lg:col-span-2 rounded-lg border border-[#1E293B] bg-[#0A0E27] p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-white">My P/L</span>
                   <div className="flex items-center gap-2">
-                    <div className="flex bg-gray-100 dark:bg-slate-800 rounded-lg p-1">
-                      <button
-                        onClick={() => setPnlViewMode('daily')}
-                        className={cn(
-                          "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                          pnlViewMode === 'daily'
-                            ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
-                            : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
-                        )}
-                      >
-                        Today
-                      </button>
-                      <button
-                        onClick={() => setPnlViewMode('weekly')}
-                        className={cn(
-                          "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                          pnlViewMode === 'weekly'
-                            ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
-                            : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
-                        )}
-                      >
-                        Week
-                      </button>
-                      <button
-                        onClick={() => setPnlViewMode('monthly')}
-                        className={cn(
-                          "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                          pnlViewMode === 'monthly'
-                            ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
-                            : "text-gray-500 dark:text-slate-400 hover:text-gray-700"
-                        )}
-                      >
-                        Month
-                      </button>
+                    <div className="flex bg-[#1E293B] rounded-lg p-0.5">
+                      {(['daily', 'weekly', 'monthly'] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          onClick={() => setPnlViewMode(mode)}
+                          className={cn(
+                            "px-2.5 py-1 text-[10px] font-medium rounded transition-all",
+                            pnlViewMode === mode
+                              ? "bg-[#0F1629] text-white"
+                              : "text-gray-500 hover:text-gray-300"
+                          )}
+                        >
+                          {mode === 'daily' ? 'Day' : mode === 'weekly' ? 'Week' : 'Month'}
+                        </button>
+                      ))}
                     </div>
-                    <div className={cn(
-                      "px-2.5 py-1 rounded-lg font-bold text-sm",
-                      periodPnL >= 0
-                        ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                        : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                    <span className={cn(
+                      "text-xs font-bold",
+                      periodPnL >= 0 ? "text-[#5EEDC3]" : "text-[#EF5A6F]"
                     )}>
-                      {hasChartData ? `${periodPnL >= 0 ? '+' : ''}${periodPnL.toFixed(1)}%` : '—'}
-                    </div>
+                      {hasChartData ? `${periodPnL >= 0 ? '+' : ''}${periodPnL.toFixed(1)}%` : '--'}
+                    </span>
                   </div>
                 </div>
-                <div className="h-40">
+                <div className="h-36">
                   {!hasChartData ? (
                     <div className="h-full flex flex-col items-center justify-center">
-                      <LineChart className="w-8 h-8 text-gray-300 dark:text-slate-600 mb-2" />
-                      <p className="text-sm text-gray-500 dark:text-slate-400">No trading data yet</p>
-                      <Link href="/analyze" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-                        Start your first analysis
-                        <ArrowRight className="w-3 h-3" />
+                      <p className="text-xs text-gray-500 mb-2">No trading data yet</p>
+                      <Link href="/analyze" className="text-xs text-[#5EEDC3] hover:underline flex items-center gap-1">
+                        Start your first analysis <ArrowRight className="w-3 h-3" />
                       </Link>
                     </div>
                   ) : (
@@ -1600,189 +1058,229 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
-            </div>
 
-            {/* My Stats */}
-            <div className="space-y-3">
-              <StatCard
-                icon={Award}
-                label="My Accuracy"
-                value={userStats?.verifiedAnalyses ? `${userStats.accuracy?.toFixed(0)}%` : (userStats?.avgScore ? `${(userStats.avgScore * 10).toFixed(0)}%` : '—')}
-                subValue={userStats?.verifiedAnalyses
-                  ? `${userStats.correctAnalyses}/${userStats.verifiedAnalyses} closed`
-                  : (userStats?.avgScore ? 'Avg analysis score' : 'No data yet')}
-                color="amber"
-              />
-              <StatCard
-                icon={TrendingUp}
-                label="GO Signals"
-                value={formatNumber(userStats?.goSignals || 0)}
-                subValue={`${formatNumber(userStats?.avoidSignals || 0)} avoided`}
-                color="green"
-              />
-              <StatCard
-                icon={Activity}
-                label="Active Trades"
-                value={formatNumber(userStats?.activeCount || 0)}
-                subValue={userStats?.activeCount
-                  ? `${formatNumber(userStats.activeProfitable || 0)} profitable`
-                  : 'Start analyzing'}
-                color="cyan"
-              />
-            </div>
-          </div>
-
-          {/* My Performance Summary */}
-          {userStats && userStats.totalAnalyses > 0 && (
-            <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/50 mb-4">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
-              <div className="relative z-10 p-5">
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-200 dark:border-white/10">
-                    <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.totalAnalyses}</div>
-                    <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Total</div>
-                  </div>
-                  <div className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-3 text-center border border-blue-200/50 dark:border-blue-500/20">
-                    <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
-                    <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Active</div>
-                  </div>
-                  <div className="bg-gray-100/80 dark:bg-white/5 rounded-xl p-3 text-center border border-gray-200 dark:border-white/10">
-                    <div className="text-xl font-bold text-gray-900 dark:text-white">{userStats.verifiedAnalyses}</div>
-                    <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Closed</div>
-                  </div>
-                  <div className="bg-green-50 dark:bg-green-500/10 rounded-xl p-3 text-center border border-green-200/50 dark:border-green-500/20">
-                    <div className="text-xl font-bold text-green-600 dark:text-green-400">{userStats.correctAnalyses}</div>
-                    <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">TP Hit</div>
-                  </div>
-                  <div className="bg-red-50 dark:bg-red-500/10 rounded-xl p-3 text-center border border-red-200/50 dark:border-red-500/20">
-                    <div className="text-xl font-bold text-red-600 dark:text-red-400">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
-                    <div className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">SL Hit</div>
-                  </div>
+              {/* My Stats */}
+              <div className="space-y-3">
+                <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
+                  <p className="text-xs text-gray-400 mb-1">My Accuracy</p>
+                  <p className="text-xl font-bold text-white">
+                    {userStats?.verifiedAnalyses ? `${userStats.accuracy?.toFixed(0)}%` : (userStats?.avgScore ? `${(userStats.avgScore * 10).toFixed(0)}%` : '--')}
+                  </p>
+                  <p className="text-[10px] text-gray-500">
+                    {userStats?.verifiedAnalyses
+                      ? `${userStats.correctAnalyses}/${userStats.verifiedAnalyses} closed`
+                      : (userStats?.avgScore ? 'Avg analysis score' : 'No data yet')}
+                  </p>
                 </div>
-
-                <div className={cn(
-                  "mt-4 text-center text-xs font-medium p-3 rounded-xl border",
-                  userStats.verifiedAnalyses === 0
-                    ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200/50 dark:border-blue-500/20"
-                    : userStats.accuracy >= 70
-                    ? "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 border-green-200/50 dark:border-green-500/20"
-                    : userStats.accuracy >= 50
-                    ? "bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-200/50 dark:border-yellow-500/20"
-                    : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200/50 dark:border-red-500/20"
-                )}>
-                  {userStats.verifiedAnalyses === 0
-                    ? "Trades are still active. Results will update when TP/SL is hit."
-                    : userStats.accuracy >= 70
-                    ? "Excellent performance! Your analysis accuracy is outstanding."
-                    : userStats.accuracy >= 50
-                    ? "Good progress! Keep improving your analysis skills."
-                    : "Consider reviewing your analysis approach for better results."}
+                <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
+                  <p className="text-xs text-gray-400 mb-1">GO Signals</p>
+                  <p className="text-xl font-bold text-white">{formatNumber(userStats?.goSignals || 0)}</p>
+                  <p className="text-[10px] text-gray-500">{formatNumber(userStats?.avoidSignals || 0)} avoided</p>
+                </div>
+                <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
+                  <p className="text-xs text-gray-400 mb-1">Active Trades</p>
+                  <p className="text-xl font-bold text-white">{formatNumber(userStats?.activeCount || 0)}</p>
+                  <p className="text-[10px] text-gray-500">{userStats?.activeCount ? `${formatNumber(userStats.activeProfitable || 0)} profitable` : 'Start analyzing'}</p>
                 </div>
               </div>
             </div>
+
+            {/* Trade summary row */}
+            {userStats && userStats.totalAnalyses > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div className="p-3 rounded-lg border border-[#1E293B] bg-[#0A0E27] text-center">
+                  <div className="text-lg font-bold text-white">{userStats.totalAnalyses}</div>
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wider">Total</div>
+                </div>
+                <div className="p-3 rounded-lg border border-blue-500/20 bg-blue-500/5 text-center">
+                  <div className="text-lg font-bold text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wider">Active</div>
+                </div>
+                <div className="p-3 rounded-lg border border-[#1E293B] bg-[#0A0E27] text-center">
+                  <div className="text-lg font-bold text-white">{userStats.verifiedAnalyses}</div>
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wider">Closed</div>
+                </div>
+                <div className="p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 text-center">
+                  <div className="text-lg font-bold text-[#5EEDC3]">{userStats.correctAnalyses}</div>
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wider">TP Hit</div>
+                </div>
+                <div className="p-3 rounded-lg border border-red-500/20 bg-red-500/5 text-center">
+                  <div className="text-lg font-bold text-[#EF5A6F]">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wider">SL Hit</div>
+                </div>
+              </div>
+            )}
+          </CollapsibleSection>
+
+          {/* Active Trades */}
+          {activeTrades.length > 0 && (
+            <CollapsibleSection
+              title="Active Trades"
+              icon={Activity}
+              badge={`${activeTrades.length}`}
+            >
+              <div className="overflow-x-auto pb-2 -mx-2 px-2">
+                <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
+                  {activeTrades.slice(0, 10).map((trade) => (
+                    <ActiveTradeCard key={trade.id} trade={trade} />
+                  ))}
+                </div>
+              </div>
+              <div className="mt-3 text-right">
+                <Link href="/reports" className="text-xs text-gray-400 hover:text-[#5EEDC3] transition flex items-center gap-1 justify-end">
+                  View all trades <ChevronRight className="w-3 h-3" />
+                </Link>
+              </div>
+            </CollapsibleSection>
           )}
 
-          {/* My AI Stats & Signals */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {aiStats && (
-              <>
-                <AIStatsCard
-                  title="My AI Concierge Usage"
-                  icon={Bot}
-                  color="teal"
-                  stats={[
-                    { label: 'Messages Sent', value: formatNumber(aiStats.user.conciergeMessages) },
-                    { label: 'Analyses via Chat', value: formatNumber(Math.floor(aiStats.user.conciergeMessages * 0.4)) },
-                  ]}
-                />
-                <AIStatsCard
-                  title="My AI Expert Usage"
-                  icon={Brain}
-                  color="purple"
-                  stats={[
-                    { label: 'Questions Asked', value: formatNumber(aiStats.user.expertQuestions) },
-                    { label: 'Free Remaining', value: Math.max(0, (userStats?.totalAnalyses || 0) * 3 - aiStats.user.expertQuestions) },
-                  ]}
-                />
-              </>
-            )}
-
-            {/* Signal Stats Card */}
-            {signalStats && (
-              <SignalStatsCard stats={signalStats} recentSignals={signalStats.recentSignals} />
-            )}
-          </div>
-        </section>
-
-        {/* ===== ACTIVE TRADES SECTION ===== */}
-        {activeTrades.length > 0 && (
-          <section className="mb-8">
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-cyan-500/5 dark:from-cyan-500/10 via-transparent to-transparent" />
-              <div className="relative z-10 p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
-                      <Activity className="w-4.5 h-4.5 text-white" />
+          {/* AI & Signals */}
+          {(aiStats || signalStats) && (
+            <CollapsibleSection title="AI Usage & Signals" icon={Brain}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {aiStats && (
+                  <>
+                    {/* My Concierge */}
+                    <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Bot className="w-4 h-4 text-[#5EEDC3]" />
+                        <span className="text-xs font-medium text-gray-400">AI Concierge</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-white">{formatNumber(aiStats.user.conciergeMessages)}</p>
+                          <p className="text-[10px] text-gray-500">Messages</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-white">{formatNumber(Math.floor(aiStats.user.conciergeMessages * 0.4))}</p>
+                          <p className="text-[10px] text-gray-500">Via Chat</p>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-slate-900 dark:text-white">Active Trades</h2>
-                      <p className="text-xs text-gray-500 dark:text-slate-400">{activeTrades.length} positions being tracked</p>
+
+                    {/* My Expert */}
+                    <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Brain className="w-4 h-4 text-purple-400" />
+                        <span className="text-xs font-medium text-gray-400">AI Expert</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-white">{formatNumber(aiStats.user.expertQuestions)}</p>
+                          <p className="text-[10px] text-gray-500">Asked</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-white">{Math.max(0, (userStats?.totalAnalyses || 0) * 3 - aiStats.user.expertQuestions)}</p>
+                          <p className="text-[10px] text-gray-500">Free Left</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <Link href="/reports" className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
-                    View all
-                    <ChevronRight className="w-3 h-3" />
-                  </Link>
-                </div>
+                  </>
+                )}
 
-                <div className="overflow-x-auto pb-2 -mx-1 px-1">
-                  <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
-                    {activeTrades.slice(0, 10).map((trade) => (
-                      <ActiveTradeCard key={trade.id} trade={trade} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
+                {/* Signal Stats */}
+                {signalStats && (
+                  <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-[#5EEDC3]" />
+                        <span className="text-xs font-medium text-gray-400">Signals</span>
+                      </div>
+                      <Link href="/signals" className="text-[10px] text-gray-500 hover:text-[#5EEDC3]">View All</Link>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center">
+                        <p className="text-lg font-bold text-white">{signalStats.totalSignals}</p>
+                        <p className="text-[10px] text-gray-500">Total</p>
+                      </div>
+                      <div className="text-center">
+                        <p className={cn(
+                          "text-lg font-bold",
+                          signalStats.winRate >= 70 ? "text-[#5EEDC3]" :
+                          signalStats.winRate >= 50 ? "text-amber-400" : "text-[#EF5A6F]"
+                        )}>
+                          {signalStats.closedSignals > 0 ? `${signalStats.winRate.toFixed(0)}%` : '--'}
+                        </p>
+                        <p className="text-[10px] text-gray-500">Win Rate</p>
+                      </div>
+                    </div>
 
-        {/* ===== EMPTY STATE FOR NEW USERS ===== */}
-        {(!userStats || userStats.totalAnalyses === 0) && (
-          <section className="mb-8">
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700 p-8 text-center">
-              <div className="relative w-16 h-16 mx-auto mb-4">
-                <div className="absolute inset-0 bg-emerald-400/20 blur-xl rounded-full" />
-                <div className="relative w-full h-full rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-                  <TrendingUp className="w-8 h-8 text-white" />
-                </div>
+                    {signalStats.bestPerformer && (
+                      <div className="mt-3 p-2 rounded border border-emerald-500/20 bg-emerald-500/5 flex items-center justify-between">
+                        <span className="text-[10px] text-gray-400">Best</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-white">{signalStats.bestPerformer.symbol}</span>
+                          <span className="text-xs font-bold text-[#5EEDC3]">+{signalStats.bestPerformer.pnl.toFixed(1)}%</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {signalStats.recentSignals.length > 0 && (
+                      <div className="mt-3 space-y-1.5">
+                        {signalStats.recentSignals.slice(0, 3).map((signal) => (
+                          <Link
+                            key={signal.id}
+                            href={`/signals/${signal.id}`}
+                            className="flex items-center justify-between p-1.5 rounded hover:bg-white/[0.02] transition"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-white">{signal.symbol}</span>
+                              <span className={cn(
+                                "px-1 py-0.5 rounded text-[9px] font-bold",
+                                signal.direction === 'long'
+                                  ? "bg-emerald-500/20 text-[#5EEDC3]"
+                                  : "bg-red-500/20 text-[#EF5A6F]"
+                              )}>
+                                {signal.direction.toUpperCase()}
+                              </span>
+                            </div>
+                            {signal.pnlPercent !== null ? (
+                              <span className={cn(
+                                "text-xs font-bold",
+                                signal.pnlPercent >= 0 ? "text-[#5EEDC3]" : "text-[#EF5A6F]"
+                              )}>
+                                {signal.pnlPercent >= 0 ? '+' : ''}{signal.pnlPercent.toFixed(1)}%
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-blue-400">Live</span>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Start Your Trading Journey</h3>
-              <p className="text-sm text-gray-500 dark:text-slate-400 mb-4 max-w-md mx-auto">
-                Follow the Capital Flow, analyze assets using our 7-step methodology, and track your performance with real-time accuracy metrics.
+            </CollapsibleSection>
+          )}
+
+          {/* Empty State for New Users */}
+          {(!userStats || userStats.totalAnalyses === 0) && (
+            <div className="rounded-lg border border-[#1E293B] bg-[#0F1629] p-8 text-center">
+              <TrendingUp className="w-10 h-10 text-[#5EEDC3] mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-white mb-2">Start Your Trading Journey</h3>
+              <p className="text-sm text-gray-400 mb-6 max-w-md mx-auto">
+                Follow the Capital Flow, analyze assets, and track your performance.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Link
                   href="/capital-flow"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl font-semibold transition shadow-lg shadow-blue-500/25"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[#1E293B] text-white text-sm font-medium hover:border-[#5EEDC3]/30 transition"
                 >
                   <Globe className="w-4 h-4" />
                   View Capital Flow
                 </Link>
                 <Link
                   href="/analyze"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-semibold transition shadow-lg shadow-emerald-500/25"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#5EEDC3] text-[#0A0E27] text-sm font-semibold hover:bg-[#5EEDC3]/90 transition"
                 >
                   Start Analysis
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
             </div>
-          </section>
-        )}
-          </>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
