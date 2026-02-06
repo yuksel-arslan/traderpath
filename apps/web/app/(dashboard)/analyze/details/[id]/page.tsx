@@ -1203,6 +1203,109 @@ export default function AnalysisDetailsPage() {
             </div>
           )}
 
+          {/* TOP-DOWN EVIDENCE CHAIN */}
+          {(() => {
+            const cfCtx = step1?.capitalFlowContext;
+            if (!cfCtx?.capitalFlowId) return null;
+
+            const l1 = cfCtx.l1Summary;
+            const l2 = cfCtx.l2Summary;
+            const l3 = cfCtx.l3Summary;
+            const l4 = cfCtx.l4Summary;
+            const selectedMarket = l2?.find((m: { market: string; phase: string; flow7d: number }) => m.market === l3?.primaryMarket) || l2?.[0];
+
+            // Determine each layer's pass/fail status
+            const l1Pass = l1?.bias !== 'risk_off';
+            const l2Pass = selectedMarket?.phase !== 'exit';
+            const l3Pass = l3?.topSectors && l3.topSectors.length > 0;
+            const l4Pass = l4?.action === 'analyze';
+            const analysisPass = !isAvoidOrWait;
+            const mlisPass = mlisConfirmationData ? confirmationStatus === 'CONFIRMED' || confirmationStatus === 'PARTIALLY_CONFIRMED' : null;
+
+            const chainItems = [
+              {
+                label: 'L1 Global Liquidity',
+                status: l1Pass,
+                detail: l1 ? `${l1.bias === 'risk_on' ? 'Risk On' : l1.bias === 'risk_off' ? 'Risk Off' : 'Neutral'} (DXY ${l1.dxyTrend}, VIX ${l1.vixLevel})` : 'N/A',
+              },
+              {
+                label: 'L2 Market Flow',
+                status: l2Pass,
+                detail: selectedMarket ? `${selectedMarket.market.charAt(0).toUpperCase() + selectedMarket.market.slice(1)} – ${selectedMarket.phase.toUpperCase()} Phase (${(selectedMarket.flow7d >= 0 ? '+' : '')}${selectedMarket.flow7d.toFixed(1)}%)` : 'N/A',
+              },
+              {
+                label: 'L3 Sector Activity',
+                status: l3Pass,
+                detail: l3?.topSectors?.join(', ') || 'N/A',
+              },
+              {
+                label: 'L4 AI Recommendation',
+                status: l4Pass,
+                detail: l4 ? `${(cfCtx.direction || 'N/A')} (${l4.confidence}% confidence)` : 'N/A',
+              },
+              {
+                label: isMLIS ? 'MLIS Pro Analysis' : '7-Step Analysis',
+                status: analysisPass,
+                detail: `${verdict} (${score}/100)`,
+              },
+              ...(mlisPass != null ? [{
+                label: 'ML Confirmation',
+                status: mlisPass,
+                detail: confirmationStatus === 'CONFIRMED' ? `Confirmed${confidenceChange > 0 ? ` (+${confidenceChange.toFixed(0)}%)` : ''}` :
+                        confirmationStatus === 'PARTIALLY_CONFIRMED' ? 'Partial' : 'Contradicted',
+              }] : []),
+            ];
+
+            const passCount = chainItems.filter(c => c.status === true).length;
+            const totalCount = chainItems.length;
+
+            return (
+              <div className="mb-6 rounded-xl border-2 border-slate-200 dark:border-slate-600/50 overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-700/40 border-b border-slate-200 dark:border-slate-600/50">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-teal-500" />
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">Top-Down Evidence Chain</span>
+                  </div>
+                  <span className={cn(
+                    "text-xs font-bold px-2 py-0.5 rounded-full",
+                    passCount === totalCount ? "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400" :
+                    passCount >= totalCount - 1 ? "bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400" :
+                    "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
+                  )}>
+                    {passCount}/{totalCount} Aligned
+                  </span>
+                </div>
+                {/* Chain Items */}
+                <div className="divide-y divide-slate-100 dark:divide-slate-700/40">
+                  {chainItems.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between px-4 py-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <div className={cn(
+                          "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0",
+                          item.status === true ? "bg-green-500" :
+                          item.status === false ? "bg-red-500" : "bg-gray-400"
+                        )}>
+                          {item.status === true ? (
+                            <Check className="w-3 h-3 text-white" />
+                          ) : item.status === false ? (
+                            <AlertTriangle className="w-3 h-3 text-white" />
+                          ) : (
+                            <Minus className="w-3 h-3 text-white" />
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{item.label}</span>
+                      </div>
+                      <span className="text-xs text-gray-500 dark:text-slate-400 text-right max-w-[50%] truncate" title={item.detail}>
+                        {item.detail}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Final Verdict - Visual Trade Decision */}
           <div className="mb-6">
             {isMLIS ? (

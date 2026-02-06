@@ -697,6 +697,34 @@ Warn about potential traps and give protective advice.`;
     interval: intervalSchema,
     tradeType: tradeTypeSchema.optional(),
     method: analysisMethodSchema,
+    capitalFlowContext: z.object({
+      capitalFlowId: z.string(),
+      recommendedAssets: z.array(z.string()),
+      direction: z.enum(['BUY', 'SELL']).optional(),
+      l1Bias: z.enum(['risk_on', 'risk_off', 'neutral']).optional(),
+      l4Confidence: z.number().optional(),
+      // Top-Down Evidence Chain data
+      l1Summary: z.object({
+        bias: z.string(),
+        dxyTrend: z.string(),
+        vixLevel: z.string(),
+        vixValue: z.number(),
+      }).optional(),
+      l2Summary: z.array(z.object({
+        market: z.string(),
+        phase: z.string(),
+        flow7d: z.number(),
+      })).optional(),
+      l3Summary: z.object({
+        primaryMarket: z.string(),
+        topSectors: z.array(z.string()),
+      }).optional(),
+      l4Summary: z.object({
+        action: z.string(),
+        confidence: z.number(),
+        market: z.string(),
+      }).optional(),
+    }).optional(),
   });
 
   app.post('/full', {
@@ -763,6 +791,31 @@ Warn about potential traps and give protective advice.`;
       usedDailyPass = true;
     }
 
+    // Capital Flow Top-Down Validation Gate
+    // If capitalFlowContext is provided, verify the asset is in the recommended list
+    const capitalFlowContext = body.capitalFlowContext;
+    let capitalFlowWarning: string | null = null;
+
+    if (capitalFlowContext) {
+      const isRecommended = capitalFlowContext.recommendedAssets.includes(body.symbol.toUpperCase());
+      if (!isRecommended) {
+        // Asset not in AI recommended list - block analysis
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: 'ASSET_NOT_ALIGNED',
+            message: `${body.symbol} is not aligned with current Capital Flow analysis. Please select from the AI-recommended assets.`,
+            recommendedAssets: capitalFlowContext.recommendedAssets,
+          },
+        });
+      }
+      console.log(`[ANALYSIS] Capital Flow validated: ${body.symbol} is in recommended list (flowId: ${capitalFlowContext.capitalFlowId})`);
+    } else {
+      // No capital flow context provided - allow but flag it
+      capitalFlowWarning = 'Analysis performed without Capital Flow context. Top-down validation skipped.';
+      console.log(`[ANALYSIS] No Capital Flow context provided for ${body.symbol} - legacy mode`);
+    }
+
     // For admin users, still log the cost but don't charge (legacy behavior)
     const cost = isAdmin ? 0 : 0; // No per-analysis cost when using daily pass
 
@@ -795,7 +848,7 @@ Warn about potential traps and give protective advice.`;
             interval: interval,
             method: 'mlis_pro', // Explicitly set method for MLIS
             stepsCompleted: [1, 2, 3, 4, 5, 6, 7], // Mark all steps as completed
-            step1Result: { mlis: true, layer: 'technical', ...mlisResult.layers.technical } as object,
+            step1Result: { mlis: true, layer: 'technical', ...mlisResult.layers.technical, ...(capitalFlowContext ? { capitalFlowContext } : {}) } as object,
             step2Result: { mlis: true, layer: 'momentum', ...mlisResult.layers.momentum } as object,
             step3Result: { mlis: true, layer: 'volatility', ...mlisResult.layers.volatility } as object,
             step4Result: { mlis: true, layer: 'volume', ...mlisResult.layers.volume } as object,
@@ -1126,7 +1179,10 @@ Warn about potential traps and give protective advice.`;
           symbol: body.symbol,
           interval: interval, // Use the selected timeframe
           stepsCompleted,
-          step1Result: marketPulse as object,
+          step1Result: {
+            ...marketPulse,
+            ...(capitalFlowContext ? { capitalFlowContext } : {}),
+          } as object,
           step2Result: assetScan as object,
           step3Result: safetyCheck as object,
           step4Result: timing as object,
@@ -1398,6 +1454,7 @@ Explain the key risks and what conditions would need to change before trading th
         creditsSpent: cost,
         remainingCredits: creditBalance?.balance ?? 0,
         dailyPassUsed: usedDailyPass,
+        capitalFlowWarning,
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

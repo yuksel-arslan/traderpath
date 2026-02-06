@@ -44,8 +44,6 @@ const PriceTicker = dynamic(
 // Direct navigation items (no dropdown)
 const directNav = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Explore', href: '/explore', icon: Compass },
-  { name: 'Capital Flow', href: '/capital-flow', icon: Globe },
   { name: 'Intelligence', href: '/intelligence', icon: Sparkles },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Report', href: '/report', icon: FileText },
@@ -233,7 +231,7 @@ export default function DashboardLayout({
   const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
 
   // Fetch user info with React Query
-  const { data: user } = useQuery<UserInfo | null>({
+  const { data: user, isLoading: isUserLoading } = useQuery<UserInfo | null>({
     queryKey: ['user-info'],
     queryFn: async () => {
       try {
@@ -253,6 +251,15 @@ export default function DashboardLayout({
     gcTime: 30 * 60 * 1000, // 30 minutes garbage collection
     retry: false,
   });
+
+  // Redirect to login if user is not authenticated (safety net beyond middleware)
+  useEffect(() => {
+    if (!isUserLoading && user === null) {
+      // Clear any stale cookies
+      document.cookie = 'auth-session=; path=/; max-age=0';
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
 
   // Get admin status from user
   const isAdmin = user?.isAdmin || false;

@@ -35,9 +35,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract token and user from response
+    // Extract token, user, and login metadata from response
     // Backend returns 'token', not 'accessToken'
-    const { token, user } = data.data || {};
+    const { token, user, credits, isFirstLogin, firstLoginBonus } = data.data || {};
 
     if (!token) {
       return NextResponse.json(
@@ -46,10 +46,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create response with user data
+    // Create response with user data and login metadata
     const res = NextResponse.json({
       success: true,
-      data: { user },
+      data: { user, credits, isFirstLogin, firstLoginBonus },
     });
 
     // Set httpOnly cookie for secure token storage

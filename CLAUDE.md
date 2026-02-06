@@ -613,6 +613,8 @@ Kullanıcı Hakları Aktif:
 | 2026-02-06 | Intelligence Dashboard: Funnel-Waterfall Layout | Mind-map yerine sol akış + sağ içerik yapısı - "From Charts to Clarity" sloganına uygun |
 | 2026-02-06 | Intelligence Dashboard: Default Trade Plan View | Varsayılan olarak Trade Plan gösterilir, üst katmanlar "kanıt" olarak sol panelde |
 | 2026-02-06 | Intelligence Dashboard: Performance Attribution Matrix | 4-layer katkı analizi (Capital Flow, Sector, Timing, ML) - "Explainable AI" |
+| 2026-02-06 | Analyze Page: Enforced Top-Down Flow (Step 0→A→B) | Capital Flow zorunlu, AI recommendation sonrası asset seçimi, corporate decision framework |
+| 2026-02-06 | Details Page: Top-Down Evidence Chain | L1-L4 + Analysis + ML Confirmation alignment durumu, "X/Y Aligned" badge |
 
 ---
 
@@ -2002,6 +2004,36 @@ Kullanıcı Hakları Aktif:
   - **URL Parameter**: `?id=analysisId` for specific analysis, or loads most recent
   - Sidebar'a "Intelligence" linki eklendi (Sparkles ikonu, Capital Flow ile Analyze arasında)
   - Dosyalar: `intelligence/page.tsx`, `layout.tsx`
+- **Top-Down Analysis Flow Restructuring (TALİMAT #2)**:
+  - **Backend: POST /api/capital-flow/recommend-assets endpoint**:
+    - Yeni endpoint: Capital Flow verisinden AI asset önerileri üretiyor
+    - L1-L4 status bilgileri döndürüyor (bias, market flow, sectors, recommendations)
+    - `capitalFlowId` session tracking ile her analiz akışı izlenebilir
+    - `recommendedAssets[]` array: symbol, name, market, direction, confidence, alignmentScore, riskTag, reason
+    - `warnings[]` array: risk_off bias, exit phase, rotation uyarıları
+    - `canProceed` flag: false ise analiz yapılmaz
+  - **Backend: capitalFlowContext validation gate**:
+    - `fullAnalysisSchema`'ya `capitalFlowContext` eklendi (Zod validation)
+    - L1-L4 summary alanları: `l1Summary`, `l2Summary`, `l3Summary`, `l4Summary`
+    - Asset recommended listede yoksa → `ASSET_NOT_ALIGNED` hatası (400)
+    - `capitalFlowContext` olmadan gelen istekler → legacy mode warning log
+    - MLIS Pro path'inde de `capitalFlowContext` step1Result'a kaydediliyor
+  - **Frontend: Analyze sayfası Step 0→A→B flow**:
+    - Sayfa tamamen yeniden yazıldı (~1360 satır)
+    - **Step 0** (Capital Flow): L1-L4 özet kartları, risk-off uyarısı, "Generate AI Asset Recommendations" butonu
+    - **Step A** (AI Recommendation): Warnings, L1-L4 context mini-bar, recommended assets grid (direction/confidence/alignment/risk), "Select & Analyze" per asset
+    - **Step B** (Asset Analysis): Top-down context bar (L1→L2→L3→L4 checkmarks), selected asset info, timeframe/method seçici, daily pass status, "Run Analysis" butonu
+    - Step progress indicator clickable (prerequisites karşılanmadan disabled)
+    - `capitalFlowContextPayload` enriched L1-L4 summary ile AnalysisDialog'a aktarılıyor
+    - Recent analyses bölümü her zaman altta görünür
+  - **Frontend: Top-Down Evidence Chain (Details Page)**:
+    - Analiz detay sayfasına Final Verdict öncesine "Top-Down Evidence Chain" eklendi
+    - L1 Global Liquidity → L2 Market Flow → L3 Sector Activity → L4 AI Recommendation → 7-Step/MLIS → ML Confirmation
+    - Her katman ✅ (yeşil) veya ⚠️ (kırmızı) ile gösteriliyor
+    - "X/Y Aligned" badge ile toplam alignment durumu
+    - `step1Result.capitalFlowContext` verisi kullanılıyor
+    - Capital Flow context olmadan yapılan analizlerde evidence chain gizleniyor
+  - Dosyalar: `capital-flow.routes.ts`, `analysis.routes.ts`, `AnalysisDialog.tsx`, `analyze/page.tsx`, `details/[id]/page.tsx`
 
 ---
 

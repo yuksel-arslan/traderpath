@@ -85,14 +85,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL(`/login?error=${errorCode}`, baseUrl));
     }
 
-    const { accessToken } = backendData.data || {};
+    const { accessToken, isFirstLogin, firstLoginBonus } = backendData.data || {};
 
     if (!accessToken) {
       return NextResponse.redirect(new URL('/login?error=no_token', baseUrl));
     }
 
     // Create response with redirect to capital-flow
-    const response = NextResponse.redirect(new URL('/capital-flow', baseUrl));
+    // If first login, add query params so the frontend can show welcome modal
+    const redirectUrl = new URL('/capital-flow', baseUrl);
+    if (isFirstLogin && firstLoginBonus) {
+      redirectUrl.searchParams.set('firstLogin', 'true');
+      redirectUrl.searchParams.set('bonus', String(firstLoginBonus));
+    }
+    const response = NextResponse.redirect(redirectUrl);
 
     // Set httpOnly cookie for secure token storage
     response.cookies.set('auth-token', accessToken, {
