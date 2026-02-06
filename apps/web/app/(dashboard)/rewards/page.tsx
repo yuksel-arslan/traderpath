@@ -692,7 +692,7 @@ export default function RewardsPage() {
         </div>
         <div className="mt-4 p-3 bg-background rounded-lg">
           <p className="text-sm text-muted-foreground mb-1">Your Referral Code</p>
-          <p className="font-mono font-bold text-lg">{MOCK_USER.referralCode}</p>
+          <p className="font-mono font-bold text-lg">{userData?.referralCode || 'Loading...'}</p>
         </div>
       </div>
     </div>
