@@ -567,6 +567,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-06 | Google OAuth callback first login tespiti ve hata yakalama eksikti | `isFirstLogin`/`firstLoginBonus` query params olarak `/capital-flow`'a aktarılıyor. Backend fetch hatası ve non-JSON response için ayrı try-catch eklendi | `apps/web/app/api/auth/google/callback/route.ts` |
 | 2026-02-06 | favicon.ico 404 hatası (GET https://traderpath.io/favicon.ico 404) | Next.js rewrite kuralı eklendi: `/favicon.ico` → `/favicon.svg`. Hem development hem production'da çalışıyor | `next.config.js` |
 | 2026-02-06 | Deprecated meta tag uyarısı: apple-mobile-web-app-capable yerine mobile-web-app-capable kullanılmalı | Next.js metadata API'sine `other: { 'mobile-web-app-capable': 'yes' }` eklendi. Modern PWA standardına uygun meta tag kullanılıyor | `apps/web/app/layout.tsx` |
+| 2026-02-06 | Zustand deprecation warning ve kullanılmayan kod | Zustand hiç kullanılmıyordu. Package.json'dan kaldırıldı, useRewardsStore ve useRewards.ts silindi. Rewards page mock data kullanıyordu - gerçek API'lere bağlanacak | `package.json`, `stores/useRewardsStore.ts`, `hooks/useRewards.ts` |
 
 ---
 
