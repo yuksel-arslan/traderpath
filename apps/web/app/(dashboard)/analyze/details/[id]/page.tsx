@@ -61,6 +61,45 @@ function formatPrice(price: number): string {
   return `$${price.toFixed(6)}`;
 }
 
+// Pre-capture all canvas elements as static images and replace them in cloned DOM
+// This prevents the "createPattern" error from lightweight-charts canvases having 0 dimensions in cloned DOM
+function captureCanvasImages(container: HTMLElement): Map<string, string> {
+  const canvasMap = new Map<string, string>();
+  const canvases = container.querySelectorAll('canvas');
+  canvases.forEach((canvas, index) => {
+    try {
+      if (canvas.width > 0 && canvas.height > 0) {
+        const dataUrl = canvas.toDataURL('image/png');
+        const id = `__canvas_capture_${index}`;
+        canvas.setAttribute('data-capture-id', id);
+        canvasMap.set(id, dataUrl);
+      }
+    } catch {
+      // Canvas may be tainted, skip it
+    }
+  });
+  return canvasMap;
+}
+
+function replaceCanvasesInClone(clonedDoc: Document, canvasMap: Map<string, string>) {
+  canvasMap.forEach((dataUrl, id) => {
+    const clonedCanvas = clonedDoc.querySelector(`canvas[data-capture-id="${id}"]`);
+    if (clonedCanvas && clonedCanvas.parentElement) {
+      const img = clonedDoc.createElement('img');
+      img.src = dataUrl;
+      img.style.width = (clonedCanvas as HTMLCanvasElement).width + 'px';
+      img.style.height = (clonedCanvas as HTMLCanvasElement).height + 'px';
+      img.style.display = 'block';
+      clonedCanvas.parentElement.replaceChild(img, clonedCanvas);
+    }
+  });
+  // Also hide any remaining canvases that weren't captured (0 dimensions)
+  const remainingCanvases = clonedDoc.querySelectorAll('canvas');
+  remainingCanvases.forEach((c) => {
+    (c as HTMLElement).style.display = 'none';
+  });
+}
+
 export default function AnalysisDetailsPage() {
   const params = useParams();
   const router = useRouter();
@@ -116,6 +155,9 @@ export default function AnalysisDetailsPage() {
       // Wait for chart to render
       await new Promise(resolve => setTimeout(resolve, 2000));
 
+      // Pre-capture chart canvases as static images before html2canvas clones the DOM
+      const canvasMap = captureCanvasImages(pageRef.current);
+
       const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#ffffff',
         scale: 1.5, // Reduced from 2 to keep file size reasonable for email
@@ -128,6 +170,8 @@ export default function AnalysisDetailsPage() {
           if (clonedElement) {
             (clonedElement as HTMLElement).style.overflow = 'visible';
           }
+          // Replace canvas elements with static images to prevent createPattern error
+          replaceCanvasesInClone(clonedDoc, canvasMap);
         },
       });
 
@@ -189,6 +233,9 @@ export default function AnalysisDetailsPage() {
       // Dynamic import jsPDF
       const { jsPDF } = await import('jspdf');
 
+      // Pre-capture chart canvases as static images
+      const canvasMap = captureCanvasImages(pageRef.current);
+
       const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#ffffff',
         scale: 2,
@@ -203,6 +250,8 @@ export default function AnalysisDetailsPage() {
             (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
             (clonedElement as HTMLElement).style.padding = '24px';
           }
+          // Replace canvas elements with static images to prevent createPattern error
+          replaceCanvasesInClone(clonedDoc, canvasMap);
         },
       });
 
@@ -250,6 +299,9 @@ export default function AnalysisDetailsPage() {
       // Dynamic import jsPDF
       const { jsPDF } = await import('jspdf');
 
+      // Pre-capture chart canvases as static images
+      const canvasMap = captureCanvasImages(pageRef.current);
+
       const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#0f172a', // Dark mode background
         scale: 2,
@@ -270,6 +322,8 @@ export default function AnalysisDetailsPage() {
           }
           // Add dark class to root for Tailwind dark mode
           clonedDoc.documentElement.classList.add('dark');
+          // Replace canvas elements with static images to prevent createPattern error
+          replaceCanvasesInClone(clonedDoc, canvasMap);
         },
       });
 
@@ -304,6 +358,9 @@ export default function AnalysisDetailsPage() {
       // Dynamic import jsPDF
       const { jsPDF } = await import('jspdf');
 
+      // Pre-capture chart canvases as static images
+      const canvasMap = captureCanvasImages(pageRef.current);
+
       // Capture in dark mode
       const canvas = await html2canvas(pageRef.current, {
         backgroundColor: '#0f172a',
@@ -323,6 +380,8 @@ export default function AnalysisDetailsPage() {
             clonedElement.classList.add('dark');
           }
           clonedDoc.documentElement.classList.add('dark');
+          // Replace canvas elements with static images to prevent createPattern error
+          replaceCanvasesInClone(clonedDoc, canvasMap);
         },
       });
 
