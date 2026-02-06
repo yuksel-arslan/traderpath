@@ -32,6 +32,10 @@ import { cn } from '../../../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../../lib/coin-icons';
 import { TradePlanChart } from '../../../../../components/analysis/TradePlanChart';
 import { TradeDecisionVisual } from '../../../../../components/analysis/TradeDecisionVisual';
+import { ForecastBandOverlay } from '../../../../../components/analysis/ForecastBandOverlay';
+import { MultiStrategyCards } from '../../../../../components/analysis/MultiStrategyCards';
+import { WebResearchPanel } from '../../../../../components/analysis/WebResearchPanel';
+import { PlanValidationBadge } from '../../../../../components/analysis/PlanValidationBadge';
 import { StarLogo } from '../../../../../components/common/TraderPathLogo';
 import { authFetch } from '../../../../../lib/api';
 
@@ -751,6 +755,70 @@ export default function AnalysisDetailsPage() {
             </div>
           </div>
 
+          {/* Capital Flow Context Banner */}
+          {(() => {
+            const cfCtx = step5?.capitalFlowContext;
+            const flowAligned = step7?.ragEnrichment?.capitalFlowAligned;
+            if (!cfCtx && flowAligned == null) return null;
+
+            const phase = (cfCtx?.phase || '').toUpperCase();
+            const alignment = cfCtx?.marketAlignment || (flowAligned ? 'aligned' : flowAligned === false ? 'counter' : null);
+            const action = (cfCtx?.action || '').toLowerCase();
+            const bias = action === 'avoid' ? 'RISK OFF' : action === 'analyze' ? 'RISK ON' : 'NEUTRAL';
+            const reason = cfCtx?.reason;
+
+            return (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-4 px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-600/50 text-xs">
+                <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium">
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>Capital Flow:</span>
+                </div>
+
+                {/* Alignment badge */}
+                {alignment && (
+                  <span className={cn(
+                    "px-1.5 py-0.5 rounded font-semibold",
+                    alignment === 'aligned'
+                      ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
+                      : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                  )}>
+                    {alignment === 'aligned' ? 'Aligned' : 'Counter-Flow'}
+                  </span>
+                )}
+
+                {/* Phase badge */}
+                {phase && ['EARLY', 'MID', 'LATE', 'EXIT'].includes(phase) && (
+                  <span className={cn(
+                    "px-1.5 py-0.5 rounded font-medium",
+                    phase === 'EARLY' ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" :
+                    phase === 'MID' ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" :
+                    phase === 'LATE' ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" :
+                    "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+                  )}>
+                    {phase}
+                  </span>
+                )}
+
+                {/* Liquidity bias */}
+                <span className={cn(
+                  "px-1.5 py-0.5 rounded font-medium",
+                  bias === 'RISK ON' ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" :
+                  bias === 'RISK OFF' ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" :
+                  "bg-slate-100 dark:bg-slate-600/40 text-slate-600 dark:text-slate-300"
+                )}>
+                  {bias}
+                </span>
+
+                {/* Short reason text */}
+                {reason && (
+                  <span className="text-slate-400 dark:text-slate-500 truncate max-w-[260px] hidden sm:inline" title={reason}>
+                    {reason}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Info Cards - Different layouts for MLIS vs Classic */}
           {isMLIS ? (
             /* MLIS Pro: 5 Layer Cards */
@@ -1240,7 +1308,50 @@ export default function AnalysisDetailsPage() {
             </div>
           )}
 
-          {/* Export Info */}
+          {/* RAG Enrichment Layer - Web Research, Forecast Bands, Multi-Strategy, Validation */}
+          {step7?.ragEnrichment && (
+            <div className="mt-8 space-y-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                  <Search className="w-4 h-4 text-white" />
+                </div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">RAG Intelligence Layer</h2>
+                {step7.ragEnrichment.capitalFlowAligned != null && (
+                  <span className={`ml-auto text-xs font-medium px-2 py-0.5 rounded-full ${step7.ragEnrichment.capitalFlowAligned ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
+                    {step7.ragEnrichment.capitalFlowAligned ? 'Flow Aligned' : 'Counter-Flow'}
+                  </span>
+                )}
+              </div>
+
+              {/* Plan Validation Badge */}
+              <PlanValidationBadge
+                validation={step7.ragEnrichment.validation}
+                capitalFlowAligned={step7.ragEnrichment.capitalFlowAligned}
+              />
+
+              {/* Web Research */}
+              <WebResearchPanel research={step7.ragEnrichment.research} />
+
+              {/* Forecast Bands */}
+              {step7.ragEnrichment.forecastBands && step7.ragEnrichment.forecastBands.length > 0 && (
+                <ForecastBandOverlay
+                  bands={step7.ragEnrichment.forecastBands}
+                  currentPrice={step2?.currentPrice || entryPrice || 0}
+                  symbol={analysis.symbol}
+                />
+              )}
+
+              {/* Multi-Strategy Plans */}
+              {step7.ragEnrichment.strategies && step7.ragEnrichment.strategies.strategies?.length > 0 && (
+                <MultiStrategyCards
+                  strategies={step7.ragEnrichment.strategies.strategies}
+                  recommended={step7.ragEnrichment.strategies.recommended}
+                  currentPrice={step2?.currentPrice || entryPrice || 0}
+                />
+              )}
+            </div>
+          )}
+
           {/* Footer - Copyright */}
           <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-700">
             <p className="text-center text-xs text-gray-500 dark:text-slate-400">
