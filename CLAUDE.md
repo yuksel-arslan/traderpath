@@ -566,6 +566,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-06 | Login route backend'den gelen isFirstLogin/firstLoginBonus/credits metadata'yı iletmiyordu | `data.data`'dan sadece `user` çıkarılıyordu. `credits`, `isFirstLogin`, `firstLoginBonus` da eklendi. Ayrıca non-JSON response ve fetch error için ayrı hata yakalama eklendi | `apps/web/app/api/auth/login/route.ts` |
 | 2026-02-06 | Google OAuth callback first login tespiti ve hata yakalama eksikti | `isFirstLogin`/`firstLoginBonus` query params olarak `/capital-flow`'a aktarılıyor. Backend fetch hatası ve non-JSON response için ayrı try-catch eklendi | `apps/web/app/api/auth/google/callback/route.ts` |
 | 2026-02-06 | favicon.ico 404 hatası (GET https://traderpath.io/favicon.ico 404) | Next.js rewrite kuralı eklendi: `/favicon.ico` → `/favicon.svg`. Hem development hem production'da çalışıyor | `next.config.js` |
+| 2026-02-06 | Deprecated meta tag uyarısı: apple-mobile-web-app-capable yerine mobile-web-app-capable kullanılmalı | Next.js metadata API'sine `other: { 'mobile-web-app-capable': 'yes' }` eklendi. Modern PWA standardına uygun meta tag kullanılıyor | `apps/web/app/layout.tsx` |
 
 ---
 
