@@ -812,7 +812,7 @@ function calculateVelocity(flow7d: number, flow30d: number): number {
 /**
  * Detect rotation signal for a market
  */
-function detectRotationSignal(flow: { flow7d: number; flowVelocity: number }): 'entering' | 'stable' | 'exiting' | null {
+function detectRotationSignal(flow: { flow7d: number; flowVelocity: number }): 'entering' | 'stable' | 'exiting' {
   if (flow.flowVelocity > 2 && flow.flow7d > 3) {
     return 'entering';
   }
@@ -821,11 +821,8 @@ function detectRotationSignal(flow: { flow7d: number; flowVelocity: number }): '
     return 'exiting';
   }
 
-  if (Math.abs(flow.flowVelocity) < 1 && Math.abs(flow.flow7d) < 3) {
-    return 'stable';
-  }
-
-  return null;
+  // Default to stable for all other cases (moderate positive/negative flow)
+  return 'stable';
 }
 
 /**
