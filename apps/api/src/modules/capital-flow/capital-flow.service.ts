@@ -2505,6 +2505,12 @@ export async function getMarketAnalysis(market: MarketType): Promise<{
       value: `${liquidity.dxy.trend.toUpperCase()}`,
       status: liquidity.dxy.trend === 'weakening' ? 'positive' : liquidity.dxy.trend === 'strengthening' ? 'negative' : 'neutral',
     });
+  } else if (market === 'bist') {
+    keyMetrics.push({
+      label: 'Market Signal',
+      value: marketFlow.rotationSignal?.toUpperCase() || 'STABLE',
+      status: marketFlow.rotationSignal === 'entering' ? 'positive' : marketFlow.rotationSignal === 'exiting' ? 'negative' : 'neutral',
+    });
   }
 
   // Determine trend

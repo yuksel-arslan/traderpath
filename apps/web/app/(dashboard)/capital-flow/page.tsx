@@ -246,6 +246,7 @@ function MarketAnalysisModal({
     stocks: 'Stock Market',
     bonds: 'Bond Market',
     metals: 'Precious Metals',
+    bist: 'Borsa Istanbul',
   };
 
   const trendColors = {

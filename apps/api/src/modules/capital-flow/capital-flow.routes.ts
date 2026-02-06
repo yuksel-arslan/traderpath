@@ -135,7 +135,7 @@ export async function capitalFlowRoutes(app: FastifyInstance) {
       const market = request.params.market as MarketType;
 
       // Validate market type
-      const validMarkets: MarketType[] = ['crypto', 'stocks', 'bonds', 'metals'];
+      const validMarkets: MarketType[] = ['crypto', 'stocks', 'bonds', 'metals', 'bist'];
       if (!validMarkets.includes(market)) {
         return reply.status(400).send({
           success: false,
@@ -174,7 +174,7 @@ export async function capitalFlowRoutes(app: FastifyInstance) {
       const market = request.params.market as MarketType;
 
       // Validate market type
-      const validMarkets: MarketType[] = ['crypto', 'stocks', 'bonds', 'metals'];
+      const validMarkets: MarketType[] = ['crypto', 'stocks', 'bonds', 'metals', 'bist'];
       if (!validMarkets.includes(market)) {
         return reply.status(400).send({
           success: false,
