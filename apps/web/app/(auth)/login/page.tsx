@@ -38,16 +38,21 @@ export default function LoginPage() {
       setSuccessMessage('Email verified successfully! You can now sign in.');
     }
     const errorParam = searchParams.get('error');
+    const detailParam = searchParams.get('detail');
     if (errorParam) {
       const errorMessages: Record<string, string> = {
         oauth_not_configured: 'Google login is not configured. Please contact support.',
         no_code: 'Authorization failed. Please try again.',
         token_exchange_failed: 'Failed to authenticate with Google. Please try again.',
         no_email: 'Could not get email from Google. Please check your Google account.',
-        backend_error: 'Server error during login. Please try again.',
+        backend_error: detailParam === 'fetch_failed'
+          ? 'Cannot connect to server. Please try again later.'
+          : detailParam?.startsWith('non_json')
+          ? 'Server returned an unexpected response. Please try again later.'
+          : 'Server error during login. Please try again.',
         no_token: 'Authentication failed. Please try again.',
         oauth_error: 'OAuth error occurred. Please try again.',
-        SERVER_ERROR: 'Google OAuth server error. Please check OAuth configuration or try again later.',
+        SERVER_ERROR: 'Server error. Please try again later.',
         access_denied: 'Access denied. Please grant permissions to continue.',
         invalid_request: 'Invalid OAuth request. Please try again.',
         redirect_uri_mismatch: 'OAuth redirect URI mismatch. Please contact support.',

@@ -20,13 +20,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Call backend API
-    const response = await fetch(`${API_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    let response: Response;
+    let data: any;
+    try {
+      response = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('Backend returned non-JSON:', response.status, text.slice(0, 500));
+        return NextResponse.json(
+          { success: false, error: { code: 'SERVER_ERROR', message: 'Backend service unavailable. Please try again later.' } },
+          { status: 502 }
+        );
+      }
+    } catch (fetchError: any) {
+      console.error('Backend fetch failed:', fetchError.message, { API_URL });
+      return NextResponse.json(
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Cannot connect to backend. Please try again later.' } },
+        { status: 502 }
+      );
+    }
 
     if (!response.ok || !data.success) {
       return NextResponse.json(

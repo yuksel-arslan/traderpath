@@ -64,20 +64,35 @@ export async function GET(request: NextRequest) {
     // Send to backend for OAuth login/register
     console.log('Sending to backend:', { API_URL, email: googleUser.email, providerId: googleUser.id });
 
-    const backendResponse = await fetch(`${API_URL}/api/auth/oauth`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        provider: 'google',
-        providerId: googleUser.id,
-        email: googleUser.email,
-        name: googleUser.name,
-        image: googleUser.picture,
-      }),
-    });
+    let backendResponse: Response;
+    let backendData: any;
+    try {
+      backendResponse = await fetch(`${API_URL}/api/auth/oauth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'google',
+          providerId: googleUser.id,
+          email: googleUser.email,
+          name: googleUser.name,
+          image: googleUser.picture,
+        }),
+      });
 
-    const backendData = await backendResponse.json();
-    console.log('Backend response:', { status: backendResponse.status, data: backendData });
+      const contentType = backendResponse.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        backendData = await backendResponse.json();
+      } else {
+        const text = await backendResponse.text();
+        console.error('Backend returned non-JSON:', backendResponse.status, text.slice(0, 500));
+        return NextResponse.redirect(new URL(`/login?error=backend_error&detail=non_json_${backendResponse.status}`, baseUrl));
+      }
+    } catch (fetchError: any) {
+      console.error('Backend fetch failed:', fetchError.message, { API_URL });
+      return NextResponse.redirect(new URL(`/login?error=backend_error&detail=fetch_failed`, baseUrl));
+    }
+
+    console.log('Backend response:', { status: backendResponse.status, success: backendData?.success });
 
     if (!backendResponse.ok || !backendData.success) {
       console.error('Backend OAuth failed:', backendData);
