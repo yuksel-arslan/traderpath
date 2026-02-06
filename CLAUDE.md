@@ -1939,6 +1939,35 @@ Kullanıcı Hakları Aktif:
     - `checkAllHistoricalOutcomes()` - Klines API ile tarihsel outcome tespitinde
     - `checkAndUpdateAnalysisOutcomes()` - Canlı fiyat ile outcome tespitinde
     - Fire-and-forget pattern (rapor gönderimi ana akışı bloklamaz)
+- **RAG Intelligence Layer implement edildi**:
+  - **Backend RAG Modülü** (15 dosya, `apps/api/src/modules/rag/`):
+    - `types.ts`: Core type tanımları (citations, forecast bands, strategies, validation)
+    - `web-research/web-research.service.ts`: 3-modlu araştırma (fast/news/deep) + Gemini AI
+    - `web-research/sources/source-allowlist.ts`: 35+ güvenilir kaynak, tier-based scoring
+    - `web-research/citation.service.ts`: Kaynak yönetimi, puanlama, deduplikasyon
+    - `forecast/band-calculator.ts`: ATR-bazlı P10/P50/P90 olasılık dağılımı
+    - `forecast/forecast-band.service.ts`: AI tahmin bantları, Capital Flow faz farkındalığı
+    - `strategy/strategies/`: 4 strateji generator (breakout, pullback, trend-following, range)
+    - `strategy/multi-strategy.service.ts`: 4 strateji orchestration + Capital Flow alignment
+    - `validation/plan-validation.service.ts`: 10-kural gatekeeper (block/warn/info)
+    - `rag-orchestrator.service.ts`: Tek giriş noktası, paralel pipeline, graceful degradation
+    - `rag.routes.ts`: POST /enrich, GET /forecast/:symbol, POST /validate
+  - **Analiz Pipeline Entegrasyonu**:
+    - Step 9 olarak MLIS confirmation sonrasına eklendi (non-blocking try/catch)
+    - RAG verisi step7Result.ragEnrichment ve API response'a dahil
+    - Routes /api/v1/rag prefix ile kayıtlı
+  - **Frontend Bileşenleri** (4 dosya):
+    - `ForecastBandOverlay.tsx`: P10/P50/P90 görsel range bar'ları (3 horizon)
+    - `MultiStrategyCards.tsx`: 4 strateji kartları (applicability score, R:R, counter-flow uyarısı)
+    - `WebResearchPanel.tsx`: Araştırma özeti, sentiment, kaynaklar
+    - `PlanValidationBadge.tsx`: Validasyon durumu (passed/blocked/warnings)
+    - Capital Flow context banner analiz detay sayfasına eklendi
+  - **PDF Rapor Güncellemesi**:
+    - Page 8 (RAG Intelligence Layer) eklendi: forecast bands, strategies tablosu, web research, citations
+    - `ragEnrichment` alanı `AnalysisReportData` interface'ine eklendi
+  - **ThemeConfig**: `apps/web/lib/theme-config.ts` - Merkezi renk yönetimi
+    - Brand renkleri: Background #0F172A, Primary #22C55E, Secondary #F43F5E
+    - Helper fonksiyonlar: getVerdictColor, getPhaseColor, getDirectionColor, getSentimentColor, getBiasColor
 
 ---
 
@@ -2060,6 +2089,100 @@ if (assetContext.metrics) {
   });
 }
 ```
+
+---
+
+## 🧠 RAG INTELLIGENCE LAYER
+
+### Temel Prensip
+> **Core engine output'ları truth source olarak kalır. RAG bir "interpretation / planning / reporting" layer'dır.**
+
+### Mimari
+
+```
+Capital Flow (top filter) → 7-Step Engine (truth) → RAG Orchestrator:
+  1. Web Research  ─────┐ (parallel)
+  2. Forecast Bands ────┤ (parallel)
+                        ├→ 3. Multi-Strategy (depends on 2)
+                        └→ 4. Validation (depends on 1, 2, 3)
+                               → Final Result
+```
+
+### Bileşenler
+
+| Bileşen | Dosya | Açıklama |
+|---------|-------|----------|
+| Types | `rag/types.ts` | Tüm RAG type tanımlamaları |
+| Source Allowlist | `rag/web-research/sources/source-allowlist.ts` | 35+ güvenilir kaynak, tier-based scoring |
+| Citation Service | `rag/web-research/citation.service.ts` | Kaynak yönetimi, puanlama, deduplikasyon |
+| Web Research | `rag/web-research/web-research.service.ts` | 3 mod: fast (free), news ($0.001), deep ($0.005) |
+| Band Calculator | `rag/forecast/band-calculator.ts` | ATR-bazlı P10/P50/P90 olasılık dağılımı |
+| Forecast Bands | `rag/forecast/forecast-band.service.ts` | AI tahmin bantları üretimi |
+| Breakout | `rag/strategy/strategies/breakout.strategy.ts` | Kırılım stratejisi |
+| Pullback | `rag/strategy/strategies/pullback.strategy.ts` | Geri çekilme stratejisi |
+| Trend Following | `rag/strategy/strategies/trend-following.strategy.ts` | Trend takip stratejisi |
+| Range | `rag/strategy/strategies/range.strategy.ts` | Aralık stratejisi |
+| Multi-Strategy | `rag/strategy/multi-strategy.service.ts` | 4 strateji orchestration |
+| Plan Validation | `rag/validation/plan-validation.service.ts` | 10-kural gatekeeper |
+| RAG Orchestrator | `rag/rag-orchestrator.service.ts` | Tek giriş noktası |
+| RAG Routes | `rag/rag.routes.ts` | API endpoint'leri |
+
+### API Endpoint'leri
+
+| Endpoint | Method | Açıklama | Maliyet |
+|----------|--------|----------|---------|
+| `/api/v1/rag/enrich` | POST | Tam RAG enrichment | $0-0.005 |
+| `/api/v1/rag/forecast/:symbol` | GET | Forecast bands (cached) | FREE |
+| `/api/v1/rag/validate` | POST | Plan validasyonu | FREE |
+
+### Research Modları
+
+| Mod | Maliyet | İçerik | Cache |
+|-----|---------|--------|-------|
+| `fast` | FREE | Mevcut news/calendar verisi | 15 dk |
+| `news` | ~$0.001 | + Gemini özet | 5 dk |
+| `deep` | ~$0.005 | + Tam RAG analiz | 2 dk |
+
+### Forecast Bands Formülü
+
+```
+bandWidth = ATR × horizonMultiplier × sqrt(barsAhead) × assetFactor × phaseFactor
+
+Asset Factors: crypto=1.3, stocks=1.0, metals=0.9, bonds=0.6, bist=1.1
+Phase Factors: early=1.1, mid=0.9, late=1.2, exit=1.4
+```
+
+### Validation Kuralları (10 adet)
+
+| Kural | Severity | Açıklama |
+|-------|----------|----------|
+| Max SL Distance | BLOCK | SL > %10 uzakta → plan reddi |
+| Min SL Distance | WARN | SL < %0.5 → çok sıkı uyarısı |
+| Min R/R Ratio | BLOCK | R:R < 1.0 → plan reddi |
+| SL Direction Sanity | BLOCK | SL yönü hatalı → plan reddi |
+| TP Direction Sanity | BLOCK | TP yönü hatalı → plan reddi |
+| Entry Realism | WARN | Entry > %5 uzakta → uyarı |
+| Economic Event | BLOCK | High-impact event yakın → plan reddi |
+| Capital Flow Direction | WARN | Flow'a ters → Counter-Trend uyarısı |
+| Exit Phase | WARN | EXIT fazda → yeni giriş yapma |
+| TP in Forecast Band | INFO | TP P90 dışında → bilgi notu |
+
+### Frontend Bileşenleri
+
+| Bileşen | Dosya | Açıklama |
+|---------|-------|----------|
+| ForecastBandOverlay | `components/analysis/ForecastBandOverlay.tsx` | P10/P50/P90 görsel range bar |
+| MultiStrategyCards | `components/analysis/MultiStrategyCards.tsx` | 4 strateji kartları |
+| WebResearchPanel | `components/analysis/WebResearchPanel.tsx` | Araştırma özeti ve kaynaklar |
+| PlanValidationBadge | `components/analysis/PlanValidationBadge.tsx` | Validasyon durumu badge'i |
+
+### ThemeConfig
+
+| Dosya | Açıklama |
+|-------|----------|
+| `apps/web/lib/theme-config.ts` | Merkezi renk yönetimi |
+
+Helper fonksiyonlar: `getVerdictColor()`, `getPhaseColor()`, `getDirectionColor()`, `getSentimentColor()`, `getBiasColor()`
 
 ---
 
