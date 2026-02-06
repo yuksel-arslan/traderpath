@@ -45,7 +45,7 @@ import { THEME } from '../../../lib/theme-config';
 const TradePlanChart = dynamic(
   () =>
     import('../../../components/analysis/TradePlanChart').then((mod) => ({
-      default: mod.default,
+      default: mod.TradePlanChart,
     })),
   { ssr: false, loading: () => <ChartSkeleton /> }
 );
