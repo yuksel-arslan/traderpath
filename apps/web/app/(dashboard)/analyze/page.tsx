@@ -62,7 +62,7 @@ const AnalysisDialog = dynamic(
 );
 
 // Types
-type AssetType = 'crypto' | 'stocks' | 'bonds' | 'metals';
+type AssetType = 'crypto' | 'stocks' | 'bonds' | 'metals' | 'bist';
 type AnalysisMethod = 'classic' | 'mlis_pro';
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
 type VerdictFilter = 'all' | 'go' | 'conditional_go' | 'wait' | 'avoid';
@@ -141,6 +141,7 @@ const ASSET_CONFIGS: Record<AssetType, { name: string; icon: React.ElementType; 
   stocks: { name: 'Stocks', icon: Building2, gradient: 'from-blue-500 to-indigo-500' },
   bonds: { name: 'Bonds', icon: Landmark, gradient: 'from-purple-500 to-violet-500' },
   metals: { name: 'Metals', icon: Gem, gradient: 'from-yellow-500 to-amber-400' },
+  bist: { name: 'BIST', icon: Building2, gradient: 'from-red-500 to-rose-500' },
 };
 
 // Sector configurations
@@ -168,6 +169,15 @@ const SECTOR_CONFIGS: Record<AssetType, { name: string; value: string }[]> = {
     { name: 'All Metals', value: 'all' },
     { name: 'Gold', value: 'gold' },
     { name: 'Silver', value: 'silver' },
+  ],
+  bist: [
+    { name: 'All BIST', value: 'all' },
+    { name: 'Bankacılık', value: 'banking' },
+    { name: 'Holding', value: 'holding' },
+    { name: 'Sanayi', value: 'industrial' },
+    { name: 'Havacılık', value: 'aviation' },
+    { name: 'Perakende', value: 'retail' },
+    { name: 'Enerji', value: 'energy' },
   ],
 };
 
@@ -259,6 +269,42 @@ const ALL_SYMBOLS: Record<AssetType, Record<string, { symbol: string; name: stri
     ],
     silver: [
       { symbol: 'SLV', name: 'Silver ETF' }, { symbol: 'SIL', name: 'Silver Miners' },
+    ],
+  },
+  bist: {
+    all: [
+      { symbol: 'THYAO', name: 'Türk Hava Yolları' }, { symbol: 'GARAN', name: 'Garanti BBVA' },
+      { symbol: 'AKBNK', name: 'Akbank' }, { symbol: 'KCHOL', name: 'Koç Holding' },
+      { symbol: 'SAHOL', name: 'Sabancı Holding' }, { symbol: 'EREGL', name: 'Ereğli Demir Çelik' },
+      { symbol: 'YKBNK', name: 'Yapı Kredi' }, { symbol: 'ISCTR', name: 'İş Bankası' },
+      { symbol: 'TOASO', name: 'Tofaş Oto' }, { symbol: 'FROTO', name: 'Ford Otosan' },
+      { symbol: 'TCELL', name: 'Turkcell' }, { symbol: 'BIMAS', name: 'BİM' },
+      { symbol: 'TUPRS', name: 'Tüpraş' }, { symbol: 'ASELS', name: 'Aselsan' },
+      { symbol: 'PGSUS', name: 'Pegasus' }, { symbol: 'SISE', name: 'Şişecam' },
+    ],
+    banking: [
+      { symbol: 'GARAN', name: 'Garanti BBVA' }, { symbol: 'AKBNK', name: 'Akbank' },
+      { symbol: 'YKBNK', name: 'Yapı Kredi' }, { symbol: 'ISCTR', name: 'İş Bankası' },
+      { symbol: 'HALKB', name: 'Halkbank' }, { symbol: 'VAKBN', name: 'Vakıfbank' },
+    ],
+    holding: [
+      { symbol: 'KCHOL', name: 'Koç Holding' }, { symbol: 'SAHOL', name: 'Sabancı Holding' },
+      { symbol: 'TAVHL', name: 'TAV Havalimanları' }, { symbol: 'TKFEN', name: 'Tekfen Holding' },
+    ],
+    industrial: [
+      { symbol: 'EREGL', name: 'Ereğli Demir Çelik' }, { symbol: 'SISE', name: 'Şişecam' },
+      { symbol: 'TOASO', name: 'Tofaş Oto' }, { symbol: 'FROTO', name: 'Ford Otosan' },
+      { symbol: 'KRDMD', name: 'Kardemir' },
+    ],
+    aviation: [
+      { symbol: 'THYAO', name: 'Türk Hava Yolları' }, { symbol: 'PGSUS', name: 'Pegasus' },
+    ],
+    retail: [
+      { symbol: 'BIMAS', name: 'BİM' }, { symbol: 'MGROS', name: 'Migros' },
+      { symbol: 'SOKM', name: 'Şok Market' },
+    ],
+    energy: [
+      { symbol: 'TUPRS', name: 'Tüpraş' }, { symbol: 'PETKM', name: 'Petkim' },
     ],
   },
 };
@@ -457,6 +503,27 @@ export default function AnalyzePage() {
       setCapitalFlowLoading(false);
     }
   }, []);
+
+  // Read URL params on mount (e.g. /analyze?market=bist&symbol=THYAO)
+  useEffect(() => {
+    const marketParam = searchParams.get('market') || searchParams.get('asset');
+    if (marketParam) {
+      const m = marketParam.toLowerCase() as AssetType;
+      if (m in ALL_SYMBOLS) {
+        setAssetType(m);
+        setSector('all');
+        // If symbol param also provided, select it
+        const symbolParam = searchParams.get('symbol');
+        if (symbolParam) {
+          setSelectedSymbol(symbolParam.toUpperCase());
+        } else {
+          // Pre-select first asset of the market
+          const firstAsset = ALL_SYMBOLS[m]?.all?.[0];
+          if (firstAsset) setSelectedSymbol(firstAsset.symbol);
+        }
+      }
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchDailyPassStatus();
