@@ -61,6 +61,7 @@ import {
 import subscriptionRoutes from './modules/subscriptions/subscription.routes';
 import { startDailyCreditsJob, stopDailyCreditsJob } from './modules/subscriptions/subscription-cron.job';
 import { startReconciliationJob, stopReconciliationJob } from './modules/admin/reconciliation.cron';
+import { unifiedAnalysisRoutes } from './modules/unified-analysis';
 
 // ===========================================
 // Server Configuration
@@ -428,6 +429,10 @@ app.register(signalSubscriptionRoutes, { prefix: '/api/v1/signals' });
 // Subscription management routes (credit-based)
 app.register(subscriptionRoutes, { prefix: '/api/v1/subscriptions' });
 app.register(subscriptionRoutes, { prefix: '/api/subscriptions' }); // Legacy
+
+// Unified Analysis Pipeline routes
+app.register(unifiedAnalysisRoutes, { prefix: '/api/v1/unified-analysis' });
+app.register(unifiedAnalysisRoutes, { prefix: '/api/unified-analysis' }); // Legacy
 
 // ===========================================
 // 404 Handler
