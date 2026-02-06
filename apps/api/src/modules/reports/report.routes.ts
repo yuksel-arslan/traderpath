@@ -1587,6 +1587,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
             dateStyle: 'medium',
             timeStyle: 'short',
           }),
+          analysisId,
         });
 
         if (!result.success) {
@@ -1718,6 +1719,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
             dateStyle: 'medium',
             timeStyle: 'short',
           }),
+          analysisId,
         });
 
         if (!result.success) {

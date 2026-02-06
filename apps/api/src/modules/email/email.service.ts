@@ -76,6 +76,7 @@ interface PdfReportEmailData {
   generatedAt: string;
   pdfBase64: string; // Base64 encoded PDF
   fileName: string;
+  analysisId?: string; // For "View Interactive Chart" link
 }
 
 class EmailService {
@@ -624,6 +625,28 @@ TraderPath - Professional Trading Analysis
                   </td>
                 </tr>
               </table>
+
+              ${data.analysisId ? `
+              <!-- View Interactive Chart Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
+                <tr>
+                  <td align="center">
+                    <table cellpadding="0" cellspacing="0" style="border-radius: 12px; overflow: hidden;">
+                      <tr>
+                        <td style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); padding: 16px 40px; text-align: center;">
+                          <a href="${process.env['APP_URL'] || 'https://traderpath.io'}/analyze/details/${data.analysisId}" style="color: white; text-decoration: none; font-size: 16px; font-weight: 600; display: inline-block;">
+                            View Interactive Chart
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="color: #94a3b8; font-size: 11px; margin: 8px 0 0;">
+                      View live candlestick chart with trade levels on TraderPath
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
 
               <!-- Footer Note -->
               <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 30px 0 0; padding-top: 20px; border-top: 1px solid #e2e8f0;">
@@ -1507,6 +1530,7 @@ TraderPath - Professional Trading Analysis
       direction: string;
       screenshotBase64: string; // Base64 data URL
       generatedAt: string;
+      analysisId?: string; // For "View Interactive Chart" link
     }
   ): Promise<{ success: boolean; error?: string }> {
     const isLong = data.direction?.toLowerCase() === 'long';
@@ -1571,9 +1595,23 @@ TraderPath - Professional Trading Analysis
               <p style="color: #94a3b8; font-size: 14px; margin: 0 0 15px;">
                 Full analysis screenshot attached below
               </p>
-              <p style="color: #64748b; font-size: 12px; margin: 0;">
+              <p style="color: #64748b; font-size: 12px; margin: 0 0 20px;">
                 Open the attachment to view your complete ${formatSymbolPair(data.symbol)} analysis with chart and trade plan
               </p>
+              ${data.analysisId ? `
+              <table cellpadding="0" cellspacing="0" style="margin: 0 auto; border-radius: 10px; overflow: hidden;">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); padding: 14px 32px; text-align: center;">
+                    <a href="${process.env['APP_URL'] || 'https://traderpath.io'}/analyze/details/${data.analysisId}" style="color: white; text-decoration: none; font-size: 14px; font-weight: 600;">
+                      View Interactive Chart
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="color: #475569; font-size: 11px; margin: 10px 0 0;">
+                View live candlestick chart with trade levels on TraderPath
+              </p>
+              ` : ''}
             </td>
           </tr>
 
