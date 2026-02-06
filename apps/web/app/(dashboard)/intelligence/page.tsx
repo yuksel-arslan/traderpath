@@ -60,12 +60,6 @@ const TradePlanChart = dynamic(
 
 interface CapitalFlowSummary {
   globalLiquidity?: {
-    fedBalanceSheet?: { value?: number; change30d?: number; trend?: string };
-    m2MoneySupply?: { value?: number; change30d?: number; yoyGrowth?: number };
-    dxy?: { value?: number; change7d?: number; trend?: string };
-    vix?: { value?: number; level?: string };
-    yieldCurve?: { spread10y2y?: number; inverted?: boolean; interpretation?: string };
-    netLiquidity?: { value?: number; change7d?: number; change30d?: number; trend?: string; interpretation?: string };
     bias?: string;
     fedBalanceSheet?: { value?: number; trend?: string; change30d?: number };
     m2?: { growth?: number; value?: number; change30d?: number };
@@ -74,7 +68,6 @@ interface CapitalFlowSummary {
     yieldCurve?: { spread?: number; inverted?: boolean; spread10y2y?: number };
     lastUpdated?: string;
   };
-  liquidityBias?: string;
   markets?: Array<{
     market?: string;
     flow7d?: number;
@@ -82,16 +75,6 @@ interface CapitalFlowSummary {
     flowVelocity?: number;
     phase?: string;
     rotationSignal?: string;
-    currentValue?: number;
-    sectors?: Array<{
-      name?: string;
-      flow7d?: number;
-      flow30d?: number;
-      dominance?: number;
-      trending?: string;
-      phase?: string;
-      topAssets?: string[];
-    }>;
     value?: number;
     daysInPhase?: number;
     sectors?: Array<{ name: string; flow7d: number; trending: string }>;
@@ -104,27 +87,18 @@ interface CapitalFlowSummary {
     reason?: string;
     phase?: string;
     sectors?: string[];
-    suggestedAssets?: Array<{ symbol: string; name: string; market: string; sector?: string; riskLevel?: string; reason?: string }>;
     suggestedAssets?: Array<{ symbol: string; name?: string; market?: string }>;
   };
   sellRecommendation?: {
-    primaryMarket?: string;
+    market?: string;
     direction?: string;
     reason?: string;
     confidence?: number;
-    sectors?: string[];
-    suggestedAssets?: Array<{ symbol: string; name: string; market: string; sector?: string; riskLevel?: string; reason?: string }>;
   };
-  insights?: {
-    layer1?: string;
-    layer2?: string;
-    layer3?: string;
-    layer4?: string;
-    ragLayer1?: string;
-    ragLayer2?: string;
-    ragLayer3?: string;
-    ragLayer4?: string;
-  };
+  ragLayer1?: string;
+  ragLayer2?: string;
+  ragLayer3?: string;
+  ragLayer4?: string;
 }
 
 interface AnalysisData {
@@ -339,8 +313,8 @@ function NavigationPanel({
       sublabel: 'L1-L2 · Global & Markets',
       icon: Globe,
       completed: !!capitalFlow,
-      value: capitalFlow?.liquidityBias
-        ? capitalFlow.liquidityBias.replace(/_/g, ' ').toUpperCase()
+      value: capitalFlow?.globalLiquidity?.bias
+        ? capitalFlow.globalLiquidity.bias.replace(/_/g, ' ').toUpperCase()
         : undefined,
     },
     {
@@ -539,7 +513,7 @@ function FlowOverviewContent({ data }: { data: CapitalFlowSummary | null }) {
   if (!data) return <SectionSkeleton lines={5} />;
 
   const gl = data.globalLiquidity;
-  const bias = safeStr(data?.liquidityBias, 'neutral');
+  const bias = safeStr(gl?.bias, 'neutral');
   const biasColors = getBiasColor(bias);
   const markets = Array.isArray(data.markets) ? data.markets.filter((m) => m && m.market) : [];
 
@@ -559,24 +533,6 @@ function FlowOverviewContent({ data }: { data: CapitalFlowSummary | null }) {
         />
         <MetricCard
           label="Yield Spread"
-          value={
-            gl?.yieldCurve?.spread10y2y != null
-              ? `${safeNum(gl.yieldCurve.spread10y2y).toFixed(2)}%`
-              : 'N/A'
-          }
-          sub={gl?.yieldCurve?.inverted ? 'INVERTED' : 'Normal'}
-          valueClass={gl?.yieldCurve?.inverted ? 'text-red-400' : 'text-emerald-400'}
-        />
-        <MetricCard
-          label="M2 Growth"
-          value={
-            gl?.m2MoneySupply?.yoyGrowth != null ? `${safeNum(gl.m2MoneySupply.yoyGrowth).toFixed(1)}%` : 'N/A'
-          }
-        />
-      </div>
-
-      {/* RAG Insight */}
-      {data.insights?.ragLayer1 && <RagInsight text={data.insights.ragLayer1} layer={1} />}
           value={gl?.yieldCurve?.spread != null ? `${safeNum(gl.yieldCurve.spread).toFixed(2)}%` : 'N/A'}
           sub={gl?.yieldCurve?.inverted ? 'INVERTED' : 'Normal'}
           valueClass={gl?.yieldCurve?.inverted ? 'text-red-400' : 'text-emerald-400'}
@@ -626,7 +582,7 @@ function FlowOverviewContent({ data }: { data: CapitalFlowSummary | null }) {
         </div>
       </div>
 
-      {data.insights?.ragLayer2 && <RagInsight text={data.insights.ragLayer2} layer={2} />}
+      {data.ragLayer2 && <RagInsight text={data.ragLayer2} layer={2} />}
     </div>
   );
 }
@@ -677,27 +633,6 @@ function SectorContent({ data }: { data: CapitalFlowSummary | null }) {
                   ))}
                 </div>
               )}
-              {Array.isArray(rec.suggestedAssets) && rec.suggestedAssets.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-emerald-500/10">
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">
-                    Suggested Assets
-                  </span>
-                  <div className="flex flex-wrap gap-1.5 mt-1.5">
-                    {rec.suggestedAssets.map((a) => (
-                      <a
-                        key={a.symbol}
-                        href={`/analyze?market=${primaryMarket}&symbol=${a.symbol}`}
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
-                      >
-                        {a.symbol}
-                        {a.riskLevel && (
-                          <span className={`w-1.5 h-1.5 rounded-full ${a.riskLevel === 'low' ? 'bg-green-400' : a.riskLevel === 'medium' ? 'bg-yellow-400' : 'bg-red-400'}`} />
-                        )}
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -716,45 +651,6 @@ function SectorContent({ data }: { data: CapitalFlowSummary | null }) {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500 w-16">Market</span>
-                <span className="text-sm font-bold text-slate-800 dark:text-white uppercase">
-                  {safeStr(sell.primaryMarket)}
-                </span>
-              </div>
-              {sell.reason && (
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  {sell.reason}
-                </p>
-              )}
-              {Array.isArray(sell.sectors) && sell.sectors.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {sell.sectors.map((s) => (
-                    <span
-                      key={s}
-                      className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 border border-red-500/20"
-                    >
-                      {s}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {Array.isArray(sell.suggestedAssets) && sell.suggestedAssets.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-red-500/10">
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">
-                    Suggested Assets
-                  </span>
-                  <div className="flex flex-wrap gap-1.5 mt-1.5">
-                    {sell.suggestedAssets.map((a) => (
-                      <a
-                        key={a.symbol}
-                        href={`/analyze?market=${safeStr(sell.primaryMarket)}&symbol=${a.symbol}`}
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors"
-                      >
-                        {a.symbol}
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
                 <span className="text-sm font-bold text-slate-800 dark:text-white uppercase">{safeStr(sell.market)}</span>
               </div>
               {sell.reason && <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{sell.reason}</p>}
@@ -763,7 +659,7 @@ function SectorContent({ data }: { data: CapitalFlowSummary | null }) {
         )}
       </div>
 
-      {data.insights?.ragLayer3 && <RagInsight text={data.insights.ragLayer3} layer={3} />}
+      {data.ragLayer3 && <RagInsight text={data.ragLayer3} layer={3} />}
     </div>
   );
 }
@@ -994,7 +890,7 @@ function TradePlanContent({ analysis, capitalFlow }: { analysis: AnalysisData | 
         </div>
       </div>
 
-      {capitalFlow?.insights?.ragLayer4 && <RagInsight text={capitalFlow.insights.ragLayer4} layer={4} />}
+      {capitalFlow?.ragLayer4 && <RagInsight text={capitalFlow.ragLayer4} layer={4} />}
     </div>
   );
 }
@@ -1418,20 +1314,6 @@ export default function IntelligenceDashboard() {
 
   // Breadcrumb
   const breadcrumb = [
-    capitalFlow?.liquidityBias
-      ? capitalFlow.liquidityBias.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
-      : 'Market',
-    capitalFlow?.recommendation?.primaryMarket
-      ? capitalFlow.recommendation.primaryMarket.charAt(0).toUpperCase() +
-        capitalFlow.recommendation.primaryMarket.slice(1)
-      : 'Sector',
-    analysis?.symbol || 'Asset',
-    analysis?.step7Result
-      ? safeStr(
-          (analysis.step7Result as any)?.action || (analysis.step7Result as any)?.verdict,
-          'Plan'
-        ).toUpperCase()
-      : 'Plan',
     { label: capitalFlow?.globalLiquidity?.bias ? capitalFlow.globalLiquidity.bias.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) : 'Market', step: 'flow' as ViewStep },
     { label: capitalFlow?.recommendation?.primaryMarket ? capitalFlow.recommendation.primaryMarket.charAt(0).toUpperCase() + capitalFlow.recommendation.primaryMarket.slice(1) : 'Sector', step: 'sector' as ViewStep },
     { label: analysis?.symbol || 'Asset', step: 'asset' as ViewStep },
