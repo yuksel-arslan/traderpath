@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { ragOrchestrator } from './rag-orchestrator.service';
 import { forecastBandService } from './forecast/forecast-band.service';
 import { planValidationService } from './validation/plan-validation.service';
-import { detectAssetClass } from '../analysis/services/asset-specific/asset-analyzer-orchestrator';
+import { detectAssetClass } from '../analysis/types/asset-metrics.types';
 import { authenticate } from '../../core/auth/middleware';
 
 export async function ragRoutes(app: FastifyInstance) {
