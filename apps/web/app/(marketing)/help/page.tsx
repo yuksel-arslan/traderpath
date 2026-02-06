@@ -103,7 +103,7 @@ const FAQS = [
   },
   {
     question: 'How accurate are the predictions?',
-    answer: 'Our platform accuracy is currently around 87% for completed trades. However, past performance does not guarantee future results. We recommend always using proper risk management and conducting your own research.',
+    answer: 'Our platform accuracy is tracked in real-time from verified trade outcomes. However, past performance does not guarantee future results. This analysis is for informational and educational purposes only. We recommend always using proper risk management, conducting your own research, and consulting with a licensed financial advisor before making any investment decisions.',
   },
   {
     question: 'Can I get a refund for unused credits?',

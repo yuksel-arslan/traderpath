@@ -342,7 +342,7 @@ IMPORTANT INSTRUCTIONS:
 3. Give practical and actionable advice
 4. Warn about risks but don't create excessive fear
 5. Keep your answer 3-5 paragraphs
-6. Always include "This is not financial advice" disclaimer
+6. Always include "This analysis is for informational and educational purposes only and does not constitute financial advice" disclaimer
 
 RESPONSE FORMAT:
 - First, answer the question directly

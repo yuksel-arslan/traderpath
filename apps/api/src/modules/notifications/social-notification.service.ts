@@ -228,7 +228,7 @@ Hello ${data.userName}! Your analysis is ready.
 
 🔗 View full report at traderpath.io/dashboard
 
-⚠️ Not investment advice. DYOR.
+This analysis is for informational and educational purposes only. Not financial advice. Past performance does not guarantee future results.
     `.trim();
 
     return this.sendTelegramMessage(chatId, message);

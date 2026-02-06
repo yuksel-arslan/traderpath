@@ -422,7 +422,7 @@ const styles = `
   .footer-disclaimer { font-size: 5px; color: #b91c1c; margin-top: 2px; line-height: 1.3; }
 `;
 
-const DISCLAIMER_TEXT = 'RISK DISCLAIMER: This report is for educational purposes only. Not financial advice. Crypto trading involves substantial risk. DYOR. Never invest more than you can afford to lose.';
+const DISCLAIMER_TEXT = 'IMPORTANT DISCLAIMER: This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. All investments carry risk, including the potential loss of principal. Past performance does not guarantee future results. Conduct your own research and consult with a licensed financial advisor before making any investment decisions. TraderPath is not responsible for any losses resulting from the use of this report.';
 
 // ===========================================
 // SVG CHART GENERATOR FOR TRADE PLAN

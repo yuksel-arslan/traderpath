@@ -1247,7 +1247,7 @@ export default function AnalysisDetailsPage() {
               © 2026 <span className="font-semibold text-teal-500">TraderPath</span>. All rights reserved.
             </p>
             <p className="text-center text-xs text-gray-400 dark:text-slate-500 mt-1">
-              Trading involves risk. Not financial advice.
+              For informational and educational purposes only. Not financial advice. Past performance does not guarantee future results.
             </p>
           </div>
         </div>

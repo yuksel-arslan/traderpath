@@ -7,7 +7,7 @@ import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { Footer } from '../../../components/common/Footer';
 
 export default function DisclaimerPage() {
-  const lastUpdated = 'January 26, 2026';
+  const lastUpdated = 'February 6, 2026';
 
   return (
     <div className="min-h-screen bg-background">
@@ -56,7 +56,7 @@ export default function DisclaimerPage() {
             </div>
           </div>
           <p className="text-muted-foreground text-lg">
-            Please read this disclaimer carefully before using TraderPath. This disclaimer applies to all users of our platform and services.
+            Please read this disclaimer carefully before using TraderPath. This disclaimer applies to all users of our platform, services, reports, and communications.
           </p>
         </div>
 
@@ -66,10 +66,10 @@ export default function DisclaimerPage() {
             <AlertTriangle className="w-8 h-8 text-red-500 flex-shrink-0 mt-1" />
             <div>
               <h2 className="text-xl font-bold text-red-600 dark:text-red-400 mb-2">
-                Risk Warning
+                Important Disclaimer
               </h2>
               <p className="text-red-600 dark:text-red-400">
-                Trading cryptocurrencies and other financial instruments involves substantial risk of loss and is not suitable for all investors. You should carefully consider whether trading is appropriate for you in light of your circumstances, knowledge, and financial resources. You may lose some or all of your invested capital.
+                This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. The information provided should not be construed as a recommendation to buy, sell, or hold any security or financial instrument. All investments carry risk, including the potential loss of principal. Past performance does not guarantee future results. You should conduct your own research and consult with a licensed financial advisor before making any investment decisions.
               </p>
             </div>
           </div>
@@ -87,16 +87,17 @@ export default function DisclaimerPage() {
             </div>
             <div className="space-y-4 text-muted-foreground">
               <p>
-                <strong className="text-foreground">TraderPath is not a financial advisor.</strong> The information, analysis, and tools provided on our platform are for informational and educational purposes only.
+                <strong className="text-foreground">TraderPath is not a financial advisor, broker-dealer, or registered investment advisor.</strong> The information, analysis, reports, and tools provided on our platform are for informational and educational purposes only and do not constitute financial, investment, or trading advice.
               </p>
               <p>
                 Nothing on this platform should be construed as:
               </p>
               <ul className="list-disc list-inside space-y-2">
-                <li>Investment advice or recommendations</li>
+                <li>A recommendation to buy, sell, or hold any security or financial instrument</li>
                 <li>An offer or solicitation to buy or sell any securities</li>
                 <li>Professional financial, legal, or tax advice</li>
                 <li>A guarantee of future performance or results</li>
+                <li>A substitute for professional financial consultation</li>
               </ul>
               <div className="bg-card border rounded-lg p-4 mt-4">
                 <p className="text-sm">
@@ -116,7 +117,7 @@ export default function DisclaimerPage() {
             </div>
             <div className="space-y-4 text-muted-foreground">
               <p>
-                Trading cryptocurrencies and digital assets carries significant risks:
+                Trading cryptocurrencies, stocks, bonds, metals, and other financial instruments carries significant risks:
               </p>
               <div className="grid gap-4">
                 {[
@@ -171,7 +172,7 @@ export default function DisclaimerPage() {
               </ul>
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 mt-4">
                 <p className="text-amber-600 dark:text-amber-400 text-sm">
-                  <strong>Past performance is not indicative of future results.</strong> Any statistics or accuracy metrics displayed on our platform are based on historical data and do not guarantee similar results in the future.
+                  <strong>Past performance does not guarantee future results.</strong> Any statistics, accuracy metrics, or price predictions displayed on our platform are based on historical data and technical analysis, which may not accurately reflect future price movements. Market conditions can change rapidly, and any analysis may become outdated. Prices and statistics are subject to change.
                 </p>
               </div>
             </div>
@@ -215,16 +216,18 @@ export default function DisclaimerPage() {
             </div>
             <div className="space-y-4 text-muted-foreground">
               <p>
-                Our platform may include information from third-party sources, including:
+                The analysis is based on publicly available information from third-party sources, including:
               </p>
               <ul className="list-disc list-inside space-y-2">
-                <li>Market data from cryptocurrency exchanges</li>
+                <li>Market data from cryptocurrency exchanges (Binance, CoinGecko)</li>
+                <li>Stock, bond, and commodity data (Yahoo Finance)</li>
+                <li>Economic data (FRED API, Finnhub)</li>
                 <li>News and sentiment analysis from external providers</li>
                 <li>Technical indicators and chart data</li>
                 <li>Economic calendar events</li>
               </ul>
               <p className="mt-4">
-                We do not guarantee the accuracy or reliability of third-party information and are not responsible for any errors, omissions, or delays in such data.
+                The analysis may contain errors or omissions. We do not guarantee the accuracy, completeness, reliability, or timeliness of third-party information and are not responsible for any errors, omissions, or delays in such data. Data as of the analysis date; prices and statistics are subject to change.
               </p>
             </div>
           </section>

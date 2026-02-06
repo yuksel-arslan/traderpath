@@ -252,8 +252,8 @@ export default function PublicAnalysisPage({ params }: PageProps) {
             TraderPath - Professional Crypto Trading Analysis
           </p>
           <p className="text-xs">
-            Disclaimer: This is not financial advice. Cryptocurrency trading carries significant risk.
-            Always do your own research before making investment decisions.
+            This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice.
+            All investments carry risk, including the potential loss of principal. Past performance does not guarantee future results.
           </p>
         </div>
       </footer>
