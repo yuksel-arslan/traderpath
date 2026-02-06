@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { authenticate } from '../../core/auth/middleware';
 import { subscriptionService } from './subscription.service';
 import { stripeService } from '../payments/stripe.service';
+import { isAdminEmail } from '../../config/admin';
 import {
   TIER_CONFIG,
   STRIPE_PRICES,
@@ -108,6 +109,39 @@ export default async function subscriptionRoutes(app: FastifyInstance) {
       const userId = request.user!.id;
 
       try {
+        // Admin users get elite tier with all features and unlimited limits
+        const userEmail = request.user!.email;
+        if (userEmail && isAdminEmail(userEmail)) {
+          return reply.send({
+            success: true,
+            data: {
+              tier: 'elite',
+              status: 'ACTIVE',
+              isAdmin: true,
+              dailyCredits: 999999,
+              currentPeriodEnd: null,
+              cancelAtPeriodEnd: false,
+              features: {
+                capitalFlowL3: true,
+                capitalFlowL4: true,
+                assetAnalysis: true,
+                aiFeatures: true,
+                reportsExport: true,
+                automation: true,
+                rewards: true,
+              },
+              limits: {
+                maxScheduledReports: -1,
+                maxAlerts: -1,
+                maxDailyAnalyses: -1,
+                monthlyAiExpertQuestions: -1,
+                monthlyEmailReports: -1,
+                monthlyPdfReports: -1,
+              },
+            },
+          });
+        }
+
         const subscription = await subscriptionService.getUserSubscription(userId);
 
         return reply.send({
