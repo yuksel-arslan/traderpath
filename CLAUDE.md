@@ -605,6 +605,9 @@ Kullanıcı Hakları Aktif:
 | 2026-01-31 | Dashboard: Platform + My Performance bölümleri | Capital Flow entegrasyonu, her layer için özet kartları, platform ve kişisel AI stats |
 | 2026-01-31 | Scheduled sayfası: Kurumsal stil tasarımı | Glassmorphism kartlar, gradient orbs, animasyonlu status badge'leri, progress bar, hover efektleri |
 | 2026-02-02 | Capital Flow: Dual-line Moving Average Sparklines | Gürültülü günlük veriler yerine 3d MA (ince, soluk) ve 7d MA (kalın, belirgin) ile daha düzgün, laminar akış gösterimi |
+| 2026-02-06 | Intelligence Dashboard: Funnel-Waterfall Layout | Mind-map yerine sol akış + sağ içerik yapısı - "From Charts to Clarity" sloganına uygun |
+| 2026-02-06 | Intelligence Dashboard: Default Trade Plan View | Varsayılan olarak Trade Plan gösterilir, üst katmanlar "kanıt" olarak sol panelde |
+| 2026-02-06 | Intelligence Dashboard: Performance Attribution Matrix | 4-layer katkı analizi (Capital Flow, Sector, Timing, ML) - "Explainable AI" |
 
 ---
 
@@ -1968,6 +1971,32 @@ Kullanıcı Hakları Aktif:
   - **ThemeConfig**: `apps/web/lib/theme-config.ts` - Merkezi renk yönetimi
     - Brand renkleri: Background #0F172A, Primary #22C55E, Secondary #F43F5E
     - Helper fonksiyonlar: getVerdictColor, getPhaseColor, getDirectionColor, getSentimentColor, getBiasColor
+- **Financial Intelligence Dashboard eklendi (Funnel-Waterfall Design)**:
+  - **Yeni Sayfa**: `apps/web/app/(dashboard)/intelligence/page.tsx`
+  - **Tasarım Prensibi**: "Netlik" - Mind-map karmaşasından kaçınarak, sol panel akış + sağ panel içerik
+  - **Sol Panel (Logic Path)**: 4 adımlı dikey analiz hunisi
+    - Step 1: Capital Flow (Global Regime) - Liquidity bias, DXY, VIX, Yield Curve, M2
+    - Step 2: Sector (Money Flow) - BUY/SELL recommendations, sector badges, confidence
+    - Step 3: Asset (Selection) - 4 analysis step scores, summary, link to full details
+    - Step 4: Trade Plan (Final Action) - DEFAULT VIEW
+  - **Sağ Panel (Content Stage)**: Seçili adımın detaylı raporu
+  - **Trade Plan İçeriği (Step 4)**:
+    - Executive Summary: Verdict badge, direction indicator, score gauge, key levels table
+    - Structured Trade Plan Matrix: Professional table (Entry/SL/TP/R:R)
+    - Interactive Price Chart: TradePlanChart with trade plan overlay
+    - AI Forecast Bands: P10/P50/P90 probability ranges (ForecastBandOverlay)
+    - Multi-Strategy Cards: 4 alternative strategies (MultiStrategyCards)
+    - Plan Validation Badge: 10-rule gatekeeper status
+    - Web Research Panel: Citations and sentiment
+    - Performance Attribution: 4-layer contribution matrix (Capital Flow, Sector, Timing, ML)
+    - Disclaimer: AI-generated content warning
+  - **Funnel Stats**: Markets (5000+) → Sectors → Selected (1) → Plan (1)
+  - **Breadcrumb Navigation**: Market > Sector > Asset > Plan (clickable)
+  - **RAG Insights**: L1-L4 insight banners from Capital Flow
+  - **Responsive**: Mobile step selector bar, desktop side panel
+  - **URL Parameter**: `?id=analysisId` for specific analysis, or loads most recent
+  - Sidebar'a "Intelligence" linki eklendi (Sparkles ikonu, Capital Flow ile Analyze arasında)
+  - Dosyalar: `intelligence/page.tsx`, `layout.tsx`
 
 ---
 

@@ -27,6 +27,7 @@ import {
   Activity,
   Compass,
   FileText,
+  Sparkles,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -45,6 +46,7 @@ const directNav = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Explore', href: '/explore', icon: Compass },
   { name: 'Capital Flow', href: '/capital-flow', icon: Globe },
+  { name: 'Intelligence', href: '/intelligence', icon: Sparkles },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Report', href: '/report', icon: FileText },
 ];
