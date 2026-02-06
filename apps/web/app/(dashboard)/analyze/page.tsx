@@ -1,8 +1,8 @@
 'use client';
 
 // ===========================================
-// UNIFIED ANALYSIS PAGE
-// Merged Analyze + Reports into single view
+// TOP-DOWN ANALYSIS PAGE
+// Capital Flow (L1-L4) → AI Recommendation → Asset Analysis → Trade Plan
 // ===========================================
 
 import { useState, useEffect, useCallback } from 'react';
@@ -44,6 +44,10 @@ import {
   ChevronRight,
   Brain,
   AlertTriangle,
+  Shield,
+  Lock,
+  Check,
+  ArrowDown,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch, getAuthToken, getApiUrl } from '../../../lib/api';
@@ -70,6 +74,9 @@ type OutcomeFilter = 'all' | 'live' | 'tp' | 'sl';
 type SortOption = 'time_desc' | 'time_asc' | 'pnl_desc' | 'pnl_asc' | 'score_desc' | 'score_asc';
 type Phase = 'early' | 'mid' | 'late' | 'exit';
 type LiquidityBias = 'risk_on' | 'risk_off' | 'neutral';
+
+// Top-Down Analysis Steps
+type AnalysisStep = 'step0' | 'stepA' | 'stepB';
 
 // Capital Flow types
 interface GlobalLiquidity {
@@ -115,6 +122,33 @@ interface CapitalFlowSummary {
   insights?: { layer1: string; layer2: string; layer3: string; layer4: string; ragLayer1?: string; ragLayer2?: string; ragLayer3?: string; ragLayer4?: string };
 }
 
+// AI Recommendation types
+interface AIRecommendedAsset {
+  symbol: string;
+  name: string;
+  market: string;
+  direction: 'BUY' | 'SELL';
+  confidence: number;
+  alignmentScore: number;
+  riskTag: 'low' | 'medium' | 'high';
+  reason: string;
+}
+
+interface AIRecommendation {
+  capitalFlowId: string;
+  timestamp: string;
+  l1Status: { bias: LiquidityBias; netLiquidityChange30d: number; dxyTrend: string; vixLevel: string; vixValue: number };
+  l2Status: { market: string; phase: Phase; flow7d: number; flow30d: number; rotationSignal: string | null }[];
+  l3Status: { primaryMarket: string; sectors: { name: string; trending: string; flow7d: number }[] };
+  l4Status: {
+    buyRecommendation: { market: string; confidence: number; action: string; suggestedAssets: any[] } | null;
+    sellRecommendation: { market: string; confidence: number; action: string; suggestedAssets: any[] } | null;
+  };
+  recommendedAssets: AIRecommendedAsset[];
+  warnings: string[];
+  canProceed: boolean;
+}
+
 interface RecentAnalysis {
   id: string;
   symbol: string;
@@ -134,180 +168,6 @@ interface RecentAnalysis {
   hasTradePlan?: boolean;
   expiresAt?: string;
 }
-
-// Asset configurations
-const ASSET_CONFIGS: Record<AssetType, { name: string; icon: React.ElementType; gradient: string }> = {
-  crypto: { name: 'Crypto', icon: Coins, gradient: 'from-amber-500 to-orange-500' },
-  stocks: { name: 'Stocks', icon: Building2, gradient: 'from-blue-500 to-indigo-500' },
-  bonds: { name: 'Bonds', icon: Landmark, gradient: 'from-purple-500 to-violet-500' },
-  metals: { name: 'Metals', icon: Gem, gradient: 'from-yellow-500 to-amber-400' },
-  bist: { name: 'BIST', icon: Building2, gradient: 'from-red-500 to-rose-500' },
-};
-
-// Sector configurations
-const SECTOR_CONFIGS: Record<AssetType, { name: string; value: string }[]> = {
-  crypto: [
-    { name: 'All Crypto', value: 'all' },
-    { name: 'DeFi', value: 'defi' },
-    { name: 'Layer 2', value: 'layer2' },
-    { name: 'AI & Data', value: 'ai' },
-    { name: 'Gaming', value: 'gaming' },
-    { name: 'Meme', value: 'meme' },
-  ],
-  stocks: [
-    { name: 'All Stocks', value: 'all' },
-    { name: 'Tech', value: 'tech' },
-    { name: 'Finance', value: 'finance' },
-    { name: 'ETFs', value: 'etf' },
-  ],
-  bonds: [
-    { name: 'All Bonds', value: 'all' },
-    { name: 'Treasury', value: 'treasury' },
-    { name: 'Corporate', value: 'corporate' },
-  ],
-  metals: [
-    { name: 'All Metals', value: 'all' },
-    { name: 'Gold', value: 'gold' },
-    { name: 'Silver', value: 'silver' },
-  ],
-  bist: [
-    { name: 'All BIST', value: 'all' },
-    { name: 'Bankacılık', value: 'banking' },
-    { name: 'Holding', value: 'holding' },
-    { name: 'Sanayi', value: 'industrial' },
-    { name: 'Havacılık', value: 'aviation' },
-    { name: 'Perakende', value: 'retail' },
-    { name: 'Enerji', value: 'energy' },
-  ],
-};
-
-// All available assets per market (complete list)
-const ALL_SYMBOLS: Record<AssetType, Record<string, { symbol: string; name: string }[]>> = {
-  crypto: {
-    all: [
-      { symbol: 'BTC', name: 'Bitcoin' }, { symbol: 'ETH', name: 'Ethereum' },
-      { symbol: 'BNB', name: 'BNB' }, { symbol: 'SOL', name: 'Solana' },
-      { symbol: 'XRP', name: 'XRP' }, { symbol: 'ADA', name: 'Cardano' },
-      { symbol: 'AVAX', name: 'Avalanche' }, { symbol: 'DOGE', name: 'Dogecoin' },
-      { symbol: 'DOT', name: 'Polkadot' }, { symbol: 'LINK', name: 'Chainlink' },
-      { symbol: 'MATIC', name: 'Polygon' }, { symbol: 'UNI', name: 'Uniswap' },
-      { symbol: 'LTC', name: 'Litecoin' }, { symbol: 'ATOM', name: 'Cosmos' },
-      { symbol: 'NEAR', name: 'NEAR' }, { symbol: 'APT', name: 'Aptos' },
-    ],
-    defi: [
-      { symbol: 'AAVE', name: 'Aave' }, { symbol: 'UNI', name: 'Uniswap' },
-      { symbol: 'MKR', name: 'Maker' }, { symbol: 'CRV', name: 'Curve' },
-      { symbol: 'SNX', name: 'Synthetix' }, { symbol: 'COMP', name: 'Compound' },
-    ],
-    layer2: [
-      { symbol: 'ARB', name: 'Arbitrum' }, { symbol: 'OP', name: 'Optimism' },
-      { symbol: 'MATIC', name: 'Polygon' }, { symbol: 'IMX', name: 'Immutable X' },
-    ],
-    ai: [
-      { symbol: 'FET', name: 'Fetch.ai' }, { symbol: 'RNDR', name: 'Render' },
-      { symbol: 'TAO', name: 'Bittensor' }, { symbol: 'OCEAN', name: 'Ocean' },
-      { symbol: 'GRT', name: 'The Graph' },
-    ],
-    gaming: [
-      { symbol: 'INJ', name: 'Injective' }, { symbol: 'SAND', name: 'Sandbox' },
-      { symbol: 'MANA', name: 'Decentraland' }, { symbol: 'AXS', name: 'Axie' },
-      { symbol: 'GALA', name: 'Gala' },
-    ],
-    meme: [
-      { symbol: 'DOGE', name: 'Dogecoin' }, { symbol: 'SHIB', name: 'Shiba Inu' },
-      { symbol: 'PEPE', name: 'Pepe' }, { symbol: 'BONK', name: 'Bonk' },
-      { symbol: 'WIF', name: 'dogwifhat' }, { symbol: 'FLOKI', name: 'Floki' },
-    ],
-  },
-  stocks: {
-    all: [
-      { symbol: 'SPY', name: 'S&P 500 ETF' }, { symbol: 'QQQ', name: 'Nasdaq 100' },
-      { symbol: 'AAPL', name: 'Apple' }, { symbol: 'MSFT', name: 'Microsoft' },
-      { symbol: 'NVDA', name: 'NVIDIA' }, { symbol: 'GOOGL', name: 'Alphabet' },
-      { symbol: 'AMZN', name: 'Amazon' }, { symbol: 'TSLA', name: 'Tesla' },
-      { symbol: 'META', name: 'Meta' }, { symbol: 'JPM', name: 'JPMorgan' },
-    ],
-    tech: [
-      { symbol: 'AAPL', name: 'Apple' }, { symbol: 'MSFT', name: 'Microsoft' },
-      { symbol: 'NVDA', name: 'NVIDIA' }, { symbol: 'GOOGL', name: 'Alphabet' },
-      { symbol: 'AMZN', name: 'Amazon' }, { symbol: 'TSLA', name: 'Tesla' },
-      { symbol: 'META', name: 'Meta' }, { symbol: 'NFLX', name: 'Netflix' },
-    ],
-    finance: [
-      { symbol: 'JPM', name: 'JPMorgan' }, { symbol: 'BAC', name: 'Bank of America' },
-      { symbol: 'GS', name: 'Goldman Sachs' }, { symbol: 'V', name: 'Visa' },
-      { symbol: 'MA', name: 'Mastercard' },
-    ],
-    etf: [
-      { symbol: 'SPY', name: 'S&P 500 ETF' }, { symbol: 'QQQ', name: 'Nasdaq 100' },
-      { symbol: 'DIA', name: 'Dow Jones ETF' }, { symbol: 'IWM', name: 'Russell 2000' },
-    ],
-  },
-  bonds: {
-    all: [
-      { symbol: 'TLT', name: '20+ Year Treasury' }, { symbol: 'IEF', name: '7-10 Year Treasury' },
-      { symbol: 'SHY', name: '1-3 Year Treasury' }, { symbol: 'BND', name: 'Total Bond' },
-      { symbol: 'AGG', name: 'Aggregate Bond' }, { symbol: 'LQD', name: 'Investment Grade' },
-    ],
-    treasury: [
-      { symbol: 'TLT', name: '20+ Year Treasury' }, { symbol: 'IEF', name: '7-10 Year Treasury' },
-      { symbol: 'SHY', name: '1-3 Year Treasury' }, { symbol: 'GOVT', name: 'US Treasury' },
-    ],
-    corporate: [
-      { symbol: 'LQD', name: 'Investment Grade' }, { symbol: 'HYG', name: 'High Yield' },
-      { symbol: 'VCIT', name: 'Intermediate Corp' },
-    ],
-  },
-  metals: {
-    all: [
-      { symbol: 'GLD', name: 'Gold ETF' }, { symbol: 'SLV', name: 'Silver ETF' },
-      { symbol: 'IAU', name: 'Gold Trust' }, { symbol: 'GDX', name: 'Gold Miners' },
-    ],
-    gold: [
-      { symbol: 'GLD', name: 'Gold ETF' }, { symbol: 'IAU', name: 'Gold Trust' },
-      { symbol: 'GDX', name: 'Gold Miners' }, { symbol: 'GDXJ', name: 'Jr Gold Miners' },
-    ],
-    silver: [
-      { symbol: 'SLV', name: 'Silver ETF' }, { symbol: 'SIL', name: 'Silver Miners' },
-    ],
-  },
-  bist: {
-    all: [
-      { symbol: 'THYAO', name: 'Türk Hava Yolları' }, { symbol: 'GARAN', name: 'Garanti BBVA' },
-      { symbol: 'AKBNK', name: 'Akbank' }, { symbol: 'KCHOL', name: 'Koç Holding' },
-      { symbol: 'SAHOL', name: 'Sabancı Holding' }, { symbol: 'EREGL', name: 'Ereğli Demir Çelik' },
-      { symbol: 'YKBNK', name: 'Yapı Kredi' }, { symbol: 'ISCTR', name: 'İş Bankası' },
-      { symbol: 'TOASO', name: 'Tofaş Oto' }, { symbol: 'FROTO', name: 'Ford Otosan' },
-      { symbol: 'TCELL', name: 'Turkcell' }, { symbol: 'BIMAS', name: 'BİM' },
-      { symbol: 'TUPRS', name: 'Tüpraş' }, { symbol: 'ASELS', name: 'Aselsan' },
-      { symbol: 'PGSUS', name: 'Pegasus' }, { symbol: 'SISE', name: 'Şişecam' },
-    ],
-    banking: [
-      { symbol: 'GARAN', name: 'Garanti BBVA' }, { symbol: 'AKBNK', name: 'Akbank' },
-      { symbol: 'YKBNK', name: 'Yapı Kredi' }, { symbol: 'ISCTR', name: 'İş Bankası' },
-      { symbol: 'HALKB', name: 'Halkbank' }, { symbol: 'VAKBN', name: 'Vakıfbank' },
-    ],
-    holding: [
-      { symbol: 'KCHOL', name: 'Koç Holding' }, { symbol: 'SAHOL', name: 'Sabancı Holding' },
-      { symbol: 'TAVHL', name: 'TAV Havalimanları' }, { symbol: 'TKFEN', name: 'Tekfen Holding' },
-    ],
-    industrial: [
-      { symbol: 'EREGL', name: 'Ereğli Demir Çelik' }, { symbol: 'SISE', name: 'Şişecam' },
-      { symbol: 'TOASO', name: 'Tofaş Oto' }, { symbol: 'FROTO', name: 'Ford Otosan' },
-      { symbol: 'KRDMD', name: 'Kardemir' },
-    ],
-    aviation: [
-      { symbol: 'THYAO', name: 'Türk Hava Yolları' }, { symbol: 'PGSUS', name: 'Pegasus' },
-    ],
-    retail: [
-      { symbol: 'BIMAS', name: 'BİM' }, { symbol: 'MGROS', name: 'Migros' },
-      { symbol: 'SOKM', name: 'Şok Market' },
-    ],
-    energy: [
-      { symbol: 'TUPRS', name: 'Tüpraş' }, { symbol: 'PETKM', name: 'Petkim' },
-    ],
-  },
-};
 
 // Timeframe options
 const TIMEFRAMES: { value: Timeframe; label: string; type: string }[] = [
@@ -361,15 +221,22 @@ export default function AnalyzePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Selection state
-  const [assetType, setAssetType] = useState<AssetType>('crypto');
-  const [sector, setSector] = useState<string>('all');
-  const [selectedSymbol, setSelectedSymbol] = useState<string>('');
+  // Top-Down step state
+  const [currentStep, setCurrentStep] = useState<AnalysisStep>('step0');
+
+  // Capital Flow state (Step 0)
+  const [capitalFlow, setCapitalFlow] = useState<CapitalFlowSummary | null>(null);
+  const [capitalFlowLoading, setCapitalFlowLoading] = useState(true);
+
+  // AI Recommendation state (Step A)
+  const [aiRecommendation, setAiRecommendation] = useState<AIRecommendation | null>(null);
+  const [aiRecommendationLoading, setAiRecommendationLoading] = useState(false);
+
+  // Asset Analysis state (Step B)
+  const [selectedAsset, setSelectedAsset] = useState<AIRecommendedAsset | null>(null);
   const [timeframe, setTimeframe] = useState<Timeframe>('4h');
   const [method, setMethod] = useState<AnalysisMethod>('classic');
-  const [searchQuery, setSearchQuery] = useState('');
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
-  const [assetDropdownOpen, setAssetDropdownOpen] = useState(false);
 
   // Recent analyses state
   const [analyses, setAnalyses] = useState<RecentAnalysis[]>([]);
@@ -387,10 +254,6 @@ export default function AnalyzePage() {
     maxUsage: number;
   } | null>(null);
   const [purchasingPass, setPurchasingPass] = useState(false);
-
-  // Capital Flow state
-  const [capitalFlow, setCapitalFlow] = useState<CapitalFlowSummary | null>(null);
-  const [capitalFlowLoading, setCapitalFlowLoading] = useState(true);
 
   // Fetch Daily Pass status
   const fetchDailyPassStatus = useCallback(async () => {
@@ -486,7 +349,7 @@ export default function AnalyzePage() {
     }
   }, []);
 
-  // Fetch Capital Flow data
+  // Fetch Capital Flow data (Step 0)
   const fetchCapitalFlow = useCallback(async () => {
     try {
       setCapitalFlowLoading(true);
@@ -504,26 +367,42 @@ export default function AnalyzePage() {
     }
   }, []);
 
-  // Read URL params on mount (e.g. /analyze?market=bist&symbol=THYAO)
+  // Generate AI Recommendations (Step A)
+  const generateRecommendations = async () => {
+    setAiRecommendationLoading(true);
+    try {
+      const res = await authFetch('/api/capital-flow/recommend-assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setAiRecommendation(data.data);
+        setCurrentStep('stepA');
+      } else {
+        toast.error('Failed to generate recommendations');
+      }
+    } catch (error) {
+      console.error('Failed to generate recommendations:', error);
+      toast.error('Failed to generate AI recommendations');
+    } finally {
+      setAiRecommendationLoading(false);
+    }
+  };
+
+  // Read URL params on mount
   useEffect(() => {
-    const marketParam = searchParams.get('market') || searchParams.get('asset');
-    if (marketParam) {
-      const m = marketParam.toLowerCase() as AssetType;
-      if (m in ALL_SYMBOLS) {
-        setAssetType(m);
-        setSector('all');
-        // If symbol param also provided, select it
-        const symbolParam = searchParams.get('symbol');
-        if (symbolParam) {
-          setSelectedSymbol(symbolParam.toUpperCase());
-        } else {
-          // Pre-select first asset of the market
-          const firstAsset = ALL_SYMBOLS[m]?.all?.[0];
-          if (firstAsset) setSelectedSymbol(firstAsset.symbol);
-        }
+    // If coming with a symbol param, skip straight to stepB if we have recommendation data
+    const symbolParam = searchParams.get('symbol');
+    if (symbolParam && aiRecommendation) {
+      const found = aiRecommendation.recommendedAssets.find(a => a.symbol === symbolParam.toUpperCase());
+      if (found) {
+        setSelectedAsset(found);
+        setCurrentStep('stepB');
       }
     }
-  }, [searchParams]);
+  }, [searchParams, aiRecommendation]);
 
   useEffect(() => {
     fetchDailyPassStatus();
@@ -556,10 +435,10 @@ export default function AnalyzePage() {
     }
   };
 
-  // Run analysis
+  // Run analysis (Step B)
   const runAnalysis = async () => {
-    if (!selectedSymbol) {
-      toast.error('Please select an asset to analyze');
+    if (!selectedAsset) {
+      toast.error('Please select an asset from the AI recommendations');
       return;
     }
 
@@ -607,14 +486,6 @@ export default function AnalyzePage() {
     router.push(`/analyze/details/${analysis.id}?email=true`);
   };
 
-  // Get current assets based on market and sector
-  const currentAssets = ALL_SYMBOLS[assetType][sector] || ALL_SYMBOLS[assetType]['all'];
-  const filteredAssets = currentAssets.filter(asset =>
-    searchQuery.length === 0 ||
-    asset.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    asset.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   // Filter and sort analyses
   const filteredAnalyses = analyses.filter(a => {
     if (verdictFilter !== 'all' && a.verdict !== verdictFilter) return false;
@@ -636,7 +507,7 @@ export default function AnalyzePage() {
     }
   });
 
-  // Helper functions for Capital Flow display
+  // Helper functions
   const safeToFixed = (val: number | undefined | null, decimals: number = 1): string => {
     if (val === null || val === undefined || isNaN(val)) return '0';
     return val.toFixed(decimals);
@@ -666,9 +537,40 @@ export default function AnalyzePage() {
     return icons[market] || Activity;
   };
 
-  // Find the recommended market and its data
-  const recommendedMarket = capitalFlow?.markets?.find(m => m.market === capitalFlow?.recommendation?.primaryMarket);
-  const sellMarket = capitalFlow?.sellRecommendation ? capitalFlow.markets?.find(m => m.market === capitalFlow.sellRecommendation?.primaryMarket) : null;
+  // Step completion states
+  const step0Complete = !!capitalFlow && !capitalFlowLoading;
+  const stepAComplete = !!aiRecommendation;
+  const stepBReady = stepAComplete && !!selectedAsset;
+
+  // Build capitalFlowContext for AnalysisDialog (enriched with L1-L4 summaries for evidence chain)
+  const capitalFlowContextPayload = aiRecommendation ? {
+    capitalFlowId: aiRecommendation.capitalFlowId,
+    recommendedAssets: aiRecommendation.recommendedAssets.map(a => a.symbol),
+    direction: selectedAsset?.direction as 'BUY' | 'SELL' | undefined,
+    l1Bias: aiRecommendation.l1Status.bias,
+    l4Confidence: selectedAsset?.confidence,
+    // Top-Down Evidence Chain data
+    l1Summary: {
+      bias: aiRecommendation.l1Status.bias,
+      dxyTrend: aiRecommendation.l1Status.dxyTrend,
+      vixLevel: aiRecommendation.l1Status.vixLevel,
+      vixValue: aiRecommendation.l1Status.vixValue,
+    },
+    l2Summary: aiRecommendation.l2Status.map(m => ({
+      market: m.market,
+      phase: m.phase,
+      flow7d: m.flow7d,
+    })),
+    l3Summary: {
+      primaryMarket: aiRecommendation.l3Status.primaryMarket,
+      topSectors: aiRecommendation.l3Status.sectors.slice(0, 3).map(s => s.name),
+    },
+    l4Summary: {
+      action: aiRecommendation.l4Status.buyRecommendation?.action || aiRecommendation.l4Status.sellRecommendation?.action || 'wait',
+      confidence: selectedAsset?.confidence || aiRecommendation.l4Status.buyRecommendation?.confidence || 0,
+      market: aiRecommendation.l4Status.buyRecommendation?.market || aiRecommendation.l4Status.sellRecommendation?.market || '',
+    },
+  } : undefined;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -681,16 +583,16 @@ export default function AnalyzePage() {
                 <TrendingUp className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-slate-900 dark:text-white">Analyze</h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Run analysis • View reports</p>
+                <h1 className="text-lg font-bold text-slate-900 dark:text-white">Top-Down Analysis</h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Capital Flow → AI Recommendation → Asset Analysis</p>
               </div>
             </div>
             <button
-              onClick={() => fetchAnalyses()}
-              disabled={analysesLoading}
+              onClick={() => { fetchCapitalFlow(); fetchAnalyses(); }}
+              disabled={capitalFlowLoading}
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
-              <RefreshCw className={cn("w-4 h-4", analysesLoading && "animate-spin")} />
+              <RefreshCw className={cn("w-4 h-4", capitalFlowLoading && "animate-spin")} />
               <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
@@ -698,737 +600,774 @@ export default function AnalyzePage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Capital Flow Context Summary */}
-        {capitalFlowLoading ? (
-          <div className="mb-6 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-            <div className="flex items-center justify-center gap-2 py-4">
-              <Loader2 className="w-5 h-5 text-teal-500 animate-spin" />
-              <span className="text-sm text-slate-500">Loading Capital Flow data...</span>
-            </div>
+        {/* Step Progress Indicator */}
+        <div className="mb-6">
+          <div className="flex items-center justify-center gap-2 sm:gap-4">
+            {/* Step 0 */}
+            <button
+              onClick={() => setCurrentStep('step0')}
+              className={cn(
+                "flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold transition-all",
+                currentStep === 'step0'
+                  ? "bg-teal-500 text-white shadow-lg shadow-teal-500/30"
+                  : step0Complete
+                    ? "bg-teal-100 dark:bg-teal-500/20 text-teal-700 dark:text-teal-400"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-400"
+              )}
+            >
+              {step0Complete ? <Check className="w-4 h-4" /> : <Globe className="w-4 h-4" />}
+              <span className="hidden sm:inline">Capital Flow</span>
+              <span className="sm:hidden">L1-L4</span>
+            </button>
+
+            <ArrowRight className="w-4 h-4 text-slate-300 dark:text-slate-600 flex-shrink-0" />
+
+            {/* Step A */}
+            <button
+              onClick={() => step0Complete && setCurrentStep('stepA')}
+              disabled={!step0Complete}
+              className={cn(
+                "flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold transition-all",
+                currentStep === 'stepA'
+                  ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30"
+                  : stepAComplete
+                    ? "bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-400",
+                !step0Complete && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              {stepAComplete ? <Check className="w-4 h-4" /> : <Brain className="w-4 h-4" />}
+              <span className="hidden sm:inline">AI Recommendation</span>
+              <span className="sm:hidden">AI Rec</span>
+            </button>
+
+            <ArrowRight className="w-4 h-4 text-slate-300 dark:text-slate-600 flex-shrink-0" />
+
+            {/* Step B */}
+            <button
+              onClick={() => stepAComplete && setCurrentStep('stepB')}
+              disabled={!stepAComplete}
+              className={cn(
+                "flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold transition-all",
+                currentStep === 'stepB'
+                  ? "bg-violet-500 text-white shadow-lg shadow-violet-500/30"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-400",
+                !stepAComplete && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              <Zap className="w-4 h-4" />
+              <span className="hidden sm:inline">Asset Analysis</span>
+              <span className="sm:hidden">Analyze</span>
+            </button>
           </div>
-        ) : capitalFlow ? (
-          <div className="mb-6 space-y-4">
-            {/* Layer Flow Summary Bar */}
-            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white via-slate-50 to-white dark:from-slate-900 dark:via-slate-800/50 dark:to-slate-900">
-              <div className="flex items-center justify-between mb-3">
+        </div>
+
+        {/* ================================================ */}
+        {/* STEP 0: CAPITAL FLOW ANALYSIS (L1-L4)            */}
+        {/* ================================================ */}
+        {currentStep === 'step0' && (
+          <div className="space-y-4">
+            <div className="p-5 rounded-2xl border-2 border-teal-200 dark:border-teal-500/30 bg-gradient-to-br from-white via-teal-50/30 to-white dark:from-slate-900 dark:via-teal-900/10 dark:to-slate-900">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-teal-500" />
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 notranslate">Capital Flow Summary</span>
+                  <Globe className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Capital Flow Analysis</h2>
                 </div>
                 <Link
                   href="/capital-flow"
                   className="text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1"
                 >
-                  View Details <ChevronRight className="w-3 h-3" />
+                  Full Details <ChevronRight className="w-3 h-3" />
                 </Link>
               </div>
 
-              {/* 4-Layer Horizontal Flow */}
-              <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
-                {/* Layer 1: Global Liquidity */}
-                <div className="flex-1 min-w-[120px] p-3 rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-500/10 dark:to-emerald-500/10 border border-teal-200/50 dark:border-teal-500/20">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <DollarSign className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                    <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300">L1: LIQUIDITY</span>
-                  </div>
-                  {(() => {
-                    const biasConfig = getBiasConfig(capitalFlow?.liquidityBias ?? 'neutral');
-                    const BiasIcon = biasConfig.icon;
-                    return (
-                      <div className={cn("flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold w-fit", biasConfig.bg, biasConfig.color)}>
-                        <BiasIcon className="w-3 h-3" />
-                        {biasConfig.label}
-                      </div>
-                    );
-                  })()}
-                  <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-1">
-                    Net: {safeToFixed(capitalFlow?.globalLiquidity?.netLiquidity?.change30d ?? capitalFlow?.globalLiquidity?.m2MoneySupply?.change30d)}%
-                  </p>
+              {capitalFlowLoading ? (
+                <div className="flex items-center justify-center gap-2 py-12">
+                  <Loader2 className="w-6 h-6 text-teal-500 animate-spin" />
+                  <span className="text-sm text-slate-500">Loading Capital Flow data...</span>
                 </div>
-
-                <ArrowRight className="w-4 h-4 text-slate-300 dark:text-slate-600 flex-shrink-0" />
-
-                {/* Layer 2: Market Flow */}
-                <div className="flex-1 min-w-[120px] p-3 rounded-xl bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-500/10 dark:to-blue-500/10 border border-cyan-200/50 dark:border-cyan-500/20">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <TrendingUp className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                    <span className="text-[10px] font-bold text-cyan-700 dark:text-cyan-300">L2: MARKETS</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {capitalFlow.markets?.filter(m => m && m.market).slice(0, 4).map((market) => {
-                      const phaseConfig = getPhaseConfig(market.phase);
-                      return (
-                        <span
-                          key={market.market}
-                          className={cn(
-                            "px-1.5 py-0.5 rounded text-[9px] font-medium",
-                            market.market === capitalFlow.recommendation?.primaryMarket
-                              ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/50"
-                              : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
-                          )}
-                        >
-                          {market.market.toUpperCase()} <span className={cn("text-[8px]", market.flow7d >= 0 ? "text-emerald-600" : "text-red-600")}>{market.flow7d >= 0 ? '+' : ''}{safeToFixed(market.flow7d)}%</span>
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <ArrowRight className="w-4 h-4 text-slate-300 dark:text-slate-600 flex-shrink-0" />
-
-                {/* Layer 3: Sector */}
-                <div className="flex-1 min-w-[120px] p-3 rounded-xl bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-500/10 dark:to-purple-500/10 border border-violet-200/50 dark:border-violet-500/20">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Layers className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
-                    <span className="text-[10px] font-bold text-violet-700 dark:text-violet-300">L3: SECTORS</span>
-                  </div>
-                  {recommendedMarket?.sectors?.slice(0, 2).map((sector, idx) => (
-                    <span
-                      key={idx}
-                      className={cn(
-                        "inline-block px-1.5 py-0.5 rounded text-[9px] font-medium mr-1 mb-1",
-                        sector.trending === 'up'
-                          ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-                          : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
-                      )}
-                    >
-                      {sector.name}
-                    </span>
-                  )) || <span className="text-[9px] text-slate-400">No sectors</span>}
-                </div>
-
-                <ArrowRight className="w-4 h-4 text-slate-300 dark:text-slate-600 flex-shrink-0" />
-
-                {/* Layer 4: Recommendation */}
-                <div className="flex-1 min-w-[120px] p-3 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 border border-amber-200/50 dark:border-amber-500/20">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Brain className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                    <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300">L4: AI REC</span>
-                  </div>
-                  <div className={cn(
-                    "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold w-fit",
-                    capitalFlow.recommendation?.direction?.toUpperCase() === 'BUY'
-                      ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-                      : capitalFlow.recommendation?.direction?.toUpperCase() === 'SELL'
-                      ? "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
-                      : "bg-slate-100 dark:bg-slate-500/20 text-slate-700 dark:text-slate-400"
-                  )}>
-                    {capitalFlow.recommendation?.direction?.toUpperCase() === 'BUY' ? <TrendingUp className="w-3 h-3" /> :
-                     capitalFlow.recommendation?.direction?.toUpperCase() === 'SELL' ? <TrendingDown className="w-3 h-3" /> :
-                     <Minus className="w-3 h-3" />}
-                    {capitalFlow.recommendation?.direction?.toUpperCase() || 'NEUTRAL'} {capitalFlow.recommendation?.primaryMarket?.toUpperCase()}
-                  </div>
-                  <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-1">
-                    {capitalFlow.recommendation?.confidence ?? 0}% confidence
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Layer 4 Detail Cards - AI Recommendations */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* BUY Opportunity Card */}
-              {capitalFlow.recommendation && (
-                <div className="p-4 rounded-2xl border-2 border-emerald-200 dark:border-emerald-500/30 bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-emerald-900/20 dark:via-slate-900 dark:to-teal-900/20">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                        <TrendingUp className="w-4 h-4 text-white" />
+              ) : capitalFlow ? (
+                <>
+                  {/* L1-L4 Summary Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                    {/* L1: Global Liquidity */}
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-500/10 dark:to-emerald-500/10 border border-teal-200/50 dark:border-teal-500/20">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <DollarSign className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                        <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 uppercase">L1: Global Liquidity</span>
+                        <Check className="w-3 h-3 ml-auto text-teal-500" />
                       </div>
-                      <div>
-                        <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">BUY Opportunity</span>
-                        <p className="text-[10px] text-slate-500">Capital flowing in</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{capitalFlow.recommendation.confidence}%</span>
-                      <p className="text-[10px] text-slate-500">Confidence</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 mb-3">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-slate-500">Market</span>
-                      <div className="flex items-center gap-1.5">
-                        {(() => {
-                          const MarketIcon = getMarketIcon(capitalFlow.recommendation.primaryMarket);
-                          return <MarketIcon className="w-4 h-4 text-emerald-600" />;
-                        })()}
-                        <span className="font-semibold text-slate-900 dark:text-white capitalize">{capitalFlow.recommendation.primaryMarket}</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-slate-500">Phase</span>
                       {(() => {
-                        const phaseConfig = getPhaseConfig(capitalFlow.recommendation.phase);
+                        const biasConfig = getBiasConfig(capitalFlow.liquidityBias ?? 'neutral');
+                        const BiasIcon = biasConfig.icon;
                         return (
-                          <span className={cn("px-2 py-0.5 rounded-full text-xs font-bold", phaseConfig.bg, phaseConfig.color)}>
-                            {phaseConfig.label}
-                          </span>
+                          <div className={cn("flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold w-fit", biasConfig.bg, biasConfig.color)}>
+                            <BiasIcon className="w-3 h-3" />
+                            {biasConfig.label}
+                          </div>
+                        );
+                      })()}
+                      <div className="mt-2 space-y-1 text-[10px] text-slate-500 dark:text-slate-400">
+                        <div className="flex justify-between">
+                          <span>Net Liquidity</span>
+                          <span className="font-medium">{safeToFixed(capitalFlow.globalLiquidity?.netLiquidity?.change30d ?? capitalFlow.globalLiquidity?.m2MoneySupply?.change30d)}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>DXY</span>
+                          <span className="font-medium capitalize">{capitalFlow.globalLiquidity?.dxy?.trend || 'stable'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>VIX</span>
+                          <span className="font-medium">{capitalFlow.globalLiquidity?.vix?.value?.toFixed(1) || '—'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* L2: Market Flows */}
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-500/10 dark:to-blue-500/10 border border-cyan-200/50 dark:border-cyan-500/20">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <TrendingUp className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                        <span className="text-[10px] font-bold text-cyan-700 dark:text-cyan-300 uppercase">L2: Market Flow</span>
+                        <Check className="w-3 h-3 ml-auto text-teal-500" />
+                      </div>
+                      <div className="space-y-1">
+                        {capitalFlow.markets?.filter(m => m && m.market).slice(0, 4).map((market) => {
+                          const phaseConfig = getPhaseConfig(market.phase);
+                          const isPrimary = market.market === capitalFlow.recommendation?.primaryMarket;
+                          return (
+                            <div key={market.market} className={cn("flex items-center justify-between text-[10px]", isPrimary && "font-bold")}>
+                              <span className="text-slate-600 dark:text-slate-400 capitalize">{market.market}</span>
+                              <div className="flex items-center gap-1">
+                                <span className={cn("px-1 py-0.5 rounded text-[8px] font-bold", phaseConfig.bg, phaseConfig.color)}>{phaseConfig.label}</span>
+                                <span className={cn("font-medium", (market.flow7d ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
+                                  {(market.flow7d ?? 0) >= 0 ? '+' : ''}{safeToFixed(market.flow7d)}%
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* L3: Sector Rotation */}
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-500/10 dark:to-purple-500/10 border border-violet-200/50 dark:border-violet-500/20">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Layers className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+                        <span className="text-[10px] font-bold text-violet-700 dark:text-violet-300 uppercase">L3: Sectors</span>
+                        <Check className="w-3 h-3 ml-auto text-teal-500" />
+                      </div>
+                      {(() => {
+                        const primaryMarketData = capitalFlow.markets?.find(m => m.market === capitalFlow.recommendation?.primaryMarket);
+                        const sectors = primaryMarketData?.sectors?.slice(0, 3);
+                        if (!sectors || sectors.length === 0) return <span className="text-[10px] text-slate-400">No sector data</span>;
+                        return (
+                          <div className="space-y-1">
+                            {sectors.map((sector, idx) => (
+                              <div key={idx} className="flex items-center justify-between text-[10px]">
+                                <span className="text-slate-600 dark:text-slate-400">{sector.name}</span>
+                                <span className={cn(
+                                  "px-1.5 py-0.5 rounded text-[9px] font-medium",
+                                  sector.trending === 'up' ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
+                                )}>
+                                  {sector.trending === 'up' ? 'Inflow' : sector.trending === 'down' ? 'Outflow' : 'Stable'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         );
                       })()}
                     </div>
-                    {recommendedMarket && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-slate-500">7D Flow</span>
-                        <span className={cn("font-semibold", recommendedMarket.flow7d >= 0 ? "text-emerald-600" : "text-red-600")}>
-                          {recommendedMarket.flow7d >= 0 ? '+' : ''}{safeToFixed(recommendedMarket.flow7d)}%
-                        </span>
+
+                    {/* L4: AI Recommendation Preview */}
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 border border-amber-200/50 dark:border-amber-500/20">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Brain className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                        <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase">L4: AI Recommendation</span>
+                        <Check className="w-3 h-3 ml-auto text-teal-500" />
                       </div>
-                    )}
+                      <div className={cn(
+                        "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold w-fit mb-2",
+                        capitalFlow.recommendation?.direction?.toUpperCase() === 'BUY'
+                          ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                          : capitalFlow.recommendation?.direction?.toUpperCase() === 'SELL'
+                          ? "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
+                          : "bg-slate-100 dark:bg-slate-500/20 text-slate-700 dark:text-slate-400"
+                      )}>
+                        {capitalFlow.recommendation?.direction?.toUpperCase() === 'BUY' ? <TrendingUp className="w-3 h-3" /> :
+                         capitalFlow.recommendation?.direction?.toUpperCase() === 'SELL' ? <TrendingDown className="w-3 h-3" /> :
+                         <Minus className="w-3 h-3" />}
+                        {capitalFlow.recommendation?.direction?.toUpperCase() || 'NEUTRAL'} {capitalFlow.recommendation?.primaryMarket?.toUpperCase()}
+                      </div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                        <span className="font-medium">{capitalFlow.recommendation?.confidence ?? 0}%</span> confidence
+                      </div>
+                    </div>
                   </div>
 
-                  <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 p-2 bg-emerald-100/50 dark:bg-emerald-500/10 rounded-lg">
-                    {capitalFlow.recommendation.reason || 'Strong capital inflow detected.'}
-                  </p>
+                  {/* Risk-Off Warning */}
+                  {capitalFlow.liquidityBias === 'risk_off' && (
+                    <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 flex items-start gap-2 mb-4">
+                      <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-red-700 dark:text-red-400">Risk-Off Environment</p>
+                        <p className="text-xs text-red-600/80 dark:text-red-400/60">Global liquidity contracting. Only safe haven assets (Bonds/Gold) recommended. Avoid risk assets.</p>
+                      </div>
+                    </div>
+                  )}
 
-                  {/* Suggested Assets */}
-                  {capitalFlow.recommendation.suggestedAssets && capitalFlow.recommendation.suggestedAssets.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-[10px] text-slate-500 mb-1">Suggested Assets:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {capitalFlow.recommendation.suggestedAssets.slice(0, 4).map((asset, idx) => (
+                  {/* Generate Recommendations Button */}
+                  <button
+                    onClick={generateRecommendations}
+                    disabled={aiRecommendationLoading}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-emerald-600 text-white text-sm font-bold rounded-xl hover:from-teal-600 hover:to-emerald-700 hover:shadow-lg hover:shadow-teal-500/25 transition-all disabled:opacity-50"
+                  >
+                    {aiRecommendationLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Generating AI Recommendations...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        Generate AI Asset Recommendations
+                        <ArrowRight className="w-5 h-5" />
+                      </>
+                    )}
+                  </button>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
+                  <p className="text-sm text-slate-500">Failed to load Capital Flow data.</p>
+                  <button onClick={fetchCapitalFlow} className="mt-2 text-sm text-teal-600 hover:underline">Try again</button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ================================================ */}
+        {/* STEP A: AI ASSET RECOMMENDATION                  */}
+        {/* ================================================ */}
+        {currentStep === 'stepA' && aiRecommendation && (
+          <div className="space-y-4">
+            {/* Warnings */}
+            {aiRecommendation.warnings.length > 0 && (
+              <div className="space-y-2">
+                {aiRecommendation.warnings.map((warning, idx) => (
+                  <div key={idx} className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-amber-700 dark:text-amber-400">{warning}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Recommendation Panel */}
+            <div className="p-5 rounded-2xl border-2 border-amber-200 dark:border-amber-500/30 bg-gradient-to-br from-white via-amber-50/30 to-white dark:from-slate-900 dark:via-amber-900/10 dark:to-slate-900">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Brain className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">AI Asset Recommendations</h2>
+                </div>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Based on Capital Flow L1-L4</span>
+              </div>
+
+              {/* L1-L4 Context Mini-Bar */}
+              <div className="flex items-center gap-2 mb-4 p-2 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-x-auto">
+                <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap", getBiasConfig(aiRecommendation.l1Status.bias).bg, getBiasConfig(aiRecommendation.l1Status.bias).color)}>
+                  L1: {getBiasConfig(aiRecommendation.l1Status.bias).label}
+                </span>
+                <span className="text-[10px] text-slate-400">→</span>
+                {aiRecommendation.l2Status.slice(0, 3).map(m => (
+                  <span key={m.market} className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap", getPhaseConfig(m.phase).bg, getPhaseConfig(m.phase).color)}>
+                    {m.market.toUpperCase()} {m.phase.toUpperCase()}
+                  </span>
+                ))}
+                <span className="text-[10px] text-slate-400">→</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 whitespace-nowrap">
+                  {aiRecommendation.l3Status.primaryMarket.toUpperCase()}
+                </span>
+              </div>
+
+              {!aiRecommendation.canProceed ? (
+                <div className="text-center py-8">
+                  <Shield className="w-12 h-12 mx-auto mb-3 text-red-400" />
+                  <h3 className="text-lg font-bold text-red-600 dark:text-red-400 mb-2">Analysis Blocked</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                    Capital Flow conditions are unfavorable. No assets are recommended for analysis at this time. Check back when conditions improve.
+                  </p>
+                  <button
+                    onClick={() => setCurrentStep('step0')}
+                    className="mt-4 px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition"
+                  >
+                    Back to Capital Flow
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Recommended Assets Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                    {aiRecommendation.recommendedAssets.map((asset) => {
+                      const isSelected = selectedAsset?.symbol === asset.symbol;
+                      const isBuy = asset.direction === 'BUY';
+                      return (
+                        <button
+                          key={`${asset.symbol}-${asset.direction}`}
+                          onClick={() => {
+                            setSelectedAsset(asset);
+                            setCurrentStep('stepB');
+                          }}
+                          className={cn(
+                            "relative p-4 rounded-xl border-2 text-left transition-all hover:shadow-md",
+                            isSelected
+                              ? isBuy
+                                ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 shadow-lg shadow-emerald-500/20"
+                                : "border-red-500 bg-red-50 dark:bg-red-500/10 shadow-lg shadow-red-500/20"
+                              : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600"
+                          )}
+                        >
+                          {/* Direction Badge */}
+                          <div className={cn(
+                            "absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold",
+                            isBuy ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" : "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
+                          )}>
+                            {isBuy ? 'BUY' : 'SELL'}
+                          </div>
+
+                          <div className="flex items-center gap-2 mb-2">
+                            <CoinIcon symbol={asset.symbol} size={28} />
+                            <div>
+                              <span className="font-bold text-sm text-slate-900 dark:text-white">{asset.symbol}</span>
+                              <p className="text-[10px] text-slate-500">{asset.name}</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-slate-500">Confidence</span>
+                              <span className="font-semibold text-slate-900 dark:text-white">{asset.confidence}%</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-slate-500">Alignment</span>
+                              <span className="font-semibold text-slate-900 dark:text-white">{asset.alignmentScore}/100</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-slate-500">Risk</span>
+                              <span className={cn(
+                                "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase",
+                                asset.riskTag === 'low' ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600" :
+                                asset.riskTag === 'high' ? "bg-red-100 dark:bg-red-500/20 text-red-600" :
+                                "bg-amber-100 dark:bg-amber-500/20 text-amber-600"
+                              )}>{asset.riskTag}</span>
+                            </div>
+                          </div>
+
+                          <p className="mt-2 text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2">{asset.reason}</p>
+
+                          <div className="mt-3 flex items-center justify-center gap-1 text-xs font-medium text-teal-600 dark:text-teal-400">
+                            <Zap className="w-3.5 h-3.5" />
+                            Select & Analyze
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ================================================ */}
+        {/* STEP B: ASSET ANALYSIS                           */}
+        {/* ================================================ */}
+        {currentStep === 'stepB' && (
+          <div className="space-y-4">
+            {/* Top-Down Context Bar */}
+            {aiRecommendation && (
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-100 dark:bg-slate-800 overflow-x-auto text-[10px]">
+                <span className={cn("px-2 py-0.5 rounded-full font-bold whitespace-nowrap", getBiasConfig(aiRecommendation.l1Status.bias).bg, getBiasConfig(aiRecommendation.l1Status.bias).color)}>
+                  L1 {getBiasConfig(aiRecommendation.l1Status.bias).label}
+                </span>
+                <Check className="w-3 h-3 text-teal-500 flex-shrink-0" />
+                <ArrowRight className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                <span className="px-2 py-0.5 rounded-full font-bold bg-cyan-100 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 whitespace-nowrap">
+                  L2 {aiRecommendation.l3Status.primaryMarket.toUpperCase()}
+                </span>
+                <Check className="w-3 h-3 text-teal-500 flex-shrink-0" />
+                <ArrowRight className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                <span className="px-2 py-0.5 rounded-full font-bold bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-400 whitespace-nowrap">
+                  L3 Sectors
+                </span>
+                <Check className="w-3 h-3 text-teal-500 flex-shrink-0" />
+                <ArrowRight className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                <span className={cn(
+                  "px-2 py-0.5 rounded-full font-bold whitespace-nowrap",
+                  selectedAsset?.direction === 'BUY' ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" : "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
+                )}>
+                  L4 {selectedAsset?.symbol} {selectedAsset?.direction}
+                </span>
+                <Check className="w-3 h-3 text-teal-500 flex-shrink-0" />
+              </div>
+            )}
+
+            {/* Analysis Configuration */}
+            <div className="p-5 rounded-2xl border-2 border-violet-200 dark:border-violet-500/30 bg-gradient-to-br from-white via-violet-50/30 to-white dark:from-slate-900 dark:via-violet-900/10 dark:to-slate-900">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Asset Analysis</h2>
+                </div>
+                <button
+                  onClick={() => setCurrentStep('stepA')}
+                  className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-1"
+                >
+                  Change Asset
+                </button>
+              </div>
+
+              {selectedAsset ? (
+                <div className="space-y-4">
+                  {/* Selected Asset Info */}
+                  <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+                    <CoinIcon symbol={selectedAsset.symbol} size={48} />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white">{selectedAsset.symbol}</h3>
+                        <span className={cn(
+                          "px-2 py-0.5 rounded-full text-xs font-bold",
+                          selectedAsset.direction === 'BUY' ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" : "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
+                        )}>
+                          {selectedAsset.direction}
+                        </span>
+                        <span className={cn(
+                          "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase",
+                          selectedAsset.riskTag === 'low' ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600" :
+                          selectedAsset.riskTag === 'high' ? "bg-red-100 dark:bg-red-500/20 text-red-600" :
+                          "bg-amber-100 dark:bg-amber-500/20 text-amber-600"
+                        )}>{selectedAsset.riskTag} risk</span>
+                      </div>
+                      <p className="text-sm text-slate-500">{selectedAsset.name} - {selectedAsset.confidence}% confidence, {selectedAsset.alignmentScore}/100 alignment</p>
+                    </div>
+                  </div>
+
+                  {/* Timeframe + Method Selection */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Timeframe</label>
+                      <div className="flex gap-2">
+                        {TIMEFRAMES.map((tf) => (
                           <button
-                            key={idx}
-                            onClick={() => {
-                              if (asset.market in ALL_SYMBOLS) {
-                                setAssetType(asset.market as AssetType);
-                              }
-                              setSelectedSymbol(asset.symbol);
-                            }}
-                            className="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-500/30 text-xs font-medium text-slate-700 dark:text-slate-300 hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all"
+                            key={tf.value}
+                            onClick={() => setTimeframe(tf.value)}
+                            className={cn(
+                              "flex-1 py-2 rounded-lg text-sm font-medium transition-all",
+                              timeframe === tf.value
+                                ? "bg-violet-500 text-white shadow-md"
+                                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                            )}
                           >
-                            {asset.symbol}
+                            {tf.label}
+                            <span className="block text-[9px] opacity-60">{tf.type}</span>
                           </button>
                         ))}
                       </div>
                     </div>
-                  )}
 
-                  <button
-                    onClick={() => {
-                      const pm = capitalFlow?.recommendation?.primaryMarket;
-                      if (pm && pm in ALL_SYMBOLS) {
-                        setAssetType(pm as AssetType);
-                        const marketAssets = ALL_SYMBOLS[pm as AssetType]?.all;
-                        if (marketAssets && marketAssets.length > 0) {
-                          setSelectedSymbol(marketAssets[0].symbol);
-                        }
-                      }
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-semibold rounded-xl hover:from-emerald-600 hover:to-teal-600 hover:shadow-lg hover:shadow-emerald-500/25 transition-all"
-                  >
-                    <Search className="w-4 h-4" />
-                    Analyze {capitalFlow?.recommendation?.primaryMarket?.toUpperCase() || 'Market'} Assets
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
-              {/* SELL Opportunity Card */}
-              {capitalFlow.sellRecommendation ? (
-                <div className="p-4 rounded-2xl border-2 border-red-200 dark:border-red-500/30 bg-gradient-to-br from-red-50 via-white to-rose-50 dark:from-red-900/20 dark:via-slate-900 dark:to-rose-900/20">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-500 flex items-center justify-center shadow-lg shadow-red-500/30">
-                        <TrendingDown className="w-4 h-4 text-white" />
-                      </div>
-                      <div>
-                        <span className="text-sm font-bold text-red-700 dark:text-red-400">SELL/Short Opportunity</span>
-                        <p className="text-[10px] text-slate-500">Capital flowing out</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-2xl font-bold text-red-600 dark:text-red-400">{capitalFlow.sellRecommendation.confidence}%</span>
-                      <p className="text-[10px] text-slate-500">Confidence</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 mb-3">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-slate-500">Market</span>
-                      <div className="flex items-center gap-1.5">
-                        {(() => {
-                          const MarketIcon = getMarketIcon(capitalFlow.sellRecommendation!.primaryMarket);
-                          return <MarketIcon className="w-4 h-4 text-red-600" />;
-                        })()}
-                        <span className="font-semibold text-slate-900 dark:text-white capitalize">{capitalFlow.sellRecommendation.primaryMarket}</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-slate-500">Phase</span>
-                      {(() => {
-                        const phaseConfig = getPhaseConfig(capitalFlow.sellRecommendation!.phase);
-                        return (
-                          <span className={cn("px-2 py-0.5 rounded-full text-xs font-bold", phaseConfig.bg, phaseConfig.color)}>
-                            {phaseConfig.label}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                    {sellMarket && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-slate-500">7D Flow</span>
-                        <span className={cn("font-semibold", (sellMarket.flow7d ?? 0) >= 0 ? "text-emerald-600" : "text-red-600")}>
-                          {(sellMarket.flow7d ?? 0) >= 0 ? '+' : ''}{safeToFixed(sellMarket.flow7d)}%
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 p-2 bg-red-100/50 dark:bg-red-500/10 rounded-lg">
-                    {capitalFlow.sellRecommendation.reason || 'Capital outflow detected - potential short opportunity.'}
-                  </p>
-
-                  <button
-                    onClick={() => {
-                      const pm = capitalFlow?.sellRecommendation?.primaryMarket;
-                      if (pm && pm in ALL_SYMBOLS) {
-                        setAssetType(pm as AssetType);
-                        const marketAssets = ALL_SYMBOLS[pm as AssetType]?.all;
-                        if (marketAssets && marketAssets.length > 0) {
-                          setSelectedSymbol(marketAssets[0].symbol);
-                        }
-                      }
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-red-500 to-rose-500 text-white text-sm font-semibold rounded-xl hover:from-red-600 hover:to-rose-600 hover:shadow-lg hover:shadow-red-500/25 transition-all"
-                  >
-                    <Search className="w-4 h-4" />
-                    Find Short Opportunities
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                /* No SELL recommendation - Show info card */
-                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                  <div className="flex items-center gap-2 mb-3">
-                    <AlertTriangle className="w-5 h-5 text-slate-400" />
-                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">No SELL Signal</span>
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                    Currently no significant capital outflow detected in any market. Focus on the BUY opportunity.
-                  </p>
-                  <Link
-                    href="/capital-flow"
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-all"
-                  >
-                    <Globe className="w-4 h-4" />
-                    View Full Capital Flow
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : null}
-
-        {/* Selection Row - All dropdowns in one line */}
-        <div className="mb-6 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Market Dropdown */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Market:</span>
-              <div className="relative">
-                <select
-                  value={assetType}
-                  onChange={(e) => { setAssetType(e.target.value as AssetType); setSector('all'); setSelectedSymbol(''); }}
-                  className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-medium pl-3 pr-8 py-2 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
-                >
-                  {(Object.keys(ASSET_CONFIGS) as AssetType[]).map((type) => (
-                    <option key={type} value={type}>{ASSET_CONFIGS[type].name}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Sector Dropdown */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Sector:</span>
-              <div className="relative">
-                <select
-                  value={sector}
-                  onChange={(e) => { setSector(e.target.value); setSelectedSymbol(''); }}
-                  className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-medium pl-3 pr-8 py-2 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
-                >
-                  {SECTOR_CONFIGS[assetType].map((s) => (
-                    <option key={s.value} value={s.value}>{s.name}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Asset Dropdown with Search */}
-            <div className="flex items-center gap-2 relative">
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Asset:</span>
-              <div className="relative">
-                <button
-                  onClick={() => setAssetDropdownOpen(!assetDropdownOpen)}
-                  className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-medium pl-3 pr-8 py-2 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 min-w-[140px]"
-                >
-                  {selectedSymbol ? (
-                    <span className="flex items-center gap-2">
-                      {assetType === 'crypto' && <CoinIcon symbol={selectedSymbol} size={18} />}
-                      {selectedSymbol}
-                    </span>
-                  ) : (
-                    <span className="text-slate-400">Select asset...</span>
-                  )}
-                </button>
-                <ChevronDown className={cn("absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none transition-transform", assetDropdownOpen && "rotate-180")} />
-
-                {assetDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setAssetDropdownOpen(false)} />
-                    <div className="absolute top-full left-0 mt-1 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-50 overflow-hidden">
-                      <div className="p-2 border-b border-slate-200 dark:border-slate-700">
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                          <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search..."
-                            className="w-full pl-8 pr-3 py-2 text-sm bg-slate-100 dark:bg-slate-900 border-0 rounded-lg focus:ring-2 focus:ring-teal-500"
-                            autoFocus
-                          />
-                        </div>
-                      </div>
-                      <div className="max-h-64 overflow-y-auto p-1">
-                        {filteredAssets.length === 0 ? (
-                          <div className="p-4 text-center text-sm text-slate-500">No assets found</div>
-                        ) : (
-                          filteredAssets.map((asset) => (
-                            <button
-                              key={asset.symbol}
-                              onClick={() => { setSelectedSymbol(asset.symbol); setAssetDropdownOpen(false); setSearchQuery(''); }}
-                              className={cn(
-                                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
-                                selectedSymbol === asset.symbol
-                                  ? "bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400"
-                                  : "hover:bg-slate-100 dark:hover:bg-slate-700/50"
-                              )}
-                            >
-                              {assetType === 'crypto' && <CoinIcon symbol={asset.symbol} size={20} />}
-                              <span className="font-medium">{asset.symbol}</span>
-                              <span className="text-slate-500 dark:text-slate-400 text-xs">{asset.name}</span>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Timeframe Dropdown */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Timeframe:</span>
-              <div className="relative">
-                <select
-                  value={timeframe}
-                  onChange={(e) => setTimeframe(e.target.value as Timeframe)}
-                  className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-medium pl-3 pr-8 py-2 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
-                >
-                  {TIMEFRAMES.map((tf) => (
-                    <option key={tf.value} value={tf.value}>{tf.label} ({tf.type})</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Analyze Button */}
-            <button
-              onClick={runAnalysis}
-              disabled={!selectedSymbol || !dailyPassStatus?.canUse}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white transition-all ml-auto",
-                selectedSymbol && dailyPassStatus?.canUse
-                  ? "bg-gradient-to-r from-teal-500 to-emerald-600 hover:shadow-lg hover:shadow-teal-500/20"
-                  : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed"
-              )}
-            >
-              <Zap className="w-4 h-4" />
-              Analyze
-            </button>
-          </div>
-
-          {/* Daily Pass Status */}
-          {dailyPassStatus && (
-            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 flex items-center gap-3">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Daily Pass:</span>
-              {dailyPassStatus.hasPass ? (
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">Active</span>
-                  <span className="text-xs text-slate-600 dark:text-slate-400">{dailyPassStatus.maxUsage - dailyPassStatus.usageCount}/{dailyPassStatus.maxUsage} analyses left</span>
-                </div>
-              ) : (
-                <button
-                  onClick={purchaseDailyPass}
-                  disabled={purchasingPass}
-                  className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-semibold hover:shadow-lg transition-all disabled:opacity-50"
-                >
-                  {purchasingPass ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Buy Pass • 100 Credits'}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Main Content - Stacked Layout */}
-        <div className="space-y-6">
-          {/* Analysis Result Area */}
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 min-h-[300px] flex items-center justify-center">
-            {selectedSymbol ? (
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  {assetType === 'crypto' && <CoinIcon symbol={selectedSymbol} size={48} />}
-                  <div className="text-left">
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{selectedSymbol}</h2>
-                    <p className="text-sm text-slate-500">{currentAssets.find(a => a.symbol === selectedSymbol)?.name}</p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-center gap-2 mb-6">
-                  <span className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-sm font-medium">{ASSET_CONFIGS[assetType].name}</span>
-                  <span className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-sm font-medium">{timeframe}</span>
-                </div>
-                <button
-                  onClick={runAnalysis}
-                  disabled={!dailyPassStatus?.canUse}
-                  className={cn(
-                    "inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white transition-all",
-                    dailyPassStatus?.canUse
-                      ? "bg-gradient-to-r from-teal-500 to-emerald-600 hover:shadow-lg hover:shadow-teal-500/20"
-                      : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed"
-                  )}
-                >
-                  <Zap className="w-5 h-5" />
-                  Run 7-Step Analysis
-                </button>
-                <p className="text-xs text-slate-400 mt-3">40+ indicators • AI-powered • ~60 seconds</p>
-              </div>
-            ) : (
-              <div className="text-center">
-                <Target className="w-12 h-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Select an Asset</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md">
-                  Choose a market, sector, and asset from the dropdowns above to start your analysis.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Recent Analyses - Full Width Below */}
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-              {/* Header */}
-              <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                    Recent Analyses
-                    <span className="text-xs font-normal text-slate-500 ml-1">
-                      ({sortedAnalyses.length})
-                    </span>
-                  </h3>
-                  <button
-                    onClick={() => fetchAnalyses()}
-                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                  >
-                    <RefreshCw className={cn("w-4 h-4 text-slate-500", analysesLoading && "animate-spin")} />
-                  </button>
-                </div>
-
-                {/* Filters */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="relative">
-                    <select
-                      value={verdictFilter}
-                      onChange={(e) => setVerdictFilter(e.target.value as VerdictFilter)}
-                      className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-medium pl-2 pr-6 py-1 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
-                    >
-                      {VERDICT_FILTERS.map((f) => (
-                        <option key={f.value} value={f.value}>{f.label}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
-                  </div>
-
-                  <div className="relative">
-                    <select
-                      value={outcomeFilter}
-                      onChange={(e) => setOutcomeFilter(e.target.value as OutcomeFilter)}
-                      className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-medium pl-2 pr-6 py-1 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
-                    >
-                      {OUTCOME_FILTERS.map((f) => (
-                        <option key={f.value} value={f.value}>{f.label}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
-                  </div>
-
-                  <div className="relative">
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value as SortOption)}
-                      className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-medium pl-2 pr-6 py-1 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
-                    >
-                      {SORT_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Analyses List */}
-              <div className="p-4 max-h-[500px] overflow-y-auto">
-                {analysesLoading ? (
-                  <div className="text-center py-8">
-                    <RefreshCw className="w-5 h-5 mx-auto mb-2 text-slate-400 animate-spin" />
-                    <p className="text-xs text-slate-500">Loading...</p>
-                  </div>
-                ) : sortedAnalyses.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Clock className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
-                    <h3 className="font-medium text-sm mb-1 text-slate-700 dark:text-slate-300">No analyses yet</h3>
-                    <p className="text-xs text-slate-500">Run an analysis to see results here</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {sortedAnalyses.map((analysis) => {
-                      const isActive = analysis.expiresAt && new Date(analysis.expiresAt) > new Date() && analysis.outcome !== 'correct' && analysis.outcome !== 'incorrect';
-                      const verdictConfig = VERDICT_CONFIG[analysis.verdict] || VERDICT_CONFIG.wait;
-                      const tradeTypeConfig = analysis.tradeType ? TRADE_TYPE_CONFIG[analysis.tradeType] : null;
-                      const isLoading = actionLoading?.id === analysis.id;
-
-                      return (
-                        <div
-                          key={analysis.id}
+                    <div>
+                      <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Method</label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setMethod('classic')}
                           className={cn(
-                            "relative border rounded-xl p-3 hover:shadow-md transition overflow-hidden",
-                            analysis.outcome === 'correct' && "border-teal-500/50 bg-teal-50/50 dark:bg-teal-500/5",
-                            analysis.outcome === 'incorrect' && "border-red-500/50 bg-red-50/50 dark:bg-red-500/5",
-                            isActive && "border-teal-500/30 bg-teal-50/30 dark:bg-teal-500/5",
-                            !analysis.outcome && !isActive && "border-slate-200 dark:border-slate-700"
+                            "flex-1 py-2 rounded-lg text-sm font-medium transition-all",
+                            method === 'classic'
+                              ? "bg-teal-500 text-white shadow-md"
+                              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
                           )}
                         >
-                          {/* Status Ribbon */}
-                          {isActive && (
-                            <div className="absolute top-0 right-0 px-2 py-0.5 bg-teal-500 text-white text-[8px] font-bold rounded-bl-lg">LIVE</div>
+                          7-Step Classic
+                        </button>
+                        <button
+                          onClick={() => setMethod('mlis_pro')}
+                          className={cn(
+                            "flex-1 py-2 rounded-lg text-sm font-medium transition-all",
+                            method === 'mlis_pro'
+                              ? "bg-purple-500 text-white shadow-md"
+                              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
                           )}
-                          {analysis.outcome === 'correct' && (
-                            <div className="absolute top-0 right-0 px-2 py-0.5 bg-teal-500 text-white text-[8px] font-bold rounded-bl-lg">TP HIT</div>
-                          )}
-                          {analysis.outcome === 'incorrect' && (
-                            <div className="absolute top-0 right-0 px-2 py-0.5 bg-red-500 text-white text-[8px] font-bold rounded-bl-lg">SL HIT</div>
-                          )}
+                        >
+                          MLIS Pro
+                        </button>
+                      </div>
+                    </div>
+                  </div>
 
-                          {/* Content */}
-                          <Link href={`/analyze/details/${analysis.id}`} className="block">
-                            <div className="flex items-center gap-2 mb-2">
-                              <CoinIcon symbol={analysis.symbol} size={28} />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="font-semibold text-sm">{analysis.symbol}</span>
-                                  {analysis.direction && (
-                                    <span className={cn(
-                                      "px-1 py-0.5 rounded text-[9px] font-medium",
-                                      analysis.direction?.toLowerCase() === 'long' ? "bg-teal-500/10 text-teal-600 dark:text-teal-400" :
-                                      analysis.direction?.toLowerCase() === 'short' ? "bg-red-500/10 text-red-600 dark:text-red-400" :
-                                      "bg-slate-500/10 text-slate-600 dark:text-slate-400"
-                                    )}>
-                                      {analysis.direction?.toLowerCase() === 'long' ? <TrendingUp className="w-2.5 h-2.5 inline" /> :
-                                       analysis.direction?.toLowerCase() === 'short' ? <TrendingDown className="w-2.5 h-2.5 inline" /> :
-                                       <Minus className="w-2.5 h-2.5 inline" />}
-                                    </span>
-                                  )}
-                                  <span className={cn("px-1 py-0.5 rounded text-[9px] font-bold", verdictConfig.bg, verdictConfig.text)}>
-                                    {verdictConfig.label}
-                                  </span>
-                                  {analysis.method === 'mlis_pro' && (
-                                    <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center gap-0.5">
-                                      <Layers className="w-2.5 h-2.5" /> MLIS
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-[10px] text-slate-500">{analysis.createdAt}</p>
-                              </div>
-                            </div>
+                  {/* Daily Pass Status */}
+                  {dailyPassStatus && (
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-100 dark:bg-slate-800">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Daily Pass:</span>
+                      {dailyPassStatus.hasPass ? (
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">Active</span>
+                          <span className="text-xs text-slate-600 dark:text-slate-400">{dailyPassStatus.maxUsage - dailyPassStatus.usageCount}/{dailyPassStatus.maxUsage} left</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={purchaseDailyPass}
+                          disabled={purchasingPass}
+                          className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-semibold hover:shadow-lg transition-all disabled:opacity-50"
+                        >
+                          {purchasingPass ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Buy Pass - 100 Credits'}
+                        </button>
+                      )}
+                    </div>
+                  )}
 
-                            {/* Stats Row */}
-                            <div className="flex items-center gap-2 text-[10px]">
-                              {analysis.score !== null && (
+                  {/* Run Analysis Button */}
+                  <button
+                    onClick={runAnalysis}
+                    disabled={!dailyPassStatus?.canUse}
+                    className={cn(
+                      "w-full flex items-center justify-center gap-2 px-6 py-3.5 text-white text-sm font-bold rounded-xl transition-all",
+                      dailyPassStatus?.canUse
+                        ? "bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 hover:shadow-lg hover:shadow-violet-500/25"
+                        : "bg-slate-300 dark:bg-slate-700 cursor-not-allowed"
+                    )}
+                  >
+                    <Zap className="w-5 h-5" />
+                    Run {method === 'classic' ? '7-Step' : 'MLIS Pro'} Analysis on {selectedAsset.symbol}
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Target className="w-12 h-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No Asset Selected</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                    Go back to select an asset from the AI recommendations.
+                  </p>
+                  <button
+                    onClick={() => setCurrentStep('stepA')}
+                    className="px-4 py-2 rounded-lg bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-sm font-medium hover:bg-amber-200 dark:hover:bg-amber-500/30 transition"
+                  >
+                    Back to Recommendations
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Recent Analyses - Always visible below */}
+        <div className="mt-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+          {/* Header */}
+          <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                Recent Analyses
+                <span className="text-xs font-normal text-slate-500 ml-1">
+                  ({sortedAnalyses.length})
+                </span>
+              </h3>
+              <button
+                onClick={() => fetchAnalyses()}
+                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
+                <RefreshCw className={cn("w-4 h-4 text-slate-500", analysesLoading && "animate-spin")} />
+              </button>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <select
+                  value={verdictFilter}
+                  onChange={(e) => setVerdictFilter(e.target.value as VerdictFilter)}
+                  className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-medium pl-2 pr-6 py-1 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                >
+                  {VERDICT_FILTERS.map((f) => (
+                    <option key={f.value} value={f.value}>{f.label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+              </div>
+
+              <div className="relative">
+                <select
+                  value={outcomeFilter}
+                  onChange={(e) => setOutcomeFilter(e.target.value as OutcomeFilter)}
+                  className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-medium pl-2 pr-6 py-1 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                >
+                  {OUTCOME_FILTERS.map((f) => (
+                    <option key={f.value} value={f.value}>{f.label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+              </div>
+
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-medium pl-2 pr-6 py-1 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                >
+                  {SORT_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+              </div>
+            </div>
+          </div>
+
+          {/* Analyses List */}
+          <div className="p-4 max-h-[500px] overflow-y-auto">
+            {analysesLoading ? (
+              <div className="text-center py-8">
+                <RefreshCw className="w-5 h-5 mx-auto mb-2 text-slate-400 animate-spin" />
+                <p className="text-xs text-slate-500">Loading...</p>
+              </div>
+            ) : sortedAnalyses.length === 0 ? (
+              <div className="text-center py-8">
+                <Clock className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
+                <h3 className="font-medium text-sm mb-1 text-slate-700 dark:text-slate-300">No analyses yet</h3>
+                <p className="text-xs text-slate-500">Complete the top-down flow above to run your first analysis</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {sortedAnalyses.map((analysis) => {
+                  const isActive = analysis.expiresAt && new Date(analysis.expiresAt) > new Date() && analysis.outcome !== 'correct' && analysis.outcome !== 'incorrect';
+                  const verdictConfig = VERDICT_CONFIG[analysis.verdict] || VERDICT_CONFIG.wait;
+                  const isLoading = actionLoading?.id === analysis.id;
+
+                  return (
+                    <div
+                      key={analysis.id}
+                      className={cn(
+                        "relative border rounded-xl p-3 hover:shadow-md transition overflow-hidden",
+                        analysis.outcome === 'correct' && "border-teal-500/50 bg-teal-50/50 dark:bg-teal-500/5",
+                        analysis.outcome === 'incorrect' && "border-red-500/50 bg-red-50/50 dark:bg-red-500/5",
+                        isActive && "border-teal-500/30 bg-teal-50/30 dark:bg-teal-500/5",
+                        !analysis.outcome && !isActive && "border-slate-200 dark:border-slate-700"
+                      )}
+                    >
+                      {/* Status Ribbon */}
+                      {isActive && (
+                        <div className="absolute top-0 right-0 px-2 py-0.5 bg-teal-500 text-white text-[8px] font-bold rounded-bl-lg">LIVE</div>
+                      )}
+                      {analysis.outcome === 'correct' && (
+                        <div className="absolute top-0 right-0 px-2 py-0.5 bg-teal-500 text-white text-[8px] font-bold rounded-bl-lg">TP HIT</div>
+                      )}
+                      {analysis.outcome === 'incorrect' && (
+                        <div className="absolute top-0 right-0 px-2 py-0.5 bg-red-500 text-white text-[8px] font-bold rounded-bl-lg">SL HIT</div>
+                      )}
+
+                      {/* Content */}
+                      <Link href={`/analyze/details/${analysis.id}`} className="block">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CoinIcon symbol={analysis.symbol} size={28} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-semibold text-sm">{analysis.symbol}</span>
+                              {analysis.direction && (
                                 <span className={cn(
-                                  "px-1.5 py-0.5 rounded font-bold",
-                                  analysis.score >= 7 ? "bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400" :
-                                  analysis.score >= 5 ? "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400" :
-                                  "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                                  "px-1 py-0.5 rounded text-[9px] font-medium",
+                                  analysis.direction?.toLowerCase() === 'long' ? "bg-teal-500/10 text-teal-600 dark:text-teal-400" :
+                                  analysis.direction?.toLowerCase() === 'short' ? "bg-red-500/10 text-red-600 dark:text-red-400" :
+                                  "bg-slate-500/10 text-slate-600 dark:text-slate-400"
                                 )}>
-                                  {(analysis.score * 10).toFixed(0)}%
+                                  {analysis.direction?.toLowerCase() === 'long' ? <TrendingUp className="w-2.5 h-2.5 inline" /> :
+                                   analysis.direction?.toLowerCase() === 'short' ? <TrendingDown className="w-2.5 h-2.5 inline" /> :
+                                   <Minus className="w-2.5 h-2.5 inline" />}
                                 </span>
                               )}
-                              {typeof analysis.unrealizedPnL === 'number' && (
-                                <span className={cn(
-                                  "px-1.5 py-0.5 rounded font-bold",
-                                  analysis.unrealizedPnL >= 0
-                                    ? "bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400"
-                                    : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                                )}>
-                                  {analysis.unrealizedPnL >= 0 ? '+' : ''}{analysis.unrealizedPnL.toFixed(2)}%
+                              <span className={cn("px-1 py-0.5 rounded text-[9px] font-bold", verdictConfig.bg, verdictConfig.text)}>
+                                {verdictConfig.label}
+                              </span>
+                              {analysis.method === 'mlis_pro' && (
+                                <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center gap-0.5">
+                                  <Layers className="w-2.5 h-2.5" /> MLIS
                                 </span>
                               )}
                             </div>
-                          </Link>
-
-                          {/* Actions */}
-                          <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                            <Link
-                              href={`/analyze/details/${analysis.id}`}
-                              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-100 dark:bg-teal-500/10 hover:bg-teal-200 dark:hover:bg-teal-500/20 text-teal-600 dark:text-teal-500 transition text-[10px] font-medium"
-                            >
-                              <Eye className="w-3 h-3" />
-                              Details
-                            </Link>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); router.push(`/ai-expert/nexus?analysisId=${analysis.id}`); }}
-                              className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/10 text-red-600 dark:text-red-500 transition"
-                            >
-                              <Bot className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => handleEmail(e, analysis)}
-                              className="p-1.5 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition"
-                            >
-                              <Mail className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => handleDelete(e, analysis.id)}
-                              disabled={isLoading}
-                              className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/10 text-red-500 transition disabled:opacity-50"
-                            >
-                              {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                            </button>
+                            <p className="text-[10px] text-slate-500">{analysis.createdAt}</p>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+
+                        {/* Stats Row */}
+                        <div className="flex items-center gap-2 text-[10px]">
+                          {analysis.score !== null && (
+                            <span className={cn(
+                              "px-1.5 py-0.5 rounded font-bold",
+                              analysis.score >= 7 ? "bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400" :
+                              analysis.score >= 5 ? "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400" :
+                              "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                            )}>
+                              {(analysis.score * 10).toFixed(0)}%
+                            </span>
+                          )}
+                          {typeof analysis.unrealizedPnL === 'number' && (
+                            <span className={cn(
+                              "px-1.5 py-0.5 rounded font-bold",
+                              analysis.unrealizedPnL >= 0
+                                ? "bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400"
+                                : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
+                            )}>
+                              {analysis.unrealizedPnL >= 0 ? '+' : ''}{analysis.unrealizedPnL.toFixed(2)}%
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                        <Link
+                          href={`/analyze/details/${analysis.id}`}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-100 dark:bg-teal-500/10 hover:bg-teal-200 dark:hover:bg-teal-500/20 text-teal-600 dark:text-teal-500 transition text-[10px] font-medium"
+                        >
+                          <Eye className="w-3 h-3" />
+                          Details
+                        </Link>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); router.push(`/ai-expert/nexus?analysisId=${analysis.id}`); }}
+                          className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/10 text-red-600 dark:text-red-500 transition"
+                        >
+                          <Bot className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => handleEmail(e, analysis)}
+                          className="p-1.5 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition"
+                        >
+                          <Mail className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => handleDelete(e, analysis.id)}
+                          disabled={isLoading}
+                          className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/10 text-red-500 transition disabled:opacity-50"
+                        >
+                          {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Analysis Dialog */}
-      {showAnalysisDialog && selectedSymbol && (
+      {showAnalysisDialog && selectedAsset && (
         <AnalysisDialog
           isOpen={showAnalysisDialog}
-          symbol={selectedSymbol}
-          coinName={currentAssets.find(s => s.symbol === selectedSymbol)?.name || selectedSymbol}
+          symbol={selectedAsset.symbol}
+          coinName={selectedAsset.name || selectedAsset.symbol}
           timeframe={timeframe}
           analysisMethod={method}
+          capitalFlowContext={capitalFlowContextPayload}
           onClose={() => setShowAnalysisDialog(false)}
           onComplete={() => {
             setShowAnalysisDialog(false);

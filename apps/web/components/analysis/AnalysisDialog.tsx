@@ -206,6 +206,19 @@ const TIMEFRAME_TO_TRADE_TYPE: Record<Timeframe, TradeType> = {
 // Analysis method type
 type AnalysisMethod = 'classic' | 'mlis_pro';
 
+interface CapitalFlowContextPayload {
+  capitalFlowId: string;
+  recommendedAssets: string[];
+  direction?: 'BUY' | 'SELL';
+  l1Bias?: 'risk_on' | 'risk_off' | 'neutral';
+  l4Confidence?: number;
+  // Top-Down Evidence Chain data
+  l1Summary?: { bias: string; dxyTrend: string; vixLevel: string; vixValue: number };
+  l2Summary?: { market: string; phase: string; flow7d: number }[];
+  l3Summary?: { primaryMarket: string; topSectors: string[] };
+  l4Summary?: { action: string; confidence: number; market: string };
+}
+
 interface AnalysisDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -214,6 +227,7 @@ interface AnalysisDialogProps {
   timeframe: Timeframe;
   analysisMethod?: AnalysisMethod;
   onComplete?: () => void;
+  capitalFlowContext?: CapitalFlowContextPayload;
 }
 
 const TRADE_TYPE_LABELS: Record<TradeType, string> = {
@@ -264,6 +278,7 @@ export function AnalysisDialog({
   timeframe,
   analysisMethod = 'classic',
   onComplete,
+  capitalFlowContext,
 }: AnalysisDialogProps) {
   // Derive trade type from timeframe
   const tradeType = TIMEFRAME_TO_TRADE_TYPE[timeframe];
@@ -479,7 +494,14 @@ export function AnalysisDialog({
       const response = await fetch(getApiUrl('/api/analysis/full'), {
         method: 'POST',
         headers,
-        body: JSON.stringify({ symbol, accountSize: 10000, interval: timeframe, tradeType, method: analysisMethod }),
+        body: JSON.stringify({
+          symbol,
+          accountSize: 10000,
+          interval: timeframe,
+          tradeType,
+          method: analysisMethod,
+          ...(capitalFlowContext ? { capitalFlowContext } : {}),
+        }),
       });
 
       const responseText = await response.text();
