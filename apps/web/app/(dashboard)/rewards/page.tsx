@@ -29,6 +29,14 @@ import {
   DEFAULT_ACHIEVEMENTS,
   QUIZ_POOL
 } from '@traderpath/types';
+import {
+  useDailyRewards,
+  useClaimLogin,
+  useSpin,
+  useAnswerQuiz,
+  useAchievements,
+  useUserLevel,
+} from '../../../hooks/useRewardsAPI';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   star: Star,
@@ -51,24 +59,8 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   globe: Star,
 };
 
-// Mock data for demo
-const MOCK_USER = {
-  xp: 450,
-  level: 3,
-  streakDays: 12,
-  referralCode: 'TRADE-ABC123',
-};
-
-const MOCK_DAILY = {
-  login: { claimed: false, credits: 3 },
-  spin: { used: false, result: null as number | null },
-  quiz: { completed: false },
-  streak: { days: 12, nextBonus: 20 },
-};
-
 export default function RewardsPage() {
   const [activeTab, setActiveTab] = useState<'daily' | 'achievements' | 'levels'>('daily');
-  const [dailyState, setDailyState] = useState(MOCK_DAILY);
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedQuizAnswer, setSelectedQuizAnswer] = useState<number | null>(null);
   const [quizResult, setQuizResult] = useState<{ correct: boolean; explanation: string } | null>(null);
@@ -77,113 +69,151 @@ export default function RewardsPage() {
 
   const { showCelebration, notifyCreditAddition } = useCreditNotification();
 
-  // Calculate level info
-  const userXp = MOCK_USER.xp;
+  // Fetch real data from APIs
+  const { data: dailyRewards, loading: dailyLoading, refetch: refetchDaily } = useDailyRewards();
+  const { data: userData, loading: userLoading } = useUserLevel();
+  const { data: achievementsData, loading: achievementsLoading } = useAchievements();
+  const { claim: claimLogin, loading: claimingLogin } = useClaimLogin();
+  const { spin: spinWheel, loading: spinning } = useSpin();
+  const { answer: answerQuiz, loading: answeringQuiz } = useAnswerQuiz();
+
+  // Use real data or fallback to empty state
+  const dailyState = dailyRewards || {
+    login: { claimed: false, credits: 3 },
+    spin: { used: false, result: null },
+    quiz: { completed: false },
+    streak: { days: 0, nextBonus: 0 },
+  };
+
+  const userXp = userData?.xp || 0;
   const currentLevelInfo = LEVEL_THRESHOLDS.filter(l => l.xp <= userXp).pop() || LEVEL_THRESHOLDS[0];
   const nextLevelInfo = LEVEL_THRESHOLDS.find(l => l.xp > userXp);
   const xpProgress = nextLevelInfo
     ? ((userXp - currentLevelInfo.xp) / (nextLevelInfo.xp - currentLevelInfo.xp)) * 100
     : 100;
 
-  const handleClaimLogin = () => {
-    const newStreakDays = dailyState.streak.days + 1;
-    const isStreakMilestone = [7, 14, 21, 28, 30].includes(newStreakDays);
-    const streakBonus = isStreakMilestone ? (newStreakDays >= 30 ? 100 : newStreakDays >= 28 ? 50 : newStreakDays >= 21 ? 30 : newStreakDays >= 14 ? 20 : 10) : 0;
-    const totalCredits = 3 + streakBonus;
+  const handleClaimLogin = async () => {
+    try {
+      const result = await claimLogin();
+      const newStreakDays = result.streakDays;
+      const totalCredits = result.credits;
+      const isStreakMilestone = [7, 14, 21, 28, 30].includes(newStreakDays);
 
-    setDailyState(prev => ({
-      ...prev,
-      login: { claimed: true, credits: 3 },
-      streak: { ...prev.streak, days: newStreakDays },
-    }));
+      // Refetch daily rewards to update UI
+      refetchDaily();
 
-    // Show celebration for daily login
-    showCelebration({
-      credits: totalCredits,
-      reason: isStreakMilestone ? 'streak_bonus' : 'daily_login',
-      streakDays: newStreakDays,
-      title: isStreakMilestone ? `${newStreakDays}-Day Streak!` : 'Daily Login Bonus!',
-      subtitle: isStreakMilestone
-        ? `Amazing! You've earned a ${newStreakDays}-day streak bonus!`
-        : 'Welcome back! Here\'s your daily reward.',
-    });
+      // Show celebration for daily login
+      showCelebration({
+        credits: totalCredits,
+        reason: isStreakMilestone ? 'streak_bonus' : 'daily_login',
+        streakDays: newStreakDays,
+        title: isStreakMilestone ? `${newStreakDays}-Day Streak!` : 'Daily Login Bonus!',
+        subtitle: isStreakMilestone
+          ? `Amazing! You've earned a ${newStreakDays}-day streak bonus!`
+          : 'Welcome back! Here\'s your daily reward.',
+      });
+    } catch (error: any) {
+      console.error('Failed to claim login:', error);
+      alert(error.message || 'Failed to claim daily login reward');
+    }
   };
 
-  const handleSpin = () => {
+  const handleSpin = async () => {
     if (dailyState.spin.used) return;
 
     setIsSpinning(true);
 
-    // Generate random result
-    const random = Math.random();
-    let result = 1;
-    if (random < 0.03) result = 10;
-    else if (random < 0.10) result = 7;
-    else if (random < 0.25) result = 5;
-    else if (random < 0.45) result = 3;
-    else if (random < 0.70) result = 2;
+    try {
+      // Show animation for 2 seconds
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-    setTimeout(() => {
-      setDailyState(prev => ({
-        ...prev,
-        spin: { used: true, result },
-      }));
-      setIsSpinning(false);
+      const result = await spinWheel();
+      const credits = result.result;
+
+      // Refetch daily rewards to update UI
+      refetchDaily();
 
       // Show celebration for spin (jackpot for 10 or more)
-      const isJackpot = result >= 10;
+      const isJackpot = credits >= 10;
       showCelebration({
-        credits: result,
+        credits,
         reason: isJackpot ? 'spin_jackpot' : 'daily_login',
-        title: isJackpot ? 'JACKPOT!' : `You Won ${result} Credits!`,
+        title: isJackpot ? 'JACKPOT!' : `You Won ${credits} Credits!`,
         subtitle: isJackpot
           ? 'Incredible! You hit the jackpot on the lucky spin!'
           : 'Nice spin! Credits have been added to your account.',
       });
-    }, 2000);
+    } catch (error: any) {
+      console.error('Failed to spin:', error);
+      alert(error.message || 'Failed to spin the wheel');
+    } finally {
+      setIsSpinning(false);
+    }
   };
 
-  const handleQuizAnswer = (answerIndex: number) => {
+  const handleQuizAnswer = async (answerIndex: number) => {
     if (dailyState.quiz.completed) return;
 
     setSelectedQuizAnswer(answerIndex);
-    const isCorrect = answerIndex === currentQuiz.correctIndex;
 
-    setQuizResult({
-      correct: isCorrect,
-      explanation: currentQuiz.explanation,
-    });
+    try {
+      const result = await answerQuiz(answerIndex);
+      const isCorrect = result.correct;
 
-    setDailyState(prev => ({
-      ...prev,
-      quiz: { completed: true },
-    }));
+      setQuizResult({
+        correct: isCorrect,
+        explanation: result.explanation || currentQuiz.explanation,
+      });
 
-    // Show celebration for correct quiz answer
-    if (isCorrect) {
-      setTimeout(() => {
-        showCelebration({
-          credits: 5,
-          reason: 'quiz_correct',
-          title: 'Correct Answer!',
-          subtitle: 'Great job! You nailed the daily quiz!',
-        });
-      }, 500);
+      // Refetch daily rewards to update UI
+      refetchDaily();
+
+      // Show celebration for correct quiz answer
+      if (isCorrect) {
+        setTimeout(() => {
+          showCelebration({
+            credits: result.credits || 5,
+            reason: 'quiz_correct',
+            title: 'Correct Answer!',
+            subtitle: 'Great job! You nailed the daily quiz!',
+          });
+        }, 500);
+      }
+    } catch (error: any) {
+      console.error('Failed to answer quiz:', error);
+      alert(error.message || 'Failed to submit quiz answer');
     }
   };
 
   const handleCopyReferral = () => {
-    navigator.clipboard.writeText(MOCK_USER.referralCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const referralCode = userData?.referralCode || '';
+    if (referralCode) {
+      navigator.clipboard.writeText(referralCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const getAchievementIcon = (iconName: string) => {
     return ICON_MAP[iconName] || Star;
   };
 
-  // Mock unlocked achievements (first 3)
-  const unlockedCodes = ['FIRST_ANALYSIS', 'STREAK_7', 'ANALYST_10'];
+  // Get unlocked achievements from real data
+  const unlockedCodes = achievementsData
+    ? achievementsData.filter(a => a.isUnlocked).map(a => a.id)
+    : [];
+
+  // Show loading state while data is being fetched
+  if (dailyLoading || userLoading || achievementsLoading) {
+    return (
+      <div className="w-full px-4 md:px-8 lg:px-12 py-6 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-teal-500 mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading your rewards...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-6">
