@@ -35,7 +35,11 @@ export function useDailyRewards() {
       setLoading(true);
       setError(null);
       const response = await authFetch('/api/rewards/daily');
-      setData(response.data);
+      const json = await response.json();
+      if (!response.ok || !json.success) {
+        throw new Error(json.error?.message || 'Failed to fetch daily rewards');
+      }
+      setData(json.data);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch daily rewards');
       console.error('Daily rewards fetch error:', err);
@@ -64,7 +68,11 @@ export function useClaimLogin() {
       const response = await authFetch('/api/rewards/claim-login', {
         method: 'POST',
       });
-      return response.data;
+      const json = await response.json();
+      if (!response.ok || !json.success) {
+        throw new Error(json.error?.message || 'Failed to claim login reward');
+      }
+      return json.data;
     } catch (err: any) {
       console.error('Login claim error:', err);
       throw new Error(err.message || 'Failed to claim login reward');
@@ -85,7 +93,11 @@ export function useSpin() {
       const response = await authFetch('/api/rewards/spin', {
         method: 'POST',
       });
-      return response.data;
+      const json = await response.json();
+      if (!response.ok || !json.success) {
+        throw new Error(json.error?.message || 'Failed to spin wheel');
+      }
+      return json.data;
     } catch (err: any) {
       console.error('Spin error:', err);
       throw new Error(err.message || 'Failed to spin wheel');
@@ -107,7 +119,11 @@ export function useAnswerQuiz() {
         method: 'POST',
         body: JSON.stringify({ answerIndex }),
       });
-      return response.data;
+      const json = await response.json();
+      if (!response.ok || !json.success) {
+        throw new Error(json.error?.message || 'Failed to submit quiz answer');
+      }
+      return json.data;
     } catch (err: any) {
       console.error('Quiz answer error:', err);
       throw new Error(err.message || 'Failed to submit quiz answer');
@@ -130,7 +146,11 @@ export function useAchievements() {
         setLoading(true);
         setError(null);
         const response = await authFetch('/api/rewards/achievements');
-        setData(response.data.achievements);
+        const json = await response.json();
+        if (!response.ok || !json.success) {
+          throw new Error(json.error?.message || 'Failed to fetch achievements');
+        }
+        setData(json.data.achievements);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch achievements');
         console.error('Achievements fetch error:', err);
@@ -156,7 +176,11 @@ export function useUserLevel() {
         setLoading(true);
         setError(null);
         const response = await authFetch('/api/user/me');
-        setData(response.data);
+        const json = await response.json();
+        if (!response.ok || !json.success) {
+          throw new Error(json.error?.message || 'Failed to fetch user level');
+        }
+        setData(json.data);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch user level');
         console.error('User level fetch error:', err);
