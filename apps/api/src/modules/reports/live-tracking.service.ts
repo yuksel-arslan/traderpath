@@ -15,6 +15,7 @@ import {
   FlowAlert,
   ActiveTradeInput,
 } from '../capital-flow/capital-flow-monitor.service';
+import { sendBeforeAfterReport } from './before-after-report.service';
 
 interface LiveTrackingStatus {
   reportId: string;
@@ -637,6 +638,7 @@ export async function checkAndUpdateAnalysisOutcomes(): Promise<{
 
   // Apply updates
   if (updates.length > 0) {
+    const now = new Date();
     await Promise.all(
       updates.map(update =>
         prisma.analysis.update({
@@ -644,12 +646,26 @@ export async function checkAndUpdateAnalysisOutcomes(): Promise<{
           data: {
             outcome: update.outcome,
             outcomePrice: update.outcomePrice,
-            outcomeAt: new Date(),
+            outcomeAt: now,
           }
         })
       )
     );
     logger.info({ updates: updates.length, tpHits, slHits }, '[AnalysisOutcomeChecker] Updated analyses');
+
+    // Send before/after trade reports (fire-and-forget)
+    for (const update of updates) {
+      try {
+        sendBeforeAfterReport({
+          analysisId: update.id,
+          outcome: update.outcome,
+          outcomePrice: update.outcomePrice,
+          outcomeAt: now,
+        }).catch(err => logger.warn({ error: err, analysisId: update.id }, '[AnalysisOutcomeChecker] Before/after report failed'));
+      } catch (err) {
+        logger.warn({ error: err, analysisId: update.id }, '[AnalysisOutcomeChecker] Before/after report error');
+      }
+    }
   }
 
   return {
@@ -948,6 +964,20 @@ export async function checkAllHistoricalOutcomes(): Promise<{
         })
       )
     );
+
+    // Send before/after trade reports (fire-and-forget)
+    for (const update of updates) {
+      try {
+        sendBeforeAfterReport({
+          analysisId: update.id,
+          outcome: update.outcome,
+          outcomePrice: update.outcomePrice,
+          outcomeAt: update.outcomeAt,
+        }).catch(err => logger.warn({ error: err, analysisId: update.id }, '[HistoricalOutcomeChecker] Before/after report failed'));
+      } catch (err) {
+        logger.warn({ error: err, analysisId: update.id }, '[HistoricalOutcomeChecker] Before/after report error');
+      }
+    }
   }
 
   logger.info({ checked: analyses.length, tpHits, slHits, stillActive, skipped }, '[HistoricalOutcomeChecker] Completed');

@@ -1912,6 +1912,34 @@ Kullanıcı Hakları Aktif:
   - Filtrelenen seviyeler `undefined` olunca mevcut fallback mantığı devreye giriyor → current price kullanılıyor
   - Dosya: `apps/api/src/modules/analysis/analysis.engine.ts:5371-5378,5530-5548`
 
+### 2026-02-06
+- **Email gönderme ve PDF indirme canvas hatası düzeltildi**:
+  - html2canvas cloned DOM'da lightweight-charts canvas 0 width/height ile oluşuyordu
+  - Canvas elementleri html2canvas çağrısı öncesi DOM'dan fiziksel olarak kaldırılıp sonra geri ekleniyor
+  - `hideCanvasesForCapture()` ve `restoreCanvases()` helper fonksiyonları try/finally pattern ile
+  - 8 farklı html2canvas çağrısı (details + reports sayfaları) düzeltildi
+- **Email'lere "View Interactive Chart" butonu eklendi**:
+  - PDF report ve screenshot email şablonlarına teal CTA butonu eklendi
+  - `/analyze/details/${analysisId}` linkine yönlendiriyor
+  - `analysisId` parametresi `PdfReportEmailData` interface'ine ve route handler'lara eklendi
+- **Before/After Trade Report sistemi eklendi**:
+  - **Yeni Dosya**: `apps/api/src/modules/reports/svg-chart-generator.ts` - Server-side SVG candlestick chart renderer
+    - `generateCandlestickSVG()`: Mum grafikleri, fiyat seviyeleri (Entry/SL/TP) ve marker'lar ile SVG üretir
+    - `svgToBase64DataUrl()`: SVG'yi base64 data URL'e çevirir (email embedding için)
+  - **Yeni Dosya**: `apps/api/src/modules/reports/before-after-report.service.ts`
+    - `sendBeforeAfterReport()`: Analiz zamanı (before) ve outcome zamanı (after) grafiklerini oluşturup email gönderir
+    - Before chart: Analiz oluşturulduğunda kaydedilen `chartCandles` verisinden
+    - After chart: `fetchCandles()` ile outcome zamanına kadar taze mumlar
+    - P/L hesaplama, trade duration, outcome badge'leri
+  - **email.service.ts**: `sendBeforeAfterReport()` metodu eklendi
+    - Before/after grafikler yan yana, P/L ve trade plan özeti
+    - Result banner (TARGET HIT / STOP LOSS HIT), trade details tablosu
+    - "View Full Analysis" CTA butonu
+  - **live-tracking.service.ts**: Her iki outcome checker'a entegre edildi
+    - `checkAllHistoricalOutcomes()` - Klines API ile tarihsel outcome tespitinde
+    - `checkAndUpdateAnalysisOutcomes()` - Canlı fiyat ile outcome tespitinde
+    - Fire-and-forget pattern (rapor gönderimi ana akışı bloklamaz)
+
 ---
 
 ## 📡 SIGNAL SERVICE (Proactive Signals)

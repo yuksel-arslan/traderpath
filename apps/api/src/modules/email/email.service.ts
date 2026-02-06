@@ -76,6 +76,7 @@ interface PdfReportEmailData {
   generatedAt: string;
   pdfBase64: string; // Base64 encoded PDF
   fileName: string;
+  analysisId?: string; // For "View Interactive Chart" link
 }
 
 class EmailService {
@@ -624,6 +625,28 @@ TraderPath - Professional Trading Analysis
                   </td>
                 </tr>
               </table>
+
+              ${data.analysisId ? `
+              <!-- View Interactive Chart Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
+                <tr>
+                  <td align="center">
+                    <table cellpadding="0" cellspacing="0" style="border-radius: 12px; overflow: hidden;">
+                      <tr>
+                        <td style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); padding: 16px 40px; text-align: center;">
+                          <a href="${process.env['APP_URL'] || 'https://traderpath.io'}/analyze/details/${data.analysisId}" style="color: white; text-decoration: none; font-size: 16px; font-weight: 600; display: inline-block;">
+                            View Interactive Chart
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="color: #94a3b8; font-size: 11px; margin: 8px 0 0;">
+                      View live candlestick chart with trade levels on TraderPath
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
 
               <!-- Footer Note -->
               <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 30px 0 0; padding-top: 20px; border-top: 1px solid #e2e8f0;">
@@ -1495,6 +1518,231 @@ TraderPath - Professional Trading Analysis
     return { success: result.success, error: result.error };
   }
   /**
+   * Send before/after trade report when a trade closes (TP or SL hit)
+   */
+  async sendBeforeAfterReport(
+    email: string,
+    data: {
+      userName: string;
+      symbol: string;
+      interval: string;
+      direction: string;
+      entry: number;
+      stopLoss: number;
+      tp1: number;
+      tp2: number;
+      outcome: string;
+      outcomePrice: number;
+      pnlPercent: number;
+      duration: string;
+      beforeChartBase64: string;
+      afterChartBase64: string;
+      analysisId: string;
+      analysisDate: Date;
+      outcomeDate: Date;
+    }
+  ): Promise<{ success: boolean; error?: string }> {
+    const isTP = data.outcome.includes('tp');
+    const isLong = data.direction === 'long';
+    const resultColor = isTP ? '#22c55e' : '#ef4444';
+    const resultLabel = isTP ? 'TARGET HIT' : 'STOP LOSS HIT';
+    const resultIcon = isTP ? '&#10004;' : '&#10006;';
+    const pnlColor = data.pnlPercent >= 0 ? '#22c55e' : '#ef4444';
+    const pnlSign = data.pnlPercent >= 0 ? '+' : '';
+    const directionIcon = isLong ? '&#9650;' : '&#9660;';
+    const directionColor = isLong ? '#22c55e' : '#ef4444';
+    const appUrl = process.env['APP_URL'] || 'https://traderpath.io';
+
+    const fmtPrice = (p: number) => {
+      if (p >= 1000) return `$${p.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+      if (p >= 1) return `$${p.toFixed(2)}`;
+      if (p >= 0.01) return `$${p.toFixed(4)}`;
+      return `$${p.toFixed(6)}`;
+    };
+
+    const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trade Report - ${formatSymbolPair(data.symbol)}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 20px;">
+    <tr>
+      <td align="center">
+        <table width="650" cellpadding="0" cellspacing="0" style="background: #1e293b; border-radius: 16px; overflow: hidden; border: 1px solid #334155;">
+
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #14b8a6 0%, #0f172a 50%, #ef4444 100%); padding: 20px; text-align: center;">
+              <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
+                Trader<span style="color: #fef3c7;">Path</span>
+              </h1>
+              <p style="margin: 6px 0 0; color: rgba(255,255,255,0.8); font-size: 12px; letter-spacing: 1px;">
+                Before / After Trade Report
+              </p>
+            </td>
+          </tr>
+
+          <!-- Result Banner -->
+          <tr>
+            <td style="background: ${resultColor}15; padding: 18px 20px; border-bottom: 1px solid #334155;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <span style="color: white; font-size: 22px; font-weight: bold;">${formatSymbolPair(data.symbol)}</span>
+                    <span style="font-size: 12px; color: ${directionColor}; margin-left: 10px; padding: 3px 8px; background: ${directionColor}20; border-radius: 4px;">
+                      ${directionIcon} ${data.direction.toUpperCase()}
+                    </span>
+                  </td>
+                  <td style="text-align: right;">
+                    <span style="display: inline-block; background: ${resultColor}; color: white; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 14px;">
+                      ${resultIcon} ${resultLabel}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- P/L Summary -->
+          <tr>
+            <td style="padding: 20px; border-bottom: 1px solid #334155;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="33%" style="text-align: center;">
+                    <p style="color: #64748b; font-size: 11px; margin: 0 0 4px; text-transform: uppercase;">P/L</p>
+                    <p style="color: ${pnlColor}; font-size: 24px; font-weight: bold; margin: 0;">${pnlSign}${data.pnlPercent.toFixed(2)}%</p>
+                  </td>
+                  <td width="33%" style="text-align: center; border-left: 1px solid #334155; border-right: 1px solid #334155;">
+                    <p style="color: #64748b; font-size: 11px; margin: 0 0 4px; text-transform: uppercase;">Duration</p>
+                    <p style="color: #f1f5f9; font-size: 18px; font-weight: bold; margin: 0;">${data.duration}</p>
+                  </td>
+                  <td width="33%" style="text-align: center;">
+                    <p style="color: #64748b; font-size: 11px; margin: 0 0 4px; text-transform: uppercase;">Outcome</p>
+                    <p style="color: ${resultColor}; font-size: 14px; font-weight: bold; margin: 0;">${data.outcome.replace('_', ' ').toUpperCase()}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Trade Plan -->
+          <tr>
+            <td style="padding: 16px 20px; border-bottom: 1px solid #334155;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 13px;">
+                <tr>
+                  <td style="padding: 4px 0; color: #94a3b8;">Entry</td>
+                  <td style="padding: 4px 0; color: #facc15; text-align: right; font-weight: 600;">${fmtPrice(data.entry)}</td>
+                  <td style="padding: 4px 0; color: #94a3b8; padding-left: 20px;">Stop Loss</td>
+                  <td style="padding: 4px 0; color: #ef4444; text-align: right; font-weight: 600;">${fmtPrice(data.stopLoss)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #94a3b8;">TP1</td>
+                  <td style="padding: 4px 0; color: #22c55e; text-align: right; font-weight: 600;">${data.tp1 ? fmtPrice(data.tp1) : '-'}</td>
+                  <td style="padding: 4px 0; color: #94a3b8; padding-left: 20px;">TP2</td>
+                  <td style="padding: 4px 0; color: #4ade80; text-align: right; font-weight: 600;">${data.tp2 ? fmtPrice(data.tp2) : '-'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 4px 0; color: #94a3b8;">Close Price</td>
+                  <td colspan="3" style="padding: 4px 0; color: ${resultColor}; text-align: right; font-weight: 600;">${fmtPrice(data.outcomePrice)}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Before Chart -->
+          <tr>
+            <td style="padding: 20px 20px 10px;">
+              <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1px;">Before - Analysis Time (${fmtDate(data.analysisDate)})</p>
+              <img src="${data.beforeChartBase64}" width="100%" style="display: block; border-radius: 8px; border: 1px solid #334155;" alt="Before chart" />
+            </td>
+          </tr>
+
+          <!-- After Chart -->
+          <tr>
+            <td style="padding: 10px 20px 20px;">
+              <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1px;">After - ${resultLabel} (${fmtDate(data.outcomeDate)})</p>
+              <img src="${data.afterChartBase64}" width="100%" style="display: block; border-radius: 8px; border: 1px solid #334155;" alt="After chart" />
+            </td>
+          </tr>
+
+          <!-- CTA -->
+          <tr>
+            <td style="padding: 10px 20px 20px; text-align: center;">
+              <table cellpadding="0" cellspacing="0" style="margin: 0 auto; border-radius: 10px; overflow: hidden;">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); padding: 14px 32px; text-align: center;">
+                    <a href="${appUrl}/analyze/details/${data.analysisId}" style="color: white; text-decoration: none; font-size: 14px; font-weight: 600;">
+                      View Full Analysis
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: #0f172a; padding: 15px 20px; text-align: center; border-top: 1px solid #334155;">
+              <p style="color: #64748b; font-size: 11px; margin: 0;">
+                ${data.interval.toUpperCase()} Timeframe | ${fmtDate(data.analysisDate)} - ${fmtDate(data.outcomeDate)}
+              </p>
+              <p style="color: #475569; font-size: 10px; margin: 8px 0 0;">
+                This is not investment advice. Do your own research before trading.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+
+    const text = `
+TraderPath - Before/After Trade Report
+=======================================
+
+${formatSymbolPair(data.symbol)} ${data.direction.toUpperCase()} - ${resultLabel}
+
+P/L: ${pnlSign}${data.pnlPercent.toFixed(2)}%
+Duration: ${data.duration}
+Outcome: ${data.outcome.replace('_', ' ').toUpperCase()}
+
+Trade Plan:
+- Entry: ${fmtPrice(data.entry)}
+- Stop Loss: ${fmtPrice(data.stopLoss)}
+- TP1: ${data.tp1 ? fmtPrice(data.tp1) : '-'}
+- TP2: ${data.tp2 ? fmtPrice(data.tp2) : '-'}
+- Close Price: ${fmtPrice(data.outcomePrice)}
+
+Analysis Date: ${fmtDate(data.analysisDate)}
+Outcome Date: ${fmtDate(data.outcomeDate)}
+
+View full analysis: ${appUrl}/analyze/details/${data.analysisId}
+
+---
+TraderPath - Professional Trading Analysis
+This is not investment advice.
+    `.trim();
+
+    const result = await this.sendEmail({
+      to: email,
+      subject: `${isTP ? '✅' : '❌'} ${formatSymbolPair(data.symbol)} ${resultLabel} (${pnlSign}${data.pnlPercent.toFixed(1)}%) | TraderPath`,
+      html,
+      text,
+    });
+
+    return { success: result.success, error: result.error };
+  }
+
+  /**
    * Send analysis screenshot via email (as attachment only - no inline data URL)
    */
   async sendAnalysisScreenshot(
@@ -1507,6 +1755,7 @@ TraderPath - Professional Trading Analysis
       direction: string;
       screenshotBase64: string; // Base64 data URL
       generatedAt: string;
+      analysisId?: string; // For "View Interactive Chart" link
     }
   ): Promise<{ success: boolean; error?: string }> {
     const isLong = data.direction?.toLowerCase() === 'long';
@@ -1571,9 +1820,23 @@ TraderPath - Professional Trading Analysis
               <p style="color: #94a3b8; font-size: 14px; margin: 0 0 15px;">
                 Full analysis screenshot attached below
               </p>
-              <p style="color: #64748b; font-size: 12px; margin: 0;">
+              <p style="color: #64748b; font-size: 12px; margin: 0 0 20px;">
                 Open the attachment to view your complete ${formatSymbolPair(data.symbol)} analysis with chart and trade plan
               </p>
+              ${data.analysisId ? `
+              <table cellpadding="0" cellspacing="0" style="margin: 0 auto; border-radius: 10px; overflow: hidden;">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); padding: 14px 32px; text-align: center;">
+                    <a href="${process.env['APP_URL'] || 'https://traderpath.io'}/analyze/details/${data.analysisId}" style="color: white; text-decoration: none; font-size: 14px; font-weight: 600;">
+                      View Interactive Chart
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="color: #475569; font-size: 11px; margin: 10px 0 0;">
+                View live candlestick chart with trade levels on TraderPath
+              </p>
+              ` : ''}
             </td>
           </tr>
 
