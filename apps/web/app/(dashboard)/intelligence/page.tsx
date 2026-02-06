@@ -56,13 +56,14 @@ const TradePlanChart = dynamic(
 
 interface CapitalFlowSummary {
   globalLiquidity?: {
-    bias?: string;
-    fedBalanceSheet?: { value?: number; trend?: string };
-    m2?: { growth?: number };
-    dxy?: { value?: number; trend?: string };
+    fedBalanceSheet?: { value?: number; change30d?: number; trend?: string };
+    m2MoneySupply?: { value?: number; change30d?: number; yoyGrowth?: number };
+    dxy?: { value?: number; change7d?: number; trend?: string };
     vix?: { value?: number; level?: string };
-    yieldCurve?: { spread?: number; inverted?: boolean };
+    yieldCurve?: { spread10y2y?: number; inverted?: boolean; interpretation?: string };
+    netLiquidity?: { value?: number; change7d?: number; change30d?: number; trend?: string; interpretation?: string };
   };
+  liquidityBias?: string;
   markets?: Array<{
     market?: string;
     flow7d?: number;
@@ -70,7 +71,16 @@ interface CapitalFlowSummary {
     flowVelocity?: number;
     phase?: string;
     rotationSignal?: string;
-    value?: number;
+    currentValue?: number;
+    sectors?: Array<{
+      name?: string;
+      flow7d?: number;
+      flow30d?: number;
+      dominance?: number;
+      trending?: string;
+      phase?: string;
+      topAssets?: string[];
+    }>;
   }>;
   recommendation?: {
     primaryMarket?: string;
@@ -80,17 +90,26 @@ interface CapitalFlowSummary {
     reason?: string;
     phase?: string;
     sectors?: string[];
+    suggestedAssets?: Array<{ symbol: string; name: string; market: string; sector?: string; riskLevel?: string; reason?: string }>;
   };
   sellRecommendation?: {
-    market?: string;
+    primaryMarket?: string;
     direction?: string;
     reason?: string;
     confidence?: number;
+    sectors?: string[];
+    suggestedAssets?: Array<{ symbol: string; name: string; market: string; sector?: string; riskLevel?: string; reason?: string }>;
   };
-  ragLayer1?: string;
-  ragLayer2?: string;
-  ragLayer3?: string;
-  ragLayer4?: string;
+  insights?: {
+    layer1?: string;
+    layer2?: string;
+    layer3?: string;
+    layer4?: string;
+    ragLayer1?: string;
+    ragLayer2?: string;
+    ragLayer3?: string;
+    ragLayer4?: string;
+  };
 }
 
 interface AnalysisData {
@@ -223,8 +242,8 @@ function LogicPathPanel({
       sublabel: 'Global Regime',
       icon: Globe,
       completed: !!capitalFlow,
-      value: capitalFlow?.globalLiquidity?.bias
-        ? capitalFlow.globalLiquidity.bias.replace(/_/g, ' ').toUpperCase()
+      value: capitalFlow?.liquidityBias
+        ? capitalFlow.liquidityBias.replace(/_/g, ' ').toUpperCase()
         : undefined,
     },
     {
@@ -413,7 +432,7 @@ function CapitalFlowContent({ data }: { data: CapitalFlowSummary | null }) {
   if (!data) return <SectionSkeleton lines={5} />;
 
   const gl = data.globalLiquidity;
-  const bias = safeStr(gl?.bias, 'neutral');
+  const bias = safeStr(data?.liquidityBias, 'neutral');
   const biasColors = getBiasColor(bias);
   const markets = Array.isArray(data.markets) ? data.markets.filter((m) => m && m.market) : [];
 
@@ -453,8 +472,8 @@ function CapitalFlowContent({ data }: { data: CapitalFlowSummary | null }) {
         <MetricCard
           label="Yield Spread"
           value={
-            gl?.yieldCurve?.spread != null
-              ? `${safeNum(gl.yieldCurve.spread).toFixed(2)}%`
+            gl?.yieldCurve?.spread10y2y != null
+              ? `${safeNum(gl.yieldCurve.spread10y2y).toFixed(2)}%`
               : 'N/A'
           }
           sub={gl?.yieldCurve?.inverted ? 'INVERTED' : 'Normal'}
@@ -463,13 +482,13 @@ function CapitalFlowContent({ data }: { data: CapitalFlowSummary | null }) {
         <MetricCard
           label="M2 Growth"
           value={
-            gl?.m2?.growth != null ? `${safeNum(gl.m2.growth).toFixed(1)}%` : 'N/A'
+            gl?.m2MoneySupply?.yoyGrowth != null ? `${safeNum(gl.m2MoneySupply.yoyGrowth).toFixed(1)}%` : 'N/A'
           }
         />
       </div>
 
       {/* RAG Insight */}
-      {data.ragLayer1 && <RagInsight text={data.ragLayer1} layer={1} />}
+      {data.insights?.ragLayer1 && <RagInsight text={data.insights.ragLayer1} layer={1} />}
 
       {/* Market Flows */}
       <div>
@@ -538,7 +557,7 @@ function CapitalFlowContent({ data }: { data: CapitalFlowSummary | null }) {
         </div>
       </div>
 
-      {data.ragLayer2 && <RagInsight text={data.ragLayer2} layer={2} />}
+      {data.insights?.ragLayer2 && <RagInsight text={data.insights.ragLayer2} layer={2} />}
     </div>
   );
 }
@@ -612,6 +631,27 @@ function SectorContent({ data }: { data: CapitalFlowSummary | null }) {
                   ))}
                 </div>
               )}
+              {Array.isArray(rec.suggestedAssets) && rec.suggestedAssets.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-emerald-500/10">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">
+                    Suggested Assets
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {rec.suggestedAssets.map((a) => (
+                      <a
+                        key={a.symbol}
+                        href={`/analyze?market=${primaryMarket}&symbol=${a.symbol}`}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
+                      >
+                        {a.symbol}
+                        {a.riskLevel && (
+                          <span className={`w-1.5 h-1.5 rounded-full ${a.riskLevel === 'low' ? 'bg-green-400' : a.riskLevel === 'medium' ? 'bg-yellow-400' : 'bg-red-400'}`} />
+                        )}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -636,7 +676,7 @@ function SectorContent({ data }: { data: CapitalFlowSummary | null }) {
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500 w-16">Market</span>
                 <span className="text-sm font-bold text-slate-800 dark:text-white uppercase">
-                  {safeStr(sell.market)}
+                  {safeStr(sell.primaryMarket)}
                 </span>
               </div>
               {sell.reason && (
@@ -644,12 +684,42 @@ function SectorContent({ data }: { data: CapitalFlowSummary | null }) {
                   {sell.reason}
                 </p>
               )}
+              {Array.isArray(sell.sectors) && sell.sectors.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {sell.sectors.map((s) => (
+                    <span
+                      key={s}
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 border border-red-500/20"
+                    >
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {Array.isArray(sell.suggestedAssets) && sell.suggestedAssets.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-red-500/10">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-medium">
+                    Suggested Assets
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {sell.suggestedAssets.map((a) => (
+                      <a
+                        key={a.symbol}
+                        href={`/analyze?market=${safeStr(sell.primaryMarket)}&symbol=${a.symbol}`}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors"
+                      >
+                        {a.symbol}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
       </div>
 
-      {data.ragLayer3 && <RagInsight text={data.ragLayer3} layer={3} />}
+      {data.insights?.ragLayer3 && <RagInsight text={data.insights.ragLayer3} layer={3} />}
     </div>
   );
 }
@@ -1033,7 +1103,7 @@ function TradePlanContent({
         </div>
       </div>
 
-      {capitalFlow?.ragLayer4 && <RagInsight text={capitalFlow.ragLayer4} layer={4} />}
+      {capitalFlow?.insights?.ragLayer4 && <RagInsight text={capitalFlow.insights.ragLayer4} layer={4} />}
     </div>
   );
 }
@@ -1443,8 +1513,8 @@ export default function IntelligenceDashboard() {
 
   // Breadcrumb
   const breadcrumb = [
-    capitalFlow?.globalLiquidity?.bias
-      ? capitalFlow.globalLiquidity.bias.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+    capitalFlow?.liquidityBias
+      ? capitalFlow.liquidityBias.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
       : 'Market',
     capitalFlow?.recommendation?.primaryMarket
       ? capitalFlow.recommendation.primaryMarket.charAt(0).toUpperCase() +
