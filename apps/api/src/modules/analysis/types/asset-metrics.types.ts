@@ -379,7 +379,13 @@ export const STOCKS_INDICES = [
 export function detectAssetClass(symbol: string): AssetClass {
   const upperSymbol = symbol.toUpperCase().replace('USDT', '').replace('USD', '');
 
-  // Check BIST first (ends with .IS suffix or known BIST symbols)
+  // Check known crypto symbols FIRST to prevent substring false positives
+  // e.g. SHIB contains 'SI' (Silver futures), SUSHI contains 'SI', etc.
+  if (CRYPTO_SYMBOLS.some(s => upperSymbol === s)) {
+    return 'crypto';
+  }
+
+  // Check BIST (ends with .IS suffix or known BIST symbols)
   if (upperSymbol.endsWith('.IS')) {
     return 'bist';
   }
@@ -391,15 +397,16 @@ export function detectAssetClass(symbol: string): AssetClass {
     return 'bist';
   }
 
-  if (METALS_SYMBOLS.some(s => upperSymbol.includes(s.replace('=F', '').replace('USD', '')))) {
+  // Use exact match for metals/bonds/stocks to avoid substring collisions
+  if (METALS_SYMBOLS.some(s => upperSymbol === s.replace('=F', '').replace('USD', ''))) {
     return 'metals';
   }
 
-  if (BONDS_SYMBOLS.some(s => upperSymbol.includes(s.replace('=F', '')))) {
+  if (BONDS_SYMBOLS.some(s => upperSymbol === s.replace('=F', ''))) {
     return 'bonds';
   }
 
-  if (STOCKS_INDICES.some(s => upperSymbol.includes(s))) {
+  if (STOCKS_INDICES.some(s => upperSymbol === s)) {
     return 'stocks';
   }
 
