@@ -18,7 +18,7 @@ export const PDF_TRANSLATIONS = {
     footerTitle: 'TraderPath Analysis Report',
     footerPowered: 'Powered by Gemini 2.5 Flash',
     page: 'Page',
-    disclaimer: 'This report is not investment advice. Cryptocurrencies carry high risk. Base your investment decisions on your own research.',
+    disclaimer: 'This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. Past performance does not guarantee future results.',
 
     // Steps
     step: 'STEP',
@@ -102,8 +102,8 @@ export const PDF_TRANSLATIONS = {
     noRiskFactors: 'No risk factors found',
 
     // Legal
-    legalDisclaimer: 'LEGAL DISCLAIMER',
-    legalText: 'This analysis is for informational purposes only and should not be considered financial advice. Cryptocurrency trading carries significant risk of loss and is not suitable for all investors. Past performance is not indicative of future results. Do your own research before making any investment decisions. TraderPath cannot be held responsible for losses resulting from trades based on this report.',
+    legalDisclaimer: 'IMPORTANT DISCLAIMER',
+    legalText: 'This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. The information provided should not be construed as a recommendation to buy, sell, or hold any security or financial instrument. All investments carry risk, including the potential loss of principal. Past performance does not guarantee future results. You should conduct your own research and consult with a licensed financial advisor before making any investment decisions. The analysis is based on publicly available information and may contain errors or omissions. Market conditions can change rapidly, and this analysis may become outdated. TraderPath is not responsible for any losses resulting from the use of this report.',
 
     // AI Commentary titles
     aiMarketPulse: 'Market Condition Assessment',
@@ -129,7 +129,7 @@ export const PDF_TRANSLATIONS = {
     footerTitle: 'TraderPath Analiz Raporu',
     footerPowered: 'Powered by Gemini 2.5 Flash',
     page: 'Sayfa',
-    disclaimer: 'Bu rapor yatirim tavsiyesi degildir. Kripto paralar yuksek risk icerir. Yatirim kararlarinizi kendi arastirmaniza dayandiriniz.',
+    disclaimer: 'Bu analiz yalnizca bilgilendirme ve egitim amaclidir; finansal, yatirim veya alim-satim tavsiyesi niteliginde degildir. Gecmis performans gelecekteki sonuclari garanti etmez.',
 
     // Steps
     step: 'ADIM',
@@ -213,8 +213,8 @@ export const PDF_TRANSLATIONS = {
     noRiskFactors: 'Risk faktoru bulunamadi',
 
     // Legal
-    legalDisclaimer: 'YASAL UYARI',
-    legalText: 'Bu analiz yalnizca bilgilendirme amacidir ve finansal tavsiye olarak degerlendirilmemelidir. Kripto para ticareti onemli kayip riski tasir ve tum yatirimcilar icin uygun degildir. Gecmis performans gelecekteki sonuclarin gostergesi degildir. Herhangi bir yatirim karari vermeden once kendi arastirmanizi yapin. TraderPath, bu rapora dayanilarak yapilan islemlerden kaynaklanan zararlardan sorumlu tutulamaz.',
+    legalDisclaimer: 'ONEMLI UYARI',
+    legalText: 'Bu analiz yalnizca bilgilendirme ve egitim amaclidir; finansal, yatirim veya alim-satim tavsiyesi niteliginde degildir. Sunulan bilgiler, herhangi bir menkul kiymet veya finansal aracin alinmasi, satilmasi veya elde tutulmasi icin bir tavsiye olarak yorumlanmamalidir. Tum yatirimlar, anapara kaybi dahil olmak uzere risk tasir. Gecmis performans gelecekteki sonuclari garanti etmez. Herhangi bir yatirim karari vermeden once kendi arastirmanizi yapmali ve lisansli bir finansal danismana basvurmalisiniz. Analiz, kamuya acik bilgilere dayanmaktadir ve hatalar veya eksiklikler icerebilir. Piyasa kosullari hizla degisebilir ve bu analiz guncelligini yitirebilir. TraderPath, bu raporun kullanimindan kaynaklanan hicbir kayiptan sorumlu degildir.',
 
     // AI Commentary titles
     aiMarketPulse: 'Piyasa Durumu Degerlendirmesi',

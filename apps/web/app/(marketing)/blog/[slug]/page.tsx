@@ -559,7 +559,7 @@ export default function BlogArticlePage() {
               © 2025 TraderPath. All rights reserved.
             </p>
             <p className="text-muted-foreground text-sm">
-              Trading involves risk. Not financial advice.
+              For informational and educational purposes only. Not financial advice. Past performance does not guarantee future results.
             </p>
           </div>
         </div>

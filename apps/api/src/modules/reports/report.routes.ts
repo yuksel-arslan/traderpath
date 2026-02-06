@@ -2207,7 +2207,7 @@ function generateReportHtmlEmail(
                 This report was sent from <span style="color: #10b981;">Trader</span><span style="color: #ef4444;">Path</span>
               </p>
               <p style="color: #475569; font-size: 11px; margin: 10px 0 0;">
-                This is not financial advice. Always do your own research before trading.
+                This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. Past performance does not guarantee future results.
               </p>
             </td>
           </tr>

@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSubscription, SubscriptionTier, SubscriptionPlan } from './useSubscription';
 
 export type GatedFeature =
@@ -54,6 +55,8 @@ interface UseFeatureGateReturn {
   currentTier: SubscriptionTier;
   /** Is the user on free tier */
   isFreeTier: boolean;
+  /** Is the user an admin */
+  isAdmin: boolean;
   /** Is subscription data still loading */
   loading: boolean;
   /** Daily credits remaining */
@@ -75,9 +78,14 @@ export function useFeatureGate(): UseFeatureGateReturn {
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [promptFeature, setPromptFeature] = useState<GatedFeature | null>(null);
 
-  const currentTier = subscription?.tier ?? 'free';
-  const isFreeTier = currentTier === 'free';
-  const dailyCredits = subscription?.dailyCredits ?? 0;
+  // Check admin status from user-info cache (set by layout.tsx)
+  const queryClient = useQueryClient();
+  const userInfo = queryClient.getQueryData<{ isAdmin?: boolean }>(['user-info']);
+  const isAdmin = userInfo?.isAdmin === true;
+
+  const currentTier = isAdmin ? 'elite' as SubscriptionTier : (subscription?.tier ?? 'free');
+  const isFreeTier = !isAdmin && currentTier === 'free';
+  const dailyCredits = isAdmin ? 999999 : (subscription?.dailyCredits ?? 0);
 
   // Check if user's tier meets minimum requirement
   const meetsMinimumTier = useCallback((minimumTier: SubscriptionTier): boolean => {
@@ -86,6 +94,9 @@ export function useFeatureGate(): UseFeatureGateReturn {
 
   // Check if user has access to a specific feature
   const hasAccess = useCallback((feature: GatedFeature): boolean => {
+    // Admin users have access to all features
+    if (isAdmin) return true;
+
     const featureConfig = FEATURE_MAP[feature];
 
     // First check minimum tier requirement
@@ -100,15 +111,17 @@ export function useFeatureGate(): UseFeatureGateReturn {
 
     // Default to true if tier requirement is met
     return true;
-  }, [meetsMinimumTier, hasFeature]);
+  }, [isAdmin, meetsMinimumTier, hasFeature]);
 
   // Get remaining limit for a feature
   const getRemainingLimit = useCallback((limitKey: keyof SubscriptionPlan['limits']): number => {
+    // Admin users have unlimited limits
+    if (isAdmin) return Infinity;
     const limit = getLimit(limitKey);
     // -1 means unlimited
     if (limit === -1) return Infinity;
     return limit;
-  }, [getLimit]);
+  }, [isAdmin, getLimit]);
 
   // Open upgrade prompt
   const openUpgradePrompt = useCallback((feature: GatedFeature) => {
@@ -137,6 +150,7 @@ export function useFeatureGate(): UseFeatureGateReturn {
     getRemainingLimit,
     currentTier,
     isFreeTier,
+    isAdmin,
     loading,
     dailyCredits,
     showUpgradePrompt,

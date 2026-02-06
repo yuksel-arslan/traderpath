@@ -361,7 +361,7 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
         <div className="flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-muted-foreground">
-            <strong className="text-yellow-500">Risk Warning:</strong> This analysis was prepared with Gemini 2.5 Flash and is not investment advice. Cryptocurrency markets carry high risk. Do not invest more than you can afford to lose.
+            <strong className="text-yellow-500">Important Disclaimer:</strong> This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. All investments carry risk, including the potential loss of principal. Past performance does not guarantee future results.
           </p>
         </div>
       </div>

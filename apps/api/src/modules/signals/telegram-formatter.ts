@@ -114,7 +114,7 @@ ${signal.sectorFlow ? `📊 Sector Flow: <b>${signal.sectorFlow > 0 ? '+' : ''}$
 ⏰ ${new Date().toUTCString()}
 🆔 Signal ID: <code>${signalId.slice(0, 8)}</code>
 
-<i>⚠️ This is not financial advice. Trade responsibly.</i>
+<i>This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. Past performance does not guarantee future results.</i>
 <i>📊 Powered by TraderPath.io</i>
 `.trim();
 

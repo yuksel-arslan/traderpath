@@ -417,9 +417,9 @@ export default function MethodologyPage() {
             <AlertTriangle className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h4 className="font-bold text-amber-800 dark:text-amber-300 text-sm mb-1">Risk Disclaimer</h4>
+            <h4 className="font-bold text-amber-800 dark:text-amber-300 text-sm mb-1">Important Disclaimer</h4>
             <p className="text-xs text-amber-700 dark:text-amber-200/80">
-              TraderPath does not provide investment advice. Capital flow analysis identifies where money is moving, not guaranteed returns. All financial markets carry risk. Always DYOR.
+              This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. All investments carry risk, including the potential loss of principal. Past performance does not guarantee future results. Conduct your own research and consult with a licensed financial advisor before making any investment decisions.
             </p>
           </div>
         </div>

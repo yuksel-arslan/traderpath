@@ -129,7 +129,7 @@ export default function TermsOfServicePage() {
               <div className="bg-card border rounded-lg p-4">
                 <h3 className="font-semibold text-foreground mb-2">Important Disclaimer</h3>
                 <p>
-                  TraderPath provides analysis tools and information for educational purposes only. We do not provide financial advice, and our analysis should not be considered as investment recommendations.
+                  TraderPath is for informational and educational purposes only and does not constitute financial, investment, or trading advice. The information provided should not be construed as a recommendation to buy, sell, or hold any security or financial instrument. All investments carry risk, including the potential loss of principal.
                 </p>
               </div>
             </div>

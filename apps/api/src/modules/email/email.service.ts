@@ -665,7 +665,7 @@ TraderPath - Professional Trading Analysis
                 This email was automatically sent for your requested analysis report.
               </p>
               <p style="color: #cbd5e1; font-size: 10px; margin: 15px 0 0;">
-                ⚠️ This report does not constitute investment advice. Do your own research before trading.
+                This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. Past performance does not guarantee future results.
               </p>
             </td>
           </tr>
@@ -1185,7 +1185,7 @@ TraderPath - Professional Trading Analysis
             <td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
               <p style="color: #64748b; font-size: 13px; margin: 0;">TraderPath - Professional Trading Analysis</p>
               <p style="color: #cbd5e1; font-size: 10px; margin: 15px 0 0;">
-                ⚠️ This is not investment advice. Do your own research before trading.
+                ⚠️ This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. Past performance does not guarantee future results.
               </p>
             </td>
           </tr>
@@ -1221,7 +1221,7 @@ View full report at: https://traderpath.io/dashboard
 
 ---
 TraderPath - Professional Trading Analysis
-⚠️ This is not investment advice.
+This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice.
     `.trim();
 
     const result = await this.sendEmail({
@@ -1693,7 +1693,7 @@ TraderPath - Professional Trading Analysis
                 ${data.interval.toUpperCase()} Timeframe | ${fmtDate(data.analysisDate)} - ${fmtDate(data.outcomeDate)}
               </p>
               <p style="color: #475569; font-size: 10px; margin: 8px 0 0;">
-                This is not investment advice. Do your own research before trading.
+                This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. Past performance does not guarantee future results.
               </p>
             </td>
           </tr>
@@ -1729,7 +1729,7 @@ View full analysis: ${appUrl}/analyze/details/${data.analysisId}
 
 ---
 TraderPath - Professional Trading Analysis
-This is not investment advice.
+This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice.
     `.trim();
 
     const result = await this.sendEmail({
@@ -1847,7 +1847,7 @@ This is not investment advice.
                 ${data.interval.toUpperCase()} Timeframe | Generated on ${data.generatedAt}
               </p>
               <p style="color: #475569; font-size: 10px; margin: 8px 0 0;">
-                This is not investment advice. Do your own research before trading.
+                This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. Past performance does not guarantee future results.
               </p>
             </td>
           </tr>
@@ -1873,7 +1873,7 @@ Generated on ${data.generatedAt}
 
 ---
 TraderPath - AI-Powered Trading Analysis
-This is not investment advice. Do your own research before trading.
+This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. Past performance does not guarantee future results.
     `.trim();
 
     const result = await this.sendEmail({

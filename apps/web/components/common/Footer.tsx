@@ -100,7 +100,7 @@ export function Footer({ className, variant = 'default' }: FooterProps) {
                   </li>
                   <li>
                     <Link href="/disclaimer" className="text-sm text-slate-500 dark:text-slate-400 hover:text-emerald-500 transition">
-                      Risk Disclaimer
+                      Disclaimer
                     </Link>
                   </li>
                 </ul>
@@ -116,14 +116,15 @@ export function Footer({ className, variant = 'default' }: FooterProps) {
         <div className="mb-8">
           <div className="bg-slate-100 dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
             <h5 className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-              Risk Disclaimer
+              Important Disclaimer
             </h5>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              Trading cryptocurrencies, stocks, and other financial instruments involves substantial risk of loss and is not suitable for all investors.
-              The analysis and recommendations provided by TraderPath are for informational purposes only and should not be considered as financial advice.
-              Past performance is not indicative of future results. You should carefully consider your investment objectives, level of experience,
-              and risk appetite before making any investment decisions. Never invest money you cannot afford to lose.
-              TraderPath does not guarantee the accuracy, completeness, or timeliness of the information provided.
+              This platform is for informational and educational purposes only and does not constitute financial, investment, or trading advice.
+              The information provided should not be construed as a recommendation to buy, sell, or hold any security or financial instrument.
+              All investments carry risk, including the potential loss of principal. Past performance does not guarantee future results.
+              You should conduct your own research and consult with a licensed financial advisor before making any investment decisions.
+              The analysis is based on publicly available information and may contain errors or omissions. Market conditions can change rapidly.
+              Prices and statistics are subject to change. TraderPath does not guarantee the accuracy, completeness, or timeliness of the information provided.
             </p>
           </div>
         </div>
