@@ -366,8 +366,6 @@ const CACHE_KEY = 'dashboard_unified_cache';
 const CACHE_DURATION = 5 * 60 * 1000;
 
 export default function DashboardPage() {
-  const router = useRouter();
-
   // Market filter state
   const [selectedMarkets, setSelectedMarkets] = useMarketFilter();
 
