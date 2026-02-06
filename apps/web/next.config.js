@@ -107,11 +107,16 @@ const nextConfig = {
   // Proxy API requests to the backend (development only)
   // In production, frontend calls API directly via NEXT_PUBLIC_API_URL
   async rewrites() {
-    // Skip rewrites in production - frontend will call API directly
+    const faviconRewrite = {
+      source: '/favicon.ico',
+      destination: '/favicon.svg',
+    };
+    // Skip API rewrites in production - frontend will call API directly
     if (process.env.NODE_ENV === 'production') {
-      return [];
+      return [faviconRewrite];
     }
     return [
+      faviconRewrite,
       // Token endpoint - handled by Next.js
       // Auth login/logout/register/oauth - handled by Next.js
       // Everything else goes to backend
