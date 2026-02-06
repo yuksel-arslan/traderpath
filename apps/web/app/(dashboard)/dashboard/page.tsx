@@ -5,7 +5,7 @@
 // Clean terminal design with progressive disclosure
 // ===========================================
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {
@@ -27,6 +27,8 @@ import {
   Globe,
   Bot,
   Minus,
+  AlertTriangle,
+  Zap,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
@@ -229,6 +231,55 @@ function formatCredits(num: number): string {
 }
 
 // ===========================================
+// Symbol → MarketType mapping
+// ===========================================
+
+import type { MarketType } from '@/components/dashboard/MarketFilter';
+
+const KNOWN_CRYPTO = new Set([
+  'BTC','ETH','SOL','BNB','XRP','ADA','DOGE','DOT','AVAX','MATIC',
+  'LINK','UNI','ATOM','FIL','APT','ARB','OP','SUI','SEI','TIA',
+  'NEAR','FTM','ALGO','ICP','VET','SAND','MANA','AXS','GALA','IMX',
+  'PEPE','SHIB','WIF','BONK','FLOKI','RNDR','FET','AGIX','TAO','WLD',
+  'AAVE','MKR','CRV','SNX','COMP','LDO','RPL','GMX','PENDLE',
+  'INJ','TRX','HBAR','LTC','BCH','ETC','XLM','THETA','ENJ','TON',
+]);
+
+const KNOWN_METALS = new Set([
+  'GLD','SLV','IAU','XAUUSD','XAGUSD','GC=F','SI=F','PPLT','PALL','GOLD','SILVER',
+]);
+
+const KNOWN_BONDS = new Set([
+  'TLT','IEF','SHY','BND','AGG','GOVT','LQD','HYG','TIP','TIPS','TMF','EDV','ZROZ','VGSH',
+]);
+
+const KNOWN_BIST = new Set([
+  'THYAO','GARAN','AKBNK','YKBNK','ISCTR','SAHOL','KCHOL','TUPRS',
+  'EREGL','BIMAS','ASELS','SISE','TCELL','EKGYO','PGSUS','TOASO',
+  'FROTO','ARCLK','PETKM','KOZAL','KOZAA','TAVHL','MGROS','HEKTS',
+  'OYAKC','VESTL','TTKOM','TURSG','ENKAI','DOHOL','SASA','KONTR',
+  'ULKER','AEFES','KRDMD',
+]);
+
+function detectMarketType(symbol: string): MarketType {
+  const clean = symbol.replace(/USDT$|BUSD$|PERP$|\.IS$/i, '').toUpperCase();
+  if (KNOWN_CRYPTO.has(clean)) return 'crypto';
+  if (KNOWN_BIST.has(clean) || symbol.endsWith('.IS')) return 'bist';
+  if (KNOWN_METALS.has(clean)) return 'metals';
+  if (KNOWN_BONDS.has(clean)) return 'bonds';
+  if (symbol.toUpperCase().endsWith('USDT')) return 'crypto';
+  return 'crypto';
+}
+
+/** Map Capital Flow market name to our MarketFilter type */
+function cfMarketToFilterType(cfMarket: string): MarketType {
+  if (cfMarket === 'stocks') return 'bist';
+  if (cfMarket === 'metals') return 'metals';
+  if (cfMarket === 'bonds') return 'bonds';
+  return 'crypto';
+}
+
+// ===========================================
 // Collapsible Section
 // ===========================================
 
@@ -287,7 +338,7 @@ function CollapsibleSection({
 }
 
 // Active Trade Card
-function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
+function ActiveTradeCard({ trade, counterFlow }: { trade: RecentAnalysis; counterFlow?: boolean }) {
   const pnlValue = trade.unrealizedPnL;
   const hasValidPnL = pnlValue !== null && pnlValue !== undefined;
   const isProfit = hasValidPnL && pnlValue >= 0;
@@ -353,6 +404,13 @@ function ActiveTradeCard({ trade }: { trade: RecentAnalysis }) {
           ) : (
             <><XCircle className="w-3 h-3" /> SL Hit</>
           )}
+        </div>
+      )}
+
+      {counterFlow && (
+        <div className="mt-2 pt-2 border-t border-amber-500/20 flex items-center gap-1 text-[10px] text-amber-400">
+          <AlertTriangle className="w-3 h-3 shrink-0" />
+          <span>Counter-flow</span>
         </div>
       )}
     </Link>
@@ -730,7 +788,39 @@ export default function DashboardPage() {
 
   const periodPnL = calculatePeriodPnL();
   const hasChartData = (performanceData?.summary?.totalTrades || 0) > 0 || recentAnalyses.filter(o => o.unrealizedPnL !== undefined).length >= 1;
-  const activeTrades = recentAnalyses.filter(t => t.outcome === 'pending');
+
+  // ===== MARKET FILTER: filter analyses by selected markets =====
+  const filteredAnalyses = useMemo(
+    () => recentAnalyses.filter((a) => selectedMarkets.includes(detectMarketType(a.symbol))),
+    [recentAnalyses, selectedMarkets]
+  );
+  const activeTrades = useMemo(
+    () => filteredAnalyses.filter((t) => t.outcome === 'pending'),
+    [filteredAnalyses]
+  );
+
+  // ===== COUNTER-FLOW DETECTION =====
+  const counterFlowIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (!capitalFlow?.markets?.length) return ids;
+    for (const trade of activeTrades) {
+      const dir = trade.direction?.toLowerCase();
+      if (!dir || dir === 'neutral') continue;
+      const mkt = detectMarketType(trade.symbol);
+      // Map dashboard MarketType back to CF market name
+      const cfName = mkt === 'bist' ? 'stocks' : mkt;
+      const flow = capitalFlow.markets.find((m) => m.market === cfName);
+      if (!flow) continue;
+      // LONG but capital is exiting, or SHORT but capital is entering
+      const isLong = dir === 'long';
+      const isExiting = (flow.flow7d ?? 0) < -1 || flow.rotationSignal === 'exiting' || flow.phase === 'exit';
+      const isEntering = (flow.flow7d ?? 0) > 1 || flow.rotationSignal === 'entering';
+      if ((isLong && isExiting) || (!isLong && isEntering)) {
+        ids.add(trade.id);
+      }
+    }
+    return ids;
+  }, [activeTrades, capitalFlow]);
 
   // Dashboard tour steps
   const dashboardTourSteps: TourStep[] = [
@@ -804,12 +894,12 @@ export default function DashboardPage() {
             )}
           </MetricCard>
 
-          {/* L2: Market Bias Indicator */}
+          {/* L2: Market Bias Indicator (filtered) */}
           <MetricCard title="Market Bias">
             {capitalFlow && capitalFlow.markets.length > 0 ? (
               <MarketBiasBar
                 markets={capitalFlow.markets
-                  .filter(m => m && m.market)
+                  .filter(m => m && m.market && selectedMarkets.includes(cfMarketToFilterType(m.market)))
                   .map(m => ({
                     market: m.market,
                     flow7d: m.flow7d ?? 0,
@@ -956,6 +1046,106 @@ export default function DashboardPage() {
                     {capitalFlow.recommendation?.confidence || 0}% confidence
                   </p>
                 </Link>
+              </div>
+            </CollapsibleSection>
+          )}
+
+          {/* Capital Flow Opportunities */}
+          {capitalFlow?.recommendation?.action === 'analyze' && (
+            <CollapsibleSection
+              title="CF Opportunities"
+              icon={Zap}
+              badge="NEW"
+              defaultOpen={true}
+            >
+              <div className="space-y-3">
+                {/* Primary BUY opportunity */}
+                {(() => {
+                  const rec = capitalFlow.recommendation;
+                  const market = capitalFlow.markets.find(m => m.market === rec.primaryMarket);
+                  const filterType = cfMarketToFilterType(rec.primaryMarket);
+                  if (!selectedMarkets.includes(filterType)) return null;
+                  return (
+                    <Link
+                      href={`/analyze?market=${rec.primaryMarket}`}
+                      className="flex items-center justify-between p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5 hover:border-emerald-500/40 transition group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                          <TrendingUp className="w-4 h-4 text-[#5EEDC3]" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-sm font-bold text-white">{(rec.primaryMarket || '').toUpperCase()}</span>
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-[#5EEDC3]">BUY</span>
+                            {market && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#1E293B] text-gray-400">
+                                {(market.phase || 'mid').toUpperCase()} PHASE
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400 line-clamp-1">{rec.reason}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {market && (
+                          <span className={cn(
+                            "text-xs font-bold tabular-nums",
+                            (market.flow7d ?? 0) >= 0 ? "text-[#5EEDC3]" : "text-[#EF5A6F]"
+                          )}>
+                            {(market.flow7d ?? 0) >= 0 ? '+' : ''}{(market.flow7d ?? 0).toFixed(1)}% 7d
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-400">{rec.confidence}%</span>
+                        <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-[#5EEDC3] transition" />
+                      </div>
+                    </Link>
+                  );
+                })()}
+
+                {/* Secondary: markets with counter-opportunity (outflow → potential short) */}
+                {capitalFlow.markets
+                  .filter(m => m && m.market && m.market !== capitalFlow.recommendation.primaryMarket && (m.flow7d ?? 0) < -2 && selectedMarkets.includes(cfMarketToFilterType(m.market)))
+                  .slice(0, 1)
+                  .map((m) => (
+                    <Link
+                      key={m.market}
+                      href={`/analyze?market=${m.market}`}
+                      className="flex items-center justify-between p-4 rounded-lg border border-[#EF5A6F]/20 bg-[#EF5A6F]/5 hover:border-[#EF5A6F]/40 transition group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-[#EF5A6F]/20 flex items-center justify-center">
+                          <TrendingDown className="w-4 h-4 text-[#EF5A6F]" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-sm font-bold text-white">{(m.market || '').toUpperCase()}</span>
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#EF5A6F]/20 text-[#EF5A6F]">SELL</span>
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#1E293B] text-gray-400">
+                              {(m.phase || 'mid').toUpperCase()} PHASE
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400">Capital outflow detected — short opportunity</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold tabular-nums text-[#EF5A6F]">
+                          {(m.flow7d ?? 0).toFixed(1)}% 7d
+                        </span>
+                        <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-[#EF5A6F] transition" />
+                      </div>
+                    </Link>
+                  ))
+                }
+
+                {/* If filter hides the recommended market */}
+                {!selectedMarkets.includes(cfMarketToFilterType(capitalFlow.recommendation.primaryMarket)) && (
+                  <div className="p-3 rounded-lg border border-[#1E293B] text-center">
+                    <p className="text-xs text-gray-500">
+                      Opportunity in <span className="text-white font-medium">{capitalFlow.recommendation.primaryMarket.toUpperCase()}</span> is hidden by your market filter.
+                    </p>
+                  </div>
+                )}
               </div>
             </CollapsibleSection>
           )}
@@ -1122,7 +1312,7 @@ export default function DashboardPage() {
               <div className="overflow-x-auto pb-2 -mx-2 px-2">
                 <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
                   {activeTrades.slice(0, 10).map((trade) => (
-                    <ActiveTradeCard key={trade.id} trade={trade} />
+                    <ActiveTradeCard key={trade.id} trade={trade} counterFlow={counterFlowIds.has(trade.id)} />
                   ))}
                 </div>
               </div>
