@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { authFetch, getApiUrl } from '../../../lib/api';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { authFetch } from '../../../lib/api';
 import {
   Search, CheckCircle2, Circle, Loader2, AlertTriangle,
-  TrendingUp, TrendingDown, Minus, ArrowRight, ChevronDown,
+  TrendingUp, TrendingDown, Minus,
   Globe, BarChart3, Activity, Brain, Sparkles, Shield, FileText,
-  ArrowUpRight, ArrowDownRight, Clock, Target, Zap,
+  ArrowUpRight, ArrowDownRight, Clock, Zap,
 } from 'lucide-react';
 
 // ============================================================================
@@ -45,13 +45,28 @@ interface PipelineProgress {
 }
 
 // ============================================================================
+// WRAPPER - Suspense boundary for useSearchParams
+// ============================================================================
+
+export default function UnifiedReportPageWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0a0e1a] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
+      </div>
+    }>
+      <UnifiedReportPage />
+    </Suspense>
+  );
+}
+
+// ============================================================================
 // MAIN PAGE COMPONENT
 // ============================================================================
 
-export default function UnifiedReportPage() {
+function UnifiedReportPage() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const initialSymbol = searchParams.get('symbol') || '';
+  const initialSymbol = searchParams?.get('symbol') || '';
 
   const [symbol, setSymbol] = useState(initialSymbol);
   const [inputValue, setInputValue] = useState(initialSymbol);
@@ -60,7 +75,14 @@ export default function UnifiedReportPage() {
   const [report, setReport] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   // Start analysis
   const startAnalysis = useCallback(async (sym: string) => {
@@ -79,6 +101,13 @@ export default function UnifiedReportPage() {
         body: JSON.stringify({ symbol: sym.trim() }),
       });
 
+      if (!res.ok) {
+        const text = await res.text();
+        setError(`Server error (${res.status}): ${text.slice(0, 200)}`);
+        setIsStarting(false);
+        return;
+      }
+
       const data = await res.json();
       if (!data.success) {
         setError(data.error || 'Failed to start analysis');
@@ -87,7 +116,7 @@ export default function UnifiedReportPage() {
       }
 
       setSessionId(data.data.sessionId);
-      connectSSE(data.data.sessionId);
+      startPolling(data.data.sessionId);
     } catch (err: any) {
       setError(err.message || 'Network error');
     } finally {
@@ -102,47 +131,46 @@ export default function UnifiedReportPage() {
     }
   }, [initialSymbol]);
 
-  // Connect to SSE for progress
-  const connectSSE = useCallback((sid: string) => {
-    // Close existing connection
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-    }
+  // Poll for progress
+  const startPolling = useCallback((sid: string) => {
+    if (pollRef.current) clearInterval(pollRef.current);
 
-    // Use polling fallback instead of raw EventSource (auth required)
-    const pollInterval = setInterval(async () => {
+    pollRef.current = setInterval(async () => {
       try {
         const res = await authFetch(`/api/unified-analysis/status/${sid}`);
-        const data = await res.json();
-        if (data.success) {
-          setProgress(data.data);
+        if (!res.ok) return;
 
-          if (data.data.status === 'completed') {
-            clearInterval(pollInterval);
-            // Fetch report
-            fetchReport(sid);
-          } else if (data.data.status === 'failed') {
-            clearInterval(pollInterval);
-            setError(data.data.error || 'Analysis failed');
-          }
+        const data = await res.json();
+        if (!data.success) return;
+
+        setProgress(data.data);
+
+        if (data.data.status === 'completed') {
+          if (pollRef.current) clearInterval(pollRef.current);
+          fetchReport(sid);
+        } else if (data.data.status === 'failed') {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setError(data.data.error || 'Analysis failed');
         }
       } catch {
         // Ignore polling errors
       }
-    }, 1000);
+    }, 1500);
 
     // Timeout after 5 minutes
     setTimeout(() => {
-      clearInterval(pollInterval);
+      if (pollRef.current) clearInterval(pollRef.current);
     }, 5 * 60 * 1000);
-
-    return () => clearInterval(pollInterval);
   }, []);
 
   // Fetch completed report
   const fetchReport = useCallback(async (sid: string) => {
     try {
       const res = await authFetch(`/api/unified-analysis/report/${sid}`);
+      if (!res.ok) {
+        setError(`Failed to load report (${res.status})`);
+        return;
+      }
       const data = await res.json();
       if (data.success) {
         setReport(data.data);
@@ -154,20 +182,19 @@ export default function UnifiedReportPage() {
     }
   }, []);
 
-  // Cleanup
-  useEffect(() => {
-    return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-      }
-    };
-  }, []);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputValue.trim()) {
       startAnalysis(inputValue.trim());
     }
+  };
+
+  const handleReset = () => {
+    setError(null);
+    setSessionId(null);
+    setProgress(null);
+    setReport(null);
+    if (pollRef.current) clearInterval(pollRef.current);
   };
 
   return (
@@ -216,10 +243,7 @@ export default function UnifiedReportPage() {
               <AlertTriangle className="w-5 h-5" />
               <span className="font-medium">{error}</span>
             </div>
-            <button
-              onClick={() => { setError(null); setSessionId(null); setProgress(null); }}
-              className="mt-2 text-sm text-red-500 hover:underline"
-            >
+            <button onClick={handleReset} className="mt-2 text-sm text-red-500 hover:underline">
               Try again
             </button>
           </div>
@@ -232,7 +256,14 @@ export default function UnifiedReportPage() {
 
         {/* Report */}
         {report && (
-          <ReportView report={report} />
+          <>
+            <div className="mb-4 flex justify-end">
+              <button onClick={handleReset} className="text-sm text-teal-500 hover:underline">
+                New Analysis
+              </button>
+            </div>
+            <ReportView report={report} />
+          </>
         )}
       </div>
     </div>
@@ -254,11 +285,11 @@ function PipelineProgressView({ progress, symbol }: { progress: PipelineProgress
       <div className="text-center py-8">
         <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">
-            {symbol.slice(0, 2)}
+            {(symbol || '??').slice(0, 2)}
           </div>
           <div className="text-left">
-            <div className="font-bold text-slate-900 dark:text-white">{symbol}</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 capitalize">{progress.assetClass}</div>
+            <div className="font-bold text-slate-900 dark:text-white">{symbol || 'Loading...'}</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 capitalize">{progress.assetClass || 'unknown'}</div>
           </div>
         </div>
       </div>
@@ -278,7 +309,7 @@ function PipelineProgressView({ progress, symbol }: { progress: PipelineProgress
 
       {/* Steps */}
       <div className="space-y-3">
-        {STEPS.map((stepDef, i) => {
+        {STEPS.map((stepDef) => {
           const stepProgress = progress.steps.find(s => s.step === stepDef.id);
           const status = stepProgress?.status || 'pending';
           const Icon = stepDef.icon;
@@ -351,6 +382,8 @@ function PipelineProgressView({ progress, symbol }: { progress: PipelineProgress
 // ============================================================================
 
 function ReportView({ report }: { report: any }) {
+  if (!report) return null;
+
   const verdictColors: Record<string, string> = {
     GO: 'from-emerald-500 to-green-500',
     CONDITIONAL_GO: 'from-amber-500 to-yellow-500',
@@ -380,10 +413,10 @@ function ReportView({ report }: { report: any }) {
             <div>
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center text-white font-bold">
-                  {report.symbol.slice(0, 2)}
+                  {(report.symbol || '??').slice(0, 2)}
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">{report.assetName}</h2>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">{report.assetName || report.symbol}</h2>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-sm text-slate-500 dark:text-slate-400">{report.symbol}</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 capitalize">
@@ -395,24 +428,24 @@ function ReportView({ report }: { report: any }) {
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold text-slate-900 dark:text-white notranslate">
-                ${formatPrice(report.technicalData?.currentPrice || report.fundamentals?.price || 0)}
+                ${safeFormatPrice(report.technicalData?.currentPrice || report.fundamentals?.price || 0)}
               </div>
-              {report.fundamentals?.changePercent24h !== undefined && (
+              {report.fundamentals?.changePercent24h != null && (
                 <div className={`text-sm font-medium ${(report.fundamentals.changePercent24h || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                  {(report.fundamentals.changePercent24h || 0) >= 0 ? '+' : ''}{(report.fundamentals.changePercent24h || 0).toFixed(2)}%
+                  {(report.fundamentals.changePercent24h || 0) >= 0 ? '+' : ''}{Number(report.fundamentals.changePercent24h || 0).toFixed(2)}%
                 </div>
               )}
             </div>
           </div>
 
           {/* Verdict + Direction + Score row */}
-          <div className="flex items-center gap-4 mt-6">
+          <div className="flex items-center gap-4 mt-6 flex-wrap">
             <span className={`px-4 py-1.5 rounded-lg text-white font-bold text-sm bg-gradient-to-r ${verdictColors[report.overallVerdict] || verdictColors.WAIT}`}>
-              {report.overallVerdict?.replace('_', ' ')}
+              {(report.overallVerdict || 'WAIT').replace('_', ' ')}
             </span>
             <div className={`flex items-center gap-1 font-medium ${directionColor}`}>
               {directionIcon}
-              <span className="uppercase">{report.overallDirection}</span>
+              <span className="uppercase">{report.overallDirection || 'neutral'}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-24 h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
@@ -421,10 +454,10 @@ function ReportView({ report }: { report: any }) {
                   style={{ width: `${report.overallScore || 0}%` }}
                 />
               </div>
-              <span className="text-sm font-bold text-slate-700 dark:text-slate-300 notranslate">{report.overallScore}/100</span>
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-300 notranslate">{report.overallScore || 0}/100</span>
             </div>
             <span className="text-xs text-slate-500 dark:text-slate-400">
-              Confidence: {report.overallConfidence}%
+              Confidence: {report.overallConfidence || 0}%
             </span>
           </div>
 
@@ -445,22 +478,22 @@ function ReportView({ report }: { report: any }) {
             <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/5">
               <div className="text-xs text-slate-500 dark:text-slate-400">Liquidity Bias</div>
               <div className="font-bold text-slate-900 dark:text-white capitalize mt-1">
-                {(report.capitalFlow.globalLiquidity?.bias || 'neutral').replace('_', ' ')}
+                {String(report.capitalFlow.globalLiquidity?.bias || 'neutral').replace('_', ' ')}
               </div>
             </div>
-            {report.capitalFlow.globalLiquidity?.dxy && (
+            {report.capitalFlow.globalLiquidity?.dxy != null && (
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/5">
                 <div className="text-xs text-slate-500 dark:text-slate-400">DXY</div>
                 <div className="font-bold text-slate-900 dark:text-white notranslate mt-1">
-                  {Number(report.capitalFlow.globalLiquidity.dxy).toFixed(2)}
+                  {Number(report.capitalFlow.globalLiquidity.dxy || 0).toFixed(2)}
                 </div>
               </div>
             )}
-            {report.capitalFlow.globalLiquidity?.vix && (
+            {report.capitalFlow.globalLiquidity?.vix != null && (
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/5">
                 <div className="text-xs text-slate-500 dark:text-slate-400">VIX</div>
                 <div className="font-bold text-slate-900 dark:text-white notranslate mt-1">
-                  {Number(report.capitalFlow.globalLiquidity.vix).toFixed(2)}
+                  {Number(report.capitalFlow.globalLiquidity.vix || 0).toFixed(2)}
                 </div>
               </div>
             )}
@@ -468,7 +501,7 @@ function ReportView({ report }: { report: any }) {
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/5">
                 <div className="text-xs text-slate-500 dark:text-slate-400">Recommendation</div>
                 <div className="font-bold text-slate-900 dark:text-white capitalize mt-1">
-                  {report.capitalFlow.recommendation.direction} {report.capitalFlow.recommendation.primaryMarket}
+                  {report.capitalFlow.recommendation.direction || 'neutral'} {report.capitalFlow.recommendation.primaryMarket || ''}
                 </div>
               </div>
             )}
@@ -477,14 +510,16 @@ function ReportView({ report }: { report: any }) {
       )}
 
       {/* Multi-Horizon Analysis */}
-      <div className="bg-white dark:bg-[#0d1221] rounded-2xl border border-slate-200 dark:border-white/10 p-6">
-        <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Multi-Horizon Analysis</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {report.horizonAnalyses?.map((ha: any) => (
-            <HorizonCard key={ha.horizon} analysis={ha} prediction={report.horizonPredictions?.find((p: any) => p.horizon === ha.horizon)} />
-          ))}
+      {report.horizonAnalyses?.length > 0 && (
+        <div className="bg-white dark:bg-[#0d1221] rounded-2xl border border-slate-200 dark:border-white/10 p-6">
+          <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Multi-Horizon Analysis</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {report.horizonAnalyses.map((ha: any) => (
+              <HorizonCard key={ha.horizon} analysis={ha} prediction={report.horizonPredictions?.find((p: any) => p.horizon === ha.horizon)} />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* AI Predictions */}
       {report.horizonPredictions?.length > 0 && (
@@ -508,8 +543,8 @@ function ReportView({ report }: { report: any }) {
             </p>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {report.expertValidation.experts.map((expert: any) => (
-              <ExpertCard key={expert.expertName} expert={expert} />
+            {report.expertValidation.experts.map((expert: any, idx: number) => (
+              <ExpertCard key={expert.expertName || idx} expert={expert} />
             ))}
           </div>
         </div>
@@ -520,11 +555,11 @@ function ReportView({ report }: { report: any }) {
         <div className="bg-white dark:bg-[#0d1221] rounded-2xl border border-slate-200 dark:border-white/10 p-6">
           <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Sentiment & Events</h3>
           <div className="flex items-center gap-4 flex-wrap">
-            {report.sentiment.fearGreedIndex !== undefined && (
+            {report.sentiment.fearGreedIndex != null && (
               <div className="px-4 py-2 rounded-xl bg-slate-50 dark:bg-white/5">
                 <span className="text-xs text-slate-500 dark:text-slate-400">Fear & Greed</span>
                 <div className="font-bold text-slate-900 dark:text-white notranslate">
-                  {report.sentiment.fearGreedIndex} - {report.sentiment.fearGreedLabel}
+                  {report.sentiment.fearGreedIndex} - {report.sentiment.fearGreedLabel || 'N/A'}
                 </div>
               </div>
             )}
@@ -534,7 +569,7 @@ function ReportView({ report }: { report: any }) {
                 report.sentiment.overallSentiment === 'bullish' ? 'text-emerald-500' :
                 report.sentiment.overallSentiment === 'bearish' ? 'text-red-500' : 'text-slate-500'
               }`}>
-                {report.sentiment.overallSentiment}
+                {report.sentiment.overallSentiment || 'neutral'}
               </div>
             </div>
             {report.sentiment.shouldBlockTrade && (
@@ -571,34 +606,34 @@ function ReportView({ report }: { report: any }) {
         <div className="bg-white dark:bg-[#0d1221] rounded-2xl border border-slate-200 dark:border-white/10 p-6">
           <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Fundamentals</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {report.fundamentals.marketCap && (
+            {report.fundamentals.marketCap != null && (
               <FundamentalItem label="Market Cap" value={formatLargeNumber(report.fundamentals.marketCap)} />
             )}
-            {report.fundamentals.peRatio && (
-              <FundamentalItem label="P/E Ratio" value={report.fundamentals.peRatio.toFixed(1)} />
+            {report.fundamentals.peRatio != null && (
+              <FundamentalItem label="P/E Ratio" value={Number(report.fundamentals.peRatio).toFixed(1)} />
             )}
-            {report.fundamentals.dividendYield && (
-              <FundamentalItem label="Dividend Yield" value={`${(report.fundamentals.dividendYield * 100).toFixed(2)}%`} />
+            {report.fundamentals.dividendYield != null && (
+              <FundamentalItem label="Dividend Yield" value={`${(Number(report.fundamentals.dividendYield) * 100).toFixed(2)}%`} />
             )}
-            {report.fundamentals.beta && (
-              <FundamentalItem label="Beta" value={report.fundamentals.beta.toFixed(2)} />
+            {report.fundamentals.beta != null && (
+              <FundamentalItem label="Beta" value={Number(report.fundamentals.beta).toFixed(2)} />
             )}
-            {report.fundamentals.targetPrice && (
-              <FundamentalItem label="Target Price" value={`$${formatPrice(report.fundamentals.targetPrice)}`} />
+            {report.fundamentals.targetPrice != null && (
+              <FundamentalItem label="Target Price" value={`$${safeFormatPrice(report.fundamentals.targetPrice)}`} />
             )}
-            {report.fundamentals.analystRating && (
-              <FundamentalItem label="Analyst Rating" value={report.fundamentals.analystRating.replace('_', ' ').toUpperCase()} />
+            {report.fundamentals.analystRating != null && (
+              <FundamentalItem label="Analyst Rating" value={String(report.fundamentals.analystRating).replace('_', ' ').toUpperCase()} />
             )}
-            {report.fundamentals.revenue && (
+            {report.fundamentals.revenue != null && (
               <FundamentalItem label="Revenue" value={formatLargeNumber(report.fundamentals.revenue)} />
             )}
-            {report.fundamentals.profitMargin && (
-              <FundamentalItem label="Profit Margin" value={`${(report.fundamentals.profitMargin * 100).toFixed(1)}%`} />
+            {report.fundamentals.profitMargin != null && (
+              <FundamentalItem label="Profit Margin" value={`${(Number(report.fundamentals.profitMargin) * 100).toFixed(1)}%`} />
             )}
-            {report.fundamentals.rank && (
+            {report.fundamentals.rank != null && (
               <FundamentalItem label="Rank" value={`#${report.fundamentals.rank}`} />
             )}
-            {report.fundamentals.circulatingSupply && (
+            {report.fundamentals.circulatingSupply != null && (
               <FundamentalItem label="Circulating Supply" value={formatLargeNumber(report.fundamentals.circulatingSupply)} />
             )}
           </div>
@@ -607,7 +642,7 @@ function ReportView({ report }: { report: any }) {
 
       {/* Generated timestamp */}
       <div className="text-center text-xs text-slate-400 dark:text-slate-500 pt-4">
-        Generated {new Date(report.generatedAt).toLocaleString()} | TraderPath Unified Analysis
+        Generated {report.generatedAt ? new Date(report.generatedAt).toLocaleString() : 'N/A'} | TraderPath Unified Analysis
       </div>
     </div>
   );
@@ -618,6 +653,8 @@ function ReportView({ report }: { report: any }) {
 // ============================================================================
 
 function HorizonCard({ analysis, prediction }: { analysis: any; prediction?: any }) {
+  if (!analysis) return null;
+
   const directionIcon = analysis.direction === 'long'
     ? <ArrowUpRight className="w-4 h-4 text-emerald-500" />
     : analysis.direction === 'short'
@@ -630,7 +667,7 @@ function HorizonCard({ analysis, prediction }: { analysis: any; prediction?: any
     <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-          {horizonLabels[analysis.horizon] || analysis.label}
+          {horizonLabels[analysis.horizon] || analysis.label || 'Unknown'}
         </span>
         <div className="flex items-center gap-1">
           {directionIcon}
@@ -638,7 +675,7 @@ function HorizonCard({ analysis, prediction }: { analysis: any; prediction?: any
             analysis.direction === 'long' ? 'text-emerald-500' :
             analysis.direction === 'short' ? 'text-red-500' : 'text-slate-400'
           }`}>
-            {analysis.direction}
+            {analysis.direction || 'neutral'}
           </span>
         </div>
       </div>
@@ -648,13 +685,13 @@ function HorizonCard({ analysis, prediction }: { analysis: any; prediction?: any
         <div className="flex-1 h-1.5 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
           <div
             className={`h-full rounded-full ${
-              analysis.score >= 70 ? 'bg-emerald-500' :
-              analysis.score >= 50 ? 'bg-amber-500' : 'bg-red-500'
+              (analysis.score || 0) >= 70 ? 'bg-emerald-500' :
+              (analysis.score || 0) >= 50 ? 'bg-amber-500' : 'bg-red-500'
             }`}
-            style={{ width: `${analysis.score}%` }}
+            style={{ width: `${analysis.score || 0}%` }}
           />
         </div>
-        <span className="text-xs font-bold text-slate-700 dark:text-slate-300 notranslate">{analysis.score}</span>
+        <span className="text-xs font-bold text-slate-700 dark:text-slate-300 notranslate">{analysis.score || 0}</span>
       </div>
 
       {/* Indicator counts */}
@@ -670,15 +707,15 @@ function HorizonCard({ analysis, prediction }: { analysis: any; prediction?: any
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div>
               <span className="text-slate-400">Entry</span>
-              <div className="font-medium text-slate-700 dark:text-slate-300 notranslate">${formatPrice(prediction.entry)}</div>
+              <div className="font-medium text-slate-700 dark:text-slate-300 notranslate">${safeFormatPrice(prediction.entry)}</div>
             </div>
             <div>
               <span className="text-red-400">SL</span>
-              <div className="font-medium text-red-500 notranslate">${formatPrice(prediction.stopLoss)}</div>
+              <div className="font-medium text-red-500 notranslate">${safeFormatPrice(prediction.stopLoss)}</div>
             </div>
             <div>
               <span className="text-emerald-400">TP1</span>
-              <div className="font-medium text-emerald-500 notranslate">${formatPrice(prediction.takeProfit1)}</div>
+              <div className="font-medium text-emerald-500 notranslate">${safeFormatPrice(prediction.takeProfit1)}</div>
             </div>
           </div>
         </div>
@@ -688,12 +725,14 @@ function HorizonCard({ analysis, prediction }: { analysis: any; prediction?: any
 }
 
 function PredictionCard({ prediction }: { prediction: any }) {
+  if (!prediction) return null;
+
   const horizonLabels: Record<string, string> = { short: 'Short-Term', medium: 'Medium-Term', long: 'Long-Term' };
 
   if (prediction.direction === 'neutral' && prediction.confidence === 0) {
     return (
       <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 opacity-60">
-        <div className="text-sm font-semibold text-slate-500 mb-2">{horizonLabels[prediction.horizon]}</div>
+        <div className="text-sm font-semibold text-slate-500 mb-2">{horizonLabels[prediction.horizon] || 'Unknown'}</div>
         <div className="text-xs text-slate-400">No clear prediction</div>
       </div>
     );
@@ -702,29 +741,29 @@ function PredictionCard({ prediction }: { prediction: any }) {
   return (
     <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{horizonLabels[prediction.horizon]}</span>
-        <span className="text-xs text-slate-400">Confidence: {prediction.confidence}%</span>
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{horizonLabels[prediction.horizon] || 'Unknown'}</span>
+        <span className="text-xs text-slate-400">Confidence: {prediction.confidence || 0}%</span>
       </div>
       <div className="space-y-2">
         <div className="flex justify-between text-xs">
           <span className="text-blue-500">Entry</span>
-          <span className="font-medium text-slate-700 dark:text-slate-300 notranslate">${formatPrice(prediction.entry)}</span>
+          <span className="font-medium text-slate-700 dark:text-slate-300 notranslate">${safeFormatPrice(prediction.entry)}</span>
         </div>
         <div className="flex justify-between text-xs">
           <span className="text-red-500">Stop Loss</span>
-          <span className="font-medium text-red-500 notranslate">${formatPrice(prediction.stopLoss)}</span>
+          <span className="font-medium text-red-500 notranslate">${safeFormatPrice(prediction.stopLoss)}</span>
         </div>
         <div className="flex justify-between text-xs">
           <span className="text-emerald-500">Take Profit 1</span>
-          <span className="font-medium text-emerald-500 notranslate">${formatPrice(prediction.takeProfit1)}</span>
+          <span className="font-medium text-emerald-500 notranslate">${safeFormatPrice(prediction.takeProfit1)}</span>
         </div>
         <div className="flex justify-between text-xs">
           <span className="text-emerald-600">Take Profit 2</span>
-          <span className="font-medium text-emerald-600 notranslate">${formatPrice(prediction.takeProfit2)}</span>
+          <span className="font-medium text-emerald-600 notranslate">${safeFormatPrice(prediction.takeProfit2)}</span>
         </div>
         <div className="flex justify-between text-xs pt-1 border-t border-slate-200 dark:border-white/10">
           <span className="text-slate-400">R:R</span>
-          <span className="font-bold text-slate-700 dark:text-slate-300 notranslate">1:{prediction.riskReward?.toFixed(1) || '1.0'}</span>
+          <span className="font-bold text-slate-700 dark:text-slate-300 notranslate">1:{Number(prediction.riskReward || 1).toFixed(1)}</span>
         </div>
       </div>
       {prediction.reasoning && (
@@ -735,6 +774,8 @@ function PredictionCard({ prediction }: { prediction: any }) {
 }
 
 function ExpertCard({ expert }: { expert: any }) {
+  if (!expert) return null;
+
   const expertEmojis: Record<string, string> = {
     ARIA: '📊', ORACLE: '🐋', SENTINEL: '🛡️', NEXUS: '🔗',
   };
@@ -748,14 +789,14 @@ function ExpertCard({ expert }: { expert: any }) {
         <div className="flex items-center gap-2">
           <span className="text-lg">{expertEmojis[expert.expertName] || '🤖'}</span>
           <div>
-            <div className="font-semibold text-sm text-slate-700 dark:text-slate-300">{expert.expertName}</div>
-            <div className="text-xs text-slate-400">{expert.role}</div>
+            <div className="font-semibold text-sm text-slate-700 dark:text-slate-300">{expert.expertName || 'Expert'}</div>
+            <div className="text-xs text-slate-400">{expert.role || ''}</div>
           </div>
         </div>
-        <span className={`text-xs font-bold uppercase ${verdictColor}`}>{expert.verdict}</span>
+        <span className={`text-xs font-bold uppercase ${verdictColor}`}>{expert.verdict || 'neutral'}</span>
       </div>
       <ul className="space-y-1 mt-2">
-        {expert.keyPoints?.map((point: string, i: number) => (
+        {(expert.keyPoints || []).map((point: string, i: number) => (
           <li key={i} className="text-xs text-slate-600 dark:text-slate-400 flex items-start gap-1.5">
             <span className="text-teal-500 mt-0.5">•</span>
             {point}
@@ -779,19 +820,21 @@ function FundamentalItem({ label, value }: { label: string; value: string }) {
 // HELPERS
 // ============================================================================
 
-function formatPrice(price: number): string {
-  if (!price || isNaN(price)) return '0.00';
-  if (price >= 1000) return price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  if (price >= 1) return price.toFixed(2);
-  if (price >= 0.01) return price.toFixed(4);
-  return price.toFixed(6);
+function safeFormatPrice(price: any): string {
+  const num = Number(price);
+  if (!num || isNaN(num)) return '0.00';
+  if (num >= 1000) return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (num >= 1) return num.toFixed(2);
+  if (num >= 0.01) return num.toFixed(4);
+  return num.toFixed(6);
 }
 
-function formatLargeNumber(num: number): string {
-  if (!num || isNaN(num)) return '0';
-  if (num >= 1e12) return `$${(num / 1e12).toFixed(2)}T`;
-  if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
-  if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
-  if (num >= 1e3) return `$${(num / 1e3).toFixed(1)}K`;
-  return `$${num.toFixed(0)}`;
+function formatLargeNumber(num: any): string {
+  const n = Number(num);
+  if (!n || isNaN(n)) return '0';
+  if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+  return `$${n.toFixed(0)}`;
 }
