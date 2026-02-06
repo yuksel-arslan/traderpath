@@ -7,7 +7,7 @@
  */
 
 import { StrategyPlan, ForecastBand } from '../../types';
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
 export function generateBreakoutPlan(params: {
   symbol: string;
@@ -91,7 +91,7 @@ export function generateBreakoutPlan(params: {
   applicability = Math.max(0, Math.min(100, applicability));
 
   return {
-    id: uuidv4(),
+    id: nanoid(),
     type: 'breakout',
     label: `Breakout ${isLong ? 'Long' : 'Short'}`,
     description: isLong

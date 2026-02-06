@@ -5,7 +5,7 @@
  * Validates, scores, deduplicates, and formats citations.
  */
 
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 import { Citation, TrustedSource } from '../types';
 import { AssetClass } from '../../analysis/types/asset-metrics.types';
 import {
@@ -39,7 +39,7 @@ export class CitationService {
     const reliability = getReliabilityScore(data.url);
 
     return {
-      id: uuidv4(),
+      id: nanoid(),
       source: this.extractDomain(data.url),
       sourceName: source?.name || this.extractDomain(data.url),
       title: data.title,

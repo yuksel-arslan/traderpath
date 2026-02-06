@@ -7,7 +7,7 @@
  */
 
 import { StrategyPlan, ForecastBand } from '../../types';
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
 export function generateRangePlan(params: {
   symbol: string;
@@ -101,7 +101,7 @@ export function generateRangePlan(params: {
   applicability = Math.max(0, Math.min(100, applicability));
 
   return {
-    id: uuidv4(),
+    id: nanoid(),
     type: 'range',
     label: `Range ${isLong ? 'Long' : 'Short'}`,
     description: isLong

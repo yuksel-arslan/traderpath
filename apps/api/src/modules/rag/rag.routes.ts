@@ -12,7 +12,7 @@ import { ragOrchestrator } from './rag-orchestrator.service';
 import { forecastBandService } from './forecast/forecast-band.service';
 import { planValidationService } from './validation/plan-validation.service';
 import { detectAssetClass } from '../analysis/services/asset-specific/asset-analyzer-orchestrator';
-import { authenticate, getUser } from '../../core/auth';
+import { authenticate } from '../../core/auth/middleware';
 
 export async function ragRoutes(app: FastifyInstance) {
   // ─────────────────────────────────────────────────────────────────

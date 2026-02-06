@@ -6,14 +6,14 @@
 
 import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 import { collectError } from './bilge.service';
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
 /**
  * Request ID middleware
  * Adds unique ID to each request for tracking
  */
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const requestId = (req.headers['x-request-id'] as string) || uuidv4();
+  const requestId = (req.headers['x-request-id'] as string) || nanoid();
   (req as any).requestId = requestId;
   res.setHeader('x-request-id', requestId);
   next();
