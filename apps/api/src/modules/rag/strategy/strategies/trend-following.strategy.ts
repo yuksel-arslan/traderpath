@@ -8,7 +8,7 @@
 
 import { StrategyPlan, ForecastBand } from '../../types';
 import { Phase } from '../../../capital-flow/types';
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
 export function generateTrendFollowingPlan(params: {
   symbol: string;
@@ -114,7 +114,7 @@ export function generateTrendFollowingPlan(params: {
   applicability = Math.max(0, Math.min(100, applicability));
 
   return {
-    id: uuidv4(),
+    id: nanoid(),
     type: 'trend_following',
     label: `Trend Follow ${isLong ? 'Long' : 'Short'}`,
     description: isLong
