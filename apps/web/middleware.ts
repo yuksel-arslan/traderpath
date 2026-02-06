@@ -11,6 +11,7 @@ const protectedPaths = [
   '/dashboard',
   '/analyze',
   '/reports',
+  '/report',
   '/rewards',
   '/credits',
   '/alerts',
@@ -18,6 +19,14 @@ const protectedPaths = [
   '/analysis',
   '/admin',
   '/ai-expert',
+  '/capital-flow',
+  '/intelligence',
+  '/concierge',
+  '/explore',
+  '/scheduled',
+  '/signals',
+  '/methodology',
+  '/top-coins',
 ];
 
 // Routes that should redirect to capital-flow if already authenticated
@@ -36,7 +45,7 @@ export function middleware(request: NextRequest) {
 
   // Debug: Log auth state for protected routes
   if (process.env.NODE_ENV === 'development') {
-    const isProtectedPath = ['/dashboard', '/analyze', '/reports', '/rewards', '/credits', '/alerts', '/settings', '/analysis', '/admin', '/ai-expert'].some(
+    const isProtectedPath = protectedPaths.some(
       p => pathname === p || pathname.startsWith(`${p}/`)
     );
     if (isProtectedPath) {
