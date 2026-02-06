@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { authFetch } from '../lib/auth-fetch';
+import { authFetch } from '../lib/api';
 
 export interface DailyRewardsData {
   login: { claimed: boolean; credits: number };
