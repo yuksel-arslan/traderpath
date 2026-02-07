@@ -36,6 +36,7 @@ import { getApiUrl, authFetch } from '../../../lib/api';
 import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
 import { MetricCard, LiquidityGauge, MarketBiasBar } from '@/components/dashboard/MetricCard';
 import { MarketFilter, useMarketFilter } from '@/components/dashboard/MarketFilter';
+import BriefingCard from '@/components/dashboard/BriefingCard';
 
 // Lazy load chart component
 const PnLChart = dynamic(
@@ -960,6 +961,11 @@ export default function DashboardPage() {
         {/* Tour trigger */}
         <div className="flex justify-end mb-4">
           <TourTriggerButton tourId="dashboard-focus" />
+        </div>
+
+        {/* ===== MORNING BRIEFING CARD ===== */}
+        <div className="mb-6">
+          <BriefingCard />
         </div>
 
         {/* ===== COLLAPSIBLE SECTIONS ===== */}

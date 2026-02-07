@@ -63,6 +63,7 @@ import { startDailyCreditsJob, stopDailyCreditsJob } from './modules/subscriptio
 import { startReconciliationJob, stopReconciliationJob } from './modules/admin/reconciliation.cron';
 import { unifiedAnalysisRoutes } from './modules/unified-analysis';
 import { ragRoutes } from './modules/rag';
+import { morningBriefingRoutes, startMorningBriefingJob, stopMorningBriefingJob } from './modules/morning-briefing';
 
 // ===========================================
 // Server Configuration
@@ -401,6 +402,9 @@ app.register(unifiedAnalysisRoutes, { prefix: '/api/unified-analysis' }); // Leg
 app.register(ragRoutes, { prefix: '/api/v1/rag' });
 app.register(ragRoutes, { prefix: '/api/rag' }); // Legacy
 
+// Morning Briefing routes (daily market briefing)
+app.register(morningBriefingRoutes, { prefix: '/api' });
+
 // ===========================================
 // 404 Handler
 // ===========================================
@@ -692,6 +696,10 @@ const start = async () => {
       // Start subscription daily credits cron job (00:00 UTC)
       startDailyCreditsJob();
       logger.info('✓ Subscription daily credits cron started');
+
+      // Start Morning Briefing cron job (07:00 UTC+3 daily)
+      startMorningBriefingJob();
+      logger.info('✓ Morning briefing cron started');
       // Start payment reconciliation cron job (03:00 UTC daily)
       startReconciliationJob();
       logger.info('✓ Payment reconciliation cron started');
@@ -767,6 +775,10 @@ const shutdown = async (signal: string) => {
     // Stop payment reconciliation cron
     stopReconciliationJob();
     logger.info('✓ Payment reconciliation cron stopped');
+
+    // Stop Morning Briefing cron
+    stopMorningBriefingJob();
+    logger.info('✓ Morning briefing cron stopped');
 
     // Stop accepting new connections
     await app.close();

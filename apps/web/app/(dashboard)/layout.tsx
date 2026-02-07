@@ -28,6 +28,7 @@ import {
   Compass,
   FileText,
   Sparkles,
+  Clock,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -44,6 +45,7 @@ const PriceTicker = dynamic(
 // Direct navigation items (no dropdown)
 const directNav = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Briefing', href: '/briefing', icon: Clock },
   { name: 'Intelligence', href: '/intelligence', icon: Sparkles },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Report', href: '/report', icon: FileText },
