@@ -626,6 +626,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-06 | Intelligence Dashboard: Performance Attribution Matrix | 4-layer katkı analizi (Capital Flow, Sector, Timing, ML) - "Explainable AI" |
 | 2026-02-06 | Analyze Page: Enforced Top-Down Flow (Step 0→A→B) | Capital Flow zorunlu, AI recommendation sonrası asset seçimi, corporate decision framework |
 | 2026-02-06 | Details Page: Top-Down Evidence Chain | L1-L4 + Analysis + ML Confirmation alignment durumu, "X/Y Aligned" badge |
+| 2026-02-07 | Nav Restructure: Top-Down Flow Order | Explore(L1-L4) → Analyze → Signals → Dashboard. Intelligence→Explore, Signals primary'ye terfi, Profile user menu'ye, Capital Flow ayrı sayfa kaldırıldı |
 
 ---
 
@@ -2137,6 +2138,22 @@ Kullanıcı Hakları Aktif:
     - `step1Result.capitalFlowContext` verisi kullanılıyor
     - Capital Flow context olmadan yapılan analizlerde evidence chain gizleniyor
   - Dosyalar: `capital-flow.routes.ts`, `analysis.routes.ts`, `AnalysisDialog.tsx`, `analyze/page.tsx`, `details/[id]/page.tsx`
+- **Navigation Restructure (Top-Down Capital Flow Order)**:
+  - **directNav yeniden düzenlendi**: Explore → Analyze → Signals → Dashboard
+  - Intelligence → **Explore** olarak yeniden adlandırıldı (Compass ikonu, `/intelligence` path)
+  - **Signals** Tools dropdown'dan primary nav'a terfi etti
+  - **Report** directNav'dan kaldırıldı → Tools dropdown'a **Reports** (`/reports`) olarak taşındı
+  - **Profile** endNav'dan kaldırıldı → User menu dropdown'a taşındı
+  - **Alerts** (`/alerts`) kaldırıldı → sadece **Smart Alerts** (`/alerts/smart`) kaldı
+  - **Trader Program** endNav'da kaldı (Pricing politikasıyla uyumlu)
+  - Kullanılmayan ikon import'ları temizlendi (Coins, BookOpen, Globe, Sparkles)
+  - **Yeni nav yapısı**:
+    - Primary: Explore | Analyze | Signals | Dashboard
+    - Dropdown "AI Chat": Concierge | AI Experts
+    - Dropdown "Tools": Reports | Smart Alerts | Scheduled | Notifications
+    - End: Trader Program
+    - User Menu: Profile | Settings | Admin | Logout
+  - Dosya: `apps/web/app/(dashboard)/layout.tsx`
 
 ---
 
