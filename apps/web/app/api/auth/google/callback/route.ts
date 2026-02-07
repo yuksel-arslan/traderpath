@@ -6,10 +6,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
+// Allow Vercel serverless function to run up to 60s (Pro plan)
+export const maxDuration = 60;
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io';
 
-// Timeout for backend requests (30 seconds - accounts for Neon DB cold start)
-const BACKEND_TIMEOUT_MS = 30_000;
+// Timeout per backend request attempt (12 seconds)
+// Two attempts = max 25s total (well within Vercel limits)
+const BACKEND_TIMEOUT_MS = 12_000;
 
 // Transient HTTP status codes that warrant a retry
 const TRANSIENT_STATUS_CODES = [502, 503, 504];
