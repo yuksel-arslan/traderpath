@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getAuthToken, getApiUrl } from '../../lib/api';
-import { CREDIT_COSTS } from '@traderpath/types';
+import { CREDIT_COSTS } from '@/lib/types';
 import { useCreditNotification } from '../../contexts/CreditNotificationContext';
 import { CoinIcon } from '../common/CoinIcon';
 

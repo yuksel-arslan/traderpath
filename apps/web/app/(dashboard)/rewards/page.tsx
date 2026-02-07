@@ -28,7 +28,7 @@ import {
   DAILY_REWARD_SCHEDULE,
   DEFAULT_ACHIEVEMENTS,
   QUIZ_POOL
-} from '@traderpath/types';
+} from '@/lib/types';
 import {
   useDailyRewards,
   useClaimLogin,

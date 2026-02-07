@@ -1,5 +1,5 @@
 // ===========================================
-// Shared Types for TraderPath Monorepo
+// Web App Types
 // ===========================================
 
 // ===== INDICATOR TYPES =====
@@ -49,34 +49,11 @@ export interface IndicatorAnalysis {
 }
 
 // ===== CREDIT TYPES =====
-export interface CreditBalance {
-  userId: string;
-  balance: number;
-  lifetimeEarned: number;
-  lifetimeSpent: number;
-  lastUpdated: Date;
-}
-
-export interface CreditTransaction {
-  id: string;
-  userId: string;
-  amount: number;
-  type: 'PURCHASE' | 'BONUS' | 'USAGE' | 'REFUND';
-  description: string;
-  balanceAfter: number;
-  createdAt: Date;
-  metadata?: Record<string, unknown>;
-}
-
-// Credit costs per operation
 export const CREDIT_COSTS = {
-  // Analysis
   ANALYSIS_BASIC: 10,
   ANALYSIS_CLASSIC: 25,
   ANALYSIS_MLIS: 25,
   ANALYSIS_SCHEDULED: 25,
-
-  // Analysis Steps (for display purposes)
   STEP_MARKET_PULSE: 3,
   STEP_ASSET_SCANNER: 4,
   STEP_SAFETY_CHECK: 4,
@@ -84,28 +61,18 @@ export const CREDIT_COSTS = {
   STEP_TRADE_PLAN: 5,
   STEP_TRAP_CHECK: 3,
   STEP_FINAL_VERDICT: 2,
-
-  // AI Expert
   AI_EXPERT_QUESTION: 5,
-  AI_EXPERT_QUESTION_FREE: 0, // First 3 per analysis
-
-  // Reports
+  AI_EXPERT_QUESTION_FREE: 0,
   PDF_DOWNLOAD: 5,
-  PDF_DOWNLOAD_FREE: 0, // First 2 per analysis
+  PDF_DOWNLOAD_FREE: 0,
   EMAIL_SEND: 5,
-  EMAIL_SEND_FREE: 0, // First 2 per analysis
-
-  // Capital Flow
-  CAPITAL_FLOW_L3: 25, // Daily pass
-  CAPITAL_FLOW_L4: 25, // Daily pass
-  ASSET_ANALYSIS_DAILY: 100, // Daily pass for 10 analyses
-
-  // Alerts
+  EMAIL_SEND_FREE: 0,
+  CAPITAL_FLOW_L3: 25,
+  CAPITAL_FLOW_L4: 25,
+  ASSET_ANALYSIS_DAILY: 100,
   PRICE_ALERT: 1,
   SCHEDULED_REPORT: 25,
-
-  // Top Coins Scan
-  TOP_COINS_SCAN: 300, // Full 30-coin scan
+  TOP_COINS_SCAN: 300,
 } as const;
 
 // ===== REWARDS TYPES =====
@@ -319,6 +286,3 @@ export const QUIZ_POOL: QuizQuestion[] = [
     category: 'Market Analysis'
   },
 ];
-
-// ===== EXPORT ALL =====
-export * from './index';

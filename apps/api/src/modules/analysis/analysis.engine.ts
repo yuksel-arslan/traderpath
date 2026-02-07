@@ -9,7 +9,7 @@ import { callGeminiWithRetry } from '../../core/gemini';
 import { contractSecurityService } from '../security/contract-security.service';
 import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig, getMaxStopLossPercent, getMaxTakeProfitPercent } from './config/trade-config';
 import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/indicator-interpreter.service';
-import { IndicatorAnalysis } from '@traderpath/types';
+import { IndicatorAnalysis } from '../../../types';
 import { IndicatorsService, OHLCV, IndicatorResult } from './services/indicators.service';
 import { getTFTClient, TFTForecast } from './services/tft-client.service';
 import { getTradingKnowledgeForAI } from '../ai-expert/trading-knowledge-base';

@@ -11,7 +11,7 @@
  * - Multi-indicator signal aggregation
  */
 
-import { IndicatorDetail, IndicatorAnalysis, DivergenceInfo } from '@traderpath/types';
+import { IndicatorDetail, IndicatorAnalysis, DivergenceInfo } from '../../../../types';
 
 interface IndicatorValue {
   value: number | null;
