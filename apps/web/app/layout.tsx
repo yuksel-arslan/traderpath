@@ -105,6 +105,11 @@ export const metadata: Metadata = {
     title: 'TraderPath',
   },
 
+  // Modern PWA Meta Tags
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
+
   // Manifest
   manifest: '/site.webmanifest',
 
