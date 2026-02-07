@@ -1934,6 +1934,26 @@ Kullanıcı Hakları Aktif:
   - Dosya: `apps/api/src/modules/analysis/analysis.engine.ts:5371-5378,5530-5548`
 
 ### 2026-02-07
+- **Notification Center (Merkezi Bildirim Yönetimi) eklendi**:
+  - **Yeni Tablo**: `Notification` - Merkezi bildirim tablosu (type, title, message, metadata, read)
+  - **5 Bildirim Tipi**: BRIEFING (sabah raporu), ALERT (L1-L4 hiyerarşi değişimi), SIGNAL (trade sinyali), REWARD (tier/AP kazanımı), SYSTEM (genel duyuru)
+  - **Backend**:
+    - `notification-center.service.ts`: create, broadcast, list, getUnreadCount, getUnreadCounts, markAsRead, markAllAsRead, clearRead, delete
+    - `notification-center.routes.ts`: GET /api/notifications (pagination + filter), GET /unread-count, PATCH /:id/read, POST /mark-all-read, DELETE /clear-read, DELETE /:id
+    - Routes index.ts'e register edildi: `/api/v1/notifications` + `/api/notifications`
+  - **Frontend**:
+    - Yeni sayfa: `apps/web/app/(dashboard)/notifications/page.tsx` - Sol sidebar filtre (All/Briefing/Alerts/Signals/Rewards/System), ana alan bildirim listesi, unread badge'ler, pagination
+    - Her bildirim kartı: type icon + badge, title, message preview (2 satır), timestamp, Mark as Read / View / Delete aksiyonları
+    - Okunmamış = `border-[#5EEDC3]`, okunmuş = `border-border/50`
+    - Mark All Read ve Clear Read toplu işlemler
+  - **Header Entegrasyonu**:
+    - Bell icon badge artık notification center unread count gösteriyor (eski: price alerts)
+    - Dropdown son 5 bildirimi gösteriyor, "View All" → `/notifications`
+    - Her bildirim tipi için ayrı renk (amber/red/teal/purple/blue)
+  - **Sidebar**: Tools grubuna "Notifications" (Inbox icon) eklendi
+  - **Middleware**: `/notifications` protected paths'e eklendi
+  - Migration: `apps/api/prisma/migrations/add_notifications_table.sql`
+  - Dosyalar: `schema.prisma`, `notification-center.service.ts`, `notification-center.routes.ts`, `notifications/page.tsx`, `layout.tsx`, `middleware.ts`, `index.ts`
 - **API Timeout Sorunu Kökten Çözüldü (6 kök neden)**:
   - **3 Duplicate PrismaClient instance** kaldırıldı (coin-score-cache, multi-asset-score-cache, asset-logos) → tek singleton import
   - **Server startup non-blocking** yapıldı: `startOutcomeTracker()` ve `initializeAssetLogos()` artık fire-and-forget (server'ı bloke etmiyor)

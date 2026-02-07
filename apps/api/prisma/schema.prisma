@@ -115,6 +115,7 @@ model User {
   signalPreferences UserSignalPreferences?
   signalSubscription SignalSubscription?
   subscription     Subscription?
+  notifications    Notification[]
 
   @@map("users")
 }
@@ -1176,4 +1177,36 @@ enum SignalSubscriptionTier {
   SIGNAL_BASIC        // $9/mo - Crypto only, 5-10 signals/day
   SIGNAL_PRO          // $19/mo - All markets, 10-20 signals/day
   SIGNAL_PRO_YEARLY   // $149/yr - All markets, 10-20 signals/day
+}
+
+// ===========================================
+// Notification Center
+// Centralized notification management
+// ===========================================
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      NotificationType
+  title     String   @db.VarChar(255)
+  message   String   @db.Text
+  metadata  Json     @default("{}")
+
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, read])
+  @@index([userId, type])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  BRIEFING  // Morning briefing ready
+  ALERT     // L1-L4 hierarchy change
+  SIGNAL    // New trade signal
+  REWARD    // Tier upgrade or AP gain
+  SYSTEM    // General announcements
 }
