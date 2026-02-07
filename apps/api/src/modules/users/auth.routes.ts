@@ -248,10 +248,21 @@ export default async function authRoutes(app: FastifyInstance) {
         });
       }
 
-      // Find user by email
+      // Find user by email - use select to avoid P2022 if production DB has missing columns
       const user = await prisma.user.findUnique({
         where: { email },
-        include: { creditBalance: true },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          passwordHash: true,
+          image: true,
+          emailVerified: true,
+          twoFactorEnabled: true,
+          firstLoginBonusReceived: true,
+          level: true,
+          creditBalance: { select: { balance: true } },
+        },
       });
 
       if (!user) {
@@ -398,7 +409,7 @@ export default async function authRoutes(app: FastifyInstance) {
           firstLoginBonus: isFirstLogin ? FIRST_LOGIN_BONUS : undefined,
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         return reply.status(400).send({
           success: false,
@@ -408,12 +419,19 @@ export default async function authRoutes(app: FastifyInstance) {
           },
         });
       }
-      console.error('Login error:', error);
+      // Log detailed error info for diagnosis
+      const errorCode = error?.code || 'UNKNOWN';
+      const errorMeta = error?.meta ? JSON.stringify(error.meta) : 'none';
+      console.error(`Login error [${errorCode}]:`, error?.message || error, `meta: ${errorMeta}`);
       return reply.status(500).send({
         success: false,
         error: {
           code: 'SERVER_ERROR',
-          message: 'An error occurred during login',
+          message: errorCode === 'P2022'
+            ? `Database schema mismatch: column ${error?.meta?.column || 'unknown'} not found. Please run migrations.`
+            : errorCode === 'P2021'
+            ? `Database schema mismatch: table not found. Please run migrations.`
+            : 'An error occurred during login',
         },
       });
     }
@@ -483,10 +501,17 @@ export default async function authRoutes(app: FastifyInstance) {
         });
       }
 
+      // Fields we actually need - using select avoids P2022 if production DB has missing columns
+      const userSelect = {
+        id: true, email: true, name: true, image: true, googleId: true,
+        firstLoginBonusReceived: true, level: true,
+        creditBalance: { select: { balance: true } },
+      } as const;
+
       // Check if user exists
       let user = await prisma.user.findUnique({
         where: { email: email.toLowerCase() },
-        include: { creditBalance: true },
+        select: userSelect,
       });
 
       let isNewUser = false;
@@ -505,9 +530,7 @@ export default async function authRoutes(app: FastifyInstance) {
               image: picture,
               googleId,
               referralCode,
-              registrationEmail: email.toLowerCase(), // Store original registration email
             },
-            include: { creditBalance: true },
           });
 
           // Create credit balance with welcome bonus
@@ -522,9 +545,9 @@ export default async function authRoutes(app: FastifyInstance) {
           // Refetch user with credit balance
           return tx.user.findUnique({
             where: { id: newUser.id },
-            include: { creditBalance: true },
+            select: userSelect,
           });
-        }) as typeof user;
+        });
       } else {
         // Update existing user's Google info if needed
         if (!user.googleId || !user.image) {
@@ -534,26 +557,34 @@ export default async function authRoutes(app: FastifyInstance) {
               googleId: user.googleId || googleId,
               image: user.image || picture,
             },
-            include: { creditBalance: true },
+            select: userSelect,
           });
         }
       }
 
+      if (!user) {
+        console.error('Google auth error: user is null after creation/lookup');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'SERVER_ERROR', message: 'Failed to create or find user account' },
+        });
+      }
+
       // Update last login
       await prisma.user.update({
-        where: { id: user!.id },
+        where: { id: user.id },
         data: { lastLoginAt: new Date() },
       });
 
       // Award first login bonus if not already received
       let isFirstLogin = false;
-      let updatedCredits = user!.creditBalance?.balance || 0;
+      let updatedCredits = user.creditBalance?.balance || 0;
 
-      if (!user!.firstLoginBonusReceived) {
+      if (!user.firstLoginBonusReceived) {
         isFirstLogin = true;
         // Award first login bonus
         const bonusResult = await creditService.add(
-          user!.id,
+          user.id,
           FIRST_LOGIN_BONUS,
           'BONUS',
           'first_login_bonus',
@@ -563,28 +594,28 @@ export default async function authRoutes(app: FastifyInstance) {
 
         // Mark first login bonus as received
         await prisma.user.update({
-          where: { id: user!.id },
+          where: { id: user.id },
           data: { firstLoginBonusReceived: true },
         });
       }
 
       // Generate JWT token
       const token = app.jwt.sign(
-        { id: user!.id, email: user!.email, name: user!.name || '', level: user!.level || 1 },
+        { id: user.id, email: user.email, name: user.name || '', level: user.level || 1 },
         { expiresIn: config.jwtExpiresIn }
       );
 
-      const isAdmin = ADMIN_EMAILS.includes(user!.email);
+      const isAdmin = ADMIN_EMAILS.includes(user.email);
 
       return reply.send({
         success: true,
         data: {
           user: {
-            id: user!.id,
-            email: user!.email,
-            name: user!.name,
-            avatarUrl: user!.image,
-            level: user!.level,
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            avatarUrl: user.image,
+            level: user.level,
             isAdmin,
           },
           token,
@@ -594,7 +625,7 @@ export default async function authRoutes(app: FastifyInstance) {
           firstLoginBonus: isFirstLogin ? FIRST_LOGIN_BONUS : undefined,
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         return reply.status(400).send({
           success: false,
@@ -604,12 +635,18 @@ export default async function authRoutes(app: FastifyInstance) {
           },
         });
       }
-      console.error('Google auth error:', error);
+      const errorCode = error?.code || 'UNKNOWN';
+      const errorMeta = error?.meta ? JSON.stringify(error.meta) : 'none';
+      console.error(`Google auth error [${errorCode}]:`, error?.message || error, `meta: ${errorMeta}`);
       return reply.status(500).send({
         success: false,
         error: {
           code: 'SERVER_ERROR',
-          message: 'An error occurred during Google authentication',
+          message: errorCode === 'P2022'
+            ? `Database schema mismatch: column ${error?.meta?.column || 'unknown'} not found. Please run migrations.`
+            : errorCode === 'P2021'
+            ? `Database schema mismatch: table not found. Please run migrations.`
+            : 'An error occurred during Google authentication',
         },
       });
     }
@@ -625,8 +662,12 @@ export default async function authRoutes(app: FastifyInstance) {
     try {
       const user = await prisma.user.findUnique({
         where: { id: request.user!.id },
-        include: {
-          creditBalance: true,
+        select: {
+          id: true, email: true, name: true, image: true, level: true, xp: true,
+          streakDays: true, preferredCoins: true, preferredInterface: true,
+          referralCode: true, twoFactorEnabled: true, preferredLanguage: true,
+          telegramChatId: true, discordWebhookUrl: true,
+          creditBalance: { select: { balance: true, lifetimeEarned: true } },
         },
       });
 
@@ -691,11 +732,18 @@ export default async function authRoutes(app: FastifyInstance) {
       const body = oauthSchema.parse(request.body);
       const { provider, providerId, email, name, image } = body;
 
+      // Fields we actually need from User - using select avoids P2022 if production DB has missing columns
+      const userSelect = {
+        id: true, email: true, name: true, image: true, googleId: true,
+        firstLoginBonusReceived: true, level: true,
+        creditBalance: { select: { balance: true } },
+      } as const;
+
       // Check if user exists by provider ID or email
       let user = provider === 'google'
         ? await prisma.user.findUnique({
             where: { googleId: providerId },
-            include: { creditBalance: true },
+            select: userSelect,
           })
         : null;
       let isNewUser = false;
@@ -704,7 +752,7 @@ export default async function authRoutes(app: FastifyInstance) {
         // Check by email
         user = await prisma.user.findUnique({
           where: { email: email.toLowerCase() },
-          include: { creditBalance: true },
+          select: userSelect,
         });
 
         if (user) {
@@ -716,7 +764,7 @@ export default async function authRoutes(app: FastifyInstance) {
                 googleId: providerId,
                 image: user.image || image,
               },
-              include: { creditBalance: true },
+              select: userSelect,
             });
           }
         } else {
@@ -733,7 +781,6 @@ export default async function authRoutes(app: FastifyInstance) {
                 googleId: provider === 'google' ? providerId : undefined,
                 image: image,
                 referralCode,
-                registrationEmail: email.toLowerCase(), // Store original registration email
               },
             });
 
@@ -747,27 +794,35 @@ export default async function authRoutes(app: FastifyInstance) {
 
             return tx.user.findUnique({
               where: { id: newUser.id },
-              include: { creditBalance: true },
+              select: userSelect,
             });
-          }) as typeof user;
+          });
         }
+      }
+
+      if (!user) {
+        console.error('OAuth error: user is null after creation/lookup');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'SERVER_ERROR', message: 'Failed to create or find user account' },
+        });
       }
 
       // Update last login
       await prisma.user.update({
-        where: { id: user!.id },
+        where: { id: user.id },
         data: { lastLoginAt: new Date() },
       });
 
       // Award first login bonus if not already received
       let isFirstLogin = false;
-      let updatedCredits = user!.creditBalance?.balance || 0;
+      let updatedCredits = user.creditBalance?.balance || 0;
 
-      if (!user!.firstLoginBonusReceived) {
+      if (!user.firstLoginBonusReceived) {
         isFirstLogin = true;
         // Award first login bonus
         const bonusResult = await creditService.add(
-          user!.id,
+          user.id,
           FIRST_LOGIN_BONUS,
           'BONUS',
           'first_login_bonus',
@@ -777,28 +832,28 @@ export default async function authRoutes(app: FastifyInstance) {
 
         // Mark first login bonus as received
         await prisma.user.update({
-          where: { id: user!.id },
+          where: { id: user.id },
           data: { firstLoginBonusReceived: true },
         });
       }
 
       // Generate JWT token
       const token = app.jwt.sign(
-        { id: user!.id, email: user!.email, name: user!.name || '', level: user!.level || 1 },
+        { id: user.id, email: user.email, name: user.name || '', level: user.level || 1 },
         { expiresIn: config.jwtExpiresIn }
       );
 
-      const isAdmin = ADMIN_EMAILS.includes(user!.email);
+      const isAdmin = ADMIN_EMAILS.includes(user.email);
 
       return reply.send({
         success: true,
         data: {
           user: {
-            id: user!.id,
-            email: user!.email,
-            name: user!.name,
-            level: user!.level,
-            avatarUrl: user!.image || image,
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            level: user.level,
+            avatarUrl: user.image || image,
             isAdmin,
           },
           accessToken: token,
@@ -808,7 +863,7 @@ export default async function authRoutes(app: FastifyInstance) {
           firstLoginBonus: isFirstLogin ? FIRST_LOGIN_BONUS : undefined,
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       if (error instanceof z.ZodError) {
         return reply.status(400).send({
           success: false,
@@ -818,12 +873,19 @@ export default async function authRoutes(app: FastifyInstance) {
           },
         });
       }
-      console.error('OAuth error:', error);
+      // Log detailed error info for diagnosis
+      const errorCode = error?.code || 'UNKNOWN';
+      const errorMeta = error?.meta ? JSON.stringify(error.meta) : 'none';
+      console.error(`OAuth error [${errorCode}]:`, error?.message || error, `meta: ${errorMeta}`);
       return reply.status(500).send({
         success: false,
         error: {
           code: 'SERVER_ERROR',
-          message: 'An error occurred during OAuth authentication',
+          message: errorCode === 'P2022'
+            ? `Database schema mismatch: column ${error?.meta?.column || 'unknown'} not found. Please run migrations.`
+            : errorCode === 'P2021'
+            ? `Database schema mismatch: table not found. Please run migrations.`
+            : 'An error occurred during OAuth authentication',
         },
       });
     }
