@@ -99,7 +99,20 @@ export default function LoginPage() {
         }),
       });
 
-      const data = await response.json();
+      // Handle Vercel function timeout (returns HTML 504, not JSON)
+      let data: any;
+      try {
+        data = await response.json();
+      } catch {
+        console.error('Login: Response was not JSON, status:', response.status);
+        if (response.status === 504 || response.status === 502) {
+          setError('Server is taking too long to respond. Please try again in a moment.');
+        } else {
+          setError('Server returned an unexpected response. Please try again.');
+        }
+        setIsLoading(false);
+        return;
+      }
 
       if (!response.ok || !data.success) {
         // Handle email not verified error specially
@@ -123,7 +136,7 @@ export default function LoginPage() {
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError('Network error. Please try again.');
+      setError('Cannot connect to server. Please check your internet connection and try again.');
     }
 
     setIsLoading(false);
