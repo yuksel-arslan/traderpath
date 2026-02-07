@@ -17,7 +17,7 @@ import {
   Target
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import type { IndicatorDetail, IndicatorAnalysis, DivergenceInfo } from '@traderpath/types';
+import type { IndicatorDetail, IndicatorAnalysis, DivergenceInfo } from '@/lib/types';
 
 interface IndicatorDetailsProps {
   data?: IndicatorAnalysis;

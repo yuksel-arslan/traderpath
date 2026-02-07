@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getAuthToken, getApiUrl } from '../../lib/api';
-import { CREDIT_COSTS } from '@traderpath/types';
+import { CREDIT_COSTS } from '@/lib/types';
 import { MarketPulse } from './MarketPulse';
 import { AssetScanner } from './AssetScanner';
 import { SafetyCheck } from './SafetyCheck';
