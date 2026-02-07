@@ -8,7 +8,6 @@ import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
   TrendingUp,
-  Coins,
   Gift,
   Bell,
   Settings,
@@ -19,14 +18,11 @@ import {
   ChevronDown,
   Server,
   Brain,
-  BookOpen,
   Calendar,
   Bot,
-  Globe,
   Activity,
   Compass,
   FileText,
-  Sparkles,
   Inbox,
   ShieldAlert,
 } from 'lucide-react';
@@ -42,12 +38,12 @@ const PriceTicker = dynamic(
   { ssr: false, loading: () => <div className="w-full h-10 bg-card/50 border-b border-border/50" /> }
 );
 
-// Direct navigation items (no dropdown)
+// Direct navigation items (no dropdown) - Top-Down Capital Flow
 const directNav = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Intelligence', href: '/intelligence', icon: Sparkles },
+  { name: 'Explore', href: '/intelligence', icon: Compass },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
-  { name: 'Report', href: '/report', icon: FileText },
+  { name: 'Signals', href: '/signals', icon: Activity },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
 ];
 
 // Dropdown navigation groups
@@ -64,11 +60,10 @@ const dropdownNav = [
     name: 'Tools',
     icon: Settings,
     items: [
-      { name: 'Notifications', href: '/notifications', icon: Inbox },
-      { name: 'Signals', href: '/signals', icon: Activity },
-      { name: 'Scheduled', href: '/scheduled', icon: Calendar },
-      { name: 'Alerts', href: '/alerts', icon: Bell },
+      { name: 'Reports', href: '/reports', icon: FileText },
       { name: 'Smart Alerts', href: '/alerts/smart', icon: ShieldAlert },
+      { name: 'Scheduled', href: '/scheduled', icon: Calendar },
+      { name: 'Notifications', href: '/notifications', icon: Inbox },
     ],
   },
 ];
@@ -76,11 +71,11 @@ const dropdownNav = [
 // End navigation items (after dropdowns)
 const endNav = [
   { name: 'Trader Program', href: '/rewards', icon: Gift },
-  { name: 'Profile', href: '/profile', icon: User },
 ];
 
-// User menu items (Settings, Admin, Logout)
+// User menu items (Profile, Settings, Admin, Logout)
 const userMenuNav = [
+  { name: 'Profile', href: '/profile', icon: User },
   { name: 'Settings', href: '/settings', icon: Settings },
   { name: 'Admin', href: '/admin', icon: Server },
 ];
