@@ -27,7 +27,14 @@ COPY packages/types ./packages/types
 COPY packages/analysis-engine ./packages/analysis-engine
 COPY tsconfig.json ./
 
-# Generate Prisma client and build
+# Build workspace packages first (required before API build)
+WORKDIR /app/packages/types
+RUN npx tsc
+
+WORKDIR /app/packages/analysis-engine
+RUN npx tsc
+
+# Generate Prisma client and build API
 WORKDIR /app/apps/api
 RUN pnpm run db:generate && pnpm run build
 
@@ -47,8 +54,13 @@ RUN adduser --system --uid 1001 traderpath
 COPY --from=builder /app/apps/api/dist ./dist
 COPY --from=builder /app/apps/api/package.json ./
 COPY --from=builder /app/apps/api/prisma ./prisma
-COPY --from=builder /app/node_modules/.pnpm/@prisma+client* ./node_modules/.pnpm/
 COPY --from=builder /app/apps/api/node_modules ./node_modules
+
+# Copy built workspace packages (needed at runtime - tsup externalizes these)
+COPY --from=builder /app/packages/types/dist ./node_modules/@traderpath/types/dist
+COPY --from=builder /app/packages/types/package.json ./node_modules/@traderpath/types/package.json
+COPY --from=builder /app/packages/analysis-engine/dist ./node_modules/@traderpath/analysis-engine/dist
+COPY --from=builder /app/packages/analysis-engine/package.json ./node_modules/@traderpath/analysis-engine/package.json
 
 # Set environment
 ENV NODE_ENV=production
@@ -57,8 +69,8 @@ ENV PORT=4000
 # Expose port
 EXPOSE 4000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+# Health check - give server enough time to start (DB connect has 10s timeout)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:4000/health || exit 1
 
 # Run as non-root user
