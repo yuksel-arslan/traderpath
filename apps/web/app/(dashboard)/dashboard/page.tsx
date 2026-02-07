@@ -36,6 +36,7 @@ import { getApiUrl, authFetch } from '../../../lib/api';
 import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
 import { MetricCard, LiquidityGauge, MarketBiasBar } from '@/components/dashboard/MetricCard';
 import { MarketFilter, useMarketFilter } from '@/components/dashboard/MarketFilter';
+import { TraderProfileCard } from '@/components/dashboard/TraderProfileCard';
 
 // Lazy load chart component
 const PnLChart = dynamic(
@@ -1301,6 +1302,11 @@ export default function DashboardPage() {
               </div>
             )}
           </CollapsibleSection>
+
+          {/* Trader Profile */}
+          <div className="rounded-lg border border-[#1E293B] bg-[#0F1629] p-4">
+            <TraderProfileCard />
+          </div>
 
           {/* Active Trades */}
           {activeTrades.length > 0 && (

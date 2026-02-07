@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { authFetch } from '../lib/api';
 
+// ===========================================
+// Types - Trader Tier & Analysis Points
+// ===========================================
+
 export interface DailyRewardsData {
   login: { claimed: boolean; credits: number };
   spin: { used: boolean; result: number | null };
@@ -19,10 +23,81 @@ export interface Achievement {
   description: string;
   icon: string;
   category: string;
-  xpReward: number;
+  xpReward: number;       // DB field (internally = AP)
   creditReward: number;
   isUnlocked: boolean;
   unlockedAt: Date | null;
+}
+
+export interface TierInfo {
+  name: string | null;
+  analysisPoints: number;
+  currentTier: {
+    tier: number;
+    name: string;
+    color: string;
+    gradient: string;
+    benefits: string[];
+  };
+  nextTier: {
+    tier: number;
+    name: string;
+    apRequired: number;
+    apRemaining: number;
+    benefits: string[];
+  } | null;
+  progress: number;
+  streakDays: number;
+  referralCode: string | null;
+  totalAnalyses: number;
+  allTiers: Array<{
+    tier: number;
+    name: string;
+    apRequired: number;
+    benefits: string[];
+    color: string;
+    gradient: string;
+  }>;
+  earningRules: Array<{
+    action: string;
+    points: number;
+    description: string;
+    category: string;
+  }>;
+}
+
+// ===========================================
+// Hooks
+// ===========================================
+
+export function useTierInfo() {
+  const [data, setData] = useState<TierInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await authFetch('/api/rewards/tier-info');
+      const json = await response.json();
+      if (!response.ok || !json.success) {
+        throw new Error(json.error?.message || 'Failed to fetch tier info');
+      }
+      setData(json.data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch tier info');
+      console.error('Tier info fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  return { data, loading, error, refetch: fetchData };
 }
 
 export function useDailyRewards() {
@@ -165,6 +240,7 @@ export function useAchievements() {
   return { data, loading, error };
 }
 
+// Legacy hook - kept for backward compat, now uses tier-info endpoint internally
 export function useUserLevel() {
   const [data, setData] = useState<{ xp: number; level: number; streakDays: number; referralCode: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -175,15 +251,21 @@ export function useUserLevel() {
       try {
         setLoading(true);
         setError(null);
-        const response = await authFetch('/api/user/me');
+        const response = await authFetch('/api/rewards/tier-info');
         const json = await response.json();
         if (!response.ok || !json.success) {
-          throw new Error(json.error?.message || 'Failed to fetch user level');
+          throw new Error(json.error?.message || 'Failed to fetch user tier info');
         }
-        setData(json.data);
+        // Map to legacy format
+        setData({
+          xp: json.data.analysisPoints,
+          level: json.data.currentTier.tier,
+          streakDays: json.data.streakDays,
+          referralCode: json.data.referralCode || '',
+        });
       } catch (err: any) {
-        setError(err.message || 'Failed to fetch user level');
-        console.error('User level fetch error:', err);
+        setError(err.message || 'Failed to fetch user tier info');
+        console.error('User tier info fetch error:', err);
       } finally {
         setLoading(false);
       }
