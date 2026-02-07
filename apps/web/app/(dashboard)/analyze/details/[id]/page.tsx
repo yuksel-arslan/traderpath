@@ -47,14 +47,14 @@ interface AnalysisData {
   createdAt: string;
   expiresAt: string;
   outcome?: string;
-  method?: 'classic' | 'mlis_pro'; // Analysis method
-  step1Result?: any; // Market Pulse (Classic) or Technical (MLIS)
-  step2Result?: any; // Asset Scanner (Classic) or Momentum (MLIS)
-  step3Result?: any; // Safety Check (Classic) or Volatility (MLIS)
-  step4Result?: any; // Timing Analysis (Classic) or Volume (MLIS)
-  step5Result?: any; // Trade Plan (Classic) or Verdict (MLIS)
-  step6Result?: any; // Trap Check (Classic only)
-  step7Result?: any; // Final Verdict (Classic only)
+  method?: string;
+  step1Result?: any; // Market Pulse
+  step2Result?: any; // Asset Scanner
+  step3Result?: any; // Safety Check
+  step4Result?: any; // Timing Analysis
+  step5Result?: any; // Trade Plan
+  step6Result?: any; // Trap Check
+  step7Result?: any; // Final Verdict + ML Confirmation
 }
 
 function formatPrice(price: number): string {
@@ -412,10 +412,7 @@ export default function AnalysisDetailsPage() {
           pdfBase64,
           score: analysis.totalScore,
           direction: analysis.step5Result?.direction || analysis.step7Result?.direction || 'long',
-          verdict: isMLIS
-            ? (mlisRecommendation === 'STRONG_BUY' || mlisRecommendation === 'BUY' ? 'GO' :
-               mlisRecommendation === 'HOLD' ? 'WAIT' : 'AVOID')
-            : (step7.verdict?.toUpperCase() || 'WAIT'),
+          verdict: step7.verdict?.toUpperCase() || 'WAIT',
         }),
       });
 
@@ -461,9 +458,6 @@ export default function AnalysisDetailsPage() {
   }
 
 
-  // Detect if this is MLIS Pro analysis
-  const isMLIS = analysis.method === 'mlis_pro' || analysis.step1Result?.mlis === true;
-
   // Extract data from steps
   const step1 = analysis.step1Result || {};
   const step2 = analysis.step2Result || {};
@@ -473,34 +467,16 @@ export default function AnalysisDetailsPage() {
   const step6 = analysis.step6Result || {};
   const step7 = analysis.step7Result || {};
 
-  // For MLIS: step7 contains the final verdict with direction
-  // For Classic: step5 is trade plan, step7 is verdict
-  // Note: MLIS can return 'neutral' direction when confidence is low
-  const rawDirection = isMLIS
-    ? (step7.direction || step5.direction || 'neutral')
-    : (step5.direction || step7.direction || 'long');
+  // Classic 7-Step: step5 is trade plan, step7 is verdict
+  const rawDirection = (step5.direction || step7.direction || 'long');
   const direction = rawDirection.toLowerCase();
   const isNeutral = direction === 'neutral';
   const isLong = direction === 'long';
   const isShort = direction === 'short';
   const score = (analysis.totalScore || 0) * 10;
 
-  // MLIS-specific data - MUST read from step7Result where verdict data is stored
-  const mlisRecommendation = isMLIS ? (step7.recommendation || step5.recommendation) : null;
-  const mlisConfidence = isMLIS ? (step7.confidence ?? step5.confidence ?? 0) : null;
-  const mlisRiskLevel = isMLIS ? (step7.riskLevel || step5.riskLevel || 'medium') : null;
-  const mlisKeySignals = isMLIS ? (step7.keySignals || step5.keySignals || []) : [];
-  const mlisRiskFactors = isMLIS ? (step7.riskFactors || step5.riskFactors || []) : [];
-
   // Determine verdict for display
   const getVerdict = () => {
-    if (isMLIS) {
-      if (mlisRecommendation === 'STRONG_BUY' || mlisRecommendation === 'BUY') return 'GO';
-      if (mlisRecommendation === 'HOLD') return 'WAIT';
-      if (mlisRecommendation === 'SELL' || mlisRecommendation === 'STRONG_SELL') return 'AVOID';
-      return 'WAIT';
-    }
-    // Classic analysis
     const classicScore = Number(step7.overallScore) || 0;
     if (step7.verdict) return step7.verdict.toUpperCase();
     if (classicScore >= 7) return 'GO';
@@ -511,47 +487,26 @@ export default function AnalysisDetailsPage() {
   const verdict = getVerdict();
   const isAvoidOrWait = verdict === 'AVOID' || verdict === 'WAIT';
 
-  // Status labels - different for MLIS vs Classic
-  let marketStatus, assetStatus, safetyStatus, timingStatus;
+  // Status labels - Classic 7-Step
+  const marketStatus = step1.trend?.direction === 'bullish' ? 'Bullish' :
+                 step1.trend?.direction === 'bearish' ? 'Bearish' : 'Neutral';
+  const assetStatus = (step2.priceChange24h || 0) >= 2 ? 'Strong' :
+                (step2.priceChange24h || 0) >= 0 ? 'Stable' :
+                (step2.priceChange24h || 0) >= -2 ? 'Weak' : 'Declining';
+  const safetyStatus = step3.riskLevel === 'low' ? 'Safe' :
+                 step3.riskLevel === 'high' ? 'Risky' : 'Caution';
+  const timingStatus = step4.tradeNow ? 'Good' : 'Wait';
 
-  if (isMLIS) {
-    // MLIS: Technical, Momentum, Volatility, Volume layers
-    const technicalSignal = step1.signal?.toUpperCase() || 'NEUTRAL';
-    const momentumSignal = step2.signal?.toUpperCase() || 'NEUTRAL';
-    const volatilitySignal = step3.signal?.toUpperCase() || 'NEUTRAL';
-    const volumeSignal = step4.signal?.toUpperCase() || 'NEUTRAL';
+  // Entry price from trade plan
+  const entryPrice = step5.averageEntry || step5.entryPrice;
+  const planStatus = entryPrice ? 'Ready' : 'Pending';
 
-    marketStatus = technicalSignal === 'BULLISH' ? 'Bullish' :
-                   technicalSignal === 'BEARISH' ? 'Bearish' : 'Neutral';
-    assetStatus = momentumSignal === 'BULLISH' ? 'Strong' :
-                  momentumSignal === 'BEARISH' ? 'Weak' : 'Neutral';
-    safetyStatus = volatilitySignal === 'LOW' || step3.score >= 60 ? 'Stable' :
-                   volatilitySignal === 'HIGH' || step3.score < 40 ? 'Volatile' : 'Moderate';
-    timingStatus = volumeSignal === 'BULLISH' || step4.score >= 60 ? 'Good' : 'Wait';
-  } else {
-    // Classic: Market Pulse, Asset Scanner, Safety Check, Timing
-    marketStatus = step1.trend?.direction === 'bullish' ? 'Bullish' :
-                   step1.trend?.direction === 'bearish' ? 'Bearish' : 'Neutral';
-    assetStatus = (step2.priceChange24h || 0) >= 2 ? 'Strong' :
-                  (step2.priceChange24h || 0) >= 0 ? 'Stable' :
-                  (step2.priceChange24h || 0) >= -2 ? 'Weak' : 'Declining';
-    safetyStatus = step3.riskLevel === 'low' ? 'Safe' :
-                   step3.riskLevel === 'high' ? 'Risky' : 'Caution';
-    timingStatus = step4.tradeNow ? 'Good' : 'Wait';
-  }
+  // Trap status
+  const trapStatus = step6.traps?.bullTrap || step6.traps?.bearTrap ? 'Warning' :
+    step6.traps?.fakeoutRisk === 'high' ? 'Caution' : 'Clear';
 
-  // Entry price - for MLIS it might not have a trade plan
-  const entryPrice = isMLIS ? null : (step5.averageEntry || step5.entryPrice);
-  const planStatus = entryPrice ? 'Ready' : (isMLIS ? 'N/A' : 'Pending');
-
-  // Trap status - only for Classic
-  const trapStatus = isMLIS ? 'N/A' : (
-    step6.traps?.bullTrap || step6.traps?.bearTrap ? 'Warning' :
-    step6.traps?.fakeoutRisk === 'high' ? 'Caution' : 'Clear'
-  );
-
-  // MLIS Confirmation data (Step 8) - only for Classic with trade plan
-  const mlisConfirmationData = !isMLIS && step7.mlisConfirmation ? step7.mlisConfirmation : null;
+  // ML Confirmation data (Step 8) - stored in step7Result.mlisConfirmation
+  const mlisConfirmationData = step7.mlisConfirmation || null;
   const confirmationStatus = mlisConfirmationData?.confirmationStatus || null;
   const agreementLevel = mlisConfirmationData?.agreementLevel || null;
   const confidenceChange = mlisConfirmationData?.confidenceChange || 0;
@@ -710,9 +665,9 @@ export default function AnalysisDetailsPage() {
                   <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-full uppercase">
                     {analysis.interval || '4H'}
                   </span>
-                  {isMLIS && (
+                  {mlisConfirmationData && (
                     <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-full">
-                      MLIS Pro
+                      ML Confirmed
                     </span>
                   )}
                 </div>
@@ -819,127 +774,7 @@ export default function AnalysisDetailsPage() {
             );
           })()}
 
-          {/* Info Cards - Different layouts for MLIS vs Classic */}
-          {isMLIS ? (
-            /* MLIS Pro: 5 Layer Cards */
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
-              {/* 1. Technical Layer */}
-              <div className="bg-violet-50 dark:bg-violet-500/10 rounded-xl p-4 border border-violet-200 dark:border-violet-500/20">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-violet-500 dark:text-violet-400" />
-                    <span className="font-medium text-gray-900 dark:text-white">Technical</span>
-                  </div>
-                  <span className={cn(
-                    "text-sm font-semibold",
-                    step1.signal?.toUpperCase() === 'BULLISH' ? 'text-green-600 dark:text-green-400' :
-                    step1.signal?.toUpperCase() === 'BEARISH' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
-                  )}>{step1.signal || 'Neutral'}</span>
-                </div>
-                <p className="text-sm text-gray-500 dark:text-slate-400">
-                  Score: {typeof step1.score === 'number' ? step1.score.toFixed(0) : (Number(step1.score) || 0)}/100 • {step1.reasoning || 'Technical analysis complete'}
-                </p>
-              </div>
-
-              {/* 2. Momentum Layer */}
-              <div className="bg-purple-50 dark:bg-purple-500/10 rounded-xl p-4 border border-purple-200 dark:border-purple-500/20">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-purple-500 dark:text-purple-400" />
-                    <span className="font-medium text-gray-900 dark:text-white">Momentum</span>
-                  </div>
-                  <span className={cn(
-                    "text-sm font-semibold",
-                    step2.signal?.toUpperCase() === 'BULLISH' ? 'text-green-600 dark:text-green-400' :
-                    step2.signal?.toUpperCase() === 'BEARISH' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
-                  )}>{step2.signal || 'Neutral'}</span>
-                </div>
-                <p className="text-sm text-gray-500 dark:text-slate-400">
-                  Score: {typeof step2.score === 'number' ? step2.score.toFixed(0) : (Number(step2.score) || 0)}/100 • {step2.reasoning || 'Momentum analysis complete'}
-                </p>
-              </div>
-
-              {/* 3. Volatility Layer */}
-              <div className="bg-indigo-50 dark:bg-indigo-500/10 rounded-xl p-4 border border-indigo-200 dark:border-indigo-500/20">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
-                    <span className="font-medium text-gray-900 dark:text-white">Volatility</span>
-                  </div>
-                  <span className={cn(
-                    "text-sm font-semibold",
-                    step3.signal?.toUpperCase() === 'LOW' || step3.score >= 60 ? 'text-green-600 dark:text-green-400' :
-                    step3.signal?.toUpperCase() === 'HIGH' || step3.score < 40 ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
-                  )}>{step3.signal || 'Moderate'}</span>
-                </div>
-                <p className="text-sm text-gray-500 dark:text-slate-400">
-                  Score: {typeof step3.score === 'number' ? step3.score.toFixed(0) : (Number(step3.score) || 0)}/100 • {step3.reasoning || 'Volatility analysis complete'}
-                </p>
-              </div>
-
-              {/* 4. Volume Layer */}
-              <div className="bg-fuchsia-50 dark:bg-fuchsia-500/10 rounded-xl p-4 border border-fuchsia-200 dark:border-fuchsia-500/20">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-fuchsia-500 dark:text-fuchsia-400" />
-                    <span className="font-medium text-gray-900 dark:text-white">Volume</span>
-                  </div>
-                  <span className={cn(
-                    "text-sm font-semibold",
-                    step4.signal?.toUpperCase() === 'BULLISH' ? 'text-green-600 dark:text-green-400' :
-                    step4.signal?.toUpperCase() === 'BEARISH' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
-                  )}>{step4.signal || 'Neutral'}</span>
-                </div>
-                <p className="text-sm text-gray-500 dark:text-slate-400">
-                  Score: {typeof step4.score === 'number' ? step4.score.toFixed(0) : (Number(step4.score) || 0)}/100 • {step4.reasoning || 'Volume analysis complete'}
-                </p>
-              </div>
-
-              {/* 5. MLIS Confidence & Risk */}
-              <div className="sm:col-span-2 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-500/10 dark:to-purple-500/10 rounded-xl p-4 border border-violet-200 dark:border-violet-500/20">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Target className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-                    <span className="font-medium text-gray-900 dark:text-white">MLIS Verdict</span>
-                  </div>
-                  <span className={cn(
-                    "px-3 py-1 rounded-full text-sm font-bold",
-                    mlisRecommendation === 'STRONG_BUY' ? 'bg-green-500 text-white' :
-                    mlisRecommendation === 'BUY' ? 'bg-green-400 text-white' :
-                    mlisRecommendation === 'HOLD' ? 'bg-yellow-400 text-black' :
-                    mlisRecommendation === 'SELL' ? 'bg-orange-500 text-white' : 'bg-red-500 text-white'
-                  )}>{mlisRecommendation || 'HOLD'}</span>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-500 dark:text-slate-400">Confidence</span>
-                    <p className="font-semibold text-gray-900 dark:text-white">{typeof mlisConfidence === 'number' ? mlisConfidence.toFixed(0) : (Number(mlisConfidence) || 0)}%</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 dark:text-slate-400">Risk Level</span>
-                    <p className={cn(
-                      "font-semibold",
-                      mlisRiskLevel === 'low' ? 'text-green-600 dark:text-green-400' :
-                      mlisRiskLevel === 'high' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
-                    )}>{mlisRiskLevel || 'Medium'}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 dark:text-slate-400">Direction</span>
-                    <p className={cn(
-                      "font-semibold",
-                      isNeutral ? 'text-gray-600 dark:text-gray-400' :
-                      isLong ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                    )}>{isNeutral ? 'NEUTRAL' : isLong ? 'LONG' : 'SHORT'}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 dark:text-slate-400">Score</span>
-                    <p className="font-semibold text-violet-600 dark:text-violet-400">{score}/100</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Classic: 6 Step Cards */
+          {/* Info Cards - 7-Step Analysis + ML Confirmation */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
               {/* 1. Market Pulse */}
               <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
@@ -1201,7 +1036,6 @@ export default function AnalysisDetailsPage() {
                 </div>
               )}
             </div>
-          )}
 
           {/* TOP-DOWN EVIDENCE CHAIN */}
           {(() => {
@@ -1244,7 +1078,7 @@ export default function AnalysisDetailsPage() {
                 detail: l4 ? `${(cfCtx.direction || 'N/A')} (${l4.confidence}% confidence)` : 'N/A',
               },
               {
-                label: isMLIS ? 'MLIS Pro Analysis' : '7-Step Analysis',
+                label: '7-Step Analysis',
                 status: analysisPass,
                 detail: `${verdict} (${score}/100)`,
               },
@@ -1308,83 +1142,34 @@ export default function AnalysisDetailsPage() {
 
           {/* Final Verdict - Visual Trade Decision */}
           <div className="mb-6">
-            {isMLIS ? (
-              <TradeDecisionVisual
-                verdict={mlisRecommendation === 'STRONG_BUY' || mlisRecommendation === 'BUY' ? 'go' :
-                         mlisRecommendation === 'HOLD' ? 'wait' : 'avoid'}
-                direction={isNeutral ? null : (isLong ? 'long' : 'short')}
-                score={Number(step7.overallScore) || Number(analysis.totalScore) * 10 || 50}
-                confidence={typeof mlisConfidence === 'number' ? mlisConfidence : Number(mlisConfidence) || 0}
-                riskLevel={mlisRiskLevel}
-                isMLISPro={true}
-                symbol={analysis.symbol}
-                size="lg"
-              />
-            ) : (
-              <TradeDecisionVisual
-                verdict={(step7.verdict || (Number(step7.overallScore) >= 7 ? 'go' : Number(step7.overallScore) >= 5 ? 'conditional_go' : Number(step7.overallScore) >= 3 ? 'wait' : 'avoid')) as 'go' | 'conditional_go' | 'wait' | 'avoid'}
-                direction={isNeutral ? null : (isLong ? 'long' : 'short')}
-                score={Number(step7.overallScore) * 10 || Number(analysis.totalScore) * 10 || 50}
-                symbol={analysis.symbol}
-                size="lg"
-              />
-            )}
+            <TradeDecisionVisual
+              verdict={(step7.verdict || (Number(step7.overallScore) >= 7 ? 'go' : Number(step7.overallScore) >= 5 ? 'conditional_go' : Number(step7.overallScore) >= 3 ? 'wait' : 'avoid')) as 'go' | 'conditional_go' | 'wait' | 'avoid'}
+              direction={isNeutral ? null : (isLong ? 'long' : 'short')}
+              score={Number(step7.overallScore) * 10 || Number(analysis.totalScore) * 10 || 50}
+              symbol={analysis.symbol}
+              size="lg"
+            />
           </div>
 
-          {/* AI Recommendation / Key Signals */}
+          {/* AI Recommendation */}
           <div className={cn(
             "rounded-xl p-4 mb-6",
-            isMLIS
-              ? "bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-500/10 dark:to-purple-500/10 border border-violet-200 dark:border-violet-500/20"
-              : (isLong ? "bg-green-50 dark:bg-green-500/10 border border-green-500/20" : "bg-red-50 dark:bg-red-500/10 border border-red-500/20")
+            isNeutral ? "bg-gray-50 dark:bg-gray-500/10 border border-gray-500/20" :
+            isLong ? "bg-green-50 dark:bg-green-500/10 border border-green-500/20" : "bg-red-50 dark:bg-red-500/10 border border-red-500/20"
           )}>
             <div className="flex items-center gap-2 mb-2">
-              <CheckCircle className={cn("w-5 h-5", isMLIS ? "text-violet-600 dark:text-violet-400" : (isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"))} />
-              <span className={cn("font-semibold", isMLIS ? "text-violet-600 dark:text-violet-400" : (isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"))}>
-                {isMLIS ? 'MLIS Pro Analysis' : 'AI Recommendation'}
+              <CheckCircle className={cn("w-5 h-5", isNeutral ? "text-gray-600 dark:text-gray-400" : isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")} />
+              <span className={cn("font-semibold", isNeutral ? "text-gray-600 dark:text-gray-400" : isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")}>
+                AI Recommendation
               </span>
             </div>
-            {isMLIS ? (
-              <div className="space-y-3">
-                {mlisKeySignals && mlisKeySignals.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Key Signals:</p>
-                    <ul className="text-sm text-gray-600 dark:text-slate-300 list-disc list-inside">
-                      {mlisKeySignals.slice(0, 3).map((signal: string, idx: number) => (
-                        <li key={idx}>{signal}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {mlisRiskFactors && mlisRiskFactors.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Risk Factors:</p>
-                    <ul className="text-sm text-gray-600 dark:text-slate-300 list-disc list-inside">
-                      {mlisRiskFactors.slice(0, 3).map((factor: string, idx: number) => (
-                        <li key={idx}>{factor}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {!mlisKeySignals?.length && !mlisRiskFactors?.length && (
-                  <p className="text-sm text-gray-600 dark:text-slate-300">
-                    {(mlisConfidence ?? 0) < 30 ? (
-                      <>MLIS Pro analysis has <strong>low confidence ({(mlisConfidence ?? 0).toFixed(0)}%)</strong>. Insufficient data for reliable recommendation. Consider waiting for better market conditions.</>
-                    ) : (
-                      <>MLIS Pro analysis recommends <strong>{mlisRecommendation || 'HOLD'}</strong> with {(mlisConfidence ?? 0).toFixed(0)}% confidence. Direction: <strong>{isNeutral ? 'NEUTRAL' : isLong ? 'LONG' : 'SHORT'}</strong>. Risk level: <strong>{mlisRiskLevel || 'Medium'}</strong>.</>
-                    )}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-600 dark:text-slate-300">
-                {step7.aiSummary || step7.summary || `Market conditions favor ${isNeutral ? 'sideways' : isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(entryPrice)} with ${typeof step5.riskReward === 'number' ? step5.riskReward.toFixed(1) : '2.0'}:1 risk-reward ratio. Set stop-loss at ${formatPrice(stopLossPrice)} to protect against downside.`}
-              </p>
-            )}
+            <p className="text-sm text-gray-600 dark:text-slate-300">
+              {step7.aiSummary || step7.summary || `Market conditions favor ${isNeutral ? 'sideways' : isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(entryPrice)} with ${typeof step5.riskReward === 'number' ? step5.riskReward.toFixed(1) : '2.0'}:1 risk-reward ratio. Set stop-loss at ${formatPrice(stopLossPrice)} to protect against downside.`}
+            </p>
           </div>
 
-          {/* Trade Plan Chart - Only for Classic (MLIS doesn't have trade plan) */}
-          {!isMLIS && entryPrice && !isNeutral && (
+          {/* Trade Plan Chart */}
+          {entryPrice && !isNeutral && (
             <div className="mb-6">
               <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Trade Plan Chart</h3>
               <div ref={chartRef} id="trade-plan-chart-visible" className="trade-plan-chart-container bg-white dark:bg-slate-800 rounded-xl p-2">

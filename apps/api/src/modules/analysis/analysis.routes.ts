@@ -688,15 +688,11 @@ Warn about potential traps and give protective advice.`;
    * POST /api/analysis/full
    * Full Analysis Bundle (15 credits)
    */
-  // Analysis method schema
-  const analysisMethodSchema = z.enum(['classic', 'mlis_pro']).optional().default('classic');
-
   const fullAnalysisSchema = z.object({
     symbol: z.string().toUpperCase(),
     accountSize: z.number().optional().default(10000),
     interval: intervalSchema,
     tradeType: tradeTypeSchema.optional(),
-    method: analysisMethodSchema,
     capitalFlowContext: z.object({
       capitalFlowId: z.string(),
       recommendedAssets: z.array(z.string()),
@@ -820,143 +816,7 @@ Warn about potential traps and give protective advice.`;
     const cost = isAdmin ? 0 : 0; // No per-analysis cost when using daily pass
 
     try {
-      // Check if MLIS Pro method is requested
-      if (body.method === 'mlis_pro') {
-        logger.info({ symbol: body.symbol, interval }, '[MLIS] Starting analysis');
-
-        // Run MLIS Pro analysis
-        let mlisResult: MLISResult;
-        try {
-          mlisResult = await analyzeMLIS(body.symbol, interval);
-          logger.info({
-            symbol: body.symbol,
-            overallScore: mlisResult.overallScore,
-            recommendation: mlisResult.recommendation,
-            direction: mlisResult.direction,
-            hasLayers: !!mlisResult.layers,
-          }, '[MLIS] Analysis completed');
-        } catch (mlisError) {
-          logger.error({ symbol: body.symbol, error: mlisError }, '[MLIS] Analysis failed');
-          throw new Error(`MLIS analysis failed: ${mlisError instanceof Error ? mlisError.message : 'Unknown error'}`);
-        }
-
-        // Save MLIS analysis to database with adapted format
-        const savedAnalysis = await prisma.analysis.create({
-          data: {
-            userId,
-            symbol: body.symbol,
-            interval: interval,
-            method: 'mlis_pro', // Explicitly set method for MLIS
-            stepsCompleted: [1, 2, 3, 4, 5, 6, 7], // Mark all steps as completed
-            step1Result: { mlis: true, layer: 'technical', ...mlisResult.layers.technical, ...(capitalFlowContext ? { capitalFlowContext } : {}) } as object,
-            step2Result: { mlis: true, layer: 'momentum', ...mlisResult.layers.momentum } as object,
-            step3Result: { mlis: true, layer: 'volatility', ...mlisResult.layers.volatility } as object,
-            step4Result: { mlis: true, layer: 'volume', ...mlisResult.layers.volume } as object,
-            step5Result: { mlis: true, layer: 'sentiment', score: mlisResult.layers.sentiment?.score || 50 } as object,
-            step6Result: { mlis: true, layer: 'onchain', score: mlisResult.layers.onchain?.score || 50 } as object,
-            step7Result: {
-              mlis: true,
-              overallScore: mlisResult.overallScore,
-              confidence: mlisResult.confidence,
-              recommendation: mlisResult.recommendation,
-              direction: mlisResult.direction,
-              riskLevel: mlisResult.riskLevel,
-              volatilityRegime: mlisResult.volatilityRegime,
-              keySignals: mlisResult.keySignals,
-              riskFactors: mlisResult.riskFactors,
-              verdict: mlisResult.recommendation === 'STRONG_BUY' || mlisResult.recommendation === 'BUY' ? 'go' :
-                       mlisResult.recommendation === 'HOLD' ? 'wait' : 'avoid',
-            } as object,
-            totalScore: mlisResult.overallScore / 10, // Convert 0-100 to 0-10 scale
-            creditsSpent: cost,
-          },
-        });
-
-        // Check for daily analysis bonus
-        await creditService.checkDailyAnalysisBonus(userId);
-
-        // Trade type completion bonus
-        const tradeTypeBonus = tradeType === 'scalping' ? 3 : tradeType === 'dayTrade' ? 2 : 1;
-        await creditService.add(
-          userId,
-          tradeTypeBonus,
-          'BONUS',
-          'trade_type_completion_bonus',
-          {
-            tradeType,
-            symbol: body.symbol,
-            analysisId: savedAnalysis.id,
-          }
-        );
-
-        logger.info({ analysisId: savedAnalysis.id }, '[MLIS] Analysis saved to database');
-
-        // Achievement tracking: Analysis milestones
-        try {
-          const { achievementService } = await import('../achievements/achievement.service');
-          await achievementService.incrementProgress(userId, 'FIRST_ANALYSIS', 1);
-          await achievementService.incrementProgress(userId, 'ANALYSIS_10', 1);
-          await achievementService.incrementProgress(userId, 'ANALYSIS_50', 1);
-          await achievementService.incrementProgress(userId, 'ANALYSIS_100', 1);
-        } catch (achErr) {
-          logger.error({ error: achErr }, '[Achievement] Failed to track analysis milestone');
-        }
-
-        // XP Reward: Analysis completion
-        try {
-          await prisma.user.update({
-            where: { id: userId },
-            data: { xp: { increment: 10 } },
-          });
-        } catch (xpErr) {
-          logger.error({ error: xpErr }, '[XP] Failed to award analysis XP');
-        }
-
-        // Return MLIS result
-        const responseData = {
-          analysisId: savedAnalysis.id,
-          method: 'mlis_pro',
-          symbol: body.symbol,
-          interval,
-          tradeType,
-          ...mlisResult,
-          // Add compatibility fields for existing UI
-          step1Result: { mlis: true, score: mlisResult.layers.technical.score },
-          step2Result: { mlis: true, score: mlisResult.layers.momentum.score },
-          step3Result: { mlis: true, score: mlisResult.layers.volatility.score },
-          step4Result: { mlis: true, score: mlisResult.layers.volume.score },
-          step5Result: { mlis: true, score: mlisResult.layers.sentiment?.score || 50 },
-          step6Result: { mlis: true, score: mlisResult.layers.onchain?.score || 50 },
-          step7Result: {
-            overallScore: mlisResult.overallScore / 10,
-            verdict: mlisResult.recommendation === 'STRONG_BUY' || mlisResult.recommendation === 'BUY' ? 'go' :
-                     mlisResult.recommendation === 'HOLD' ? 'wait' : 'avoid',
-            recommendation: mlisResult.recommendation,
-            direction: mlisResult.direction,
-          },
-          tradePlan: null, // MLIS doesn't generate trade plans
-          creditsUsed: cost,
-          bonusCredits: tradeTypeBonus,
-        };
-
-        logger.info({ symbol: body.symbol }, '[MLIS] Sending response');
-
-        // Get current credit balance
-        const creditBalance = await prisma.creditBalance.findUnique({
-          where: { userId },
-          select: { balance: true },
-        });
-
-        return reply.send({
-          success: true,
-          data: responseData,
-          creditsSpent: cost,
-          remainingCredits: creditBalance?.balance ?? 0,
-          dailyPassUsed: usedDailyPass,
-        });
-      }
-
-      // Classic 7-step analysis
+      // Classic 7-step analysis + Step 8 MLIS Confirmation (always runs)
       // Step 1-5: Run all prerequisite analysis steps in parallel
       // All steps use trade type specific timeframes and indicators
       const [marketPulse, assetScan, safetyCheck, timing, trapCheck] = await Promise.all([
@@ -1042,54 +902,61 @@ Warn about potential traps and give protective advice.`;
         tradeType
       );
 
-      // Step 8: MLIS Confirmation - ML validation layer
+      // Step 8: MLIS Confirmation - ML validation layer (ALWAYS runs)
       // MLIS serves as a "second opinion" to validate the 7-Step verdict
       // Compares both methodologies and adjusts confidence based on agreement
       let mlisConfirmation: MLISConfirmation | null = null;
-      if (tradePlan) {
-        try {
-          mlisConfirmation = await generateMLISConfirmation(
-            body.symbol,
-            interval,
-            {
-              verdict: verdict.verdict,
-              direction: tradePlan.direction,
-              overallScore: verdict.overallScore,
-            },
-            tradePlan.confidence
-          );
+      try {
+        const confidenceForMlis = tradePlan?.confidence ?? preliminaryVerdict.confidence ?? 50;
+        const directionForMlis = tradePlan?.direction || preliminaryVerdict.direction || 'NEUTRAL';
 
-          // Apply MLIS confidence adjustment to trade plan
-          if (mlisConfirmation) {
-            const previousConfidence = tradePlan.confidence;
-            tradePlan.confidence = mlisConfirmation.adjustedConfidence;
+        mlisConfirmation = await generateMLISConfirmation(
+          body.symbol,
+          interval,
+          {
+            verdict: verdict.verdict,
+            direction: directionForMlis,
+            overallScore: verdict.overallScore,
+          },
+          confidenceForMlis
+        );
 
-            // Store MLIS context in trade plan
-            (tradePlan as Record<string, unknown>).mlisConfirmation = {
-              confirmationStatus: mlisConfirmation.confirmationStatus,
-              agreementLevel: mlisConfirmation.agreementLevel,
-              agreementReason: mlisConfirmation.agreementReason,
-              mlisRecommendation: mlisConfirmation.mlisRecommendation,
-              mlisDirection: mlisConfirmation.mlisDirection,
-              mlisScore: mlisConfirmation.mlisScore,
-              confidenceChange: mlisConfirmation.confidenceChange,
-              alignedSignals: mlisConfirmation.alignedSignals,
-              conflictingSignals: mlisConfirmation.conflictingSignals,
-              warningMessage: mlisConfirmation.warningMessage,
-            };
+        // Apply MLIS confidence adjustment to trade plan (if trade plan exists)
+        if (mlisConfirmation && tradePlan) {
+          const previousConfidence = tradePlan.confidence;
+          tradePlan.confidence = mlisConfirmation.adjustedConfidence;
 
-            logger.info({
-              symbol: body.symbol,
-              previousConfidence,
-              newConfidence: tradePlan.confidence,
-              agreementLevel: mlisConfirmation.agreementLevel,
-              confirmationStatus: mlisConfirmation.confirmationStatus,
-            }, '[Analysis] Step 8: MLIS Confirmation applied');
-          }
-        } catch (mlisError) {
-          // MLIS Confirmation is non-blocking - log error and continue
-          logger.warn({ error: mlisError, symbol: body.symbol }, '[Analysis] MLIS Confirmation failed, proceeding without ML validation');
+          // Store MLIS context in trade plan
+          (tradePlan as Record<string, unknown>).mlisConfirmation = {
+            confirmationStatus: mlisConfirmation.confirmationStatus,
+            agreementLevel: mlisConfirmation.agreementLevel,
+            agreementReason: mlisConfirmation.agreementReason,
+            mlisRecommendation: mlisConfirmation.mlisRecommendation,
+            mlisDirection: mlisConfirmation.mlisDirection,
+            mlisScore: mlisConfirmation.mlisScore,
+            confidenceChange: mlisConfirmation.confidenceChange,
+            alignedSignals: mlisConfirmation.alignedSignals,
+            conflictingSignals: mlisConfirmation.conflictingSignals,
+            warningMessage: mlisConfirmation.warningMessage,
+          };
+
+          logger.info({
+            symbol: body.symbol,
+            previousConfidence,
+            newConfidence: tradePlan.confidence,
+            agreementLevel: mlisConfirmation.agreementLevel,
+            confirmationStatus: mlisConfirmation.confirmationStatus,
+          }, '[Analysis] Step 8: MLIS Confirmation applied');
+        } else if (mlisConfirmation) {
+          logger.info({
+            symbol: body.symbol,
+            agreementLevel: mlisConfirmation.agreementLevel,
+            confirmationStatus: mlisConfirmation.confirmationStatus,
+          }, '[Analysis] Step 8: MLIS Confirmation completed (no trade plan to adjust)');
         }
+      } catch (mlisError) {
+        // MLIS Confirmation is non-blocking - log error and continue
+        logger.warn({ error: mlisError, symbol: body.symbol }, '[Analysis] MLIS Confirmation failed, proceeding without ML validation');
       }
 
       // Step 9: RAG Enrichment - Web Research, Forecast Bands, Multi-Strategy, Validation
@@ -1413,6 +1280,22 @@ Explain the key risks and what conditions would need to change before trading th
             preliminaryVerdict, // New: includes direction sources and reasons
             verdict: { ...verdict, aiVerdict },
           },
+          // Step 8: MLIS Confirmation (ML validation layer)
+          mlisConfirmation: mlisConfirmation ? {
+            confirmationStatus: mlisConfirmation.confirmationStatus,
+            agreementLevel: mlisConfirmation.agreementLevel,
+            agreementReason: mlisConfirmation.agreementReason,
+            mlisRecommendation: mlisConfirmation.mlisRecommendation,
+            mlisDirection: mlisConfirmation.mlisDirection,
+            mlisScore: mlisConfirmation.mlisScore,
+            mlisConfidence: mlisConfirmation.mlisConfidence,
+            originalConfidence: mlisConfirmation.originalConfidence,
+            adjustedConfidence: mlisConfirmation.adjustedConfidence,
+            confidenceChange: mlisConfirmation.confidenceChange,
+            alignedSignals: mlisConfirmation.alignedSignals,
+            conflictingSignals: mlisConfirmation.conflictingSignals,
+            warningMessage: mlisConfirmation.warningMessage,
+          } : null,
           // RAG enrichment layer (Step 9) - web research, forecast bands, multi-strategy
           ragEnrichment: ragEnrichment ? {
             research: ragEnrichment.research ? {
