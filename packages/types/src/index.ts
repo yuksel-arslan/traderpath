@@ -1,224 +1,8 @@
 // ===========================================
-// TraderPath Shared Types
+// Shared Types for TraderPath Monorepo
 // ===========================================
 
-// ===========================================
-// User Types
-// ===========================================
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  avatarUrl?: string;
-  level: number;
-  xp: number;
-  streakDays: number;
-  streakLastDate?: Date;
-  preferredCoins: string[];
-  referralCode?: string;
-  createdAt: Date;
-  lastLoginAt?: Date;
-}
-
-export interface UserStats {
-  totalAnalyses: number;
-  successfulSignals: number;
-  achievementsCount: number;
-  referralsCount: number;
-}
-
-export interface LevelInfo {
-  current: number;
-  xp: number;
-  xpForNext: number;
-  progress: number; // 0-100
-  benefits: string[];
-}
-
-// ===========================================
-// Credit Types
-// ===========================================
-
-export interface CreditBalance {
-  balance: number;
-  lifetimeEarned: number;
-  lifetimeSpent: number;
-  lifetimePurchased: number;
-}
-
-export interface CreditPackage {
-  id: string;
-  name: string;
-  credits: number;
-  bonusCredits: number;
-  priceUsd: number;
-  pricePerCredit: number;
-  discountPercent: number;
-  isPopular: boolean;
-}
-
-export interface CreditTransaction {
-  id: string;
-  amount: number;
-  balanceAfter: number;
-  type: TransactionType;
-  source: string;
-  metadata?: Record<string, unknown>;
-  createdAt: Date;
-}
-
-export type TransactionType =
-  | 'PURCHASE'
-  | 'REWARD'
-  | 'SPEND'
-  | 'REFUND'
-  | 'REFERRAL'
-  | 'BONUS';
-
-export const CREDIT_COSTS = {
-  // 7-Step Analysis
-  STEP_MARKET_PULSE: 0,    // FREE
-  STEP_ASSET_SCANNER: 2,
-  STEP_SAFETY_CHECK: 5,
-  STEP_TIMING: 3,
-  STEP_TRADE_PLAN: 5,
-  STEP_TRAP_CHECK: 5,
-  STEP_FINAL_VERDICT: 0,   // FREE (with previous steps)
-
-  // Bundles
-  BUNDLE_QUICK_CHECK: 5,   // Steps 2 + 7
-  BUNDLE_SMART_ENTRY: 12,  // Steps 2-4 + 7 (20% off)
-  BUNDLE_FULL_ANALYSIS: 25, // All steps
-
-  // Features
-  PRICE_ALERT: 1,
-  AI_CHAT_QUESTION: 5,     // AI Expert consultation per message
-  AI_EXPERT_QUESTION: 5,   // Alias for AI_CHAT_QUESTION
-  ADD_TO_REPORT: 2,        // Add AI insight to report
-  PDF_REPORT: 10,          // Professional comprehensive report
-  REPORT_TRANSLATION: 5,   // Translate PDF to user's language
-  EMAIL_SEND: 5,           // Send report via email
-  WATCHLIST_SLOT: 3,
-  AUTO_REFRESH_HOUR: 5,
-} as const;
-
-// ===========================================
-// Analysis Types
-// ===========================================
-
-export interface Analysis {
-  id: string;
-  userId: string;
-  symbol: string;
-  interval: string;
-  stepsCompleted: number[];
-  step1Result?: MarketPulse;
-  step2Result?: AssetScan;
-  step3Result?: SafetyCheck;
-  step4Result?: TimingAnalysis;
-  step5Result?: TradePlan;
-  step6Result?: TrapCheck;
-  step7Result?: FinalVerdict;
-  totalScore?: number;
-  creditsSpent: number;
-  createdAt: Date;
-  expiresAt: Date;
-}
-
-// Step 1: Market Pulse
-export interface MarketPulse {
-  btcDominance: number;
-  btcDominanceTrend: 'rising' | 'falling' | 'stable';
-  totalMarketCap: number;
-  marketCap24hChange: number;
-  fearGreedIndex: number;
-  fearGreedLabel: FearGreedLabel;
-  marketRegime: MarketRegime;
-  trend: {
-    direction: TrendDirection;
-    strength: number;
-    timeframesAligned: number;
-  };
-  macroEvents: MacroEvent[];
-  summary: string;
-  verdict: 'suitable' | 'caution' | 'avoid';
-}
-
-export type FearGreedLabel =
-  | 'extreme_fear'
-  | 'fear'
-  | 'neutral'
-  | 'greed'
-  | 'extreme_greed';
-
-export type MarketRegime = 'risk_on' | 'risk_off' | 'neutral';
-export type TrendDirection = 'bullish' | 'bearish' | 'sideways';
-
-export interface MacroEvent {
-  name: string;
-  date: string;
-  impact: 'high' | 'medium' | 'low';
-  description: string;
-}
-
-// Step 2: Asset Scanner
-export interface AssetScan {
-  symbol: string;
-  currentPrice: number;
-  timeframes: TimeframeAnalysis[];
-  forecast: Forecast;
-  levels: KeyLevels;
-  indicators: TechnicalIndicators;
-  score: number;
-}
-
-export interface TimeframeAnalysis {
-  tf: '1M' | '1W' | '1D' | '4H' | '1H';
-  trend: 'bullish' | 'bearish' | 'neutral';
-  strength: number;
-}
-
-export interface Forecast {
-  price24h: number;
-  price7d: number;
-  confidence: number;
-  scenarios: Scenario[];
-}
-
-export interface Scenario {
-  name: 'bull' | 'base' | 'bear';
-  price: number;
-  probability: number;
-}
-
-export interface KeyLevels {
-  resistance: number[];
-  support: number[];
-  poc: number;
-}
-
-export interface TechnicalIndicators {
-  rsi: number;
-  macd: {
-    value: number;
-    signal: number;
-    histogram: number;
-  };
-  movingAverages: {
-    ma20: number;
-    ma50: number;
-    ma200: number;
-  };
-}
-
-// ===========================================
-// Detailed Indicator Analysis Types
-// ===========================================
-
-/**
- * Single indicator detail with value, signal, and interpretation
- */
+// ===== INDICATOR TYPES =====
 export interface IndicatorDetail {
   name: string;
   value: number | string | null;
@@ -227,1036 +11,314 @@ export interface IndicatorDetail {
   interpretation: string;
   category: 'trend' | 'momentum' | 'volatility' | 'volume' | 'advanced';
   isLeadingIndicator: boolean;
-  weight: number; // 0-1, importance in decision
+  weight: number;
+  strength?: number;
   metadata?: Record<string, unknown>;
 }
 
-/**
- * Divergence detection result
- */
 export interface DivergenceInfo {
-  type: 'bullish' | 'bearish' | 'none';
+  type: 'bullish' | 'bearish' | 'hidden_bullish' | 'hidden_bearish' | 'none';
   indicator: string;
   description: string;
   reliability: 'high' | 'medium' | 'low';
   isEarlySignal: boolean;
+  timeframe?: string;
+  strength?: number;
+  pricePoints?: Array<{ time: number; price: number }>;
+  indicatorPoints?: Array<{ time: number; value: number }>;
 }
 
-/**
- * Complete indicator analysis with all details
- */
+export interface IndicatorAnalysisSummary {
+  bullishIndicators: number;
+  bearishIndicators: number;
+  neutralIndicators: number;
+  totalIndicatorsUsed: number;
+  overallSignal: 'bullish' | 'bearish' | 'neutral';
+  signalConfidence: number;
+  leadingIndicatorsSignal: 'bullish' | 'bearish' | 'neutral' | 'mixed';
+}
+
 export interface IndicatorAnalysis {
-  // Trend Indicators
-  trend: {
-    ema9?: IndicatorDetail;
-    ema21?: IndicatorDetail;
-    ema50?: IndicatorDetail;
-    ema200?: IndicatorDetail;
-    sma50?: IndicatorDetail;
-    sma200?: IndicatorDetail;
-    macd?: IndicatorDetail;
-    adx?: IndicatorDetail;
-    supertrend?: IndicatorDetail;
-    ichimoku?: IndicatorDetail;
-  };
-
-  // Momentum Indicators
-  momentum: {
-    rsi?: IndicatorDetail;
-    stochastic?: IndicatorDetail;
-    stochRsi?: IndicatorDetail;
-    cci?: IndicatorDetail;
-    williamsR?: IndicatorDetail;
-    mfi?: IndicatorDetail;
-    roc?: IndicatorDetail;
-  };
-
-  // Volatility Indicators
-  volatility: {
-    bollingerBands?: IndicatorDetail;
-    atr?: IndicatorDetail;
-    keltnerChannel?: IndicatorDetail;
-    historicalVolatility?: IndicatorDetail;
-    squeeze?: IndicatorDetail;
-  };
-
-  // Volume Indicators
-  volume: {
-    obv?: IndicatorDetail;
-    vwap?: IndicatorDetail;
-    cmf?: IndicatorDetail;
-    pvt?: IndicatorDetail;
-    relativeVolume?: IndicatorDetail;
-    volumeSpike?: IndicatorDetail;
-  };
-
-  // Advanced/Leading Indicators
-  advanced: {
-    orderFlowImbalance?: IndicatorDetail;
-    liquidityScore?: IndicatorDetail;
-    bidAskSpread?: IndicatorDetail;
-    whaleActivity?: IndicatorDetail;
-    spoofingRisk?: IndicatorDetail;
-  };
-
-  // Divergences (Early Signals)
+  trend: Record<string, IndicatorDetail | undefined>;
+  momentum: Record<string, IndicatorDetail | undefined>;
+  volatility: Record<string, IndicatorDetail | undefined>;
+  volume: Record<string, IndicatorDetail | undefined>;
+  advanced: Record<string, IndicatorDetail | undefined>;
   divergences: DivergenceInfo[];
-
-  // Summary
-  summary: {
-    bullishIndicators: number;
-    bearishIndicators: number;
-    neutralIndicators: number;
-    totalIndicatorsUsed: number;
-    overallSignal: 'bullish' | 'bearish' | 'neutral';
-    signalConfidence: number; // 0-100
-    leadingIndicatorsSignal: 'bullish' | 'bearish' | 'neutral' | 'mixed';
-  };
+  summary: IndicatorAnalysisSummary;
 }
 
-// Step 3: Safety Check
-export interface SafetyCheck {
-  manipulation: ManipulationCheck;
-  whaleActivity: WhaleActivity;
-  exchangeFlows: ExchangeFlow[];
-  smartMoney: SmartMoneyPosition;
-  riskLevel: RiskLevel;
-  warnings: string[];
-  score: number;
+// ===== CREDIT TYPES =====
+export interface CreditBalance {
+  userId: string;
+  balance: number;
+  lifetimeEarned: number;
+  lifetimeSpent: number;
+  lastUpdated: Date;
 }
 
-export interface ManipulationCheck {
-  spoofingDetected: boolean;
-  spoofingDetails?: string;
-  layeringDetected: boolean;
-  layeringDetails?: string;
-  icebergDetected: boolean;
-  icebergPrice?: number;
-  icebergSide?: 'buy' | 'sell';
-  washTrading: boolean;
-  pumpDumpRisk: RiskLevel;
-}
-
-export interface WhaleActivity {
-  largeBuys: WhaleTransaction[];
-  largeSells: WhaleTransaction[];
-  netFlowUsd: number;
-  bias: 'accumulation' | 'distribution' | 'neutral';
-}
-
-export interface WhaleTransaction {
-  amountUsd: number;
-  price: number;
-  time: string;
-}
-
-export interface ExchangeFlow {
-  exchange: string;
-  inflow: number;
-  outflow: number;
-  net: number;
-  interpretation: string;
-}
-
-export interface SmartMoneyPosition {
-  positioning: 'long' | 'short' | 'neutral';
-  confidence: number;
-}
-
-export type RiskLevel = 'low' | 'medium' | 'high';
-
-// Step 4: Timing
-export interface TimingAnalysis {
-  tradeNow: boolean;
-  reason: string;
-  conditions: EntryCondition[];
-  entryZones: EntryZone[];
-  waitFor?: {
-    event: string;
-    estimatedTime: string;
-  };
-  score: number;
-}
-
-export interface EntryCondition {
-  name: string;
-  met: boolean;
-  details: string;
-}
-
-export interface EntryZone {
-  priceLow: number;
-  priceHigh: number;
-  probability: number;
-  eta: string;
-  quality: number; // 1-5
-}
-
-// Step 5: Trade Plan
-export interface TradePlan {
-  direction: 'long' | 'short';
-  type: 'limit' | 'market';
-  entries: Entry[];
-  averageEntry: number;
-  stopLoss: StopLoss;
-  takeProfits: TakeProfit[];
-  riskReward: number;
-  winRateEstimate: number;
-  positionSizePercent: number;
-  riskAmount?: number;
-  trailingStop?: TrailingStop;
-  score: number;
-}
-
-export interface Entry {
-  price: number;
-  percentage: number;
-  type: 'limit' | 'stop_limit';
-}
-
-export interface StopLoss {
-  price: number;
-  percentage: number;
-  reason: string;
-}
-
-export interface TakeProfit {
-  price: number;
-  percentage: number;
-  reason: string;
-}
-
-export interface TrailingStop {
-  activateAfter: string;
-  trailPercent: number;
-}
-
-// Step 6: Trap Check
-export interface TrapCheck {
-  traps: TrapDetection;
-  liquidationLevels: LiquidationLevel[];
-  counterStrategy: string[];
-  proTip: string;
-  riskLevel: RiskLevel;
-  score: number;
-}
-
-export interface TrapDetection {
-  bullTrap: boolean;
-  bullTrapZone?: number;
-  bearTrap: boolean;
-  bearTrapZone?: number;
-  liquidityGrab: {
-    detected: boolean;
-    zones: number[];
-  };
-  stopHuntZones: number[];
-  fakeoutRisk: RiskLevel;
-}
-
-export interface LiquidationLevel {
-  price: number;
-  amountUsd: number;
-  type: 'longs' | 'shorts';
-}
-
-// Step 7: Final Verdict
-export interface FinalVerdict {
-  overallScore: number;
-  verdict: VerdictType;
-  componentScores: ComponentScore[];
-  confidenceFactors: ConfidenceFactor[];
-  recommendation: string;
-  analysisId: string;
-  createdAt: string;
-  expiresAt: string;
-}
-
-export type VerdictType = 'go' | 'conditional_go' | 'wait' | 'avoid';
-
-export interface ComponentScore {
-  step: string;
-  score: number;
-  weight: number;
-}
-
-export interface ConfidenceFactor {
-  factor: string;
-  positive: boolean;
-  impact: 'high' | 'medium' | 'low';
-}
-
-// ===========================================
-// Detailed Report Types (3D Matrix Based)
-// ===========================================
-
-/**
- * Indicator Chart Data for rendering line charts in Detailed Report
- */
-export interface IndicatorChartData {
-  name: string;
-  category: 'trend' | 'momentum' | 'volatility' | 'volume' | 'advanced';
-  values: number[];
-  timestamps: number[];
-  currentValue: number;
-  signal: 'bullish' | 'bearish' | 'neutral';
-  signalStrength: number;
-  interpretation: string;
-  chartColor: string;
-  // For indicators with multiple lines (e.g., MACD, Bollinger)
-  secondaryValues?: number[];
-  secondaryLabel?: string;
-  thirdValues?: number[];
-  thirdLabel?: string;
-  // Reference lines (e.g., RSI 30/70, MACD zero line)
-  referenceLines?: { value: number; label: string; color: string }[];
-  // Metadata for advanced display
+export interface CreditTransaction {
+  id: string;
+  userId: string;
+  amount: number;
+  type: 'PURCHASE' | 'BONUS' | 'USAGE' | 'REFUND';
+  description: string;
+  balanceAfter: number;
+  createdAt: Date;
   metadata?: Record<string, unknown>;
 }
 
-/**
- * Step Input Data - what data was used for this step
- */
-export interface StepInputData {
-  timeframes: {
-    timeframe: string;
-    candleCount: number;
-    priority: 'primary' | 'secondary' | 'confirmation';
-    dataRange: {
-      startTime: number;
-      endTime: number;
-    };
-  }[];
-  indicators: {
-    name: string;
-    category: string;
-    params: Record<string, number>;
-    weight: number;
-  }[];
-  tradeType: 'scalping' | 'dayTrade' | 'swing';
-  aiPromptFocus: string;
+// Credit costs per operation
+export const CREDIT_COSTS = {
+  // Analysis
+  ANALYSIS_BASIC: 10,
+  ANALYSIS_CLASSIC: 25,
+  ANALYSIS_MLIS: 25,
+  ANALYSIS_SCHEDULED: 25,
+
+  // Analysis Steps (for display purposes)
+  STEP_MARKET_PULSE: 3,
+  STEP_ASSET_SCANNER: 4,
+  STEP_SAFETY_CHECK: 4,
+  STEP_TIMING: 4,
+  STEP_TRADE_PLAN: 5,
+  STEP_TRAP_CHECK: 3,
+  STEP_FINAL_VERDICT: 2,
+
+  // AI Expert
+  AI_EXPERT_QUESTION: 5,
+  AI_EXPERT_QUESTION_FREE: 0, // First 3 per analysis
+
+  // Reports
+  PDF_DOWNLOAD: 5,
+  PDF_DOWNLOAD_FREE: 0, // First 2 per analysis
+  EMAIL_SEND: 5,
+  EMAIL_SEND_FREE: 0, // First 2 per analysis
+
+  // Capital Flow
+  CAPITAL_FLOW_L3: 25, // Daily pass
+  CAPITAL_FLOW_L4: 25, // Daily pass
+  ASSET_ANALYSIS_DAILY: 100, // Daily pass for 10 analyses
+
+  // Alerts
+  PRICE_ALERT: 1,
+  SCHEDULED_REPORT: 25,
+
+  // Top Coins Scan
+  TOP_COINS_SCAN: 300, // Full 30-coin scan
+} as const;
+
+// ===== REWARDS TYPES =====
+export interface LevelThreshold {
+  level: number;
+  xp: number;
+  title: string;
+  benefits: string[];
+  dailyBonus: number;
+  discount: number;
+  color: string;
+  badge: string;
+  unlockMessage?: string;
 }
 
-/**
- * Step Output Data - what was calculated/determined
- */
-export interface StepOutputData {
-  indicators: Record<string, {
-    value: number | null;
-    signal: 'bullish' | 'bearish' | 'neutral';
-    strength: number;
-    metadata?: Record<string, unknown>;
-  }>;
-  signals: {
-    bullish: string[];
-    bearish: string[];
-    neutral: string[];
-  };
-  stepScore: number;
-  stepConfidence: number;
-  keyFindings: string[];
+export const LEVEL_THRESHOLDS: LevelThreshold[] = [
+  { level: 1, xp: 0, title: 'Beginner', benefits: ['Access to basic features'], dailyBonus: 0, discount: 0, color: 'gray', badge: '🌱' },
+  { level: 2, xp: 100, title: 'Trader', benefits: ['5% analysis discount'], dailyBonus: 5, discount: 5, color: 'blue', badge: '📊' },
+  { level: 3, xp: 300, title: 'Pro Trader', benefits: ['10% discount', 'Priority support'], dailyBonus: 10, discount: 10, color: 'green', badge: '📈' },
+  { level: 4, xp: 600, title: 'Expert', benefits: ['15% discount', '1 free analysis/day'], dailyBonus: 15, discount: 15, color: 'purple', badge: '⭐' },
+  { level: 5, xp: 1000, title: 'Master', benefits: ['20% discount', '2 free analyses/day'], dailyBonus: 25, discount: 20, color: 'orange', badge: '👑' },
+  { level: 6, xp: 1500, title: 'Legend', benefits: ['25% discount', '3 free analyses/day', 'Custom badge'], dailyBonus: 50, discount: 25, color: 'gold', badge: '🏆' },
+];
+
+export interface StreakMilestone {
+  days: number;
+  bonus: number;
+  title: string;
 }
 
-/**
- * Step Commentary - AI analysis and interpretation
- */
-export interface StepCommentary {
-  summary: string;
-  signalInterpretation: string;
-  riskFactors: string[];
-  opportunities: string[];
-  recommendation: string;
-  aiExpertInsight?: string;
+export const STREAK_MILESTONES: StreakMilestone[] = [
+  { days: 3, bonus: 10, title: '3-Day Streak' },
+  { days: 7, bonus: 25, title: 'Week Warrior' },
+  { days: 14, bonus: 50, title: 'Two Weeks Strong' },
+  { days: 21, bonus: 75, title: 'Three Weeks Legend' },
+  { days: 30, bonus: 150, title: 'Month Master' },
+];
+
+export interface DailyReward {
+  day: number;
+  credits: number;
+  bonus?: string;
 }
 
-/**
- * Complete Step Detail for Detailed Report
- */
-export interface DetailedStepData {
-  stepNumber: number;
-  stepName: string;
-  stepDescription: string;
-  input: StepInputData;
-  output: StepOutputData;
-  commentary: StepCommentary;
-  indicatorCharts: IndicatorChartData[];
-}
-
-/**
- * Full Detailed Report Data Structure
- */
-export interface DetailedReportData {
-  // Header info
-  symbol: string;
-  tradeType: 'scalping' | 'dayTrade' | 'swing';
-  generatedAt: string;
-  analysisId: string;
-
-  // Market context
-  marketContext: {
-    btcPrice: number;
-    btcDominance: number;
-    fearGreedIndex: number;
-    marketTrend: 'bullish' | 'bearish' | 'neutral';
-  };
-
-  // Current asset info
-  assetInfo: {
-    currentPrice: number;
-    priceChange24h: number;
-    volume24h: number;
-    marketCap?: number;
-  };
-
-  // All 7 steps with detailed data
-  steps: DetailedStepData[];
-
-  // Trade Plan Summary
-  tradePlanSummary: {
-    direction: 'long' | 'short';
-    entries: { price: number; percentage: number }[];
-    averageEntry: number;
-    stopLoss: { price: number; percentage: number; reason: string };
-    takeProfits: { price: number; percentage: number; reason: string }[];
-    riskReward: number;
-    winRateEstimate: number;
-  };
-
-  // Final Verdict
-  verdict: {
-    action: 'go' | 'conditional_go' | 'wait' | 'avoid';
-    overallScore: number;
-    overallConfidence: number;
-    direction: 'long' | 'short' | null;
-    reasons: string[];
-    aiSummary?: string;
-  };
-
-  // AI Expert Comments
-  aiExpertComments?: {
-    expertName: string;
-    role: string;
-    comment: string;
-  }[];
-
-  // Chart image for trade plan visualization
-  chartImage?: string;
-}
-
-// ===========================================
-// Rewards & Achievements
-// ===========================================
-
-export interface DailyRewards {
-  login: {
-    claimed: boolean;
-    credits: number;
-  };
-  spin: {
-    used: boolean;
-    result?: number;
-  };
-  quiz: {
-    completed: boolean;
-    question?: Quiz;
-  };
-  ads: {
-    watched: number;
-    max: number;
-    creditsPerAd: number;
-  };
-  streak: {
-    days: number;
-    nextBonus: number;
-  };
-}
+export const DAILY_REWARD_SCHEDULE: DailyReward[] = [
+  { day: 1, credits: 5 },
+  { day: 2, credits: 5 },
+  { day: 3, credits: 10, bonus: '3-Day Streak!' },
+  { day: 4, credits: 5 },
+  { day: 5, credits: 5 },
+  { day: 6, credits: 5 },
+  { day: 7, credits: 25, bonus: 'Week Complete!' },
+];
 
 export interface Achievement {
   id: string;
   code: string;
   name: string;
-  description?: string;
-  category: AchievementCategory;
-  icon?: string;
+  title: string;
+  description: string;
+  icon: string;
   xpReward: number;
   creditReward: number;
-  requirementType: RequirementType;
+  category: 'analysis' | 'streak' | 'social' | 'milestone';
+  tier: 'bronze' | 'silver' | 'gold' | 'platinum';
+  requirementType: string;
   requirementValue: number;
+  condition?: {
+    type: string;
+    target: number;
+  };
 }
 
-export type AchievementCategory =
-  | 'ANALYSIS'
-  | 'WHALE'
-  | 'TRADING'
-  | 'SOCIAL'
-  | 'EDUCATION'
-  | 'STREAK';
-
-export type RequirementType = 'COUNT' | 'STREAK' | 'PERCENTAGE' | 'SINGLE';
-
-export interface UserAchievement {
-  id: string;
-  achievementId: string;
-  progress: number;
-  isUnlocked: boolean;
-  unlockedAt?: Date;
-}
-
-export interface Quiz {
-  id: string;
-  question: string;
-  options: string[];
-  category: QuizCategory;
-  difficulty: number;
-}
-
-export type QuizCategory =
-  | 'TECHNICAL_ANALYSIS'
-  | 'WHALE_BEHAVIOR'
-  | 'RISK_MANAGEMENT'
-  | 'MARKET_STRUCTURE'
-  | 'MANIPULATION'
-  | 'PSYCHOLOGY';
-
-// ===========================================
-// Referrals
-// ===========================================
-
-export interface Referral {
-  id: string;
-  referrerId: string;
-  referredId: string;
-  status: ReferralStatus;
-  referrerCreditsEarned: number;
-  referredCreditsEarned: number;
-  createdAt: Date;
-}
-
-export type ReferralStatus =
-  | 'PENDING'
-  | 'REGISTERED'
-  | 'FIRST_ANALYSIS'
-  | 'FIRST_PURCHASE';
-
-export interface ReferralStats {
-  code: string;
-  url: string;
-  totalReferrals: number;
-  pending: number;
-  completed: number;
-  creditsEarned: number;
-  tier: ReferralTier;
-}
-
-export interface ReferralTier {
-  name: string;
-  bonusPercent: number;
-  nextTier?: string;
-  referralsNeeded?: number;
-}
-
-// ===========================================
-// Price Alerts
-// ===========================================
-
-export interface PriceAlert {
-  id: string;
-  symbol: string;
-  targetPrice: number;
-  direction: 'ABOVE' | 'BELOW';
-  isTriggered: boolean;
-  triggeredAt?: Date;
-  isActive: boolean;
-  createdAt: Date;
-}
-
-// ===========================================
-// API Response Types
-// ===========================================
-
-export interface ApiResponse<T = unknown> {
-  success: boolean;
-  data?: T;
-  error?: ApiError;
-}
-
-export interface ApiError {
-  code: string;
-  message: string;
-  details?: Record<string, unknown>;
-}
-
-export interface PaginatedResponse<T> {
-  items: T[];
-  total: number;
-  page: number;
-  pages: number;
-  hasMore: boolean;
-}
-
-// ===========================================
-// WebSocket Event Types
-// ===========================================
-
-export interface WSMessage<T = unknown> {
-  type: WSEventType;
-  payload: T;
-  timestamp: number;
-}
-
-export type WSEventType =
-  | 'PRICE_UPDATE'
-  | 'ALERT_TRIGGERED'
-  | 'ANALYSIS_COMPLETE'
-  | 'ACHIEVEMENT_UNLOCKED'
-  | 'CREDIT_UPDATE'
-  | 'LEVEL_UP';
-
-// ===========================================
-// Constants
-// ===========================================
-
-export const SUPPORTED_SYMBOLS = [
-  'BTC',
-  'ETH',
-  'SOL',
-  'BNB',
-  'XRP',
-  'ADA',
-  'DOGE',
-  'AVAX',
-  'DOT',
-  'MATIC',
-] as const;
-
-export type SupportedSymbol = typeof SUPPORTED_SYMBOLS[number];
-
-export const INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d', '1w'] as const;
-export type Interval = typeof INTERVALS[number];
-
-export const LEVEL_THRESHOLDS = [
-  { level: 1, xp: 0, dailyBonus: 0, discount: 0 },
-  { level: 5, xp: 500, dailyBonus: 1, discount: 0 },
-  { level: 10, xp: 1500, dailyBonus: 2, discount: 0 },
-  { level: 15, xp: 3500, dailyBonus: 2, discount: 10 },
-  { level: 20, xp: 6000, dailyBonus: 3, discount: 10 },
-  { level: 25, xp: 10000, dailyBonus: 3, discount: 15 },
-  { level: 30, xp: 15000, dailyBonus: 5, discount: 15 },
-  { level: 40, xp: 25000, dailyBonus: 5, discount: 20 },
-  { level: 50, xp: 40000, dailyBonus: 10, discount: 20 },
-  { level: 100, xp: 100000, dailyBonus: 10, discount: 25 },
-] as const;
-
-export const XP_REWARDS = {
-  ANALYSIS: 10,
-  FULL_ANALYSIS: 30,
-  DAILY_LOGIN: 5,
-  QUIZ_CORRECT: 15,
-  ACHIEVEMENT: 50,
-  REFERRAL: 25,
-} as const;
-
-// ===========================================
-// Credit Earning Constants
-// ===========================================
-
-export const CREDIT_EARNING = {
-  DAILY_LOGIN: 3,
-  DAILY_SPIN_MIN: 1,
-  DAILY_SPIN_MAX: 10,
-  WATCH_AD: 2,
-  MAX_ADS_PER_DAY: 3,
-  QUIZ_CORRECT: 5,
-  STREAK_7_DAY: 20,
-  STREAK_30_DAY: 100,
-  REFERRAL_SIGNUP: 20,
-  REFERRAL_FIRST_ANALYSIS: 10,
-  REFERRAL_PURCHASE_PERCENT: 10,
-  LEVEL_UP: 10,
-} as const;
-
-export const STREAK_MILESTONES = [
-  { days: 7, bonus: 20, label: 'Week Warrior' },
-  { days: 14, bonus: 30, label: 'Fortnight Fighter' },
-  { days: 30, bonus: 100, label: 'Monthly Master' },
-  { days: 60, bonus: 150, label: 'Bi-Monthly Beast' },
-  { days: 90, bonus: 250, label: 'Quarter Champion' },
-  { days: 180, bonus: 500, label: 'Half-Year Hero' },
-  { days: 365, bonus: 1000, label: 'Annual Legend' },
-] as const;
-
-export const SPIN_WHEEL_PRIZES = [
-  { credits: 1, probability: 0.30, label: '1 Credit' },
-  { credits: 2, probability: 0.25, label: '2 Credits' },
-  { credits: 3, probability: 0.20, label: '3 Credits' },
-  { credits: 5, probability: 0.15, label: '5 Credits' },
-  { credits: 7, probability: 0.07, label: '7 Credits' },
-  { credits: 10, probability: 0.03, label: '10 Credits!' },
-] as const;
-
-export const DEFAULT_ACHIEVEMENTS: Omit<Achievement, 'id'>[] = [
-  // Analysis Achievements
+export const DEFAULT_ACHIEVEMENTS: Achievement[] = [
   {
-    code: 'FIRST_ANALYSIS',
-    name: 'First Steps',
-    description: 'Complete your first analysis',
-    category: 'ANALYSIS',
+    id: 'first_analysis',
+    code: 'first_analysis',
+    name: 'First Analysis',
+    title: 'First Analysis',
+    description: 'Complete your first 7-step analysis',
     icon: 'star',
     xpReward: 50,
     creditReward: 10,
-    requirementType: 'COUNT',
+    category: 'analysis',
+    tier: 'bronze',
+    requirementType: 'analysis_count',
     requirementValue: 1,
+    condition: { type: 'analysis_count', target: 1 }
   },
   {
-    code: 'ANALYST_10',
+    id: 'analysis_10',
+    code: 'analysis_10',
     name: 'Analyst',
+    title: 'Analyst',
     description: 'Complete 10 analyses',
-    category: 'ANALYSIS',
     icon: 'target',
     xpReward: 100,
     creditReward: 25,
-    requirementType: 'COUNT',
+    category: 'analysis',
+    tier: 'silver',
+    requirementType: 'analysis_count',
     requirementValue: 10,
+    condition: { type: 'analysis_count', target: 10 }
   },
   {
-    code: 'ANALYST_50',
+    id: 'analysis_50',
+    code: 'analysis_50',
     name: 'Expert Analyst',
+    title: 'Expert Analyst',
     description: 'Complete 50 analyses',
-    category: 'ANALYSIS',
     icon: 'medal',
     xpReward: 250,
-    creditReward: 50,
-    requirementType: 'COUNT',
-    requirementValue: 50,
-  },
-  {
-    code: 'ANALYST_100',
-    name: 'Master Analyst',
-    description: 'Complete 100 analyses',
-    category: 'ANALYSIS',
-    icon: 'trophy',
-    xpReward: 500,
     creditReward: 100,
-    requirementType: 'COUNT',
-    requirementValue: 100,
+    category: 'analysis',
+    tier: 'gold',
+    requirementType: 'analysis_count',
+    requirementValue: 50,
+    condition: { type: 'analysis_count', target: 50 }
   },
   {
-    code: 'FULL_ANALYSIS_10',
-    name: 'Thorough Trader',
-    description: 'Complete 10 full 7-step analyses',
-    category: 'ANALYSIS',
-    icon: 'check-circle',
-    xpReward: 200,
-    creditReward: 40,
-    requirementType: 'COUNT',
-    requirementValue: 10,
-  },
-  // Streak Achievements
-  {
-    code: 'STREAK_7',
+    id: 'streak_7',
+    code: 'streak_7',
     name: 'Week Warrior',
-    description: 'Maintain a 7-day login streak',
-    category: 'STREAK',
+    title: 'Week Warrior',
+    description: 'Login 7 days in a row',
     icon: 'flame',
     xpReward: 100,
-    creditReward: 20,
-    requirementType: 'STREAK',
-    requirementValue: 7,
-  },
-  {
-    code: 'STREAK_30',
-    name: 'Monthly Master',
-    description: 'Maintain a 30-day login streak',
-    category: 'STREAK',
-    icon: 'crown',
-    xpReward: 500,
-    creditReward: 100,
-    requirementType: 'STREAK',
-    requirementValue: 30,
-  },
-  {
-    code: 'STREAK_100',
-    name: 'Century Legend',
-    description: 'Maintain a 100-day login streak',
-    category: 'STREAK',
-    icon: 'award',
-    xpReward: 1000,
-    creditReward: 250,
-    requirementType: 'STREAK',
-    requirementValue: 100,
-  },
-  // Whale Achievements
-  {
-    code: 'WHALE_SPOTTER',
-    name: 'Whale Spotter',
-    description: 'Detect your first whale activity',
-    category: 'WHALE',
-    icon: 'eye',
-    xpReward: 75,
-    creditReward: 15,
-    requirementType: 'COUNT',
-    requirementValue: 1,
-  },
-  {
-    code: 'TRAP_DETECTOR',
-    name: 'Trap Detector',
-    description: 'Detect your first manipulation trap',
-    category: 'WHALE',
-    icon: 'alert-triangle',
-    xpReward: 150,
-    creditReward: 30,
-    requirementType: 'COUNT',
-    requirementValue: 1,
-  },
-  {
-    code: 'MANIPULATION_MASTER',
-    name: 'Manipulation Master',
-    description: 'Detect 25 manipulation events',
-    category: 'WHALE',
-    icon: 'shield',
-    xpReward: 300,
-    creditReward: 75,
-    requirementType: 'COUNT',
-    requirementValue: 25,
-  },
-  // Social Achievements
-  {
-    code: 'FIRST_REFERRAL',
-    name: 'Networker',
-    description: 'Refer your first friend',
-    category: 'SOCIAL',
-    icon: 'users',
-    xpReward: 100,
-    creditReward: 20,
-    requirementType: 'COUNT',
-    requirementValue: 1,
-  },
-  {
-    code: 'REFERRAL_5',
-    name: 'Ambassador',
-    description: 'Refer 5 friends',
-    category: 'SOCIAL',
-    icon: 'gift',
-    xpReward: 300,
-    creditReward: 100,
-    requirementType: 'COUNT',
-    requirementValue: 5,
-  },
-  {
-    code: 'REFERRAL_25',
-    name: 'Influencer',
-    description: 'Refer 25 friends',
-    category: 'SOCIAL',
-    icon: 'star',
-    xpReward: 1000,
-    creditReward: 500,
-    requirementType: 'COUNT',
-    requirementValue: 25,
-  },
-  // Education Achievements
-  {
-    code: 'QUIZ_MASTER_10',
-    name: 'Quiz Enthusiast',
-    description: 'Answer 10 quizzes correctly',
-    category: 'EDUCATION',
-    icon: 'book',
-    xpReward: 100,
     creditReward: 25,
-    requirementType: 'COUNT',
-    requirementValue: 10,
-  },
-  {
-    code: 'QUIZ_MASTER_50',
-    name: 'Knowledge Seeker',
-    description: 'Answer 50 quizzes correctly',
-    category: 'EDUCATION',
-    icon: 'graduation-cap',
-    xpReward: 300,
-    creditReward: 75,
-    requirementType: 'COUNT',
-    requirementValue: 50,
-  },
-  {
-    code: 'PERFECT_WEEK',
-    name: 'Perfect Week',
-    description: 'Answer all daily quizzes correctly for 7 days',
-    category: 'EDUCATION',
-    icon: 'zap',
-    xpReward: 200,
-    creditReward: 50,
-    requirementType: 'STREAK',
+    category: 'streak',
+    tier: 'silver',
+    requirementType: 'streak_days',
     requirementValue: 7,
-  },
-  // Trading Achievements
-  {
-    code: 'MULTI_COIN',
-    name: 'Diversifier',
-    description: 'Analyze 5 different coins',
-    category: 'TRADING',
-    icon: 'layers',
-    xpReward: 75,
-    creditReward: 15,
-    requirementType: 'COUNT',
-    requirementValue: 5,
+    condition: { type: 'streak_days', target: 7 }
   },
   {
-    code: 'ALL_COINS',
-    name: 'Market Explorer',
-    description: 'Analyze all 10 supported coins',
-    category: 'TRADING',
-    icon: 'globe',
-    xpReward: 200,
-    creditReward: 50,
-    requirementType: 'COUNT',
-    requirementValue: 10,
+    id: 'streak_30',
+    code: 'streak_30',
+    name: 'Month Master',
+    title: 'Month Master',
+    description: 'Login 30 days in a row',
+    icon: 'trophy',
+    xpReward: 500,
+    creditReward: 150,
+    category: 'streak',
+    tier: 'platinum',
+    requirementType: 'streak_days',
+    requirementValue: 30,
+    condition: { type: 'streak_days', target: 30 }
   },
-] as const;
-
-// ===========================================
-// Daily Reward Schedule
-// ===========================================
-
-export const DAILY_REWARD_SCHEDULE = [
-  { day: 1, credits: 3 },
-  { day: 2, credits: 3 },
-  { day: 3, credits: 5 },
-  { day: 4, credits: 5 },
-  { day: 5, credits: 7 },
-  { day: 6, credits: 7 },
-  { day: 7, credits: 10, bonus: true },
-] as const;
-
-// ===========================================
-// Quiz Questions Pool
-// ===========================================
+];
 
 export interface QuizQuestion {
+  id: string;
   question: string;
   options: string[];
   correctIndex: number;
-  category: QuizCategory;
   explanation: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  category: string;
 }
 
 export const QUIZ_POOL: QuizQuestion[] = [
   {
-    question: 'What does "spoofing" mean in crypto trading?',
-    options: [
-      'Fake orders placed to manipulate price',
-      'Fast trading algorithm',
-      'A type of wallet',
-      'Market analysis tool'
-    ],
+    id: 'q1',
+    question: 'What does RSI stand for?',
+    options: ['Relative Strength Index', 'Real Signal Indicator', 'Rate of Stock Increase', 'Return on Stock Investment'],
     correctIndex: 0,
-    category: 'MANIPULATION',
-    explanation: 'Spoofing is placing large fake orders to create false demand/supply, then cancelling them after prices move.'
+    explanation: 'RSI (Relative Strength Index) is a momentum oscillator that measures the speed and magnitude of price changes.',
+    difficulty: 'easy',
+    category: 'Technical Analysis'
   },
   {
-    question: 'When BTC dominance rises, altcoins typically:',
-    options: [
-      'Rise faster than BTC',
-      'Fall against BTC',
-      'Stay the same',
-      'Follow gold prices'
-    ],
+    id: 'q2',
+    question: 'What is the ideal RSI range for a neutral market?',
+    options: ['0-30', '30-70', '70-100', '50-60'],
     correctIndex: 1,
-    category: 'MARKET_STRUCTURE',
-    explanation: 'Rising BTC dominance means money flows from altcoins to Bitcoin, causing alts to underperform.'
+    explanation: 'RSI values between 30-70 typically indicate a neutral market, while below 30 suggests oversold and above 70 suggests overbought conditions.',
+    difficulty: 'medium',
+    category: 'Technical Analysis'
   },
   {
-    question: 'What is a "liquidity grab"?',
-    options: [
-      'A type of exchange fee',
-      'Price moving to trigger stop losses before reversing',
-      'Adding liquidity to a pool',
-      'A trading bot strategy'
-    ],
-    correctIndex: 1,
-    category: 'MANIPULATION',
-    explanation: 'Liquidity grabs occur when price spikes to hit stop losses (where liquidity sits) then reverses.'
-  },
-  {
-    question: 'What RSI level typically indicates oversold conditions?',
-    options: [
-      'Above 70',
-      'Above 50',
-      'Below 30',
-      'Below 50'
-    ],
+    id: 'q3',
+    question: 'What does MACD measure?',
+    options: ['Price volatility', 'Trading volume', 'Trend momentum', 'Market cap'],
     correctIndex: 2,
-    category: 'TECHNICAL_ANALYSIS',
-    explanation: 'RSI below 30 typically indicates oversold conditions, suggesting potential upward reversal.'
+    explanation: 'MACD (Moving Average Convergence Divergence) is a trend-following momentum indicator that shows the relationship between two moving averages.',
+    difficulty: 'easy',
+    category: 'Technical Analysis'
   },
   {
-    question: 'What is a "bull trap"?',
+    id: 'q4',
+    question: 'What is a bullish divergence?',
     options: [
-      'A bullish continuation pattern',
-      'A false breakout above resistance that reverses',
-      'A support level',
-      'A trading strategy'
-    ],
-    correctIndex: 1,
-    category: 'WHALE_BEHAVIOR',
-    explanation: 'Bull traps lure buyers with a false breakout above resistance, then price drops sharply.'
-  },
-  {
-    question: 'Large exchange inflows typically suggest:',
-    options: [
-      'Potential selling pressure',
-      'Bullish sentiment',
-      'Decreased volatility',
-      'Higher prices'
+      'Price makes lower lows while indicator makes higher lows',
+      'Price makes higher highs while indicator makes lower highs',
+      'Price and indicator move in same direction',
+      'Indicator crosses above signal line'
     ],
     correctIndex: 0,
-    category: 'WHALE_BEHAVIOR',
-    explanation: 'Coins moving to exchanges usually means holders want to sell, creating potential selling pressure.'
+    explanation: 'Bullish divergence occurs when price makes lower lows but the indicator makes higher lows, suggesting potential upward reversal.',
+    difficulty: 'hard',
+    category: 'Technical Analysis'
   },
   {
-    question: 'What is the Fear & Greed Index range for "Extreme Fear"?',
-    options: [
-      '0-24',
-      '25-49',
-      '50-74',
-      '75-100'
-    ],
+    id: 'q5',
+    question: 'What does high trading volume indicate?',
+    options: ['Strong interest and liquidity', 'Market manipulation', 'Price will go up', 'Price will go down'],
     correctIndex: 0,
-    category: 'MARKET_STRUCTURE',
-    explanation: 'Extreme Fear is 0-24, often indicating a potential buying opportunity.'
-  },
-  {
-    question: 'What is proper position sizing for high-risk trades?',
-    options: [
-      '50% of portfolio',
-      '25% of portfolio',
-      '1-2% of portfolio',
-      '10% of portfolio'
-    ],
-    correctIndex: 2,
-    category: 'RISK_MANAGEMENT',
-    explanation: 'Risk 1-2% per trade to survive losing streaks and protect capital.'
-  },
-  {
-    question: 'What does "wash trading" mean?',
-    options: [
-      'Cleaning your trading history',
-      'Trading with yourself to fake volume',
-      'Hedging positions',
-      'Arbitrage trading'
-    ],
-    correctIndex: 1,
-    category: 'MANIPULATION',
-    explanation: 'Wash trading is buying and selling to yourself to create artificial volume and interest.'
-  },
-  {
-    question: 'When should you typically avoid trading?',
-    options: [
-      'During high volume',
-      'During major news events or FOMC',
-      'During trending markets',
-      'During Asian session'
-    ],
-    correctIndex: 1,
-    category: 'RISK_MANAGEMENT',
-    explanation: 'Major events cause unpredictable volatility. Wait for clarity after announcements.'
+    explanation: 'High trading volume indicates strong market interest and good liquidity, making it easier to enter and exit positions.',
+    difficulty: 'easy',
+    category: 'Market Analysis'
   },
 ];
+
+// ===== EXPORT ALL =====
+export * from './index';
