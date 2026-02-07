@@ -31,6 +31,7 @@ export async function signalRoutes(fastify: FastifyInstance) {
             status: { type: 'string', enum: ['pending', 'published', 'expired', 'cancelled'] },
             minConfidence: { type: 'number', minimum: 0, maximum: 100 },
             minScore: { type: 'number', minimum: 0, maximum: 10 },
+            minQualityScore: { type: 'number', minimum: 0, maximum: 100 },
             direction: { type: 'string', enum: ['long', 'short'] },
             limit: { type: 'number', minimum: 1, maximum: 100, default: 20 },
             offset: { type: 'number', minimum: 0, default: 0 },
@@ -46,6 +47,7 @@ export async function signalRoutes(fastify: FastifyInstance) {
         status: query.status,
         minConfidence: query.minConfidence,
         minScore: query.minScore,
+        minQualityScore: query.minQualityScore,
         direction: query.direction,
       };
 
@@ -487,6 +489,8 @@ function serializeSignal(signal: any) {
     mlisRecommendation: signal.mlisRecommendation,
     mlisConfidence: signal.mlisConfidence,
     overallConfidence: signal.overallConfidence,
+    qualityScore: signal.qualityScore ?? null,
+    qualityData: signal.qualityData ?? null,
     capitalFlowPhase: signal.capitalFlowPhase,
     capitalFlowBias: signal.capitalFlowBias,
     sectorFlow: signal.sectorFlow ? Number(signal.sectorFlow) : null,

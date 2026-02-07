@@ -1078,6 +1078,10 @@ model Signal {
   outcomeAt           DateTime? @map("outcome_at")
   pnlPercent          Decimal?  @map("pnl_percent") @db.Decimal(6, 2)
 
+  // Signal Quality Score
+  qualityScore        Int?      @map("quality_score") // 0-100 composite quality score
+  qualityData         Json?     @map("quality_data") // Full breakdown: { breakdown, forecastBands }
+
   // Delivery Tracking
   telegramMessageId   String?   @map("telegram_message_id") @db.VarChar(50)
   discordMessageId    String?   @map("discord_message_id") @db.VarChar(50)
@@ -1090,6 +1094,7 @@ model Signal {
   @@index([status])
   @@index([createdAt])
   @@index([market, status])
+  @@index([qualityScore])
   @@map("signals")
 }
 

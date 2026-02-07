@@ -17,7 +17,8 @@ import { analyzeMLIS } from '../analysis/services/mlis.service';
 import { signalService } from './signal.service';
 import { formatTelegramSignal } from './telegram-formatter';
 import { signalMonitoring } from './signal-monitoring.service';
-import type { SignalData, SignalGenerationResult } from './types';
+import { calculateSignalQuality, type ScoringInput } from './signal-scoring.service';
+import type { SignalData, SignalGenerationResult, SignalQualityEnrichment } from './types';
 
 // Telegram bot configuration
 const TELEGRAM_BOT_TOKEN = process.env['TELEGRAM_BOT_TOKEN'];
@@ -165,8 +166,33 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
           continue;
         }
 
-        // Create and publish signal
-        const signalId = await signalService.createSignal(signalData);
+        // Calculate signal quality score
+        const scoringInput: ScoringInput = {
+          signal: signalData,
+          rsi: analysisResult.step7Result?.indicatorSummary?.rsi,
+          macdHistogram: analysisResult.step7Result?.indicatorSummary?.macdHistogram,
+          adx: analysisResult.step7Result?.indicatorSummary?.adx,
+          volumeConfirm: analysisResult.step7Result?.indicatorSummary?.volumeConfirm,
+          atr: analysisResult.step7Result?.indicatorSummary?.atr,
+          bbWidth: analysisResult.step7Result?.indicatorSummary?.bbWidth,
+          l1LiquidityBias: capitalFlowSummary.globalLiquidity?.bias,
+          l2MarketPhase: recommendation.phase,
+          l3SectorFlowAligned: asset.sectorFlow !== undefined
+            ? (signalData.direction === 'long' ? asset.sectorFlow > 0 : asset.sectorFlow < 0)
+            : undefined,
+          l4RecommendationAligned: true, // We only generate signals for recommended assets
+        };
+
+        let qualityEnrichment: SignalQualityEnrichment | undefined;
+        try {
+          qualityEnrichment = calculateSignalQuality(scoringInput);
+          console.log(`[SignalGenerator] ${asset.symbol} quality score: ${qualityEnrichment.qualityScore.qualityScore}/100 (${qualityEnrichment.qualityScore.qualityLabel})`);
+        } catch (scoreError) {
+          console.warn(`[SignalGenerator] Quality scoring failed for ${asset.symbol}:`, scoreError);
+        }
+
+        // Create and publish signal (with quality data)
+        const signalId = await signalService.createSignal(signalData, qualityEnrichment);
         result.generated++;
 
         console.log(`[SignalGenerator] Signal created for ${asset.symbol}: ${signalId}`);
@@ -174,7 +200,7 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
         // Publish to Telegram
         if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHANNEL_ID) {
           try {
-            const message = formatTelegramSignal(signalData, signalId);
+            const message = formatTelegramSignal(signalData, signalId, qualityEnrichment);
             const telegramMessageId = await sendTelegramMessage(TELEGRAM_CHANNEL_ID, message);
 
             await signalService.markAsPublished(signalId, telegramMessageId);
