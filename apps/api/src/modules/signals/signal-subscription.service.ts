@@ -93,7 +93,7 @@ export const signalSubscriptionService = {
     }
 
     // Cache for 5 minutes
-    await cache.setex(cacheKey, 300, JSON.stringify(subscription));
+    await cache.set(cacheKey, JSON.stringify(subscription), 300);
 
     return subscription;
   },
@@ -212,7 +212,7 @@ export const signalSubscriptionService = {
 
     // Cache for 30 days
     if (cache) {
-      await cache.setex(cacheKey, 30 * 24 * 60 * 60, price.id);
+      await cache.set(cacheKey, price.id, 30 * 24 * 60 * 60);
     }
 
     return price.id;
