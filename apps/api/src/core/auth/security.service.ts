@@ -161,6 +161,7 @@ export async function verifyEmail(token: string): Promise<{ success: boolean; er
         emailVerificationToken: hashedToken,
         emailVerificationExpires: { gt: new Date() },
       },
+      select: { id: true, email: true },
     });
 
     if (!user) {
@@ -207,7 +208,10 @@ interface PasswordResetResult {
  */
 export async function createPasswordResetToken(email: string): Promise<PasswordResetResult> {
   try {
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, passwordHash: true, googleId: true },
+    });
 
     if (!user) {
       // Don't reveal if email exists (security)
@@ -249,6 +253,7 @@ export async function validatePasswordResetToken(token: string): Promise<{ valid
       passwordResetToken: hashedToken,
       passwordResetExpires: { gt: new Date() },
     },
+    select: { id: true },
   });
 
   return { valid: !!user, userId: user?.id };
@@ -270,6 +275,7 @@ export async function resetPassword(
         passwordResetToken: hashedToken,
         passwordResetExpires: { gt: new Date() },
       },
+      select: { id: true, email: true },
     });
 
     if (!user) {
@@ -320,50 +326,67 @@ interface LockoutStatus {
 
 /**
  * Check if account is locked
+ * Gracefully degrades if security columns don't exist in production DB
  */
 export async function checkAccountLockout(email: string): Promise<LockoutStatus> {
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: {
-      accountLocked: true,
-      accountLockedUntil: true,
-      loginAttempts: true,
-    },
-  });
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        accountLocked: true,
+        accountLockedUntil: true,
+        loginAttempts: true,
+      },
+    });
 
-  if (!user) {
-    return { isLocked: false, attemptsRemaining: SECURITY_CONFIG.MAX_LOGIN_ATTEMPTS };
-  }
-
-  // Check if lock has expired
-  if (user.accountLocked && user.accountLockedUntil) {
-    if (new Date() > user.accountLockedUntil) {
-      // Unlock the account
-      await prisma.user.update({
-        where: { email },
-        data: {
-          accountLocked: false,
-          accountLockedUntil: null,
-          loginAttempts: 0,
-        },
-      });
+    if (!user) {
       return { isLocked: false, attemptsRemaining: SECURITY_CONFIG.MAX_LOGIN_ATTEMPTS };
     }
-    return {
-      isLocked: true,
-      attemptsRemaining: 0,
-      lockedUntil: user.accountLockedUntil,
-    };
-  }
 
-  return {
-    isLocked: false,
-    attemptsRemaining: SECURITY_CONFIG.MAX_LOGIN_ATTEMPTS - user.loginAttempts,
-  };
+    // Check if lock has expired
+    if (user.accountLocked && user.accountLockedUntil) {
+      if (new Date() > user.accountLockedUntil) {
+        // Unlock the account
+        try {
+          await prisma.user.update({
+            where: { email },
+            data: {
+              accountLocked: false,
+              accountLockedUntil: null,
+              loginAttempts: 0,
+            },
+          });
+        } catch (updateErr) {
+          console.error('[Security] Failed to unlock expired account:', updateErr);
+        }
+        return { isLocked: false, attemptsRemaining: SECURITY_CONFIG.MAX_LOGIN_ATTEMPTS };
+      }
+      return {
+        isLocked: true,
+        attemptsRemaining: 0,
+        lockedUntil: user.accountLockedUntil,
+      };
+    }
+
+    return {
+      isLocked: false,
+      attemptsRemaining: SECURITY_CONFIG.MAX_LOGIN_ATTEMPTS - (user.loginAttempts || 0),
+    };
+  } catch (error: any) {
+    // If security columns don't exist (P2022), degrade gracefully - allow login
+    const code = error?.code || '';
+    if (code === 'P2022' || code === 'P2021') {
+      console.warn('[Security] Lockout columns missing in DB, skipping lockout check. Run ensure_all_user_columns.sql migration.');
+    } else {
+      console.error('[Security] checkAccountLockout error:', error);
+    }
+    return { isLocked: false, attemptsRemaining: SECURITY_CONFIG.MAX_LOGIN_ATTEMPTS };
+  }
 }
 
 /**
  * Record failed login attempt
+ * Uses select clause and try-catch to prevent P2022 crashes in production
  */
 export async function recordFailedLogin(
   email: string,
@@ -371,70 +394,94 @@ export async function recordFailedLogin(
   userAgent?: string,
   reason?: string
 ): Promise<LockoutStatus> {
-  const user = await prisma.user.findUnique({ where: { email } });
-
-  if (!user) {
-    // Log failed attempt even for non-existent user (for security monitoring)
-    await logSecurityEvent({
-      email,
-      eventType: 'LOGIN_FAILED',
-      success: false,
-      ipAddress,
-      userAgent,
-      failureReason: 'User not found',
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        loginAttempts: true,
+      },
     });
-    return { isLocked: false, attemptsRemaining: 0 };
-  }
 
-  const newAttempts = user.loginAttempts + 1;
-  const shouldLock = newAttempts >= SECURITY_CONFIG.MAX_LOGIN_ATTEMPTS;
+    if (!user) {
+      // Log failed attempt even for non-existent user (for security monitoring)
+      await logSecurityEvent({
+        email,
+        eventType: 'LOGIN_FAILED',
+        success: false,
+        ipAddress,
+        userAgent,
+        failureReason: 'User not found',
+      });
+      return { isLocked: false, attemptsRemaining: 0 };
+    }
 
-  const updateData: Record<string, unknown> = {
-    loginAttempts: newAttempts,
-  };
+    const newAttempts = (user.loginAttempts || 0) + 1;
+    const shouldLock = newAttempts >= SECURITY_CONFIG.MAX_LOGIN_ATTEMPTS;
 
-  if (shouldLock) {
-    const lockUntil = new Date(Date.now() + SECURITY_CONFIG.LOCKOUT_DURATION_MINUTES * 60 * 1000);
-    updateData.accountLocked = true;
-    updateData.accountLockedUntil = lockUntil;
+    const updateData: Record<string, unknown> = {
+      loginAttempts: newAttempts,
+    };
 
-    // Log account locked event
+    if (shouldLock) {
+      const lockUntil = new Date(Date.now() + SECURITY_CONFIG.LOCKOUT_DURATION_MINUTES * 60 * 1000);
+      updateData.accountLocked = true;
+      updateData.accountLockedUntil = lockUntil;
+
+      // Log account locked event
+      await logSecurityEvent({
+        userId: user.id,
+        email,
+        eventType: 'ACCOUNT_LOCKED',
+        success: true,
+        ipAddress,
+        userAgent,
+        metadata: { attempts: newAttempts, lockUntil },
+      });
+    }
+
+    try {
+      await prisma.user.update({
+        where: { email },
+        data: updateData,
+      });
+    } catch (updateErr: any) {
+      // If lockout columns don't exist, log but don't crash
+      console.error('[Security] Failed to update login attempts (missing columns?):', updateErr?.code || updateErr);
+    }
+
+    // Log failed login
     await logSecurityEvent({
       userId: user.id,
       email,
-      eventType: 'ACCOUNT_LOCKED',
-      success: true,
+      eventType: shouldLock ? 'LOGIN_BLOCKED' : 'LOGIN_FAILED',
+      success: false,
       ipAddress,
       userAgent,
-      metadata: { attempts: newAttempts, lockUntil },
+      failureReason: reason || 'Invalid credentials',
     });
+
+    return {
+      isLocked: shouldLock,
+      attemptsRemaining: Math.max(0, SECURITY_CONFIG.MAX_LOGIN_ATTEMPTS - newAttempts),
+      lockedUntil: shouldLock ? (updateData.accountLockedUntil as Date) : undefined,
+    };
+  } catch (error: any) {
+    // Degrade gracefully - don't block login because of security feature failure
+    const code = error?.code || '';
+    if (code === 'P2022' || code === 'P2021') {
+      console.warn('[Security] recordFailedLogin columns missing in DB, skipping. Run ensure_all_user_columns.sql migration.');
+    } else {
+      console.error('[Security] recordFailedLogin error:', error);
+    }
+    return { isLocked: false, attemptsRemaining: SECURITY_CONFIG.MAX_LOGIN_ATTEMPTS - 1 };
   }
-
-  await prisma.user.update({
-    where: { email },
-    data: updateData,
-  });
-
-  // Log failed login
-  await logSecurityEvent({
-    userId: user.id,
-    email,
-    eventType: shouldLock ? 'LOGIN_BLOCKED' : 'LOGIN_FAILED',
-    success: false,
-    ipAddress,
-    userAgent,
-    failureReason: reason || 'Invalid credentials',
-  });
-
-  return {
-    isLocked: shouldLock,
-    attemptsRemaining: Math.max(0, SECURITY_CONFIG.MAX_LOGIN_ATTEMPTS - newAttempts),
-    lockedUntil: shouldLock ? (updateData.accountLockedUntil as Date) : undefined,
-  };
 }
 
 /**
  * Reset login attempts on successful login
+ * Wrapped in try-catch to prevent P2022 crashes - login must succeed even if audit fails
  */
 export async function recordSuccessfulLogin(
   userId: string,
@@ -442,17 +489,27 @@ export async function recordSuccessfulLogin(
   ipAddress: string,
   userAgent?: string
 ): Promise<void> {
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      loginAttempts: 0,
-      accountLocked: false,
-      accountLockedUntil: null,
-      lastLoginAt: new Date(),
-      lastLoginIp: ipAddress,
-      lastLoginDevice: userAgent,
-    },
-  });
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        loginAttempts: 0,
+        accountLocked: false,
+        accountLockedUntil: null,
+        lastLoginAt: new Date(),
+        lastLoginIp: ipAddress,
+        lastLoginDevice: userAgent,
+      },
+    });
+  } catch (error: any) {
+    // If security columns don't exist, log but don't crash login
+    const code = error?.code || '';
+    if (code === 'P2022' || code === 'P2021') {
+      console.warn('[Security] recordSuccessfulLogin columns missing in DB. Run ensure_all_user_columns.sql migration.');
+    } else {
+      console.error('[Security] Failed to record successful login:', error);
+    }
+  }
 
   await logSecurityEvent({
     userId,
@@ -835,43 +892,61 @@ export async function getUserSecurityLogs(
 
 /**
  * Check for suspicious activity
+ * Wrapped in try-catch - if LoginAuditLog table doesn't exist, return safe default
  */
 export async function checkSuspiciousActivity(
   userId: string,
   currentIp: string
 ): Promise<{ suspicious: boolean; reason?: string }> {
-  // Get recent login history
-  const recentLogins = await prisma.loginAuditLog.findMany({
-    where: {
-      userId,
-      eventType: 'LOGIN_SUCCESS',
-      createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // Last 24 hours
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 10,
-  });
+  try {
+    // Get recent login history
+    const recentLogins = await prisma.loginAuditLog.findMany({
+      where: {
+        userId,
+        eventType: 'LOGIN_SUCCESS',
+        createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // Last 24 hours
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: {
+        ipAddress: true,
+        eventType: true,
+        createdAt: true,
+      },
+    });
 
-  // Check for multiple IPs in short time
-  const uniqueIps = new Set(recentLogins.map((l) => l.ipAddress));
-  if (uniqueIps.size >= 3 && !uniqueIps.has(currentIp)) {
-    return { suspicious: true, reason: 'Multiple login locations detected' };
+    // Check for multiple IPs in short time
+    const uniqueIps = new Set(recentLogins.map((l) => l.ipAddress));
+    if (uniqueIps.size >= 3 && !uniqueIps.has(currentIp)) {
+      return { suspicious: true, reason: 'Multiple login locations detected' };
+    }
+
+    // Check if this is a new IP
+    const knownIps = await prisma.loginAuditLog.findMany({
+      where: {
+        userId,
+        eventType: 'LOGIN_SUCCESS',
+        ipAddress: currentIp,
+      },
+      take: 1,
+      select: { id: true },
+    });
+
+    if (knownIps.length === 0 && recentLogins.length > 0) {
+      return { suspicious: true, reason: 'New login location' };
+    }
+
+    return { suspicious: false };
+  } catch (error: any) {
+    // If LoginAuditLog table doesn't exist or columns missing, degrade gracefully
+    const code = error?.code || '';
+    if (code === 'P2022' || code === 'P2021') {
+      console.warn('[Security] LoginAuditLog table/columns missing. Run auth_tables.sql migration.');
+    } else {
+      console.error('[Security] checkSuspiciousActivity error:', error);
+    }
+    return { suspicious: false };
   }
-
-  // Check if this is a new IP
-  const knownIps = await prisma.loginAuditLog.findMany({
-    where: {
-      userId,
-      eventType: 'LOGIN_SUCCESS',
-      ipAddress: currentIp,
-    },
-    take: 1,
-  });
-
-  if (knownIps.length === 0 && recentLogins.length > 0) {
-    return { suspicious: true, reason: 'New login location' };
-  }
-
-  return { suspicious: false };
 }
 
 // ===========================================
