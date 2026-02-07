@@ -1017,7 +1017,8 @@ class ConciergeService {
           return await this.handleAnalysis(userId, symbol!, interval || '4h', detectedLanguage, creditBalance);
 
         case 'MLIS_ANALYSIS':
-          return await this.handleMLISAnalysis(userId, symbol!, interval || '4h', detectedLanguage, creditBalance);
+          // MLIS is now integrated as Step 8 of the classic analysis flow
+          return await this.handleAnalysis(userId, symbol!, interval || '4h', detectedLanguage, creditBalance);
 
         case 'ANALYSIS_NEEDS_CLARIFICATION':
           return this.handleAnalysisClarification(symbol!, detectedLanguage, creditBalance);

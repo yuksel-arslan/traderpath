@@ -67,7 +67,6 @@ const AnalysisDialog = dynamic(
 
 // Types
 type AssetType = 'crypto' | 'stocks' | 'bonds' | 'metals' | 'bist';
-type AnalysisMethod = 'classic' | 'mlis_pro';
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
 type VerdictFilter = 'all' | 'go' | 'conditional_go' | 'wait' | 'avoid';
 type OutcomeFilter = 'all' | 'live' | 'tp' | 'sl';
@@ -156,7 +155,7 @@ interface RecentAnalysis {
   score: number | null;
   direction: string | null;
   tradeType?: TradeType;
-  method?: AnalysisMethod;
+  method?: string;
   createdAt: string;
   outcome?: 'correct' | 'incorrect' | 'pending' | null;
   entryPrice?: number;
@@ -235,7 +234,6 @@ export default function AnalyzePage() {
   // Asset Analysis state (Step B)
   const [selectedAsset, setSelectedAsset] = useState<AIRecommendedAsset | null>(null);
   const [timeframe, setTimeframe] = useState<Timeframe>('4h');
-  const [method, setMethod] = useState<AnalysisMethod>('classic');
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
 
   // Recent analyses state
@@ -323,7 +321,7 @@ export default function AnalyzePage() {
               score: a.totalScore !== null && a.totalScore !== undefined ? a.totalScore : null,
               direction: a.direction,
               tradeType,
-              method: (a.method === 'mlis_pro' ? 'mlis_pro' : 'classic') as AnalysisMethod,
+              method: a.method || 'classic',
               createdAt: new Date(a.createdAt).toLocaleDateString('en-US', {
                 day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
               }),
@@ -1077,29 +1075,9 @@ export default function AnalyzePage() {
 
                     <div>
                       <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Method</label>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setMethod('classic')}
-                          className={cn(
-                            "flex-1 py-2 rounded-lg text-sm font-medium transition-all",
-                            method === 'classic'
-                              ? "bg-teal-500 text-white shadow-md"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
-                          )}
-                        >
-                          7-Step Classic
-                        </button>
-                        <button
-                          onClick={() => setMethod('mlis_pro')}
-                          className={cn(
-                            "flex-1 py-2 rounded-lg text-sm font-medium transition-all",
-                            method === 'mlis_pro'
-                              ? "bg-purple-500 text-white shadow-md"
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
-                          )}
-                        >
-                          MLIS Pro
-                        </button>
+                      <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-teal-500/10 border border-teal-500/20">
+                        <span className="text-sm font-medium text-teal-600 dark:text-teal-400">7-Step + ML Confirmation</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-400 font-semibold">Step 8</span>
                       </div>
                     </div>
                   </div>
@@ -1137,7 +1115,7 @@ export default function AnalyzePage() {
                     )}
                   >
                     <Zap className="w-5 h-5" />
-                    Run {method === 'classic' ? '7-Step' : 'MLIS Pro'} Analysis on {selectedAsset.symbol}
+                    Run Analysis on {selectedAsset.symbol}
                     <ArrowRight className="w-5 h-5" />
                   </button>
                 </div>
@@ -1286,11 +1264,6 @@ export default function AnalyzePage() {
                               <span className={cn("px-1 py-0.5 rounded text-[9px] font-bold", verdictConfig.bg, verdictConfig.text)}>
                                 {verdictConfig.label}
                               </span>
-                              {analysis.method === 'mlis_pro' && (
-                                <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center gap-0.5">
-                                  <Layers className="w-2.5 h-2.5" /> MLIS
-                                </span>
-                              )}
                             </div>
                             <p className="text-[10px] text-slate-500">{analysis.createdAt}</p>
                           </div>
@@ -1366,7 +1339,6 @@ export default function AnalyzePage() {
           symbol={selectedAsset.symbol}
           coinName={selectedAsset.name || selectedAsset.symbol}
           timeframe={timeframe}
-          analysisMethod={method}
           capitalFlowContext={capitalFlowContextPayload}
           onClose={() => setShowAnalysisDialog(false)}
           onComplete={() => {
