@@ -545,7 +545,7 @@ function FlowOverviewContent({ data }: { data: CapitalFlowSummary | null }) {
       {/* Market Flows — Compact Grid */}
       <div>
         <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3">Market Flows</h3>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           {markets.map((m) => {
             const phase = safeStr(m.phase, 'mid');
             const pc = getPhaseColor(phase);
