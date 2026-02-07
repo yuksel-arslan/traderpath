@@ -7,8 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io';
 
-// Timeout for backend requests (15 seconds)
-const BACKEND_TIMEOUT_MS = 15_000;
+// Timeout for backend requests (30 seconds - accounts for Neon DB cold start)
+const BACKEND_TIMEOUT_MS = 30_000;
 
 // Transient HTTP status codes that warrant a retry
 const TRANSIENT_STATUS_CODES = [502, 503, 504];
@@ -86,6 +86,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Log the API URL being used for debugging
+    console.log(`[Login] Calling backend at: ${API_URL}/api/auth/login`);
 
     // Call backend API with timeout and retry
     let response: Response | undefined;
