@@ -703,13 +703,17 @@ export default async function authRoutes(app: FastifyInstance) {
           credits: user.creditBalance,
         },
       });
-    } catch (error) {
-      console.error('Get user error:', error);
+    } catch (error: any) {
+      const errorCode = error?.code || 'UNKNOWN';
+      const errorMeta = error?.meta ? JSON.stringify(error.meta) : 'none';
+      console.error(`Get user error [${errorCode}]:`, error?.message || error, `meta: ${errorMeta}`);
       return reply.status(500).send({
         success: false,
         error: {
           code: 'SERVER_ERROR',
-          message: 'An error occurred while fetching user data',
+          message: errorCode === 'P2022'
+            ? `Database schema mismatch: column ${error?.meta?.column || 'unknown'} not found. Please run migrations.`
+            : 'An error occurred while fetching user data',
         },
       });
     }
