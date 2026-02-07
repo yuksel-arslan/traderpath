@@ -40,7 +40,7 @@ const PriceTicker = dynamic(
 
 // Direct navigation items (no dropdown) - Top-Down Capital Flow
 const directNav = [
-  { name: 'Explore', href: '/intelligence', icon: Compass },
+  { name: 'Explore', href: '/explore', icon: Compass },
   { name: 'Analyze', href: '/analyze', icon: TrendingUp },
   { name: 'Signals', href: '/signals', icon: Activity },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
