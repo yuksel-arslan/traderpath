@@ -16,15 +16,15 @@ export function LevelProgress() {
           <Star className="w-6 h-6 text-yellow-500" />
         </div>
         <div>
-          <h3 className="font-semibold">Level {level}</h3>
+          <h3 className="font-semibold">Tier {level}</h3>
           <p className="text-sm text-muted-foreground">Trader</p>
         </div>
       </div>
 
       <div className="mb-2">
         <div className="flex justify-between text-sm mb-1">
-          <span>{xp.toLocaleString()} XP</span>
-          <span className="text-muted-foreground">{xpForNext.toLocaleString()} XP</span>
+          <span>{xp.toLocaleString()} AP</span>
+          <span className="text-muted-foreground">{xpForNext.toLocaleString()} AP</span>
         </div>
         <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
           <div
@@ -35,7 +35,7 @@ export function LevelProgress() {
       </div>
 
       <div className="text-sm text-muted-foreground">
-        {xpForNext - xp} XP to level {level + 1}
+        {xpForNext - xp} AP to Tier {level + 1}
       </div>
     </div>
   );

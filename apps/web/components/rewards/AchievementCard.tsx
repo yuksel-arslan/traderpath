@@ -181,7 +181,7 @@ export function AchievementCard({ achievement, className, compact = false }: Ach
         {achievement.xpReward > 0 && (
           <div className="flex items-center gap-1 text-sm">
             <Star className="w-4 h-4 text-purple-500" />
-            <span className="text-muted-foreground">+{achievement.xpReward} XP</span>
+            <span className="text-muted-foreground">+{achievement.xpReward} AP</span>
           </div>
         )}
         {achievement.creditReward > 0 && (

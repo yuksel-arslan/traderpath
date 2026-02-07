@@ -1,5 +1,5 @@
 // ===========================================
-// Rewards Routes
+// Rewards Routes - Trader Tier & Analysis Points
 // ===========================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
@@ -7,14 +7,94 @@ import { z } from 'zod';
 import { prisma } from '../../core/database';
 import { authenticate } from '../../core/auth/middleware';
 import { creditService } from '../credits/credit.service';
+import {
+  TRADER_TIERS,
+  AP_EARNING_RULES,
+  getTierForAP,
+  getNextTier,
+  getTierProgress,
+  getAPForAction,
+} from './tier-benefits';
 
 export default async function rewardRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
 
-  /**
-   * GET /api/rewards/daily
-   * Get daily rewards status
-   */
+  // ===========================================
+  // GET /api/rewards/tier-info
+  // Get current trader tier, AP, and progression
+  // ===========================================
+  app.get('/tier-info', async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = request.user!.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        xp: true,          // Analysis Points (DB column = xp)
+        level: true,        // Tier number (DB column = level)
+        streakDays: true,
+        name: true,
+        referralCode: true,
+      },
+    });
+
+    if (!user) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: 'USER_NOT_FOUND', message: 'User not found' },
+      });
+    }
+
+    const ap = user.xp;
+    const currentTier = getTierForAP(ap);
+    const nextTier = getNextTier(ap);
+    const progress = getTierProgress(ap);
+
+    // Sync tier number if out of date
+    if (user.level !== currentTier.tier) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { level: currentTier.tier },
+      });
+    }
+
+    // Count completed analyses for stats
+    const analysisCount = await prisma.analysis.count({
+      where: { userId },
+    });
+
+    return reply.send({
+      success: true,
+      data: {
+        name: user.name,
+        analysisPoints: ap,
+        currentTier: {
+          tier: currentTier.tier,
+          name: currentTier.name,
+          color: currentTier.color,
+          gradient: currentTier.gradient,
+          benefits: currentTier.benefits,
+        },
+        nextTier: nextTier ? {
+          tier: nextTier.tier,
+          name: nextTier.name,
+          apRequired: nextTier.apRequired,
+          apRemaining: nextTier.apRequired - ap,
+          benefits: nextTier.benefits,
+        } : null,
+        progress,
+        streakDays: user.streakDays,
+        referralCode: user.referralCode,
+        totalAnalyses: analysisCount,
+        allTiers: TRADER_TIERS,
+        earningRules: AP_EARNING_RULES,
+      },
+    });
+  });
+
+  // ===========================================
+  // GET /api/rewards/daily
+  // Get daily rewards status
+  // ===========================================
   app.get('/daily', async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.user!.id;
     const today = new Date().toISOString().split('T')[0];
@@ -84,10 +164,10 @@ export default async function rewardRoutes(app: FastifyInstance) {
     });
   });
 
-  /**
-   * POST /api/rewards/claim-login
-   * Claim daily login reward
-   */
+  // ===========================================
+  // POST /api/rewards/claim-login
+  // Claim daily login reward (+5 AP + credits)
+  // ===========================================
   app.post('/claim-login', async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.user!.id;
     const today = new Date().toISOString().split('T')[0];
@@ -112,7 +192,7 @@ export default async function rewardRoutes(app: FastifyInstance) {
     // Update streak
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { streakDays: true, streakLastDate: true },
+      select: { streakDays: true, streakLastDate: true, xp: true, level: true },
     });
 
     const yesterday = new Date();
@@ -131,6 +211,16 @@ export default async function rewardRoutes(app: FastifyInstance) {
       credits += streakBonus;
     }
 
+    // Analysis Points for daily login
+    const loginAP = getAPForAction('daily_login');
+
+    // Calculate new AP and check for tier advancement
+    const currentAP = user?.xp || 0;
+    const newAP = currentAP + loginAP;
+    const oldTier = getTierForAP(currentAP);
+    const newTier = getTierForAP(newAP);
+    const tierAdvanced = newTier.tier > oldTier.tier;
+
     // Update user and daily reward
     await prisma.$transaction([
       prisma.user.update({
@@ -138,6 +228,8 @@ export default async function rewardRoutes(app: FastifyInstance) {
         data: {
           streakDays: newStreak,
           streakLastDate: new Date(today),
+          xp: { increment: loginAP },
+          level: newTier.tier,
         },
       }),
       prisma.dailyReward.upsert({
@@ -176,30 +268,27 @@ export default async function rewardRoutes(app: FastifyInstance) {
       console.error('[Achievement] Failed to track streak milestone:', achErr);
     }
 
-    // XP Reward: Daily login
-    try {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { xp: { increment: 5 } },
-      });
-    } catch (xpErr) {
-      console.error('[XP] Failed to award login XP:', xpErr);
-    }
-
     return reply.send({
       success: true,
       data: {
         credits,
+        analysisPoints: loginAP,
+        totalAP: newAP,
         streakDays: newStreak,
         streakBonus: [7, 14, 21, 28, 30].includes(newStreak) ? streakBonus : undefined,
+        tierAdvanced,
+        newTier: tierAdvanced ? {
+          tier: newTier.tier,
+          name: newTier.name,
+        } : undefined,
       },
     });
   });
 
-  /**
-   * POST /api/rewards/spin
-   * Spin the daily wheel
-   */
+  // ===========================================
+  // POST /api/rewards/spin
+  // Spin the daily wheel
+  // ===========================================
   app.post('/spin', async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.user!.id;
     const today = new Date().toISOString().split('T')[0];
@@ -254,10 +343,10 @@ export default async function rewardRoutes(app: FastifyInstance) {
     });
   });
 
-  /**
-   * POST /api/rewards/quiz
-   * Answer daily quiz
-   */
+  // ===========================================
+  // POST /api/rewards/quiz
+  // Answer daily quiz (+15 AP on correct)
+  // ===========================================
   const quizSchema = z.object({
     answerIndex: z.number().min(0).max(3),
   });
@@ -322,9 +411,27 @@ export default async function rewardRoutes(app: FastifyInstance) {
       },
     });
 
-    // Add credits if correct
+    // Add credits and AP if correct
+    let apEarned = 0;
     if (isCorrect) {
       await creditService.add(userId, credits, 'REWARD', 'daily_quiz');
+
+      // Award Analysis Points for correct quiz
+      apEarned = getAPForAction('quiz_correct');
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { xp: true },
+      });
+      const newAP = (user?.xp || 0) + apEarned;
+      const newTier = getTierForAP(newAP);
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          xp: { increment: apEarned },
+          level: newTier.tier,
+        },
+      });
 
       // Achievement tracking: Quiz milestones
       try {
@@ -335,16 +442,6 @@ export default async function rewardRoutes(app: FastifyInstance) {
       } catch (achErr) {
         console.error('[Achievement] Failed to track quiz milestone:', achErr);
       }
-
-      // XP Reward: Quiz correct answer
-      try {
-        await prisma.user.update({
-          where: { id: userId },
-          data: { xp: { increment: 15 } },
-        });
-      } catch (xpErr) {
-        console.error('[XP] Failed to award quiz XP:', xpErr);
-      }
     }
 
     return reply.send({
@@ -352,15 +449,16 @@ export default async function rewardRoutes(app: FastifyInstance) {
       data: {
         correct: isCorrect,
         credits,
+        analysisPoints: apEarned,
         explanation: quiz.explanation,
       },
     });
   });
 
-  /**
-   * GET /api/rewards/achievements
-   * Get all achievements and user progress
-   */
+  // ===========================================
+  // GET /api/rewards/achievements
+  // Get all achievements and user progress
+  // ===========================================
   app.get('/achievements', async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.user!.id;
 
@@ -387,7 +485,10 @@ export default async function rewardRoutes(app: FastifyInstance) {
   });
 }
 
+// ===========================================
 // Helper functions
+// ===========================================
+
 function calculateStreakBonus(days: number): number {
   if (days >= 30) return 100;
   if (days >= 28) return 50;

@@ -75,7 +75,8 @@ const dropdownNav = [
 
 // End navigation items (after dropdowns)
 const endNav = [
-  { name: 'Rewards', href: '/rewards', icon: Gift },
+  { name: 'Trader Program', href: '/rewards', icon: Gift },
+  { name: 'Profile', href: '/profile', icon: User },
 ];
 
 // User menu items (Settings, Admin, Logout)

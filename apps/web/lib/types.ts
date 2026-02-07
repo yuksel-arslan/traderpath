@@ -75,7 +75,52 @@ export const CREDIT_COSTS = {
   TOP_COINS_SCAN: 300,
 } as const;
 
-// ===== REWARDS TYPES =====
+// ===== TRADER TIER TYPES =====
+export interface TraderTierThreshold {
+  tier: number;
+  apRequired: number;
+  name: string;
+  benefits: string[];
+  color: string;
+  gradient: string;
+}
+
+export const TRADER_TIERS: TraderTierThreshold[] = [
+  {
+    tier: 1,
+    apRequired: 0,
+    name: 'Junior Trader',
+    benefits: ['Basic analysis tools', 'Standard Capital Flow access (L1-L2)', 'Community support'],
+    color: 'gray',
+    gradient: 'from-slate-400 to-slate-500',
+  },
+  {
+    tier: 2,
+    apRequired: 1000,
+    name: 'Trader',
+    benefits: ['Morning Briefing reports', 'Smart Alerts (L1-L4 changes)', 'Priority email support', 'Extended analysis history (90 days)'],
+    color: 'blue',
+    gradient: 'from-blue-400 to-blue-600',
+  },
+  {
+    tier: 3,
+    apRequired: 5000,
+    name: 'Senior Trader',
+    benefits: ['Priority support', 'Advanced indicator overlays', 'Custom alert thresholds', 'Extended analysis history (180 days)', 'Monthly performance digest'],
+    color: 'teal',
+    gradient: 'from-teal-400 to-emerald-600',
+  },
+  {
+    tier: 4,
+    apRequired: 20000,
+    name: 'Master Trader',
+    benefits: ['Dedicated analyst access', 'Custom report templates', 'API access for personal tools', 'Unlimited analysis history', 'Quarterly strategy review', 'Early access to new features'],
+    color: 'amber',
+    gradient: 'from-amber-400 to-yellow-600',
+  },
+];
+
+// Legacy alias for backwards compatibility (used in some pages)
 export interface LevelThreshold {
   level: number;
   xp: number;
@@ -88,13 +133,37 @@ export interface LevelThreshold {
   unlockMessage?: string;
 }
 
-export const LEVEL_THRESHOLDS: LevelThreshold[] = [
-  { level: 1, xp: 0, title: 'Beginner', benefits: ['Access to basic features'], dailyBonus: 0, discount: 0, color: 'gray', badge: '🌱' },
-  { level: 2, xp: 100, title: 'Trader', benefits: ['5% analysis discount'], dailyBonus: 5, discount: 5, color: 'blue', badge: '📊' },
-  { level: 3, xp: 300, title: 'Pro Trader', benefits: ['10% discount', 'Priority support'], dailyBonus: 10, discount: 10, color: 'green', badge: '📈' },
-  { level: 4, xp: 600, title: 'Expert', benefits: ['15% discount', '1 free analysis/day'], dailyBonus: 15, discount: 15, color: 'purple', badge: '⭐' },
-  { level: 5, xp: 1000, title: 'Master', benefits: ['20% discount', '2 free analyses/day'], dailyBonus: 25, discount: 20, color: 'orange', badge: '👑' },
-  { level: 6, xp: 1500, title: 'Legend', benefits: ['25% discount', '3 free analyses/day', 'Custom badge'], dailyBonus: 50, discount: 25, color: 'gold', badge: '🏆' },
+export const LEVEL_THRESHOLDS: LevelThreshold[] = TRADER_TIERS.map(t => ({
+  level: t.tier,
+  xp: t.apRequired,
+  title: t.name,
+  benefits: t.benefits,
+  dailyBonus: 0,
+  discount: 0,
+  color: t.color,
+  badge: '',
+}));
+
+// ===== AP EARNING RULES (Frontend mirror) =====
+export interface APEarningRule {
+  action: string;
+  points: number;
+  description: string;
+  category: 'analysis' | 'engagement' | 'social';
+}
+
+export const AP_EARNING_RULES: APEarningRule[] = [
+  { action: 'step_1_complete', points: 10, description: 'Complete Market Pulse (Step 1)', category: 'analysis' },
+  { action: 'step_2_complete', points: 20, description: 'Complete Asset Scanner (Step 2)', category: 'analysis' },
+  { action: 'step_3_complete', points: 20, description: 'Complete Safety Check (Step 3)', category: 'analysis' },
+  { action: 'step_4_complete', points: 20, description: 'Complete Timing Analysis (Step 4)', category: 'analysis' },
+  { action: 'step_5_complete', points: 20, description: 'Complete Trade Plan (Step 5)', category: 'analysis' },
+  { action: 'step_6_complete', points: 20, description: 'Complete Trap Check (Step 6)', category: 'analysis' },
+  { action: 'step_7_complete', points: 50, description: 'Complete Final Verdict (Step 7)', category: 'analysis' },
+  { action: 'trade_plan_applied', points: 100, description: 'Apply trade plan (external tracker)', category: 'analysis' },
+  { action: 'daily_login', points: 5, description: 'Daily platform login', category: 'engagement' },
+  { action: 'quiz_correct', points: 15, description: 'Correct quiz answer', category: 'engagement' },
+  { action: 'referral', points: 200, description: 'Refer a new trader', category: 'social' },
 ];
 
 export interface StreakMilestone {
@@ -134,7 +203,7 @@ export interface Achievement {
   title: string;
   description: string;
   icon: string;
-  xpReward: number;
+  xpReward: number;       // DB field name (internally = AP)
   creditReward: number;
   category: 'analysis' | 'streak' | 'social' | 'milestone';
   tier: 'bronze' | 'silver' | 'gold' | 'platinum';

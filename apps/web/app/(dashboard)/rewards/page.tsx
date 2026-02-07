@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   Trophy,
   Flame,
@@ -18,16 +19,19 @@ import {
   Loader2,
   Play,
   HelpCircle,
-  Copy
+  Copy,
+  TrendingUp,
+  BarChart3,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCreditNotification } from '../../../contexts/CreditNotificationContext';
 import {
-  LEVEL_THRESHOLDS,
+  TRADER_TIERS,
   STREAK_MILESTONES,
   DAILY_REWARD_SCHEDULE,
   DEFAULT_ACHIEVEMENTS,
-  QUIZ_POOL
+  QUIZ_POOL,
+  AP_EARNING_RULES,
 } from '@/lib/types';
 import {
   useDailyRewards,
@@ -35,7 +39,7 @@ import {
   useSpin,
   useAnswerQuiz,
   useAchievements,
-  useUserLevel,
+  useTierInfo,
 } from '../../../hooks/useRewardsAPI';
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -59,23 +63,30 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   globe: Star,
 };
 
+const TIER_COLORS: Record<number, { text: string; bg: string; border: string }> = {
+  1: { text: 'text-slate-500', bg: 'bg-slate-500/10', border: 'border-slate-500/30' },
+  2: { text: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
+  3: { text: 'text-teal-500', bg: 'bg-teal-500/10', border: 'border-teal-500/30' },
+  4: { text: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30' },
+};
+
 export default function RewardsPage() {
-  const [activeTab, setActiveTab] = useState<'daily' | 'achievements' | 'levels'>('daily');
+  const [activeTab, setActiveTab] = useState<'daily' | 'achievements' | 'tiers'>('daily');
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedQuizAnswer, setSelectedQuizAnswer] = useState<number | null>(null);
   const [quizResult, setQuizResult] = useState<{ correct: boolean; explanation: string } | null>(null);
   const [currentQuiz] = useState(QUIZ_POOL[Math.floor(Math.random() * QUIZ_POOL.length)]);
   const [copied, setCopied] = useState(false);
 
-  const { showCelebration, notifyCreditAddition } = useCreditNotification();
+  const { showCelebration } = useCreditNotification();
 
   // Fetch real data from APIs
   const { data: dailyRewards, loading: dailyLoading, refetch: refetchDaily } = useDailyRewards();
-  const { data: userData, loading: userLoading } = useUserLevel();
+  const { data: tierInfo, loading: tierLoading } = useTierInfo();
   const { data: achievementsData, loading: achievementsLoading } = useAchievements();
-  const { claim: claimLogin, loading: claimingLogin } = useClaimLogin();
-  const { spin: spinWheel, loading: spinning } = useSpin();
-  const { answer: answerQuiz, loading: answeringQuiz } = useAnswerQuiz();
+  const { claim: claimLogin } = useClaimLogin();
+  const { spin: spinWheel } = useSpin();
+  const { answer: answerQuiz } = useAnswerQuiz();
 
   // Use real data or fallback to empty state
   const dailyState = dailyRewards || {
@@ -85,12 +96,10 @@ export default function RewardsPage() {
     streak: { days: 0, nextBonus: 0 },
   };
 
-  const userXp = userData?.xp || 0;
-  const currentLevelInfo = LEVEL_THRESHOLDS.filter(l => l.xp <= userXp).pop() || LEVEL_THRESHOLDS[0];
-  const nextLevelInfo = LEVEL_THRESHOLDS.find(l => l.xp > userXp);
-  const xpProgress = nextLevelInfo
-    ? ((userXp - currentLevelInfo.xp) / (nextLevelInfo.xp - currentLevelInfo.xp)) * 100
-    : 100;
+  const currentAP = tierInfo?.analysisPoints || 0;
+  const currentTier = tierInfo?.currentTier || { tier: 1, name: 'Junior Trader', color: 'gray', gradient: 'from-slate-400 to-slate-500', benefits: [] };
+  const nextTier = tierInfo?.nextTier || null;
+  const progress = tierInfo?.progress || 0;
 
   const handleClaimLogin = async () => {
     try {
@@ -99,52 +108,49 @@ export default function RewardsPage() {
       const totalCredits = result.credits;
       const isStreakMilestone = [7, 14, 21, 28, 30].includes(newStreakDays);
 
-      // Refetch daily rewards to update UI
       refetchDaily();
 
-      // Show celebration for daily login
-      showCelebration({
-        credits: totalCredits,
-        reason: isStreakMilestone ? 'streak_bonus' : 'daily_login',
-        streakDays: newStreakDays,
-        title: isStreakMilestone ? `${newStreakDays}-Day Streak!` : 'Daily Login Bonus!',
-        subtitle: isStreakMilestone
-          ? `Amazing! You've earned a ${newStreakDays}-day streak bonus!`
-          : 'Welcome back! Here\'s your daily reward.',
-      });
+      if (result.tierAdvanced) {
+        showCelebration({
+          credits: totalCredits,
+          reason: 'level_up',
+          title: `Advanced to ${result.newTier.name}`,
+          subtitle: `You've earned enough Analysis Points to reach the next tier.`,
+        });
+      } else {
+        showCelebration({
+          credits: totalCredits,
+          reason: isStreakMilestone ? 'streak_bonus' : 'daily_login',
+          streakDays: newStreakDays,
+          title: isStreakMilestone ? `${newStreakDays}-Day Streak!` : 'Daily Login Bonus!',
+          subtitle: isStreakMilestone
+            ? `Impressive consistency! ${newStreakDays}-day streak bonus earned.`
+            : 'Welcome back. Daily reward claimed.',
+        });
+      }
     } catch (error: any) {
-      console.error('Failed to claim login:', error);
       alert(error.message || 'Failed to claim daily login reward');
     }
   };
 
   const handleSpin = async () => {
     if (dailyState.spin.used) return;
-
     setIsSpinning(true);
-
     try {
-      // Show animation for 2 seconds
       await new Promise(resolve => setTimeout(resolve, 2000));
-
       const result = await spinWheel();
       const credits = result.result;
-
-      // Refetch daily rewards to update UI
       refetchDaily();
-
-      // Show celebration for spin (jackpot for 10 or more)
       const isJackpot = credits >= 10;
       showCelebration({
         credits,
         reason: isJackpot ? 'spin_jackpot' : 'daily_login',
         title: isJackpot ? 'JACKPOT!' : `You Won ${credits} Credits!`,
         subtitle: isJackpot
-          ? 'Incredible! You hit the jackpot on the lucky spin!'
-          : 'Nice spin! Credits have been added to your account.',
+          ? 'Outstanding! You hit the jackpot!'
+          : 'Credits have been added to your account.',
       });
     } catch (error: any) {
-      console.error('Failed to spin:', error);
       alert(error.message || 'Failed to spin the wheel');
     } finally {
       setIsSpinning(false);
@@ -153,40 +159,32 @@ export default function RewardsPage() {
 
   const handleQuizAnswer = async (answerIndex: number) => {
     if (dailyState.quiz.completed) return;
-
     setSelectedQuizAnswer(answerIndex);
-
     try {
       const result = await answerQuiz(answerIndex);
       const isCorrect = result.correct;
-
       setQuizResult({
         correct: isCorrect,
         explanation: result.explanation || currentQuiz.explanation,
       });
-
-      // Refetch daily rewards to update UI
       refetchDaily();
-
-      // Show celebration for correct quiz answer
       if (isCorrect) {
         setTimeout(() => {
           showCelebration({
             credits: result.credits || 5,
             reason: 'quiz_correct',
             title: 'Correct Answer!',
-            subtitle: 'Great job! You nailed the daily quiz!',
+            subtitle: `+${result.analysisPoints || 15} AP earned for your knowledge.`,
           });
         }, 500);
       }
     } catch (error: any) {
-      console.error('Failed to answer quiz:', error);
       alert(error.message || 'Failed to submit quiz answer');
     }
   };
 
   const handleCopyReferral = () => {
-    const referralCode = userData?.referralCode || '';
+    const referralCode = tierInfo?.referralCode || '';
     if (referralCode) {
       navigator.clipboard.writeText(referralCode);
       setCopied(true);
@@ -198,87 +196,87 @@ export default function RewardsPage() {
     return ICON_MAP[iconName] || Star;
   };
 
-  // Get unlocked achievements from real data
   const unlockedCodes = achievementsData
     ? achievementsData.filter(a => a.isUnlocked).map(a => a.id)
     : [];
 
-  // Show loading state while data is being fetched
-  if (dailyLoading || userLoading || achievementsLoading) {
+  if (dailyLoading || tierLoading || achievementsLoading) {
     return (
       <div className="w-full px-4 md:px-8 lg:px-12 py-6 flex items-center justify-center min-h-screen">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-teal-500 mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Loading your rewards...</p>
+          <p className="text-muted-foreground">Loading your trader program...</p>
         </div>
       </div>
     );
   }
 
+  const tc = TIER_COLORS[currentTier.tier] || TIER_COLORS[1];
+
   return (
     <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-6">
-      {/* ===== Compact Header ===== */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border border-gray-200 dark:border-slate-700">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent" />
-
+      {/* ===== Trader Profile Header ===== */}
+      <div className={`relative overflow-hidden rounded-2xl border ${tc.border} ${tc.bg}`}>
         <div className="relative z-10 p-5">
-          {/* Header Row */}
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
-              <Trophy className="w-5 h-5 text-white" />
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl bg-gradient-to-br ${currentTier.gradient} text-white shadow-lg`}>
+              {currentTier.tier}
             </div>
             <div>
-              <h1 className="text-xl font-bold gradient-text-logo-animate">Rewards & Achievements</h1>
-              <p className="text-xs text-gray-500 dark:text-slate-400">Track your progress and earn rewards</p>
+              <h1 className={`text-xl font-bold ${tc.text}`}>{currentTier.name}</h1>
+              <p className="text-xs text-muted-foreground">Trader Program</p>
             </div>
+            <Link
+              href="/profile"
+              className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
+            >
+              View Profile <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
 
           {/* Stats Row */}
           <div className="grid grid-cols-3 gap-3">
-            {/* Level */}
-            <div className="bg-purple-50 dark:bg-purple-500/10 rounded-xl p-3 border border-purple-200/50 dark:border-purple-500/20">
+            <div className="bg-background/50 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
-                <Crown className="w-4 h-4 text-purple-500" />
-                <span className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Level</span>
+                <TrendingUp className="w-4 h-4 text-teal-500" />
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Analysis Points</span>
               </div>
-              <div className="text-xl font-bold text-purple-600 dark:text-purple-400">{currentLevelInfo.level}</div>
-              {nextLevelInfo && (
+              <div className="text-xl font-bold">{currentAP.toLocaleString()}</div>
+              {nextTier && (
                 <>
-                  <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-2">
+                  <div className="w-full h-1.5 bg-muted/50 rounded-full overflow-hidden mt-2">
                     <motion.div
-                      className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"
+                      className={`h-full rounded-full ${tc.text === 'text-slate-500' ? 'bg-slate-500' : tc.text === 'text-blue-500' ? 'bg-blue-500' : tc.text === 'text-teal-500' ? 'bg-teal-500' : 'bg-amber-500'}`}
                       initial={{ width: 0 }}
-                      animate={{ width: `${xpProgress}%` }}
+                      animate={{ width: `${progress}%` }}
                       transition={{ duration: 0.5 }}
                     />
                   </div>
-                  <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-1">
-                    {userXp.toLocaleString()}/{nextLevelInfo.xp.toLocaleString()} XP
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {currentAP.toLocaleString()}/{nextTier.apRequired.toLocaleString()} AP
                   </p>
                 </>
               )}
             </div>
 
-            {/* Streak */}
-            <div className="bg-orange-50 dark:bg-orange-500/10 rounded-xl p-3 border border-orange-200/50 dark:border-orange-500/20">
+            <div className="bg-background/50 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
                 <Flame className="w-4 h-4 text-orange-500" />
-                <span className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Streak</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Streak</span>
               </div>
-              <div className="text-xl font-bold text-orange-600 dark:text-orange-400">{dailyState.streak.days} Days</div>
-              <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-1">
-                Next: 14 days (+30)
+              <div className="text-xl font-bold">{dailyState.streak.days} Days</div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Keep it going
               </p>
             </div>
 
-            {/* Achievements */}
-            <div className="bg-amber-50 dark:bg-amber-500/10 rounded-xl p-3 border border-amber-200/50 dark:border-amber-500/20">
+            <div className="bg-background/50 rounded-xl p-3">
               <div className="flex items-center gap-2 mb-2">
                 <Award className="w-4 h-4 text-amber-500" />
-                <span className="text-[10px] text-gray-500 dark:text-slate-400 uppercase tracking-wider">Achievements</span>
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Achievements</span>
               </div>
-              <div className="text-xl font-bold text-amber-600 dark:text-amber-400">{unlockedCodes.length}/{DEFAULT_ACHIEVEMENTS.length}</div>
-              <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-1">
+              <div className="text-xl font-bold">{unlockedCodes.length}/{DEFAULT_ACHIEVEMENTS.length}</div>
+              <p className="text-[10px] text-muted-foreground mt-1">
                 {DEFAULT_ACHIEVEMENTS.length - unlockedCodes.length} to unlock
               </p>
             </div>
@@ -291,7 +289,7 @@ export default function RewardsPage() {
         {[
           { id: 'daily', label: 'Daily Rewards', icon: Gift },
           { id: 'achievements', label: 'Achievements', icon: Trophy },
-          { id: 'levels', label: 'Levels', icon: Crown },
+          { id: 'tiers', label: 'Trader Tiers', icon: TrendingUp },
         ].map((tab) => {
           const Icon = tab.icon;
           return (
@@ -330,7 +328,7 @@ export default function RewardsPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold">Daily Login</h3>
-                      <p className="text-sm text-muted-foreground">Claim your daily credits</p>
+                      <p className="text-sm text-muted-foreground">+3 credits & +5 AP</p>
                     </div>
                   </div>
                   <span className="text-lg font-bold text-green-500">+3</span>
@@ -347,7 +345,7 @@ export default function RewardsPage() {
                   {dailyState.login.claimed ? (
                     <>
                       <Check className="w-5 h-5 inline mr-2" />
-                      Claimed!
+                      Claimed
                     </>
                   ) : (
                     'Claim Reward'
@@ -363,7 +361,7 @@ export default function RewardsPage() {
                       <Star className="w-6 h-6 text-purple-500" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">Lucky Spin</h3>
+                      <h3 className="font-semibold">Daily Spin</h3>
                       <p className="text-sm text-muted-foreground">Win 1-10 credits</p>
                     </div>
                   </div>
@@ -381,11 +379,11 @@ export default function RewardsPage() {
                   {isSpinning ? (
                     <Loader2 className="w-5 h-5 animate-spin mx-auto" />
                   ) : dailyState.spin.used ? (
-                    <>Won +{dailyState.spin.result} credits!</>
+                    <>Won +{dailyState.spin.result} credits</>
                   ) : (
                     <>
                       <Play className="w-5 h-5 inline mr-2" />
-                      Spin the Wheel
+                      Spin
                     </>
                   )}
                 </button>
@@ -400,7 +398,7 @@ export default function RewardsPage() {
                   <div>
                     <h3 className="font-semibold">Daily Quiz</h3>
                     <p className="text-sm text-muted-foreground">
-                      Answer correctly to earn +5 credits
+                      +5 credits & +15 AP for correct answer
                     </p>
                   </div>
                 </div>
@@ -410,7 +408,7 @@ export default function RewardsPage() {
                     quizResult.correct ? 'bg-green-500/10' : 'bg-red-500/10'
                   }`}>
                     <p className="font-medium mb-2">
-                      {quizResult.correct ? '✅ Correct! +5 credits' : '❌ Incorrect'}
+                      {quizResult.correct ? 'Correct! +5 credits, +15 AP' : 'Incorrect. Try again tomorrow.'}
                     </p>
                     <p className="text-sm text-muted-foreground">{quizResult.explanation}</p>
                   </div>
@@ -441,7 +439,7 @@ export default function RewardsPage() {
 
               {/* Weekly Progress */}
               <div className="bg-card border rounded-lg p-4 sm:p-6 sm:col-span-2">
-                <h3 className="font-semibold mb-4 gradient-text-logo-animate">Weekly Login Rewards</h3>
+                <h3 className="font-semibold mb-4">Weekly Login Rewards</h3>
                 <div className="grid grid-cols-7 gap-1 sm:gap-2">
                   {DAILY_REWARD_SCHEDULE.map((reward, index) => {
                     const streakDay = dailyState.streak.days % 7;
@@ -522,8 +520,8 @@ export default function RewardsPage() {
                       <div className="flex items-center justify-between mb-1">
                         <h3 className="font-semibold">{achievement.name}</h3>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-amber-500 font-medium">
-                            +{achievement.xpReward} XP
+                          <span className="text-sm text-teal-500 font-medium">
+                            +{achievement.xpReward} AP
                           </span>
                           <span className="text-sm text-green-500 font-medium">
                             +{achievement.creditReward}
@@ -551,7 +549,7 @@ export default function RewardsPage() {
                       {isUnlocked && (
                         <div className="flex items-center gap-1 text-green-500 text-sm">
                           <Check className="w-4 h-4" />
-                          Unlocked!
+                          Unlocked
                         </div>
                       )}
                     </div>
@@ -562,73 +560,86 @@ export default function RewardsPage() {
           </motion.div>
         )}
 
-        {activeTab === 'levels' && (
+        {activeTab === 'tiers' && (
           <motion.div
-            key="levels"
+            key="tiers"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="space-y-2"
+            className="space-y-3"
           >
-            {LEVEL_THRESHOLDS.map((level) => {
-              const isCurrentLevel = level.level === currentLevelInfo.level;
-              const isUnlocked = userXp >= level.xp;
+            {TRADER_TIERS.map((tier) => {
+              const isCurrent = tier.tier === currentTier.tier;
+              const isUnlocked = currentAP >= tier.apRequired;
+              const tierColors = TIER_COLORS[tier.tier] || TIER_COLORS[1];
 
               return (
                 <div
-                  key={level.level}
-                  className={`flex items-center gap-4 p-4 rounded-lg border ${
-                    isCurrentLevel
-                      ? 'bg-primary/5 border-primary'
+                  key={tier.tier}
+                  className={`flex items-start gap-4 p-4 rounded-xl border ${
+                    isCurrent
+                      ? `${tierColors.border} ${tierColors.bg}`
                       : isUnlocked
                       ? 'bg-green-500/5 border-green-500/20'
-                      : 'bg-card'
+                      : 'bg-card border-border/50'
                   }`}
                 >
                   <div
-                    className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0 ${
                       isUnlocked
-                        ? 'bg-gradient-to-br from-purple-500 to-blue-500 text-white'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
+                        ? `bg-gradient-to-br ${tier.gradient} text-white`
+                        : 'bg-muted text-muted-foreground'
                     }`}
                   >
-                    {level.level}
+                    {tier.tier}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">Level {level.level}</h3>
-                      {isCurrentLevel && (
+                      <h3 className="font-semibold">{tier.name}</h3>
+                      {isCurrent && (
                         <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
                           CURRENT
                         </span>
                       )}
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      <span className="text-xs bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-full">
-                        {level.xp.toLocaleString()} XP
-                      </span>
-                      {level.dailyBonus > 0 && (
-                        <span className="text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full">
-                          +{level.dailyBonus} daily
-                        </span>
-                      )}
-                      {level.discount > 0 && (
-                        <span className="text-xs bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full">
-                          {level.discount}% off
-                        </span>
-                      )}
-                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {tier.apRequired === 0 ? 'Starting tier' : `${tier.apRequired.toLocaleString()} AP required`}
+                    </p>
+                    <ul className="space-y-1">
+                      {tier.benefits.map((benefit, i) => (
+                        <li key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Check className={`w-3 h-3 flex-shrink-0 ${isUnlocked ? 'text-green-500' : 'text-muted-foreground/50'}`} />
+                          <span className={isUnlocked ? '' : 'opacity-60'}>{benefit}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0">
                     {isUnlocked ? (
                       <Check className="w-6 h-6 text-green-500" />
                     ) : (
-                      <Lock className="w-6 h-6 text-gray-400" />
+                      <Lock className="w-6 h-6 text-muted-foreground" />
                     )}
                   </div>
                 </div>
               );
             })}
+
+            {/* How to Earn AP */}
+            <div className="mt-6 p-5 rounded-xl border border-teal-500/20 bg-teal-500/5">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-teal-500" />
+                How to Earn Analysis Points
+              </h3>
+              <div className="space-y-2">
+                {AP_EARNING_RULES.map((rule) => (
+                  <div key={rule.action} className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{rule.description}</span>
+                    <span className="font-bold text-teal-500">+{rule.points} AP</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -637,7 +648,7 @@ export default function RewardsPage() {
       <div className="mt-8 p-6 bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-lg">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Flame className="w-5 h-5 text-orange-500" />
-          <span className="gradient-text-logo-animate">Streak Milestones</span>
+          Streak Milestones
         </h3>
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
           {STREAK_MILESTONES.map((milestone) => {
@@ -668,9 +679,9 @@ export default function RewardsPage() {
       <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-lg font-semibold mb-1 gradient-text-logo-animate">Invite Friends, Earn Rewards</h3>
+            <h3 className="text-lg font-semibold mb-1">Refer Fellow Traders</h3>
             <p className="text-sm text-muted-foreground">
-              Get 20 credits for each friend who signs up with your referral code
+              Earn 200 AP and 20 credits for each trader who signs up with your referral code.
             </p>
           </div>
           <button
@@ -680,7 +691,7 @@ export default function RewardsPage() {
             {copied ? (
               <>
                 <Check className="w-4 h-4" />
-                Copied!
+                Copied
               </>
             ) : (
               <>
@@ -692,7 +703,7 @@ export default function RewardsPage() {
         </div>
         <div className="mt-4 p-3 bg-background rounded-lg">
           <p className="text-sm text-muted-foreground mb-1">Your Referral Code</p>
-          <p className="font-mono font-bold text-lg">{userData?.referralCode || 'Loading...'}</p>
+          <p className="font-mono font-bold text-lg">{tierInfo?.referralCode || 'Loading...'}</p>
         </div>
       </div>
     </div>
