@@ -4,9 +4,7 @@
 // Same workflow as CoinScoreCache but for traditional markets
 // ===========================================
 
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../../core/database';
 
 // ===========================================
 // Asset Lists for Each Market

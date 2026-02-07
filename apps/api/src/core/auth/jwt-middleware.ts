@@ -6,8 +6,39 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../database';
 import { isAdminEmail } from '../../config/admin';
+import { logger } from '../logger';
 
-// Admin emails with free unlimited access (now configurable via ADMIN_EMAILS env variable)
+// Minimal select to avoid P2022 errors on missing columns
+const AUTH_USER_SELECT = {
+  id: true,
+  email: true,
+  name: true,
+  level: true,
+};
+
+/**
+ * Safely fetch user for auth - handles P2022 (missing column) gracefully
+ */
+async function findUserForAuth(userId: string) {
+  try {
+    // Try with isAdmin column first
+    return await prisma.user.findUnique({
+      where: { id: userId },
+      select: { ...AUTH_USER_SELECT, isAdmin: true },
+    });
+  } catch (error: any) {
+    const code = error?.code || '';
+    if (code === 'P2022' || code === 'P2021') {
+      // Column missing in DB - fall back to minimal select
+      logger.warn('Auth: isAdmin column missing, using fallback');
+      return await prisma.user.findUnique({
+        where: { id: userId },
+        select: AUTH_USER_SELECT,
+      });
+    }
+    throw error;
+  }
+}
 
 /**
  * Authentication middleware
@@ -31,17 +62,8 @@ export async function authenticate(
       });
     }
 
-    // Find user by ID
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        level: true,
-        isAdmin: true,
-      },
-    });
+    // Find user by ID (with P2022 fallback)
+    const user = await findUserForAuth(decoded.id);
 
     if (!user) {
       return reply.status(401).send({
@@ -54,15 +76,18 @@ export async function authenticate(
     }
 
     // Check if user is admin (from DB or hardcoded list)
-    const isAdmin = user.isAdmin || isAdminEmail(user.email);
+    const isAdmin = (user as any).isAdmin || isAdminEmail(user.email);
 
     // Attach user to request
     request.user = {
       ...user,
       isAdmin,
     };
-  } catch (error) {
-    console.error('Auth error:', error);
+  } catch (error: any) {
+    // Don't log expected JWT verification failures as errors
+    if (error?.code !== 'FST_JWT_NO_AUTHORIZATION_IN_HEADER') {
+      logger.warn({ error: error?.message }, 'Auth middleware error');
+    }
     return reply.status(401).send({
       success: false,
       error: {
@@ -94,19 +119,10 @@ export async function optionalAuth(
       return;
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        level: true,
-        isAdmin: true,
-      },
-    });
+    const user = await findUserForAuth(decoded.id);
 
     if (user) {
-      const isAdmin = user.isAdmin || isAdminEmail(user.email);
+      const isAdmin = (user as any).isAdmin || isAdminEmail(user.email);
       request.user = {
         ...user,
         isAdmin,

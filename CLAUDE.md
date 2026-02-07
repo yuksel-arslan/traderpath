@@ -571,6 +571,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-07 | Login "Server error" - backend 500 hatası (2 kök neden) | **Neden 1 (Frontend)**: OAuth callback `backendData.error?.code` Fastify default format'ta (`error` string, object değil) undefined dönüyordu → generic 'backend_error'. **Neden 2 (Backend)**: Tüm auth route'ları `prisma.user.findUnique()` ile `include` kullanıyordu, production'da eksik sütun varsa P2022 hatası veriyordu. **Fix**: 1) Frontend: `parseBackendError()` tüm response formatlarını handle ediyor, `fetchWithTimeout()` 15s timeout, retry for 502/503/504, 2) Backend: Tüm auth route'ları `select` kullanarak sadece gerekli sütunları çekiyor (P2022'ye dayanıklı), P2022/P2021 için spesifik hata mesajları, 3) Migration: `ensure_all_user_columns.sql` tüm eksik sütunları ekliyor | `auth/login/route.ts`, `google/callback/route.ts`, `login/page.tsx`, `auth.routes.ts`, `ensure_all_user_columns.sql` |
 | 2026-02-07 | /me endpoint createdAt undefined döndürüyordu | Prisma `select` clause'unda `createdAt: true` eksikti. Response body'de `user.createdAt` referans ediliyordu ama select'te yoktu → undefined | `auth.routes.ts:668` |
 | 2026-02-07 | Login hala 500 veriyor - security.service.ts P2022 crash | `auth.routes.ts` düzeltilmişti ama çağrılan security helper fonksiyonları düzeltilmemişti. **5 kritik sorun**: 1) `recordFailedLogin()` `findUnique` select clause olmadan → tüm sütunlar çekilip P2022, 2) `recordSuccessfulLogin()` 6 sütun update (loginAttempts, accountLocked, lastLoginAt vb.) → sütun yoksa P2022, 3) `checkSuspiciousActivity()` LoginAuditLog tablosu yoksa crash (try-catch yok), 4) `checkAccountLockout()` select'li ama try-catch yok → sütun yoksa crash, 5) `verifyEmail/resetPassword/createPasswordResetToken` findFirst/findUnique select clause yok. **Fix**: Tüm fonksiyonlara select clause eklendi, tüm login-critical fonksiyonlara try-catch ile graceful degradation eklendi. Security feature yoksa login yine çalışır | `security.service.ts:324-875` |
+| 2026-02-07 | API timeout - sistem zaman aşımına uğruyordu (6 kök neden) | **1) 3 duplicate PrismaClient instance** connection pool'u tüketiyordu (coin-score-cache, multi-asset-score-cache, asset-logos). **2) Server startup blocking** - `startOutcomeTracker()` ve `initializeAssetLogos()` await ediliyordu, external API'ler yanıt vermezse server hiç başlamıyordu. **3) Binance ticker fetch timeout eksik** - `binance.provider.ts:213`'te AbortSignal.timeout yoktu. **4) Prisma query timeout yok** - hiçbir DB sorgusu timeout'a sahip değildi, tek bir yavaş sorgu tüm pool'u bloke edebilirdi. **5) Polling job'lar overlap** - 30s/15s interval job'lar önceki çalışma bitmeden tekrar tetikleniyordu, DB bağlantıları birikiyordu. **6) Auth middleware P2022 hata yönetimi eksik** - missing column hatası tüm auth'u kırıyordu. **Fix**: 1) Tüm duplicate PrismaClient kaldırıldı → singleton import, 2) Startup non-blocking yapıldı (fire-and-forget + timeout), 3) Binance fetch'e 10s timeout eklendi, 4) Prisma middleware ile 15s query timeout + slow query log eklendi, 5) Overlap guard flag'leri + withTimeout wrapper'ları eklendi, 6) Auth middleware'e P2022 fallback eklendi, duplicate decorator kaldırılıp jwt-middleware'e delege edildi | `database.ts`, `index.ts`, `jwt-middleware.ts`, `binance.provider.ts`, `coin-score-cache.service.ts`, `multi-asset-score-cache.service.ts`, `asset-logos.service.ts`, `schema.prisma` |
 
 ---
 
@@ -1931,6 +1932,18 @@ Kullanıcı Hakları Aktif:
     5. `averageEntry` için son güvenlik kontrolü eklendi - %10 aşarsa entries sıfırlanıp current price kullanılıyor
   - Filtrelenen seviyeler `undefined` olunca mevcut fallback mantığı devreye giriyor → current price kullanılıyor
   - Dosya: `apps/api/src/modules/analysis/analysis.engine.ts:5371-5378,5530-5548`
+
+### 2026-02-07
+- **API Timeout Sorunu Kökten Çözüldü (6 kök neden)**:
+  - **3 Duplicate PrismaClient instance** kaldırıldı (coin-score-cache, multi-asset-score-cache, asset-logos) → tek singleton import
+  - **Server startup non-blocking** yapıldı: `startOutcomeTracker()` ve `initializeAssetLogos()` artık fire-and-forget (server'ı bloke etmiyor)
+  - **Binance ticker fetch timeout** eklendi: `binance.provider.ts:213` → `AbortSignal.timeout(10000)`
+  - **Prisma query timeout middleware** eklendi: 15s timeout + slow query logging (>5s)
+  - **Polling job overlap koruması** eklendi: guard flag'leri ile aynı anda çalışma engellendi, withTimeout wrapper'ları
+  - **Auth middleware P2022 fallback** eklendi: `findUserForAuth()` ile missing column graceful degradation
+  - **Duplicate authenticate decorator** kaldırıldı: index.ts'deki hardcoded decorator yerine jwt-middleware'e delege
+  - **Startup outcome checks parallelleştirildi**: Sequential → `Promise.all` ile paralel (15s timeout/each)
+  - Dosyalar: `database.ts`, `index.ts`, `jwt-middleware.ts`, `binance.provider.ts`, `coin-score-cache.service.ts`, `multi-asset-score-cache.service.ts`, `asset-logos.service.ts`, `schema.prisma`
 
 ### 2026-02-06
 - **Email gönderme ve PDF indirme canvas hatası düzeltildi**:

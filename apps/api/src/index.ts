@@ -220,47 +220,9 @@ app.decorate('prisma', prisma);
 app.decorate('redis', redis);
 
 // Authenticate decorator for protected routes
-app.decorate('authenticate', async function(request: FastifyRequest, reply: FastifyReply) {
-  try {
-    const decoded = await request.jwtVerify<{ id: string }>();
-
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        level: true,
-      },
-    });
-
-    if (!user) {
-      return reply.status(401).send({
-        success: false,
-        error: {
-          code: 'AUTH_002',
-          message: 'User not found',
-        },
-      });
-    }
-
-    // Check if admin
-    const ADMIN_EMAILS = ['contact@yukselarslan.com'];
-    const isAdmin = ADMIN_EMAILS.includes(user.email);
-
-    // Attach user to request
-    request.user = { ...user, isAdmin };
-  } catch (err) {
-    reply.status(401).send({
-      success: false,
-      error: {
-        code: 'AUTH_001',
-        message: 'Authentication required',
-      },
-    });
-  }
-});
+// Delegates to the centralized jwt-middleware (single source of truth)
+import { authenticate as jwtAuthenticate } from './core/auth/jwt-middleware';
+app.decorate('authenticate', jwtAuthenticate);
 
 // ===========================================
 // Hooks
@@ -474,58 +436,103 @@ let expiredOutcomeInterval: NodeJS.Timeout | null = null;
 let cautionOutcomeInterval: NodeJS.Timeout | null = null;
 let alertCheckerInterval: NodeJS.Timeout | null = null;
 
+// Helper: race a promise against a timeout (returns undefined on timeout)
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T | undefined> {
+  return Promise.race([
+    promise,
+    new Promise<undefined>((resolve) =>
+      setTimeout(() => {
+        logger.warn(`${label} timed out after ${ms}ms - skipping`);
+        resolve(undefined);
+      }, ms)
+    ),
+  ]);
+}
+
 async function startOutcomeTracker() {
   const { checkAndUpdateOutcomes, checkAndUpdateAnalysisOutcomes, checkAllHistoricalOutcomes, checkActiveTradesFlowHealth } = await import('./modules/reports/live-tracking.service');
   const { calculateExpiredOutcomes, calculateCautionOutcomes } = await import('./modules/reports/outcome.service');
 
   // ONE-TIME: Fix all historical analyses that never had outcomes recorded
+  // Wrapped with 30s timeout to prevent blocking on external API hangs
   try {
-    const historicalResult = await checkAllHistoricalOutcomes();
-    if (historicalResult.checked > 0) {
+    const historicalResult = await withTimeout(
+      checkAllHistoricalOutcomes(),
+      30_000,
+      'Historical outcome check'
+    );
+    if (historicalResult && historicalResult.checked > 0) {
       logger.info(historicalResult, '✓ Historical outcome check completed (one-time fix)');
     }
   } catch (error) {
     logger.error(error, 'Historical outcome check failed');
   }
 
-  // Run immediately on startup
+  // Run immediately on startup with individual timeouts
   try {
-    const liveResult = await checkAndUpdateOutcomes();
-    const analysisResult = await checkAndUpdateAnalysisOutcomes();
-    const expiredResult = await calculateExpiredOutcomes();
-    const cautionResult = await calculateCautionOutcomes();
+    const [liveResult, analysisResult, expiredResult, cautionResult] = await Promise.all([
+      withTimeout(checkAndUpdateOutcomes(), 15_000, 'Live outcome check'),
+      withTimeout(checkAndUpdateAnalysisOutcomes(), 15_000, 'Analysis outcome check'),
+      withTimeout(calculateExpiredOutcomes(), 15_000, 'Expired outcome calc'),
+      withTimeout(calculateCautionOutcomes(), 15_000, 'Caution outcome calc'),
+    ]);
     logger.info({
-      live: liveResult,
-      analysis: analysisResult,
-      expired: expiredResult,
-      caution: cautionResult
+      live: liveResult ?? 'timed out',
+      analysis: analysisResult ?? 'timed out',
+      expired: expiredResult ?? 'timed out',
+      caution: cautionResult ?? 'timed out',
     }, '✓ Initial outcome check completed');
   } catch (error) {
     logger.error(error, 'Initial outcome check failed');
   }
 
+  // Guard flags to prevent overlapping job executions
+  let outcomeTrackerRunning = false;
+  let historicalCheckRunning = false;
+  let expiredCalcRunning = false;
+  let cautionCalcRunning = false;
+  let alertCheckRunning = false;
+
   // Then run every 30 seconds for live TP/SL tracking
   outcomeTrackerInterval = setInterval(async () => {
+    if (outcomeTrackerRunning) {
+      logger.debug('Outcome tracker still running, skipping this tick');
+      return;
+    }
+    outcomeTrackerRunning = true;
     try {
-      const liveResult = await checkAndUpdateOutcomes();
-      const analysisResult = await checkAndUpdateAnalysisOutcomes();
-      if (liveResult.tpHits > 0 || liveResult.slHits > 0) {
+      const [liveResult, analysisResult] = await Promise.all([
+        withTimeout(checkAndUpdateOutcomes(), 25_000, 'Live outcome check'),
+        withTimeout(checkAndUpdateAnalysisOutcomes(), 25_000, 'Analysis outcome check'),
+      ]);
+      if (liveResult && (liveResult.tpHits > 0 || liveResult.slHits > 0)) {
         logger.info(liveResult, 'Report outcome tracker: TP/SL hits detected');
       }
-      if (analysisResult.tpHits > 0 || analysisResult.slHits > 0) {
+      if (analysisResult && (analysisResult.tpHits > 0 || analysisResult.slHits > 0)) {
         logger.info(analysisResult, 'Analysis outcome tracker: TP/SL hits detected');
       }
     } catch (error) {
       logger.error(error, 'Outcome tracker error');
+    } finally {
+      outcomeTrackerRunning = false;
     }
   }, 30 * 1000); // 30 seconds
 
   // Run historical outcome check every 10 minutes to catch missed SL/TP hits
   // This uses Binance Klines API to check all candles since analysis creation
   historicalOutcomeInterval = setInterval(async () => {
+    if (historicalCheckRunning) {
+      logger.debug('Historical outcome check still running, skipping this tick');
+      return;
+    }
+    historicalCheckRunning = true;
     try {
-      const historicalResult = await checkAllHistoricalOutcomes();
-      if (historicalResult.tpHits > 0 || historicalResult.slHits > 0) {
+      const historicalResult = await withTimeout(
+        checkAllHistoricalOutcomes(),
+        5 * 60_000, // 5 minute timeout for historical check
+        'Historical outcome check'
+      );
+      if (historicalResult && (historicalResult.tpHits > 0 || historicalResult.slHits > 0)) {
         logger.info(historicalResult, 'Historical outcome check: TP/SL hits detected');
       }
     } catch (error) {
@@ -534,45 +541,72 @@ async function startOutcomeTracker() {
 
     // Capital Flow Health Monitor - check flow health for all active trades
     try {
-      const flowResult = await checkActiveTradesFlowHealth();
-      if (flowResult.adverseCount > 0 || flowResult.alertCount > 0) {
-        logger.info(flowResult, 'Capital Flow Monitor: alerts generated for active trades');
-      }
+      await withTimeout(
+        checkActiveTradesFlowHealth(),
+        60_000, // 1 minute timeout
+        'Capital Flow health check'
+      );
     } catch (error) {
       logger.warn(error, 'Capital Flow Monitor check failed');
+    } finally {
+      historicalCheckRunning = false;
     }
   }, 10 * 60 * 1000); // 10 minutes
 
   // Run expired outcome calculation every 5 minutes
   expiredOutcomeInterval = setInterval(async () => {
+    if (expiredCalcRunning) return;
+    expiredCalcRunning = true;
     try {
-      const result = await calculateExpiredOutcomes();
-      if (result.processed > 0) {
+      const result = await withTimeout(
+        calculateExpiredOutcomes(),
+        60_000, // 1 minute timeout
+        'Expired outcome calc'
+      );
+      if (result && result.processed > 0) {
         logger.info(result, 'Expired outcome calculation completed');
       }
     } catch (error) {
       logger.error(error, 'Expired outcome calculation error');
+    } finally {
+      expiredCalcRunning = false;
     }
   }, 5 * 60 * 1000); // 5 minutes
 
   // Run WAIT/AVOID caution outcome calculation every 10 minutes
   cautionOutcomeInterval = setInterval(async () => {
+    if (cautionCalcRunning) return;
+    cautionCalcRunning = true;
     try {
-      const result = await calculateCautionOutcomes();
-      if (result.processed > 0) {
+      const result = await withTimeout(
+        calculateCautionOutcomes(),
+        60_000, // 1 minute timeout
+        'Caution outcome calc'
+      );
+      if (result && result.processed > 0) {
         logger.info(result, 'Caution outcome calculation completed');
       }
     } catch (error) {
       logger.error(error, 'Caution outcome calculation error');
+    } finally {
+      cautionCalcRunning = false;
     }
   }, 10 * 60 * 1000); // 10 minutes
 
   // Check price alerts every 15 seconds
   alertCheckerInterval = setInterval(async () => {
+    if (alertCheckRunning) return;
+    alertCheckRunning = true;
     try {
-      await notificationService.checkAlerts();
+      await withTimeout(
+        notificationService.checkAlerts(),
+        12_000, // 12 second timeout (must finish before next 15s tick)
+        'Alert checker'
+      );
     } catch (error) {
       logger.error(error, 'Alert checker error');
+    } finally {
+      alertCheckRunning = false;
     }
   }, 15 * 1000); // 15 seconds
 
@@ -589,8 +623,10 @@ const start = async () => {
     await redis.ping();
     logger.info('✓ Redis connected');
 
-    // Start outcome tracker
-    await startOutcomeTracker();
+    // Start outcome tracker (non-blocking - don't hold up server startup)
+    startOutcomeTracker().catch((err) => {
+      logger.error(err, 'Outcome tracker startup failed (non-blocking)');
+    });
 
     // Start price alert checker
     startPriceChecker();
@@ -604,9 +640,12 @@ const start = async () => {
     startCoinScoreCacheJob();
     logger.info('✓ Coin score cache cron started');
 
-    // Initialize asset logos in database
-    await initializeAssetLogos();
-    logger.info('✓ Asset logos initialized');
+    // Initialize asset logos in database (non-blocking - don't hold up server startup)
+    initializeAssetLogos().then(() => {
+      logger.info('✓ Asset logos initialized');
+    }).catch((err) => {
+      logger.warn(err, 'Asset logos initialization failed (non-blocking)');
+    });
 
     // Initialize BILGE Guardian System
     initializeBilgeService(redis);

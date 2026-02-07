@@ -3,7 +3,6 @@
 // Manages logo data storage and retrieval
 // ===========================================
 
-import { PrismaClient } from '@prisma/client';
 import {
   CRYPTO_LOGOS,
   STOCK_LOGOS,
@@ -15,8 +14,7 @@ import {
   getAssetLogoInfo,
   detectAssetClass,
 } from './asset-logos.data';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../core/database';
 
 // Current schema version
 const SCHEMA_VERSION = 1;
