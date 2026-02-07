@@ -666,7 +666,7 @@ export default async function authRoutes(app: FastifyInstance) {
           id: true, email: true, name: true, image: true, level: true, xp: true,
           streakDays: true, preferredCoins: true, preferredInterface: true,
           referralCode: true, twoFactorEnabled: true, preferredLanguage: true,
-          telegramChatId: true, discordWebhookUrl: true,
+          telegramChatId: true, discordWebhookUrl: true, createdAt: true,
           creditBalance: { select: { balance: true, lifetimeEarned: true } },
         },
       });
