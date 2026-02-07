@@ -27,6 +27,7 @@ const protectedPaths = [
   '/signals',
   '/methodology',
   '/top-coins',
+  '/notifications',
 ];
 
 // Routes that should redirect to capital-flow if already authenticated

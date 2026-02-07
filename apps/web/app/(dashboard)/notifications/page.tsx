@@ -1,0 +1,442 @@
+'use client';
+
+import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
+import {
+  Bell,
+  Sunrise,
+  AlertTriangle,
+  Zap,
+  Gift,
+  Megaphone,
+  CheckCheck,
+  Trash2,
+  Eye,
+  Loader2,
+  Inbox,
+  Settings,
+  ExternalLink,
+} from 'lucide-react';
+import { authFetch } from '../../../lib/api';
+import { cn } from '../../../lib/utils';
+
+// ─── Types ────────────────────────────────────────
+
+type NotificationType = 'BRIEFING' | 'ALERT' | 'SIGNAL' | 'REWARD' | 'SYSTEM';
+
+interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  metadata: Record<string, unknown>;
+  read: boolean;
+  createdAt: string;
+}
+
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+interface NotificationsResponse {
+  notifications: Notification[];
+  pagination: PaginationInfo;
+}
+
+interface UnreadCounts {
+  BRIEFING: number;
+  ALERT: number;
+  SIGNAL: number;
+  REWARD: number;
+  SYSTEM: number;
+  total: number;
+}
+
+// ─── Config ───────────────────────────────────────
+
+const FILTER_OPTIONS: { label: string; value: NotificationType | 'ALL'; icon: typeof Bell; color: string }[] = [
+  { label: 'All', value: 'ALL', icon: Bell, color: 'text-foreground' },
+  { label: 'Briefing', value: 'BRIEFING', icon: Sunrise, color: 'text-amber-500' },
+  { label: 'Alerts', value: 'ALERT', icon: AlertTriangle, color: 'text-red-500' },
+  { label: 'Signals', value: 'SIGNAL', icon: Zap, color: 'text-teal-500' },
+  { label: 'Rewards', value: 'REWARD', icon: Gift, color: 'text-purple-500' },
+  { label: 'System', value: 'SYSTEM', icon: Megaphone, color: 'text-blue-500' },
+];
+
+function getTypeConfig(type: NotificationType) {
+  switch (type) {
+    case 'BRIEFING':
+      return { icon: Sunrise, color: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30' };
+    case 'ALERT':
+      return { icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/30' };
+    case 'SIGNAL':
+      return { icon: Zap, color: 'text-teal-500', bg: 'bg-teal-500/10', border: 'border-teal-500/30' };
+    case 'REWARD':
+      return { icon: Gift, color: 'text-purple-500', bg: 'bg-purple-500/10', border: 'border-purple-500/30' };
+    case 'SYSTEM':
+      return { icon: Megaphone, color: 'text-blue-500', bg: 'bg-blue-500/10', border: 'border-blue-500/30' };
+  }
+}
+
+function formatTimeAgo(dateStr: string): string {
+  const now = Date.now();
+  const date = new Date(dateStr).getTime();
+  const diff = now - date;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
+
+// ─── Page Component ───────────────────────────────
+
+export default function NotificationsPage() {
+  const queryClient = useQueryClient();
+  const [activeFilter, setActiveFilter] = useState<NotificationType | 'ALL'>('ALL');
+  const [page, setPage] = useState(1);
+  const LIMIT = 20;
+
+  // Fetch notifications
+  const { data, isLoading, error } = useQuery<NotificationsResponse>({
+    queryKey: ['notifications', activeFilter, page],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (activeFilter !== 'ALL') params.set('type', activeFilter);
+      params.set('page', String(page));
+      params.set('limit', String(LIMIT));
+      const res = await authFetch(`/api/notifications?${params.toString()}`);
+      if (!res.ok) throw new Error('Failed to fetch notifications');
+      const json = await res.json();
+      return json.data;
+    },
+    staleTime: 30_000,
+  });
+
+  // Fetch unread counts
+  const { data: unreadCounts } = useQuery<UnreadCounts>({
+    queryKey: ['notification-unread-counts'],
+    queryFn: async () => {
+      const res = await authFetch('/api/notifications/unread-count');
+      if (!res.ok) return { BRIEFING: 0, ALERT: 0, SIGNAL: 0, REWARD: 0, SYSTEM: 0, total: 0 };
+      const json = await res.json();
+      return json.data;
+    },
+    staleTime: 30_000,
+  });
+
+  // Mark single as read
+  const markReadMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await authFetch(`/api/notifications/${id}/read`, { method: 'PATCH' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notification-unread-counts'] });
+    },
+  });
+
+  // Mark all as read
+  const markAllReadMutation = useMutation({
+    mutationFn: async () => {
+      const body: Record<string, unknown> = {};
+      if (activeFilter !== 'ALL') body.type = activeFilter;
+      await authFetch('/api/notifications/mark-all-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notification-unread-counts'] });
+    },
+  });
+
+  // Clear read notifications
+  const clearReadMutation = useMutation({
+    mutationFn: async () => {
+      await authFetch('/api/notifications/clear-read', { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notification-unread-counts'] });
+    },
+  });
+
+  // Delete single
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await authFetch(`/api/notifications/${id}`, { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notification-unread-counts'] });
+    },
+  });
+
+  const handleFilterChange = useCallback((filter: NotificationType | 'ALL') => {
+    setActiveFilter(filter);
+    setPage(1);
+  }, []);
+
+  const notifications = data?.notifications || [];
+  const pagination = data?.pagination;
+  const totalUnread = unreadCounts?.total ?? 0;
+
+  // Resolve link from metadata
+  const getViewLink = (n: Notification): string | null => {
+    const meta = n.metadata as Record<string, string>;
+    if (meta?.link) return meta.link;
+    if (meta?.analysisId) return `/analyze/details/${meta.analysisId}`;
+    if (meta?.signalId) return `/signals`;
+    return null;
+  };
+
+  return (
+    <div className="relative min-h-screen">
+      {/* Background orbs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-1/4 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-1/4 w-80 h-80 bg-orange-500/5 rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative max-w-5xl mx-auto px-4 py-6 sm:py-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Notification Center</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {totalUnread > 0 ? `${totalUnread} unread` : 'All caught up'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {totalUnread > 0 && (
+              <button
+                onClick={() => markAllReadMutation.mutate()}
+                disabled={markAllReadMutation.isPending}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-card border border-border hover:bg-accent transition-colors disabled:opacity-50"
+              >
+                <CheckCheck className="w-4 h-4" />
+                Mark All Read
+              </button>
+            )}
+            <button
+              onClick={() => clearReadMutation.mutate()}
+              disabled={clearReadMutation.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-card border border-border hover:bg-accent transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4" />
+              Clear Read
+            </button>
+            <Link
+              href="/settings"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-card border border-border hover:bg-accent transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Settings</span>
+            </Link>
+          </div>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Sidebar Filters */}
+          <aside className="lg:w-56 shrink-0">
+            <div className="bg-card/50 backdrop-blur border border-border/50 rounded-xl p-2 lg:sticky lg:top-24">
+              <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible">
+                {FILTER_OPTIONS.map((opt) => {
+                  const count =
+                    opt.value === 'ALL'
+                      ? totalUnread
+                      : (unreadCounts as Record<string, number> | undefined)?.[opt.value] ?? 0;
+
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleFilterChange(opt.value)}
+                      className={cn(
+                        'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
+                        activeFilter === opt.value
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                      )}
+                    >
+                      <opt.icon className={cn('w-4 h-4', activeFilter !== opt.value && opt.color)} />
+                      <span>{opt.label}</span>
+                      {count > 0 && (
+                        <span
+                          className={cn(
+                            'ml-auto text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center',
+                            activeFilter === opt.value
+                              ? 'bg-primary-foreground/20 text-primary-foreground'
+                              : 'bg-primary/10 text-primary'
+                          )}
+                        >
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Content */}
+          <main className="flex-1 min-w-0">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : error ? (
+              <div className="text-center py-20">
+                <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Failed to load notifications</p>
+                <button
+                  onClick={() => queryClient.invalidateQueries({ queryKey: ['notifications'] })}
+                  className="mt-2 text-sm text-primary hover:underline"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="text-center py-20">
+                <Inbox className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-lg font-medium mb-1">No notifications</p>
+                <p className="text-sm text-muted-foreground">
+                  {activeFilter !== 'ALL'
+                    ? `No ${activeFilter.toLowerCase()} notifications yet`
+                    : 'You\'re all caught up!'}
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  {notifications.map((n) => {
+                    const config = getTypeConfig(n.type);
+                    const Icon = config.icon;
+                    const viewLink = getViewLink(n);
+
+                    return (
+                      <div
+                        key={n.id}
+                        className={cn(
+                          'group relative bg-card/50 backdrop-blur border rounded-xl p-4 transition-all hover:bg-card/80',
+                          n.read ? 'border-border/50' : 'border-[#5EEDC3]/40'
+                        )}
+                      >
+                        <div className="flex gap-3">
+                          {/* Icon */}
+                          <div className={cn('shrink-0 w-9 h-9 rounded-full flex items-center justify-center', config.bg)}>
+                            <Icon className={cn('w-4 h-4', config.color)} />
+                          </div>
+
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={cn(
+                                      'text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded',
+                                      config.bg,
+                                      config.color
+                                    )}
+                                  >
+                                    {n.type}
+                                  </span>
+                                  <span className={cn('text-sm font-semibold', n.read ? 'text-muted-foreground' : 'text-foreground')}>
+                                    {n.title}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                              </div>
+                            </div>
+
+                            {/* Bottom row */}
+                            <div className="flex items-center justify-between mt-2">
+                              <span className="text-xs text-muted-foreground">{formatTimeAgo(n.createdAt)}</span>
+
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {!n.read && (
+                                  <button
+                                    onClick={() => markReadMutation.mutate(n.id)}
+                                    disabled={markReadMutation.isPending}
+                                    className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-accent transition-colors"
+                                    title="Mark as read"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                    Read
+                                  </button>
+                                )}
+                                {viewLink && (
+                                  <Link
+                                    href={viewLink}
+                                    className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-accent transition-colors text-primary"
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    View
+                                  </Link>
+                                )}
+                                <button
+                                  onClick={() => deleteMutation.mutate(n.id)}
+                                  disabled={deleteMutation.isPending}
+                                  className="flex items-center gap-1 px-2 py-1 text-xs rounded-md hover:bg-destructive/10 text-destructive transition-colors"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Unread dot */}
+                          {!n.read && (
+                            <div className="shrink-0 mt-1">
+                              <div className="w-2.5 h-2.5 rounded-full bg-[#5EEDC3]" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Pagination */}
+                {pagination && pagination.totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-6">
+                    <button
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page <= 1}
+                      className="px-3 py-1.5 text-sm rounded-lg border border-border hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-muted-foreground">
+                      Page {page} of {pagination.totalPages}
+                    </span>
+                    <button
+                      onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+                      disabled={page >= pagination.totalPages}
+                      className="px-3 py-1.5 text-sm rounded-lg border border-border hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}

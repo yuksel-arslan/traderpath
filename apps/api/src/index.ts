@@ -63,6 +63,7 @@ import { startDailyCreditsJob, stopDailyCreditsJob } from './modules/subscriptio
 import { startReconciliationJob, stopReconciliationJob } from './modules/admin/reconciliation.cron';
 import { unifiedAnalysisRoutes } from './modules/unified-analysis';
 import { ragRoutes } from './modules/rag';
+import notificationCenterRoutes from './modules/notifications/notification-center.routes';
 
 // ===========================================
 // Server Configuration
@@ -400,6 +401,10 @@ app.register(unifiedAnalysisRoutes, { prefix: '/api/unified-analysis' }); // Leg
 // RAG (Retrieval-Augmented Generation) enrichment routes
 app.register(ragRoutes, { prefix: '/api/v1/rag' });
 app.register(ragRoutes, { prefix: '/api/rag' }); // Legacy
+
+// Notification Center routes (centralized notification management)
+app.register(notificationCenterRoutes, { prefix: '/api/v1/notifications' });
+app.register(notificationCenterRoutes, { prefix: '/api/notifications' }); // Legacy
 
 // ===========================================
 // 404 Handler
