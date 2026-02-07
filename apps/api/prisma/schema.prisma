@@ -10,6 +10,8 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
+  // Connection pool: limit to 20 connections, 30s timeout for acquiring a connection
+  // Set via DATABASE_URL query params: ?connection_limit=20&pool_timeout=30
 }
 
 // ===========================================

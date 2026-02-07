@@ -210,7 +210,9 @@ export async function getOrderBookImbalance(symbol: string = 'BTCUSDT', depthPer
     const data: OrderBookData = await response.json();
 
     // Get current price for percentage calculation
-    const tickerResponse = await fetch(`${BINANCE_SPOT_URL}/api/v3/ticker/price?symbol=${symbol}`);
+    const tickerResponse = await fetch(`${BINANCE_SPOT_URL}/api/v3/ticker/price?symbol=${symbol}`, {
+      signal: AbortSignal.timeout(10000),
+    });
     const ticker = await tickerResponse.json();
     const currentPrice = parseFloat(ticker.price);
 

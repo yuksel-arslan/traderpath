@@ -3,13 +3,11 @@
 // Periodic scanning of top coins using REAL analysis engine
 // ===========================================
 
-import { PrismaClient } from '@prisma/client';
 import { analysisEngine } from '../analysis.engine';
 import { getTradeTypeFromInterval } from '../config/trade-config';
 import { smartCoinsService } from './smart-coins.service';
 import { logger } from '../../../core/logger';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../../core/database';
 
 // Top coins to scan (prioritized list)
 const TOP_COINS_TO_SCAN = [
