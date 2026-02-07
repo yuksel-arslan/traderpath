@@ -615,13 +615,26 @@ async function startOutcomeTracker() {
 
 const start = async () => {
   try {
-    // Connect to database
-    await prisma.$connect();
-    logger.info('✓ Database connected');
+    // Connect to database with hard 10s timeout
+    try {
+      await Promise.race([
+        prisma.$connect(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('DB connect timeout after 10s')), 10_000)
+        ),
+      ]);
+      logger.info('✓ Database connected');
+    } catch (dbError: any) {
+      logger.error({ error: dbError?.message }, 'Database connection failed - starting without DB');
+    }
 
-    // Test Redis connection
-    await redis.ping();
-    logger.info('✓ Redis connected');
+    // Test Redis connection (has in-memory fallback)
+    try {
+      await redis.ping();
+      logger.info('✓ Redis connected');
+    } catch (redisError: any) {
+      logger.warn({ error: redisError?.message }, 'Redis ping failed - using in-memory fallback');
+    }
 
     // ===========================================
     // EXTERNAL API ISOLATION FLAG

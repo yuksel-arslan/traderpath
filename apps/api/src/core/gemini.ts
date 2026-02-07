@@ -13,8 +13,18 @@ const GEMINI_API_KEY = config.gemini.apiKey;
 const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const GEMINI_SETTINGS_KEY = 'admin:gemini:settings';
 
-// Initialize the Genai client
-const genai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+// Initialize the Genai client lazily - only when actually needed
+// This prevents crashes during startup when GEMINI_API_KEY is not set
+let _genai: InstanceType<typeof GoogleGenAI> | null = null;
+function getGenAI(): GoogleGenAI {
+  if (!_genai) {
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not configured. AI features are unavailable.');
+    }
+    _genai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+  }
+  return _genai;
+}
 
 // Cache for settings to avoid Redis calls on every request
 let cachedSettings: { model: string; expertModel: string; conciergeModel: string; cachedAt: number } | null = null;
@@ -208,7 +218,7 @@ export async function callGeminiWithRetry(
         .join('\n\n');
 
       // Call the SDK
-      const response = await genai.models.generateContent({
+      const response = await getGenAI().models.generateContent({
         model: modelName,
         contents: prompt,
         config: {
@@ -310,7 +320,7 @@ export async function callGemini(options: GeminiRequestOptions): Promise<GeminiR
     .map(content => content.parts.map(part => part.text).join('\n'))
     .join('\n\n');
 
-  const response = await genai.models.generateContent({
+  const response = await getGenAI().models.generateContent({
     model: DEFAULT_GEMINI_MODEL,
     contents: prompt,
     config: {
@@ -324,8 +334,8 @@ export async function callGemini(options: GeminiRequestOptions): Promise<GeminiR
   return convertResponse(response);
 }
 
-// Export the SDK client for direct access if needed
-export { genai };
+// Export the SDK client getter for direct access if needed
+export { getGenAI as genai };
 
 // Export model and URL for reference
 export { GEMINI_MODEL, GEMINI_API_URL, getGeminiModel, buildGeminiApiUrl };
