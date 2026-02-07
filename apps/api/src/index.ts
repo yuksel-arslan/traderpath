@@ -469,6 +469,10 @@ app.setErrorHandler(errorHandler);
 // ===========================================
 
 let outcomeTrackerInterval: NodeJS.Timeout | null = null;
+let historicalOutcomeInterval: NodeJS.Timeout | null = null;
+let expiredOutcomeInterval: NodeJS.Timeout | null = null;
+let cautionOutcomeInterval: NodeJS.Timeout | null = null;
+let alertCheckerInterval: NodeJS.Timeout | null = null;
 
 async function startOutcomeTracker() {
   const { checkAndUpdateOutcomes, checkAndUpdateAnalysisOutcomes, checkAllHistoricalOutcomes, checkActiveTradesFlowHealth } = await import('./modules/reports/live-tracking.service');
@@ -518,7 +522,7 @@ async function startOutcomeTracker() {
 
   // Run historical outcome check every 10 minutes to catch missed SL/TP hits
   // This uses Binance Klines API to check all candles since analysis creation
-  setInterval(async () => {
+  historicalOutcomeInterval = setInterval(async () => {
     try {
       const historicalResult = await checkAllHistoricalOutcomes();
       if (historicalResult.tpHits > 0 || historicalResult.slHits > 0) {
@@ -540,7 +544,7 @@ async function startOutcomeTracker() {
   }, 10 * 60 * 1000); // 10 minutes
 
   // Run expired outcome calculation every 5 minutes
-  setInterval(async () => {
+  expiredOutcomeInterval = setInterval(async () => {
     try {
       const result = await calculateExpiredOutcomes();
       if (result.processed > 0) {
@@ -552,7 +556,7 @@ async function startOutcomeTracker() {
   }, 5 * 60 * 1000); // 5 minutes
 
   // Run WAIT/AVOID caution outcome calculation every 10 minutes
-  setInterval(async () => {
+  cautionOutcomeInterval = setInterval(async () => {
     try {
       const result = await calculateCautionOutcomes();
       if (result.processed > 0) {
@@ -564,7 +568,7 @@ async function startOutcomeTracker() {
   }, 10 * 60 * 1000); // 10 minutes
 
   // Check price alerts every 15 seconds
-  setInterval(async () => {
+  alertCheckerInterval = setInterval(async () => {
     try {
       await notificationService.checkAlerts();
     } catch (error) {
@@ -658,11 +662,13 @@ const shutdown = async (signal: string) => {
   logger.info(`${signal} received, starting graceful shutdown...`);
 
   try {
-    // Stop outcome tracker
-    if (outcomeTrackerInterval) {
-      clearInterval(outcomeTrackerInterval);
-      logger.info('✓ Outcome tracker stopped');
-    }
+    // Stop all outcome trackers and intervals
+    if (outcomeTrackerInterval) clearInterval(outcomeTrackerInterval);
+    if (historicalOutcomeInterval) clearInterval(historicalOutcomeInterval);
+    if (expiredOutcomeInterval) clearInterval(expiredOutcomeInterval);
+    if (cautionOutcomeInterval) clearInterval(cautionOutcomeInterval);
+    if (alertCheckerInterval) clearInterval(alertCheckerInterval);
+    logger.info('✓ All interval timers stopped');
 
     // Stop price checker
     stopPriceChecker();
@@ -720,13 +726,23 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
 // Handle uncaught errors
+// IMPORTANT: Do NOT call shutdown() for every uncaught exception.
+// This was causing crash loops when background tasks threw errors.
+// Only shutdown for truly fatal errors, not recoverable ones.
 process.on('uncaughtException', (error) => {
   logger.error({ error }, 'Uncaught exception');
-  shutdown('uncaughtException');
+  // Only exit for truly fatal errors (OOM, stack overflow, etc.)
+  // Background task errors should be caught within their own try/catch
+  if (error.message?.includes('out of memory') || error.message?.includes('Maximum call stack')) {
+    shutdown('uncaughtException (fatal)');
+  }
+  // Otherwise just log - the server can continue
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   logger.error({ reason, promise }, 'Unhandled rejection');
+  // Don't crash - just log. This prevents promise rejections from background
+  // tasks (cron jobs, monitoring) from killing the entire server.
 });
 
 // Start the server

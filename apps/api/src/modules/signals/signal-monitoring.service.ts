@@ -92,24 +92,25 @@ export const signalMonitoring = {
 
       // Report to BILGE Guardian
       if (result.error) {
-        await collectError({
-          error: result.error,
-          context: {
-            service: 'signal-generator',
-            consecutiveFailures: metrics.consecutiveFailures,
-            totalRuns: metrics.totalRuns,
-          },
-        });
+        try {
+          await collectError({
+            message: result.error.message || 'Signal generator error',
+            stack: result.error.stack,
+            code: 'SIGNAL_GENERATOR_ERROR',
+          });
+        } catch { /* don't crash on monitoring failure */ }
       }
 
       // Alert if too many consecutive failures
       if (metrics.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-        await this.alertGeneratorFailure(metrics);
+        try { await this.alertGeneratorFailure(metrics); } catch { /* ignore */ }
       }
     }
 
     // Save metrics
-    await cache.setex(key, CACHE_TTL, JSON.stringify(metrics));
+    try {
+      await cache.set(key, JSON.stringify(metrics), CACHE_TTL);
+    } catch { /* don't crash on cache failure */ }
   },
 
   /**
@@ -130,16 +131,13 @@ export const signalMonitoring = {
       `Signal Generator has failed ${metrics.consecutiveFailures} times consecutively. Last error: ${metrics.errorMessage}`
     );
 
-    await collectError({
-      error,
-      context: {
-        service: 'signal-generator',
-        severity: 'critical',
-        consecutiveFailures: metrics.consecutiveFailures,
-        totalRuns: metrics.totalRuns,
-        lastRunAt: metrics.lastRunAt,
-      },
-    });
+    try {
+      await collectError({
+        message: error.message,
+        stack: error.stack,
+        code: 'SIGNAL_GENERATOR_CRITICAL',
+      });
+    } catch { /* ignore */ }
 
     console.error('[SignalMonitoring] CRITICAL: Signal generator consecutive failures', {
       consecutiveFailures: metrics.consecutiveFailures,
@@ -204,24 +202,25 @@ export const signalMonitoring = {
 
       // Report to BILGE Guardian
       if (result.error) {
-        await collectError({
-          error: result.error,
-          context: {
-            service: 'outcome-tracker',
-            consecutiveFailures: metrics.consecutiveFailures,
-            totalRuns: metrics.totalRuns,
-          },
-        });
+        try {
+          await collectError({
+            message: result.error.message || 'Outcome tracker error',
+            stack: result.error.stack,
+            code: 'OUTCOME_TRACKER_ERROR',
+          });
+        } catch { /* don't crash on monitoring failure */ }
       }
 
       // Alert if too many consecutive failures
       if (metrics.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-        await this.alertTrackerFailure(metrics);
+        try { await this.alertTrackerFailure(metrics); } catch { /* ignore */ }
       }
     }
 
     // Save metrics
-    await cache.setex(key, CACHE_TTL, JSON.stringify(metrics));
+    try {
+      await cache.set(key, JSON.stringify(metrics), CACHE_TTL);
+    } catch { /* don't crash on cache failure */ }
   },
 
   /**
@@ -242,16 +241,13 @@ export const signalMonitoring = {
       `Outcome Tracker has failed ${metrics.consecutiveFailures} times consecutively. Last error: ${metrics.errorMessage}`
     );
 
-    await collectError({
-      error,
-      context: {
-        service: 'outcome-tracker',
-        severity: 'critical',
-        consecutiveFailures: metrics.consecutiveFailures,
-        totalRuns: metrics.totalRuns,
-        lastRunAt: metrics.lastRunAt,
-      },
-    });
+    try {
+      await collectError({
+        message: error.message,
+        stack: error.stack,
+        code: 'OUTCOME_TRACKER_CRITICAL',
+      });
+    } catch { /* ignore */ }
 
     console.error('[SignalMonitoring] CRITICAL: Outcome tracker consecutive failures', {
       consecutiveFailures: metrics.consecutiveFailures,
@@ -270,16 +266,13 @@ export const signalMonitoring = {
       `Outcome Tracker has high error rate: ${errorRate.toFixed(1)}% (${metrics.errorsCount}/${metrics.signalsChecked})`
     );
 
-    await collectError({
-      error,
-      context: {
-        service: 'outcome-tracker',
-        severity: 'high',
-        signalsChecked: metrics.signalsChecked,
-        errorsCount: metrics.errorsCount,
-        errorRate,
-      },
-    });
+    try {
+      await collectError({
+        message: error.message,
+        stack: error.stack,
+        code: 'OUTCOME_TRACKER_HIGH_ERROR_RATE',
+      });
+    } catch { /* ignore */ }
 
     console.warn('[SignalMonitoring] WARNING: High error rate in outcome tracker', {
       errorRate,
