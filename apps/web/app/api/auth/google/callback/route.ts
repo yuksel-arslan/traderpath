@@ -1,11 +1,58 @@
 // ===========================================
 // Google OAuth Callback
 // Handles the OAuth callback and logs in the user
+// Robust error handling for backend failures
 // ===========================================
 
 import { NextRequest, NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io';
+
+// Timeout for backend requests (15 seconds)
+const BACKEND_TIMEOUT_MS = 15_000;
+
+// Transient HTTP status codes that warrant a retry
+const TRANSIENT_STATUS_CODES = [502, 503, 504];
+
+/**
+ * Parse error from ANY backend response format:
+ * - App format: { success: false, error: { code, message } }
+ * - Fastify default: { statusCode, error, message }
+ * - Railway/proxy: { statusCode, message } or plain text
+ */
+function parseBackendErrorCode(data: any, httpStatus: number): string {
+  // App's standard format - has error.code
+  if (data?.error?.code && typeof data.error.code === 'string') {
+    return data.error.code;
+  }
+
+  // Fastify default format: { statusCode, error: "Internal Server Error", message }
+  // Here data.error is a STRING, not an object - this was the root cause bug
+  if (data?.statusCode && typeof data?.error === 'string') {
+    return httpStatus >= 500 ? 'server_error' : `http_${data.statusCode}`;
+  }
+
+  // Proxy format or unknown
+  if (httpStatus >= 500) {
+    return 'server_error';
+  }
+
+  return 'backend_error';
+}
+
+/**
+ * Fetch with timeout using AbortController
+ */
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -46,7 +93,7 @@ export async function GET(request: NextRequest) {
     const tokens = await tokenResponse.json();
 
     if (!tokens.access_token) {
-      console.error('Token exchange failed:', tokens);
+      console.error('[OAuth] Token exchange failed:', tokens);
       return NextResponse.redirect(new URL('/login?error=token_exchange_failed', baseUrl));
     }
 
@@ -61,42 +108,82 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=no_email', baseUrl));
     }
 
-    // Send to backend for OAuth login/register
-    console.log('Sending to backend:', { API_URL, email: googleUser.email, providerId: googleUser.id });
-
-    let backendResponse: Response;
+    // Send to backend for OAuth login/register with timeout and retry
+    let backendResponse: Response | undefined;
     let backendData: any;
-    try {
-      backendResponse = await fetch(`${API_URL}/api/auth/oauth`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: 'google',
-          providerId: googleUser.id,
-          email: googleUser.email,
-          name: googleUser.name,
-          image: googleUser.picture,
-        }),
-      });
 
-      const contentType = backendResponse.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        backendData = await backendResponse.json();
-      } else {
-        const text = await backendResponse.text();
-        console.error('Backend returned non-JSON:', backendResponse.status, text.slice(0, 500));
-        return NextResponse.redirect(new URL(`/login?error=backend_error&detail=non_json_${backendResponse.status}`, baseUrl));
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        backendResponse = await fetchWithTimeout(
+          `${API_URL}/api/auth/oauth`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              provider: 'google',
+              providerId: googleUser.id,
+              email: googleUser.email,
+              name: googleUser.name,
+              image: googleUser.picture,
+            }),
+          },
+          BACKEND_TIMEOUT_MS
+        );
+
+        // Check if response is JSON
+        const contentType = backendResponse.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          backendData = await backendResponse.json();
+        } else {
+          const text = await backendResponse.text();
+          console.error(`[OAuth] Backend returned non-JSON (attempt ${attempt + 1}):`, backendResponse.status, text.slice(0, 300));
+
+          // Retry transient errors on first attempt
+          if (attempt === 0 && TRANSIENT_STATUS_CODES.includes(backendResponse.status)) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+
+          return NextResponse.redirect(new URL('/login?error=server_error&detail=non_json', baseUrl));
+        }
+
+        // Retry transient HTTP errors on first attempt
+        if (attempt === 0 && TRANSIENT_STATUS_CODES.includes(backendResponse.status)) {
+          console.warn(`[OAuth] Transient error ${backendResponse.status}, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
+
+        // Got a definitive response, break out of retry loop
+        break;
+      } catch (fetchError: any) {
+        const errorMsg = fetchError.name === 'AbortError'
+          ? 'Request timed out'
+          : fetchError.message || 'Connection failed';
+
+        console.error(`[OAuth] Backend fetch failed (attempt ${attempt + 1}):`, errorMsg, { API_URL });
+
+        // Retry on first attempt
+        if (attempt === 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
+
+        const detail = fetchError.name === 'AbortError' ? 'timeout' : 'fetch_failed';
+        return NextResponse.redirect(new URL(`/login?error=server_error&detail=${detail}`, baseUrl));
       }
-    } catch (fetchError: any) {
-      console.error('Backend fetch failed:', fetchError.message, { API_URL });
-      return NextResponse.redirect(new URL(`/login?error=backend_error&detail=fetch_failed`, baseUrl));
     }
 
-    console.log('Backend response:', { status: backendResponse.status, success: backendData?.success });
+    // Safety check
+    if (!backendData || !backendResponse) {
+      return NextResponse.redirect(new URL('/login?error=server_error&detail=no_response', baseUrl));
+    }
 
     if (!backendResponse.ok || !backendData.success) {
-      console.error('Backend OAuth failed:', backendData);
-      const errorCode = backendData.error?.code || 'backend_error';
+      console.error('[OAuth] Backend OAuth failed:', { status: backendResponse.status, data: backendData });
+
+      // Parse the error code properly - handles ALL backend response formats
+      const errorCode = parseBackendErrorCode(backendData, backendResponse.status);
       return NextResponse.redirect(new URL(`/login?error=${errorCode}`, baseUrl));
     }
 
@@ -135,7 +222,7 @@ export async function GET(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error('Google OAuth error:', error);
+    console.error('[OAuth] Unhandled error:', error);
     return NextResponse.redirect(new URL('/login?error=oauth_error', baseUrl));
   }
 }

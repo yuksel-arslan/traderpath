@@ -41,21 +41,27 @@ export default function LoginPage() {
     const detailParam = searchParams.get('detail');
     if (errorParam) {
       const errorMessages: Record<string, string> = {
+        // OAuth configuration errors
         oauth_not_configured: 'Google login is not configured. Please contact support.',
         no_code: 'Authorization failed. Please try again.',
         token_exchange_failed: 'Failed to authenticate with Google. Please try again.',
         no_email: 'Could not get email from Google. Please check your Google account.',
-        backend_error: detailParam === 'fetch_failed'
-          ? 'Cannot connect to server. Please try again later.'
-          : detailParam?.startsWith('non_json')
-          ? 'Server returned an unexpected response. Please try again later.'
-          : 'Server error during login. Please try again.',
         no_token: 'Authentication failed. Please try again.',
-        oauth_error: 'OAuth error occurred. Please try again.',
-        SERVER_ERROR: 'Server error. Please try again later.',
+        oauth_error: 'An error occurred during sign-in. Please try again.',
         access_denied: 'Access denied. Please grant permissions to continue.',
         invalid_request: 'Invalid OAuth request. Please try again.',
         redirect_uri_mismatch: 'OAuth redirect URI mismatch. Please contact support.',
+        // Server/infrastructure errors (from both login route and OAuth callback)
+        server_error: detailParam === 'fetch_failed'
+          ? 'Cannot connect to server. Please try again later.'
+          : detailParam === 'timeout'
+          ? 'Server is taking too long to respond. Please try again.'
+          : detailParam === 'non_json'
+          ? 'Server returned an unexpected response. Please try again later.'
+          : 'Server is temporarily unavailable. Please try again in a moment.',
+        SERVER_ERROR: 'Server is temporarily unavailable. Please try again in a moment.',
+        // Legacy backend_error (should no longer be produced, but handle gracefully)
+        backend_error: 'Server error during login. Please try again later.',
       };
       setError(errorMessages[errorParam] || `Login error: ${errorParam}`);
     }

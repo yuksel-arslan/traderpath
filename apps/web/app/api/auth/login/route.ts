@@ -7,6 +7,74 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io';
 
+// Timeout for backend requests (15 seconds)
+const BACKEND_TIMEOUT_MS = 15_000;
+
+// Transient HTTP status codes that warrant a retry
+const TRANSIENT_STATUS_CODES = [502, 503, 504];
+
+/**
+ * Parse error from ANY backend response format:
+ * - App format: { success: false, error: { code, message } }
+ * - Fastify default: { statusCode, error, message }
+ * - Railway/proxy: { statusCode, message } or plain text
+ * - Unknown: any other JSON
+ */
+function parseBackendError(data: any, httpStatus: number): { code: string; message: string } {
+  // App's standard format
+  if (data?.error?.code && data?.error?.message) {
+    return { code: data.error.code, message: data.error.message };
+  }
+
+  // App format with only message (no code)
+  if (data?.error?.message) {
+    return { code: 'SERVER_ERROR', message: data.error.message };
+  }
+
+  // Fastify default format: { statusCode, error: "Internal Server Error", message: "..." }
+  if (data?.statusCode && typeof data?.error === 'string') {
+    return { code: `HTTP_${data.statusCode}`, message: data.message || data.error };
+  }
+
+  // Proxy format: { statusCode, message }
+  if (data?.statusCode && data?.message) {
+    return { code: `HTTP_${data.statusCode}`, message: data.message };
+  }
+
+  // Plain message field
+  if (data?.message) {
+    return { code: `HTTP_${httpStatus}`, message: data.message };
+  }
+
+  // Totally unknown format
+  return { code: 'SERVER_ERROR', message: `Server returned an error (HTTP ${httpStatus})` };
+}
+
+/**
+ * Determine if the error is a backend/server error vs an authentication error.
+ * Server errors (5xx, connection issues) should not say "Invalid credentials".
+ */
+function isServerError(httpStatus: number, errorCode: string): boolean {
+  if (httpStatus >= 500) return true;
+  if (errorCode.startsWith('HTTP_5')) return true;
+  if (errorCode === 'SERVER_ERROR' || errorCode.startsWith('INTERNAL_')) return true;
+  return false;
+}
+
+/**
+ * Fetch with timeout using AbortController
+ */
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -19,49 +87,115 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call backend API
-    let response: Response;
+    // Call backend API with timeout and retry
+    let response: Response | undefined;
     let data: any;
-    try {
-      response = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+    let lastError: string = '';
 
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        data = await response.json();
-      } else {
-        const text = await response.text();
-        console.error('Backend returned non-JSON:', response.status, text.slice(0, 500));
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        response = await fetchWithTimeout(
+          `${API_URL}/api/auth/login`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+          },
+          BACKEND_TIMEOUT_MS
+        );
+
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const text = await response.text();
+          console.error(`[Login] Backend returned non-JSON (attempt ${attempt + 1}):`, response.status, text.slice(0, 300));
+
+          // Retry transient errors on first attempt
+          if (attempt === 0 && TRANSIENT_STATUS_CODES.includes(response.status)) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+
+          return NextResponse.json(
+            { success: false, error: { code: 'SERVER_ERROR', message: 'Backend service is temporarily unavailable. Please try again in a moment.' } },
+            { status: 502 }
+          );
+        }
+
+        // Retry transient HTTP errors on first attempt
+        if (attempt === 0 && TRANSIENT_STATUS_CODES.includes(response.status)) {
+          console.warn(`[Login] Transient error ${response.status}, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
+
+        // Got a definitive response, break out of retry loop
+        break;
+      } catch (fetchError: any) {
+        lastError = fetchError.name === 'AbortError'
+          ? 'Request timed out'
+          : fetchError.message || 'Connection failed';
+
+        console.error(`[Login] Backend fetch failed (attempt ${attempt + 1}):`, lastError, { API_URL });
+
+        // Retry on first attempt for connection errors
+        if (attempt === 0) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
+
         return NextResponse.json(
-          { success: false, error: { code: 'SERVER_ERROR', message: 'Backend service unavailable. Please try again later.' } },
+          {
+            success: false,
+            error: {
+              code: 'SERVER_ERROR',
+              message: fetchError.name === 'AbortError'
+                ? 'Server is taking too long to respond. Please try again.'
+                : 'Cannot connect to server. Please try again later.',
+            },
+          },
           { status: 502 }
         );
       }
-    } catch (fetchError: any) {
-      console.error('Backend fetch failed:', fetchError.message, { API_URL });
+    }
+
+    // Safety check - if we exited the loop without data (shouldn't happen but be safe)
+    if (!data || !response) {
       return NextResponse.json(
-        { success: false, error: { code: 'SERVER_ERROR', message: 'Cannot connect to backend. Please try again later.' } },
+        { success: false, error: { code: 'SERVER_ERROR', message: 'Failed to get a response from the server. Please try again.' } },
         { status: 502 }
       );
     }
 
+    // Handle error responses
     if (!response.ok || !data.success) {
+      const parsed = parseBackendError(data, response.status);
+
+      // Don't mask server errors as "Invalid credentials"
+      if (isServerError(response.status, parsed.code)) {
+        console.error('[Login] Backend server error:', { status: response.status, code: parsed.code, message: parsed.message });
+        return NextResponse.json(
+          { success: false, error: { code: 'SERVER_ERROR', message: 'Server is temporarily unavailable. Please try again in a moment.' } },
+          { status: 502 }
+        );
+      }
+
+      // Auth/validation errors - pass through the backend's response
       return NextResponse.json(
-        { success: false, error: data.error || { code: 'AUTH_ERROR', message: 'Invalid credentials' } },
+        { success: false, error: { code: parsed.code, message: parsed.message } },
         { status: response.status }
       );
     }
 
     // Extract token, user, and login metadata from response
-    // Backend returns 'token', not 'accessToken'
     const { token, user, credits, isFirstLogin, firstLoginBonus } = data.data || {};
 
     if (!token) {
+      console.error('[Login] Backend returned success but no token:', JSON.stringify(data).slice(0, 500));
       return NextResponse.json(
-        { success: false, error: { code: 'AUTH_ERROR', message: 'No token received' } },
+        { success: false, error: { code: 'AUTH_ERROR', message: 'Authentication failed. Please try again.' } },
         { status: 500 }
       );
     }
@@ -73,7 +207,6 @@ export async function POST(request: NextRequest) {
     });
 
     // Set httpOnly cookie for secure token storage
-    // This prevents XSS attacks from accessing the token
     res.cookies.set('auth-token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -82,7 +215,7 @@ export async function POST(request: NextRequest) {
       maxAge: 7 * 24 * 60 * 60, // 7 days
     });
 
-    // Also set a session indicator cookie (not httpOnly, so JS can check login status)
+    // Set session indicator cookie (not httpOnly, so JS can check login status)
     res.cookies.set('auth-session', 'true', {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
@@ -92,10 +225,10 @@ export async function POST(request: NextRequest) {
     });
 
     return res;
-  } catch (error) {
-    console.error('Login error:', error);
+  } catch (error: any) {
+    console.error('[Login] Unhandled error:', error?.message || error);
     return NextResponse.json(
-      { success: false, error: { code: 'SERVER_ERROR', message: 'Server error' } },
+      { success: false, error: { code: 'SERVER_ERROR', message: 'An unexpected error occurred. Please try again.' } },
       { status: 500 }
     );
   }
