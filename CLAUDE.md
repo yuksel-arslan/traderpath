@@ -1965,6 +1965,37 @@ Kullanıcı Hakları Aktif:
   - **Startup outcome checks parallelleştirildi**: Sequential → `Promise.all` ile paralel (15s timeout/each)
   - Dosyalar: `database.ts`, `index.ts`, `jwt-middleware.ts`, `binance.provider.ts`, `coin-score-cache.service.ts`, `multi-asset-score-cache.service.ts`, `asset-logos.service.ts`, `schema.prisma`
 
+- **Smart Alerts (Akıllı Alarmlar) - L1-L4 Hierarchy Change Detection**:
+  - **Yeni Modül**: `apps/api/src/modules/automation/`
+  - **Backend Dosyaları**:
+    - `alert-triggers.ts`: L1-L4 tetikleyici tanımları ve değerlendirme mantığı
+      - L1: Liquidity bias shift, VIX spike (>25/>30), DXY significant move (>1.5% weekly), Fed BS change (>5%), Yield curve inversion flip
+      - L2: Market phase change (early→mid→late→exit), rotation detected (entering/exiting), market bias change
+      - L3: Sector flow anomaly (>10% weekly change), sector dominance shift (>5pp)
+      - L4: AI recommendation direction flip (BUY↔SELL), high momentum detection
+    - `smart-alerts.service.ts`: Ana alarm motoru
+      - `runSmartAlertScan()`: Capital Flow verisi çeker, önceki snapshot ile karşılaştırır, tetikleyicileri değerlendirir
+      - `deliverAlerts()`: Kullanıcı tercihlerine göre notification center üzerinden bildirim gönderir
+      - Alert cooldown sistemi (Redis): aynı alert tipi için tekrar spam engeli
+      - `getUserPreferences()` / `upsertUserPreferences()`: Kullanıcı tercih CRUD
+      - Cron job: Her 15 dakikada bir otomatik tarama
+    - `smart-alerts.routes.ts`: API endpoint'leri
+  - **API Endpoint'leri**:
+    - `GET /api/smart-alerts` - Kullanıcının akıllı alarmları (layer/severity/market filtre)
+    - `GET /api/smart-alerts/preferences` - Tercihler
+    - `PATCH /api/smart-alerts/preferences` - Tercih güncelleme
+    - `GET /api/smart-alerts/status` - Motor durumu
+    - `POST /api/smart-alerts/scan` - Manuel tarama (admin)
+  - **Database**: `smart_alert_preferences` tablosu (user_id, enabled, markets JSON, min_severity, email_enabled, push_enabled)
+  - **Frontend Sayfaları**:
+    - `/alerts/smart` - Akıllı alarm listesi (L1-L4 layer kartları, severity/market filtreleri, action önerileri)
+    - `/alerts/smart/settings` - Alarm tercihleri (market toggle, severity threshold, delivery channel seçimi)
+  - **Sidebar**: Tools grubuna "Smart Alerts" (ShieldAlert ikonu) eklendi
+  - **Bildirim Entegrasyonu**: Notification Center `ALERT` tipini kullanarak mevcut bell icon ve bildirim sistemi ile çalışır
+  - **Alarm Severity'leri**: INFO (gray), WARNING (teal), CRITICAL (coral/red)
+  - **Alert Cooldown'lar**: VIX spike 30dk, phase change 2 saat, Fed BS 1 gün vb. (Redis TTL)
+  - Dosyalar: `alert-triggers.ts`, `smart-alerts.service.ts`, `smart-alerts.routes.ts`, `index.ts`, `layout.tsx`, `alerts/smart/page.tsx`, `alerts/smart/settings/page.tsx`
+
 ### 2026-02-06
 - **Email gönderme ve PDF indirme canvas hatası düzeltildi**:
   - html2canvas cloned DOM'da lightweight-charts canvas 0 width/height ile oluşuyordu
@@ -2077,6 +2108,51 @@ Kullanıcı Hakları Aktif:
     - `step1Result.capitalFlowContext` verisi kullanılıyor
     - Capital Flow context olmadan yapılan analizlerde evidence chain gizleniyor
   - Dosyalar: `capital-flow.routes.ts`, `analysis.routes.ts`, `AnalysisDialog.tsx`, `analyze/page.tsx`, `details/[id]/page.tsx`
+
+---
+
+## 🔔 SMART ALERTS (L1-L4 Hierarchy Change Detection)
+
+### Temel Prensip
+> **Sadece fiyat değil, Capital Flow hiyerarşisindeki kritik değişimleri otomatik bildir.**
+
+### Alarm Tetikleyicileri
+
+| Layer | Tetikleyici | Severity | Cooldown |
+|-------|------------|----------|----------|
+| L1 | Liquidity bias değişimi (risk_on↔risk_off) | CRITICAL/WARNING | 1 saat |
+| L1 | VIX > 25 spike | WARNING | 30 dk |
+| L1 | VIX > 30 extreme | CRITICAL | 30 dk |
+| L1 | DXY > 1.5% haftalık hareket | WARNING | 1 saat |
+| L1 | Fed BS > 5% aylık değişim | WARNING | 1 gün |
+| L1 | Yield curve inversion flip | CRITICAL/INFO | 1 gün |
+| L2 | Market phase değişimi (early→mid→late→exit) | varies | 2 saat |
+| L2 | Rotation tespit (entering/exiting) | WARNING | 1 saat |
+| L2 | Market preference değişimi (Crypto→Stocks vb.) | WARNING | 1 saat |
+| L3 | Sector flow anomalisi (>10% haftalık) | WARNING/CRITICAL | 1 saat |
+| L3 | Sector dominance kayması (>5pp) | INFO | 2 saat |
+| L4 | AI recommendation yön değişimi (BUY↔SELL) | WARNING | 30 dk |
+| L4 | High momentum tespiti | INFO | 1 saat |
+
+### API Endpoint'leri
+
+| Endpoint | Method | Açıklama |
+|----------|--------|----------|
+| `/api/smart-alerts` | GET | Kullanıcının akıllı alarmları |
+| `/api/smart-alerts/preferences` | GET | Tercihler |
+| `/api/smart-alerts/preferences` | PATCH | Tercih güncelleme |
+| `/api/smart-alerts/status` | GET | Motor durumu |
+| `/api/smart-alerts/scan` | POST | Manuel tarama (admin) |
+
+### Kod Lokasyonları
+
+| Dosya | Açıklama |
+|-------|----------|
+| `apps/api/src/modules/automation/alert-triggers.ts` | L1-L4 tetikleyici logic |
+| `apps/api/src/modules/automation/smart-alerts.service.ts` | Ana servis, cron job, delivery |
+| `apps/api/src/modules/automation/smart-alerts.routes.ts` | API routes |
+| `apps/web/app/(dashboard)/alerts/smart/page.tsx` | Alarm listesi sayfası |
+| `apps/web/app/(dashboard)/alerts/smart/settings/page.tsx` | Tercih ayarları |
 
 ---
 
