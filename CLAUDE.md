@@ -1995,6 +1995,35 @@ Kullanıcı Hakları Aktif:
   - **Alarm Severity'leri**: INFO (gray), WARNING (teal), CRITICAL (coral/red)
   - **Alert Cooldown'lar**: VIX spike 30dk, phase change 2 saat, Fed BS 1 gün vb. (Redis TTL)
   - Dosyalar: `alert-triggers.ts`, `smart-alerts.service.ts`, `smart-alerts.routes.ts`, `index.ts`, `layout.tsx`, `alerts/smart/page.tsx`, `alerts/smart/settings/page.tsx`
+- **Signal Quality Scoring System eklendi** (Talimat #5):
+  - **Yeni Dosya**: `apps/api/src/modules/signals/signal-scoring.service.ts` (~310 satir)
+    - `calculateSignalQuality(input: ScoringInput): SignalQualityEnrichment` - Composite 0-100 skor hesaplama
+    - **L1-L4 Alignment (40%)**: Liquidity bias, market phase+rotation, sector flow, AI recommendation
+    - **Technical Strength (30%)**: RSI, MACD histogram, volume confirmation
+    - **Momentum (20%)**: ADX trend strength, classic score proxy
+    - **Volatility Adjustment (10%)**: BB width + ATR relative penalty
+    - `buildForecastBands()`: P10/P50/P90 olasilik bantlari (entry fiyatindan % degisim)
+    - Eksik indikatör verisi için fallback nötr skorlar
+  - **Types güncellendi** (`types.ts`):
+    - `SignalQualityScore` interface (qualityScore, qualityLabel, breakdown, tooltip)
+    - `SignalForecastBand` interface (horizon, timeframe, p10/p50/p90, percent changes)
+    - `SignalQualityEnrichment` interface (qualityScore + forecastBands)
+    - `QUALITY_THRESHOLDS` (low: 40, medium: 70, high: 100)
+    - `QUALITY_COLORS` (low: #EF5A6F, medium: #F59E0B, high: #5EEDC3)
+    - `SignalFilterCriteria`'ya `minQualityScore` eklendi
+  - **Database**: `qualityScore` (Int?) ve `qualityData` (Json?) sütunlari Signal tablosuna eklendi + index
+  - **Migration**: `apps/api/prisma/migrations/add_signal_quality_score.sql`
+  - **Signal Generator Job**: Scoring pipeline entegre edildi (step7Result indicators + capitalFlowSummary -> scoring -> createSignal)
+  - **Signal Service**: `createSignal()` artik `qualityEnrichment` kabul ediyor, `getSignals()` `minQualityScore` filtresi destekliyor
+  - **Signal Routes**: GET /signals query'ye `minQualityScore` parametresi eklendi, serialization'a `qualityScore` ve `qualityData` eklendi
+  - **Telegram Formatter**: Quality Score ve Price Forecast bölümleri eklendi
+  - **Yeni Komponent**: `apps/web/components/signals/SignalCard.tsx` (~490 satir)
+    - `QualityScoreBadge`: Renk kodlu skor badge (>70 yesil, >40 sari, <=40 kirmizi) + hover tooltip
+    - `QualityBreakdown`: 4 progress bar (L1-L4 Alignment, Technical, Momentum, Volatility) + agirliklar
+    - `ForecastBands`: P10/P50/P90 görsel gradient bar'lar + entry marker
+    - Expandable quality details bölümü
+  - **Signals Page güncellendi**: SignalCard komponenti entegre edildi, Min Quality Score slider filtresi (0-100, step 5) eklendi, 5 kolonlu filtre grid'i
+  - Dosyalar: `signal-scoring.service.ts`, `types.ts`, `signal-generator.job.ts`, `signal.service.ts`, `signal.routes.ts`, `telegram-formatter.ts`, `SignalCard.tsx`, `signals/page.tsx`, `schema.prisma`
 
 ### 2026-02-06
 - **Email gönderme ve PDF indirme canvas hatası düzeltildi**:

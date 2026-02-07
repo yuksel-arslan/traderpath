@@ -3,63 +3,26 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  TrendingUp,
-  TrendingDown,
   Search,
   RefreshCw,
-  Eye,
-  CheckCircle2,
-  XCircle,
-  Timer,
-  Target,
   Filter,
   Loader2,
   Activity,
   Flame,
-  ThumbsUp,
-  Clock,
   AlertTriangle,
-  Zap,
   BarChart3,
-  Globe,
-  Coins,
-  TrendingDownIcon,
+  Target,
 } from 'lucide-react';
-import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
+import SignalCard from '../../../components/signals/SignalCard';
 
-// Market configuration
-const MARKET_CONFIG = {
-  crypto: { label: 'Crypto', icon: '₿', color: 'from-orange-500 to-yellow-500' },
-  stocks: { label: 'Stocks', icon: '📈', color: 'from-blue-500 to-cyan-500' },
-  metals: { label: 'Metals', icon: '🥇', color: 'from-yellow-600 to-amber-600' },
-  bonds: { label: 'Bonds', icon: '📊', color: 'from-gray-600 to-slate-600' },
-};
-
-// Verdict configuration
-const VERDICT_CONFIG = {
-  GO: { label: 'GO', bg: 'bg-green-500/10', text: 'text-green-600 dark:text-green-400', border: 'border-green-500/30', icon: CheckCircle2 },
-  CONDITIONAL_GO: { label: 'COND', bg: 'bg-yellow-500/10', text: 'text-yellow-600 dark:text-yellow-400', border: 'border-yellow-500/30', icon: Zap },
-  WAIT: { label: 'WAIT', bg: 'bg-orange-500/10', text: 'text-orange-600 dark:text-orange-400', border: 'border-orange-500/30', icon: Clock },
-  AVOID: { label: 'AVOID', bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/30', icon: AlertTriangle },
-};
-
-// Outcome configuration
-const OUTCOME_CONFIG = {
-  tp1_hit: { label: 'TP1 HIT', bg: 'bg-green-500', text: 'text-white', icon: Target },
-  tp2_hit: { label: 'TP2 HIT', bg: 'bg-green-600', text: 'text-white', icon: Flame },
-  sl_hit: { label: 'SL HIT', bg: 'bg-red-500', text: 'text-white', icon: XCircle },
-  expired: { label: 'EXPIRED', bg: 'bg-gray-500', text: 'text-white', icon: Timer },
-  pending: { label: 'LIVE', bg: 'bg-blue-500', text: 'text-white', icon: Activity },
-};
-
-// Phase configuration
-const PHASE_CONFIG = {
-  early: { label: 'Early', icon: '🌱', color: 'text-green-600 dark:text-green-400' },
-  mid: { label: 'Mid', icon: '🌿', color: 'text-blue-600 dark:text-blue-400' },
-  late: { label: 'Late', icon: '🍂', color: 'text-orange-600 dark:text-orange-400' },
-  exit: { label: 'Exit', icon: '🍁', color: 'text-red-600 dark:text-red-400' },
-};
+// Market labels for filter dropdown
+const MARKET_OPTIONS = [
+  { key: 'crypto', label: 'Crypto', icon: '\u20BF' },
+  { key: 'stocks', label: 'Stocks', icon: '\uD83D\uDCC8' },
+  { key: 'metals', label: 'Metals', icon: '\uD83E\uDD47' },
+  { key: 'bonds', label: 'Bonds', icon: '\uD83D\uDCCA' },
+];
 
 interface Signal {
   id: string;
@@ -81,6 +44,8 @@ interface Signal {
   capitalFlowPhase: string;
   capitalFlowBias: string;
   sectorFlow?: number;
+  qualityScore?: number | null;
+  qualityData?: any | null;
   status: 'pending' | 'published' | 'expired' | 'cancelled';
   publishedAt?: string;
   expiresAt: string;
@@ -129,6 +94,7 @@ export default function SignalsPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [selectedDirection, setSelectedDirection] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [minQualityScore, setMinQualityScore] = useState<number>(0);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -138,7 +104,7 @@ export default function SignalsPage() {
   useEffect(() => {
     fetchSignals();
     fetchStats();
-  }, [selectedMarket, selectedStatus, selectedDirection, page]);
+  }, [selectedMarket, selectedStatus, selectedDirection, minQualityScore, page]);
 
   const fetchSignals = async () => {
     setLoading(true);
@@ -149,6 +115,7 @@ export default function SignalsPage() {
       if (selectedMarket) params.append('market', selectedMarket);
       if (selectedStatus) params.append('status', selectedStatus);
       if (selectedDirection) params.append('direction', selectedDirection);
+      if (minQualityScore > 0) params.append('minQualityScore', minQualityScore.toString());
       params.append('limit', limit.toString());
       params.append('offset', ((page - 1) * limit).toString());
 
@@ -184,19 +151,6 @@ export default function SignalsPage() {
   const handleRefresh = () => {
     fetchSignals();
     fetchStats();
-  };
-
-  const getOutcomeStatus = (signal: Signal) => {
-    if (signal.outcome) {
-      return signal.outcome;
-    }
-    if (signal.status === 'published' && new Date(signal.expiresAt) > new Date()) {
-      return 'pending';
-    }
-    if (signal.status === 'expired') {
-      return 'expired';
-    }
-    return null;
   };
 
   const filteredSignals = signals.filter(signal => {
@@ -290,7 +244,7 @@ export default function SignalsPage() {
               <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Filters</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Market Filter */}
               <div>
                 <label className="text-sm text-slate-600 dark:text-slate-400 mb-2 block">Market</label>
@@ -303,9 +257,9 @@ export default function SignalsPage() {
                   className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
                   <option value="">All Markets</option>
-                  {Object.entries(MARKET_CONFIG).map(([key, config]) => (
-                    <option key={key} value={key}>
-                      {config.icon} {config.label}
+                  {MARKET_OPTIONS.map((m) => (
+                    <option key={m.key} value={m.key}>
+                      {m.icon} {m.label}
                     </option>
                   ))}
                 </select>
@@ -342,9 +296,36 @@ export default function SignalsPage() {
                   className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
                   <option value="">All Directions</option>
-                  <option value="long">🟢 LONG</option>
-                  <option value="short">🔴 SHORT</option>
+                  <option value="long">LONG</option>
+                  <option value="short">SHORT</option>
                 </select>
+              </div>
+
+              {/* Min Quality Score Slider */}
+              <div>
+                <label className="text-sm text-slate-600 dark:text-slate-400 mb-2 block">
+                  Min Quality Score: <span className="font-semibold text-slate-900 dark:text-white">{minQualityScore}</span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={minQualityScore}
+                    onChange={(e) => {
+                      setMinQualityScore(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full appearance-none cursor-pointer accent-teal-500"
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                  <span>0</span>
+                  <span>40</span>
+                  <span>70</span>
+                  <span>100</span>
+                </div>
               </div>
 
               {/* Search */}
@@ -391,195 +372,13 @@ export default function SignalsPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredSignals.map((signal) => {
-              const outcomeStatus = getOutcomeStatus(signal);
-              const verdictConfig = VERDICT_CONFIG[signal.classicVerdict as keyof typeof VERDICT_CONFIG];
-              const outcomeConfig = outcomeStatus ? OUTCOME_CONFIG[outcomeStatus as keyof typeof OUTCOME_CONFIG] : null;
-              const phaseConfig = PHASE_CONFIG[signal.capitalFlowPhase as keyof typeof PHASE_CONFIG];
-              const marketConfig = MARKET_CONFIG[signal.market as keyof typeof MARKET_CONFIG];
-
-              return (
-                <div
-                  key={signal.id}
-                  onClick={() => router.push(`/signals/${signal.id}`)}
-                  className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl p-6 hover:shadow-lg hover:border-teal-500/50 dark:hover:border-teal-500/50 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      {/* Symbol */}
-                      <div className="flex items-center gap-2">
-                        <div className={cn(
-                          "w-10 h-10 rounded-full flex items-center justify-center text-lg",
-                          `bg-gradient-to-br ${marketConfig.color}`
-                        )}>
-                          {marketConfig.icon}
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                            {signal.symbol}
-                          </h3>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {marketConfig.label}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Direction */}
-                      <div className={cn(
-                        "px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1",
-                        signal.direction === 'long'
-                          ? 'bg-green-500/10 text-green-600 dark:text-green-400'
-                          : 'bg-red-500/10 text-red-600 dark:text-red-400'
-                      )}>
-                        {signal.direction === 'long' ? (
-                          <TrendingUp className="w-4 h-4" />
-                        ) : (
-                          <TrendingDown className="w-4 h-4" />
-                        )}
-                        {signal.direction.toUpperCase()}
-                      </div>
-                    </div>
-
-                    {/* Outcome Badge */}
-                    {outcomeConfig && (
-                      <div className={cn(
-                        "px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1",
-                        outcomeConfig.bg,
-                        outcomeConfig.text
-                      )}>
-                        <outcomeConfig.icon className="w-3 h-3" />
-                        {outcomeConfig.label}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    {/* Analysis Section */}
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Analysis</p>
-
-                      {verdictConfig && (
-                        <div className={cn(
-                          "inline-flex items-center gap-1 px-2 py-1 rounded-md border text-xs font-medium",
-                          verdictConfig.bg,
-                          verdictConfig.text,
-                          verdictConfig.border
-                        )}>
-                          <verdictConfig.icon className="w-3 h-3" />
-                          {verdictConfig.label}
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-slate-600 dark:text-slate-400">Score:</span>
-                        <span className="font-semibold text-slate-900 dark:text-white">
-                          {signal.classicScore.toFixed(1)}/10
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-slate-600 dark:text-slate-400">Confidence:</span>
-                        <span className="font-semibold text-slate-900 dark:text-white">
-                          {signal.overallConfidence}%
-                        </span>
-                      </div>
-
-                      {signal.mlisConfirmation && (
-                        <div className="flex items-center gap-1 text-xs text-teal-600 dark:text-teal-400">
-                          <CheckCircle2 className="w-3 h-3" />
-                          MLIS Confirmed
-                        </div>
-                      )}
-
-                      {phaseConfig && (
-                        <div className="flex items-center gap-1 text-xs">
-                          <span>{phaseConfig.icon}</span>
-                          <span className={phaseConfig.color}>{phaseConfig.label} Phase</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Trade Plan Section */}
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Trade Plan</p>
-
-                      <div className="space-y-1 text-sm">
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-600 dark:text-slate-400">Entry:</span>
-                          <span className="font-mono font-medium text-slate-900 dark:text-white">
-                            ${signal.entryPrice.toFixed(signal.entryPrice >= 1 ? 2 : 6)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-red-600 dark:text-red-400">SL:</span>
-                          <span className="font-mono font-medium text-red-600 dark:text-red-400">
-                            ${signal.stopLoss.toFixed(signal.stopLoss >= 1 ? 2 : 6)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-green-600 dark:text-green-400">TP1:</span>
-                          <span className="font-mono font-medium text-green-600 dark:text-green-400">
-                            ${signal.takeProfit1.toFixed(signal.takeProfit1 >= 1 ? 2 : 6)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-green-600 dark:text-green-400">TP2:</span>
-                          <span className="font-mono font-medium text-green-600 dark:text-green-400">
-                            ${signal.takeProfit2.toFixed(signal.takeProfit2 >= 1 ? 2 : 6)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-600 dark:text-slate-400">R:R</span>
-                          <span className="font-semibold text-blue-600 dark:text-blue-400">
-                            {signal.riskRewardRatio.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Performance Section */}
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Performance</p>
-
-                      {signal.pnlPercent !== undefined && signal.pnlPercent !== null ? (
-                        <div className={cn(
-                          "text-2xl font-bold",
-                          signal.pnlPercent >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                        )}>
-                          {signal.pnlPercent >= 0 ? '+' : ''}{signal.pnlPercent.toFixed(2)}%
-                        </div>
-                      ) : (
-                        <div className="text-slate-400 dark:text-slate-500 text-sm">
-                          Pending
-                        </div>
-                      )}
-
-                      <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
-                        <div>Created: {new Date(signal.createdAt).toLocaleDateString()}</div>
-                        {signal.publishedAt && (
-                          <div>Published: {new Date(signal.publishedAt).toLocaleDateString()}</div>
-                        )}
-                        <div>Expires: {new Date(signal.expiresAt).toLocaleDateString()}</div>
-                      </div>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/signals/${signal.id}`);
-                        }}
-                        className="w-full px-3 py-2 bg-gradient-to-r from-teal-500 to-blue-500 text-white rounded-lg hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm group-hover:scale-105"
-                      >
-                        <Eye className="w-4 h-4" />
-                        View Details
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {filteredSignals.map((signal) => (
+              <SignalCard
+                key={signal.id}
+                signal={signal}
+                onClick={() => router.push(`/signals/${signal.id}`)}
+              />
+            ))}
           </div>
         )}
 
