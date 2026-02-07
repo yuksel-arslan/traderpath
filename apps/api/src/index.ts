@@ -623,52 +623,66 @@ const start = async () => {
     await redis.ping();
     logger.info('✓ Redis connected');
 
-    // Start outcome tracker (non-blocking - don't hold up server startup)
-    startOutcomeTracker().catch((err) => {
-      logger.error(err, 'Outcome tracker startup failed (non-blocking)');
-    });
+    // ===========================================
+    // EXTERNAL API ISOLATION FLAG
+    // When true, all external API-dependent background jobs are disabled.
+    // Only DB + Redis + Auth + Routes are active.
+    // Set DISABLE_EXTERNAL_APIS=true in env to enable minimal mode.
+    // ===========================================
+    const externalApisDisabled = process.env['DISABLE_EXTERNAL_APIS'] === 'true';
 
-    // Start price alert checker
-    startPriceChecker();
-    logger.info('✓ Price checker started');
+    if (externalApisDisabled) {
+      logger.info('⚠ MINIMAL MODE: External APIs disabled. Only DB/Redis/Auth/Routes active.');
+      logger.info('  Skipped: outcome tracker, price checker, scheduled reports,');
+      logger.info('           coin score cache, signals, BILGE cron, asset logos.');
+    } else {
+      // Start outcome tracker (non-blocking - don't hold up server startup)
+      startOutcomeTracker().catch((err) => {
+        logger.error(err, 'Outcome tracker startup failed (non-blocking)');
+      });
 
-    // Start scheduled reports cron job
-    scheduledReportsService.start();
-    logger.info('✓ Scheduled reports cron started');
+      // Start price alert checker
+      startPriceChecker();
+      logger.info('✓ Price checker started');
 
-    // Start coin score cache cron job
-    startCoinScoreCacheJob();
-    logger.info('✓ Coin score cache cron started');
+      // Start scheduled reports cron job
+      scheduledReportsService.start();
+      logger.info('✓ Scheduled reports cron started');
 
-    // Initialize asset logos in database (non-blocking - don't hold up server startup)
-    initializeAssetLogos().then(() => {
-      logger.info('✓ Asset logos initialized');
-    }).catch((err) => {
-      logger.warn(err, 'Asset logos initialization failed (non-blocking)');
-    });
+      // Start coin score cache cron job
+      startCoinScoreCacheJob();
+      logger.info('✓ Coin score cache cron started');
 
-    // Initialize BILGE Guardian System
-    initializeBilgeService(redis);
-    logger.info('✓ BILGE Guardian initialized');
+      // Initialize asset logos in database (non-blocking - don't hold up server startup)
+      initializeAssetLogos().then(() => {
+        logger.info('✓ Asset logos initialized');
+      }).catch((err) => {
+        logger.warn(err, 'Asset logos initialization failed (non-blocking)');
+      });
 
-    // Start BILGE weekly report cron job (Sunday 21:00 UTC+3)
-    startBilgeWeeklyReportJob();
-    logger.info('✓ BILGE weekly report cron started');
+      // Initialize BILGE Guardian System
+      initializeBilgeService(redis);
+      logger.info('✓ BILGE Guardian initialized');
 
-    // Start Signal Generator cron job (hourly at :15)
-    startSignalGeneratorJob();
-    logger.info('✓ Signal generator cron started');
+      // Start BILGE weekly report cron job (Sunday 21:00 UTC+3)
+      startBilgeWeeklyReportJob();
+      logger.info('✓ BILGE weekly report cron started');
 
-    // Start Signal Outcome Tracker cron job (every 15 minutes)
-    startSignalOutcomeTracker();
-    logger.info('✓ Signal outcome tracker cron started');
+      // Start Signal Generator cron job (hourly at :15)
+      startSignalGeneratorJob();
+      logger.info('✓ Signal generator cron started');
 
-    // Start subscription daily credits cron job (00:00 UTC)
-    startDailyCreditsJob();
-    logger.info('✓ Subscription daily credits cron started');
-    // Start payment reconciliation cron job (03:00 UTC daily)
-    startReconciliationJob();
-    logger.info('✓ Payment reconciliation cron started');
+      // Start Signal Outcome Tracker cron job (every 15 minutes)
+      startSignalOutcomeTracker();
+      logger.info('✓ Signal outcome tracker cron started');
+
+      // Start subscription daily credits cron job (00:00 UTC)
+      startDailyCreditsJob();
+      logger.info('✓ Subscription daily credits cron started');
+      // Start payment reconciliation cron job (03:00 UTC daily)
+      startReconciliationJob();
+      logger.info('✓ Payment reconciliation cron started');
+    }
 
     // Start server
     await app.listen({
@@ -680,6 +694,7 @@ const start = async () => {
     logger.info(`   TradePath API Server v1.0.0`);
     logger.info(`   Port: ${config.port}`);
     logger.info(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.info(`   Mode: ${externalApisDisabled ? 'MINIMAL (no external APIs)' : 'FULL'}`);
     logger.info('===========================================');
     logger.info('');
     logger.info('Endpoints:');

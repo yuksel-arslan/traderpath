@@ -81,6 +81,11 @@ const CACHE_TTL = {
  * Get complete Capital Flow Summary
  */
 export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
+  // MINIMAL MODE: Return static fallback data immediately (no external API calls)
+  if (process.env['DISABLE_EXTERNAL_APIS'] === 'true') {
+    return buildFallbackSummary();
+  }
+
   // Try cache first
   try {
     const cached = await redis?.get(CACHE_KEYS.CAPITAL_FLOW);
@@ -1060,6 +1065,23 @@ function getFallbackMarketFlow(market: MarketType): MarketFlow {
     rotationConfidence: 50,
     sectors: [],
     lastUpdated: now,
+  };
+}
+
+/**
+ * Build a complete fallback summary without any external API calls
+ * Used in MINIMAL MODE (DISABLE_EXTERNAL_APIS=true)
+ */
+function buildFallbackSummary(): CapitalFlowSummary {
+  const globalLiquidity = getFallbackGlobalLiquidity();
+  const markets = getFallbackMarketFlows();
+  return {
+    timestamp: new Date(),
+    globalLiquidity,
+    liquidityBias: 'neutral',
+    markets,
+    recommendation: getFallbackRecommendation(),
+    cacheExpiry: new Date(Date.now() + 60_000), // 1 min TTL in fallback mode
   };
 }
 
