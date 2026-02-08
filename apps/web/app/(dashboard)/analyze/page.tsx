@@ -48,6 +48,8 @@ import {
   Lock,
   Check,
   ArrowDown,
+  MessageSquare,
+  GitBranch,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch, getAuthToken, getApiUrl } from '../../../lib/api';
@@ -216,9 +218,15 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'score_asc', label: 'Score ↑' },
 ];
 
+// Mode type
+type AnalyzeMode = 'select' | 'flow';
+
 export default function AnalyzePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Mode selection state
+  const [mode, setMode] = useState<AnalyzeMode>('select');
 
   // Top-Down step state
   const [currentStep, setCurrentStep] = useState<AnalysisStep>('step0');
@@ -405,10 +413,12 @@ export default function AnalyzePage() {
   useEffect(() => {
     fetchDailyPassStatus();
     fetchAnalyses();
-    fetchCapitalFlow();
+    if (mode === 'flow') {
+      fetchCapitalFlow();
+    }
     const interval = setInterval(fetchAnalyses, 30000);
     return () => clearInterval(interval);
-  }, [fetchDailyPassStatus, fetchAnalyses, fetchCapitalFlow]);
+  }, [fetchDailyPassStatus, fetchAnalyses, fetchCapitalFlow, mode]);
 
   // Purchase Daily Pass
   const purchaseDailyPass = async () => {
@@ -570,36 +580,150 @@ export default function AnalyzePage() {
     },
   } : undefined;
 
+  // Handle selecting flow mode
+  const handleSelectFlow = () => {
+    setMode('flow');
+    if (!capitalFlow) fetchCapitalFlow();
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      {/* Header */}
-      <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
-                <TrendingUp className="w-5 h-5 text-white" />
+
+      {/* ================================================ */}
+      {/* MODE SELECTION LANDING                           */}
+      {/* ================================================ */}
+      {mode === 'select' && (
+        <>
+          <div className="max-w-4xl mx-auto px-4 pt-16 pb-10">
+            {/* Title */}
+            <div className="text-center mb-10">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-xl shadow-teal-500/20 mx-auto mb-4">
+                <TrendingUp className="w-7 h-7 text-white" />
               </div>
-              <div>
-                <h1 className="text-lg font-bold text-slate-900 dark:text-white">Top-Down Analysis</h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Capital Flow → AI Recommendation → Asset Analysis</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">
+                How would you like to analyze?
+              </h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                Choose your preferred analysis experience. Both methods use the same Capital Flow intelligence engine.
+              </p>
+            </div>
+
+            {/* Two Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {/* Analyze via Chat */}
+              <button
+                onClick={() => router.push('/concierge')}
+                className="group relative p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-violet-400 dark:hover:border-violet-500/50 hover:shadow-xl hover:shadow-violet-500/10 transition-all duration-300 text-left"
+              >
+                <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 text-[10px] font-bold uppercase">
+                  Fastest
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20 mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <MessageSquare className="w-6 h-6 text-white" />
+                </div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                  Analyze via Chat
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
+                  Tell the AI what you want to analyze. Capital Flow check, asset selection, and full analysis run automatically. Your saved report opens when done.
+                </p>
+                <ul className="space-y-2 mb-5">
+                  {[
+                    'Type a symbol or ask "What should I buy?"',
+                    'L1-L4 Capital Flow checked automatically',
+                    'Full 7-Step analysis runs in background',
+                    'Report saved and opened for you',
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-400">
+                      <Check className="w-3.5 h-3.5 text-violet-500 mt-0.5 flex-shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex items-center gap-2 text-sm font-semibold text-violet-600 dark:text-violet-400 group-hover:gap-3 transition-all">
+                  <MessageSquare className="w-4 h-4" />
+                  Open AI Chat
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </button>
+
+              {/* Analyze via Flow */}
+              <button
+                onClick={handleSelectFlow}
+                className="group relative p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-teal-400 dark:hover:border-teal-500/50 hover:shadow-xl hover:shadow-teal-500/10 transition-all duration-300 text-left"
+              >
+                <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400 text-[10px] font-bold uppercase">
+                  Full Control
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/20 mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <GitBranch className="w-6 h-6 text-white" />
+                </div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                  Analyze via Flow
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
+                  Follow the top-down Capital Flow funnel step by step. Review each layer, pick your asset from AI recommendations, and configure your analysis.
+                </p>
+                <ul className="space-y-2 mb-5">
+                  {[
+                    'L1-L3 Capital Flow loads automatically',
+                    'Generate AI Asset Recommendations',
+                    'Select asset and configure timeframe',
+                    'Run analysis with full visibility',
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-400">
+                      <Check className="w-3.5 h-3.5 text-teal-500 mt-0.5 flex-shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex items-center gap-2 text-sm font-semibold text-teal-600 dark:text-teal-400 group-hover:gap-3 transition-all">
+                  <GitBranch className="w-4 h-4" />
+                  Start Flow Analysis
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ================================================ */}
+      {/* FLOW MODE - Existing Step-by-Step Analysis        */}
+      {/* ================================================ */}
+      {mode === 'flow' && (
+        <>
+          {/* Header */}
+          <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <div className="max-w-7xl mx-auto px-4 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setMode('select')}
+                    className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    <ArrowDown className="w-4 h-4 text-slate-500 rotate-90" />
+                  </button>
+                  <div>
+                    <h1 className="text-lg font-bold text-slate-900 dark:text-white">Top-Down Analysis</h1>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Capital Flow → AI Recommendation → Asset Analysis</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { fetchCapitalFlow(); fetchAnalyses(); }}
+                  disabled={capitalFlowLoading}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <RefreshCw className={cn("w-4 h-4", capitalFlowLoading && "animate-spin")} />
+                  <span className="hidden sm:inline">Refresh</span>
+                </button>
               </div>
             </div>
-            <button
-              onClick={() => { fetchCapitalFlow(); fetchAnalyses(); }}
-              disabled={capitalFlowLoading}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              <RefreshCw className={cn("w-4 h-4", capitalFlowLoading && "animate-spin")} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
           </div>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Step Progress Indicator */}
-        <div className="mb-6">
+          <div className="max-w-7xl mx-auto px-4 py-6">
+            {/* Step Progress Indicator */}
+            <div className="mb-6">
           <div className="flex items-center justify-center gap-2 sm:gap-4">
             {/* Step 0 */}
             <button
@@ -1347,6 +1471,52 @@ export default function AnalyzePage() {
             fetchAnalyses();
           }}
         />
+      )}
+      </>)}
+
+      {/* Recent Analyses - visible in both modes */}
+      {mode === 'select' && analyses.length > 0 && (
+        <div className="max-w-4xl mx-auto px-4 pb-10">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  Recent Analyses
+                  <span className="text-xs font-normal text-slate-500 ml-1">({analyses.length})</span>
+                </h3>
+              </div>
+            </div>
+            <div className="p-4 max-h-[300px] overflow-y-auto">
+              <div className="space-y-2">
+                {analyses.slice(0, 5).map((analysis) => {
+                  const verdictConfig = VERDICT_CONFIG[analysis.verdict] || VERDICT_CONFIG.wait;
+                  return (
+                    <Link
+                      key={analysis.id}
+                      href={`/analyze/details/${analysis.id}`}
+                      className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-md transition"
+                    >
+                      <CoinIcon symbol={analysis.symbol} size={28} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-sm text-slate-900 dark:text-white">{analysis.symbol}</span>
+                          <span className={cn("px-1 py-0.5 rounded text-[9px] font-bold", verdictConfig.bg, verdictConfig.text)}>
+                            {verdictConfig.label}
+                          </span>
+                          {analysis.score !== null && (
+                            <span className="text-[10px] text-slate-500 font-medium">{(analysis.score * 10).toFixed(0)}%</span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-500">{analysis.createdAt}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
