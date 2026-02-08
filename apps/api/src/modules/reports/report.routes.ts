@@ -194,7 +194,8 @@ export async function reportRoutes(fastify: FastifyInstance) {
 
         // Auto-create price alerts for trade plan (if GO or CONDITIONAL_GO verdict)
         const tradePlan = reportData?.tradePlan as Record<string, unknown> | undefined;
-        const verdictLower = verdict.toLowerCase();
+        // Guard: verdict could be non-string from report data
+        const verdictLower = typeof verdict === 'string' ? verdict.toLowerCase() : '';
         const shouldCreateAlerts = verdictLower === 'go' || verdictLower === 'go!' || verdictLower === 'conditional_go' || verdictLower === 'conditional go';
 
         let alertsCreated = 0;

@@ -760,7 +760,7 @@ export default function BilgeAdminPage() {
           <div className="divide-y max-h-[600px] overflow-y-auto">
             {errors
               .filter((err) =>
-                searchQuery ? err.message.toLowerCase().includes(searchQuery.toLowerCase()) : true
+                searchQuery ? (err.message || '').toLowerCase().includes((searchQuery || '').toLowerCase()) : true
               )
               .map((err) => (
                 <div

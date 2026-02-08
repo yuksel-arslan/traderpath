@@ -313,7 +313,7 @@ export default function NotificationsPage() {
                 <p className="text-lg font-medium mb-1">No notifications</p>
                 <p className="text-sm text-muted-foreground">
                   {activeFilter !== 'ALL'
-                    ? `No ${activeFilter.toLowerCase()} notifications yet`
+                    ? `No ${(activeFilter || '').toLowerCase()} notifications yet`
                     : 'You\'re all caught up!'}
                 </p>
               </div>

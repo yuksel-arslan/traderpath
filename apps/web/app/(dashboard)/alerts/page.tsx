@@ -95,7 +95,8 @@ export default function AlertsPage() {
   }, [fetchAlerts, fetchHistory]);
 
   const filteredAlerts = alerts.filter((alert) => {
-    const matchesSearch = alert.symbol.toLowerCase().includes(searchQuery.toLowerCase());
+    // Guard: alert.symbol could be undefined from API
+    const matchesSearch = (alert.symbol || '').toLowerCase().includes((searchQuery || '').toLowerCase());
     const matchesFilter = filter === 'all' ||
       (filter === 'active' && alert.isActive && !alert.isTriggered) ||
       (filter === 'triggered' && alert.isTriggered);

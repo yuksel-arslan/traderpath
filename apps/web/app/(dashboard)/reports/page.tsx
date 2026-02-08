@@ -317,7 +317,8 @@ Could you share your risk assessment and recommendations based on this analysis?
   };
 
   const getVerdictColor = (verdict: string) => {
-    const v = verdict.toLowerCase();
+    // Guard: verdict could be non-string from API response
+    const v = typeof verdict === 'string' ? verdict.toLowerCase() : '';
     if (v.includes('strong buy') || v.includes('buy')) return 'text-green-500 bg-green-500/10';
     if (v.includes('strong sell') || v.includes('sell')) return 'text-red-500 bg-red-500/10';
     if (v.includes('hold') || v.includes('wait')) return 'text-yellow-500 bg-yellow-500/10';
@@ -404,7 +405,8 @@ Could you share your risk assessment and recommendations based on this analysis?
 
   const filteredReports = reports
     .filter(r =>
-      r.symbol.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      // Guard: r.symbol could be undefined from API
+      (r.symbol || '').toLowerCase().includes((searchQuery || '').toLowerCase()) &&
       isInDateRange(r.generatedAt) &&
       (tradeTypeFilter === 'all' || r.tradeType === tradeTypeFilter) &&
       matchesVerdictFilter(r.verdict) &&

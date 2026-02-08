@@ -30,13 +30,18 @@ export default async function creditRoutes(app: FastifyInstance) {
    * Get current credit balance
    */
   app.get('/balance', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = getUser(request).id;
-    const balance = await creditService.getBalance(userId);
+    try {
+      const userId = getUser(request).id;
+      const balance = await creditService.getBalance(userId);
 
-    return reply.send({
-      success: true,
-      data: balance,
-    });
+      return reply.send({
+        success: true,
+        data: balance,
+      });
+    } catch (error) {
+      console.error('GET /api/credits/balance error:', error);
+      return reply.status(500).send({ success: false, error: 'Failed to fetch balance' });
+    }
   });
 
   /**
@@ -44,12 +49,17 @@ export default async function creditRoutes(app: FastifyInstance) {
    * Get available credit packages
    */
   app.get('/packages', async (_request: FastifyRequest, reply: FastifyReply) => {
-    const packages = await creditService.getPackages();
+    try {
+      const packages = await creditService.getPackages();
 
-    return reply.send({
-      success: true,
-      data: { packages },
-    });
+      return reply.send({
+        success: true,
+        data: { packages },
+      });
+    } catch (error) {
+      console.error('GET /api/credits/packages error:', error);
+      return reply.status(500).send({ success: false, error: 'Failed to fetch packages' });
+    }
   });
 
   /**
@@ -62,23 +72,31 @@ export default async function creditRoutes(app: FastifyInstance) {
   });
 
   app.post('/purchase', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = getUser(request).id;
-    const body = purchaseSchema.parse(request.body);
+    try {
+      const userId = getUser(request).id;
+      const body = purchaseSchema.parse(request.body);
 
-    // TODO: Process payment with Stripe/Crypto
-    // For now, simulate successful payment
-    const paymentId = `pay_${Date.now()}`;
+      // TODO: Process payment with Stripe/Crypto
+      // For now, simulate successful payment
+      const paymentId = `pay_${Date.now()}`;
 
-    const result = await creditService.purchasePackage(
-      userId,
-      body.packageId,
-      paymentId
-    );
+      const result = await creditService.purchasePackage(
+        userId,
+        body.packageId,
+        paymentId
+      );
 
-    return reply.send({
-      success: true,
-      data: result,
-    });
+      return reply.send({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      if (error?.name === 'ZodError') {
+        return reply.status(400).send({ success: false, error: 'Invalid purchase parameters' });
+      }
+      console.error('POST /api/credits/purchase error:', error);
+      return reply.status(500).send({ success: false, error: 'Failed to process purchase' });
+    }
   });
 
   /**
@@ -92,20 +110,25 @@ export default async function creditRoutes(app: FastifyInstance) {
   });
 
   app.get('/history', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = getUser(request).id;
-    const query = historyQuerySchema.parse(request.query);
+    try {
+      const userId = getUser(request).id;
+      const query = historyQuerySchema.parse(request.query);
 
-    const history = await creditService.getHistory(
-      userId,
-      query.page,
-      query.limit,
-      query.type
-    );
+      const history = await creditService.getHistory(
+        userId,
+        query.page,
+        query.limit,
+        query.type
+      );
 
-    return reply.send({
-      success: true,
-      data: history,
-    });
+      return reply.send({
+        success: true,
+        data: history,
+      });
+    } catch (error) {
+      console.error('GET /api/credits/history error:', error);
+      return reply.status(500).send({ success: false, error: 'Failed to fetch credit history' });
+    }
   });
 
   /**
@@ -113,12 +136,17 @@ export default async function creditRoutes(app: FastifyInstance) {
    * Get credit costs for all services
    */
   app.get('/costs', async (_request: FastifyRequest, reply: FastifyReply) => {
-    const { CREDIT_COSTS } = await import('@traderpath/types');
+    try {
+      const { CREDIT_COSTS } = await import('@traderpath/types');
 
-    return reply.send({
-      success: true,
-      data: { costs: CREDIT_COSTS },
-    });
+      return reply.send({
+        success: true,
+        data: { costs: CREDIT_COSTS },
+      });
+    } catch (error) {
+      console.error('GET /api/credits/costs error:', error);
+      return reply.status(500).send({ success: false, error: 'Failed to fetch credit costs' });
+    }
   });
 
   /**
@@ -132,32 +160,40 @@ export default async function creditRoutes(app: FastifyInstance) {
   });
 
   app.post('/deduct', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = getUser(request).id;
-    const body = deductSchema.parse(request.body);
+    try {
+      const userId = getUser(request).id;
+      const body = deductSchema.parse(request.body);
 
-    const result = await creditService.charge(
-      userId,
-      body.amount,
-      body.reason,
-      body.analysisId ? { analysisId: body.analysisId } : undefined
-    );
+      const result = await creditService.charge(
+        userId,
+        body.amount,
+        body.reason,
+        body.analysisId ? { analysisId: body.analysisId } : undefined
+      );
 
-    if (!result.success) {
-      return reply.status(402).send({
-        success: false,
-        error: {
-          code: 'INSUFFICIENT_CREDITS',
-          message: `You need ${body.amount} credits. Current balance: ${result.newBalance}`,
+      if (!result.success) {
+        return reply.status(402).send({
+          success: false,
+          error: {
+            code: 'INSUFFICIENT_CREDITS',
+            message: `You need ${body.amount} credits. Current balance: ${result.newBalance}`,
+          },
+        });
+      }
+
+      return reply.send({
+        success: true,
+        data: {
+          creditsDeducted: body.amount,
+          newBalance: result.newBalance,
         },
       });
+    } catch (error: any) {
+      if (error?.name === 'ZodError') {
+        return reply.status(400).send({ success: false, error: 'Invalid deduction parameters' });
+      }
+      console.error('POST /api/credits/deduct error:', error);
+      return reply.status(500).send({ success: false, error: 'Failed to deduct credits' });
     }
-
-    return reply.send({
-      success: true,
-      data: {
-        creditsDeducted: body.amount,
-        newBalance: result.newBalance,
-      },
-    });
   });
 }

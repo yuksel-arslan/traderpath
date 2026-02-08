@@ -181,7 +181,8 @@ export function WebResearchPanel({ research }: WebResearchPanelProps) {
 }
 
 function SentimentBadge({ label, score }: { label: string; score: number }) {
-  const normalized = label.toLowerCase();
+  // Guard: label prop could be non-string from API data
+  const normalized = typeof label === 'string' ? label.toLowerCase() : '';
   let sentimentKey: 'bullish' | 'bearish' | 'neutral' = 'neutral';
   if (normalized.includes('bullish') || normalized.includes('positive')) sentimentKey = 'bullish';
   else if (normalized.includes('bearish') || normalized.includes('negative')) sentimentKey = 'bearish';

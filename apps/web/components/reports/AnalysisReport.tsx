@@ -294,7 +294,9 @@ function formatRegime(regime: string | undefined): string {
     'risk_on': 'Risk On', 'risk_off': 'Risk Off', 'risk-on': 'Risk On', 'risk-off': 'Risk Off',
     'normal': 'Normal', 'volatile': 'Volatile', 'trending': 'Trending', 'ranging': 'Ranging'
   };
-  return map[regime.toLowerCase()] || regime.charAt(0).toUpperCase() + regime.slice(1).replace(/_/g, ' ');
+  // Guard: regime could be non-string from API data even though typed as string
+  const key = typeof regime === 'string' ? regime.toLowerCase() : '';
+  return map[key] || (typeof regime === 'string' ? regime.charAt(0).toUpperCase() + regime.slice(1).replace(/_/g, ' ') : 'Normal');
 }
 
 function formatDirection(dir: string | null | undefined): string {
@@ -317,8 +319,10 @@ function formatAction(actionOrVerdict: string | undefined): string {
     'wait': 'WAIT', 'no_go': 'NO GO', 'avoid': 'AVOID', 'stop': 'STOP', 'hold': 'HOLD',
     'long': 'LONG', 'short': 'SHORT', 'neutral': 'WAIT',
   };
-  const lower = actionOrVerdict.toLowerCase().replace(/-/g, '_');
-  return map[lower] || actionOrVerdict.toUpperCase().replace(/_/g, ' ');
+  // Guard: actionOrVerdict could be non-string from API data
+  const safeStr = typeof actionOrVerdict === 'string' ? actionOrVerdict : '';
+  const lower = safeStr.toLowerCase().replace(/-/g, '_');
+  return map[lower] || safeStr.toUpperCase().replace(/_/g, ' ');
 }
 
 function getVerdictAction(v: { action?: string; verdict?: string } | undefined): string {
@@ -363,7 +367,7 @@ function renderIndicatorTable(indicators: Record<string, IndicatorDetailItem | u
         ${items.length > maxItems ? `
         <tr style="background: #f0f9ff;">
           <td colspan="4" style="text-align: center; font-size: 6px; color: #0369a1; font-style: italic;">
-            + ${items.length - maxItems} more ${title.toLowerCase()} analyzed...
+            + ${items.length - maxItems} more ${(typeof title === 'string' ? title.toLowerCase() : 'items')} analyzed...
           </td>
         </tr>
         ` : ''}
@@ -714,7 +718,9 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
 
   // Verdict and conditional explanation
   const verdictAction = getVerdictAction(v);
-  const isConditional = verdictAction.toLowerCase().includes('conditional') || verdictAction.toLowerCase().includes('cond');
+  // Guard: verdictAction could be non-string
+  const verdictActionLower = typeof verdictAction === 'string' ? verdictAction.toLowerCase() : '';
+  const isConditional = verdictActionLower.includes('conditional') || verdictActionLower.includes('cond');
 
   // Format date nicely
   const reportDate = data.generatedAt || new Date().toLocaleDateString('en-US', {
@@ -1686,7 +1692,9 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
 
   // Check for conditional verdict
   const verdictAction = getVerdictAction(v);
-  const isConditional = verdictAction.toLowerCase().includes('conditional') || verdictAction.toLowerCase().includes('cond');
+  // Guard: verdictAction could be non-string
+  const verdictActionLower2 = typeof verdictAction === 'string' ? verdictAction.toLowerCase() : '';
+  const isConditional = verdictActionLower2.includes('conditional') || verdictActionLower2.includes('cond');
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${styles}</style></head><body>
   <div class="page">
@@ -2146,8 +2154,10 @@ function generateSinglePageReport(data: AnalysisReportData): string {
   const ml = data.mlConfirmation;
 
   const directionStr = formatDirection(tp.direction);
-  const isLong = directionStr.toLowerCase() === 'long';
-  const isShort = directionStr.toLowerCase() === 'short';
+  // Guard: formatDirection returns string, but defensive against edge cases
+  const dirLower = typeof directionStr === 'string' ? directionStr.toLowerCase() : '';
+  const isLong = dirLower === 'long';
+  const isShort = dirLower === 'short';
 
   const verdictAction = formatAction(getVerdictAction(verdict));
   const verdictColor = verdictAction === 'GO' ? '#16a34a' : verdictAction.includes('CONDITIONAL') ? '#d97706' : verdictAction === 'AVOID' ? '#dc2626' : '#666';

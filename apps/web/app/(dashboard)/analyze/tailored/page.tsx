@@ -279,8 +279,8 @@ export default function TailoredAnalysisPage() {
   const filteredAssets = ASSET_CATALOG.filter(asset => {
     const matchesCategory = activeCategory === 'all' || asset.category === activeCategory;
     const matchesSearch = searchQuery === '' ||
-      asset.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      asset.name.toLowerCase().includes(searchQuery.toLowerCase());
+      (asset.symbol || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+      (asset.name || '').toLowerCase().includes((searchQuery || '').toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
