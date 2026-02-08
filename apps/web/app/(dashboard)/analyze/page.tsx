@@ -11,50 +11,37 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Target,
-  Timer,
-  ChevronDown,
   Sparkles,
   TrendingUp,
   TrendingDown,
   BarChart3,
-  Search,
   Coins,
   Landmark,
   Gem,
   Loader2,
   Zap,
   Building2,
-  Clock,
   RefreshCw,
-  Download,
-  Mail,
   Minus,
-  Eye,
-  Bot,
-  Trash2,
-  CheckCircle2,
-  XCircle,
-  Filter,
-  Layers,
   Activity,
-  Calendar,
   Globe,
-  DollarSign,
   ArrowRight,
   ChevronRight,
   Brain,
   AlertTriangle,
   Shield,
-  Lock,
   Check,
   ArrowDown,
-  MessageSquare,
-  GitBranch,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch, getAuthToken, getApiUrl } from '../../../lib/api';
 import type { Timeframe } from '../../../components/analysis/TradeTypeSelector';
 import Link from 'next/link';
+
+// Mobile-first components
+import { SelectionCards } from '../../../components/analyze/SelectionCards';
+import { AnalysisGrid } from '../../../components/analyze/AnalysisGrid';
+import { RecentAnalysesMobile } from '../../../components/analyze/RecentAnalysesMobile';
 
 // Lazy load components
 const CoinIcon = dynamic(
@@ -68,11 +55,7 @@ const AnalysisDialog = dynamic(
 );
 
 // Types
-type AssetType = 'crypto' | 'stocks' | 'bonds' | 'metals' | 'bist';
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
-type VerdictFilter = 'all' | 'go' | 'conditional_go' | 'wait' | 'avoid';
-type OutcomeFilter = 'all' | 'live' | 'tp' | 'sl';
-type SortOption = 'time_desc' | 'time_asc' | 'pnl_desc' | 'pnl_asc' | 'score_desc' | 'score_asc';
 type Phase = 'early' | 'mid' | 'late' | 'exit';
 type LiquidityBias = 'risk_on' | 'risk_off' | 'neutral';
 
@@ -178,46 +161,6 @@ const TIMEFRAMES: { value: Timeframe; label: string; type: string }[] = [
   { value: '1d', label: '1D', type: 'Swing' },
 ];
 
-// Trade type config
-const TRADE_TYPE_CONFIG: Record<TradeType, { label: string; icon: typeof Zap; color: string }> = {
-  scalping: { label: 'Scalping', icon: Zap, color: 'teal' },
-  dayTrade: { label: 'Day Trade', icon: Activity, color: 'slate' },
-  swing: { label: 'Swing', icon: Calendar, color: 'amber' },
-};
-
-// Verdict config
-const VERDICT_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  go: { label: 'GO', bg: 'bg-green-500/20', text: 'text-green-600 dark:text-green-400' },
-  conditional_go: { label: 'COND', bg: 'bg-yellow-500/20', text: 'text-yellow-600 dark:text-yellow-400' },
-  wait: { label: 'WAIT', bg: 'bg-orange-500/20', text: 'text-orange-600 dark:text-orange-400' },
-  avoid: { label: 'AVOID', bg: 'bg-red-500/20', text: 'text-red-600 dark:text-red-400' },
-};
-
-// Filter options
-const VERDICT_FILTERS: { value: VerdictFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'go', label: 'GO' },
-  { value: 'conditional_go', label: 'COND' },
-  { value: 'wait', label: 'WAIT' },
-  { value: 'avoid', label: 'AVOID' },
-];
-
-const OUTCOME_FILTERS: { value: OutcomeFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'live', label: 'LIVE' },
-  { value: 'tp', label: 'TP HIT' },
-  { value: 'sl', label: 'SL HIT' },
-];
-
-const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: 'time_desc', label: 'Newest' },
-  { value: 'time_asc', label: 'Oldest' },
-  { value: 'pnl_desc', label: 'P/L ↓' },
-  { value: 'pnl_asc', label: 'P/L ↑' },
-  { value: 'score_desc', label: 'Score ↓' },
-  { value: 'score_asc', label: 'Score ↑' },
-];
-
 // Mode type
 type AnalyzeMode = 'select' | 'flow';
 
@@ -247,9 +190,6 @@ export default function AnalyzePage() {
   // Recent analyses state
   const [analyses, setAnalyses] = useState<RecentAnalysis[]>([]);
   const [analysesLoading, setAnalysesLoading] = useState(true);
-  const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>('all');
-  const [outcomeFilter, setOutcomeFilter] = useState<OutcomeFilter>('all');
-  const [sortBy, setSortBy] = useState<SortOption>('time_desc');
   const [actionLoading, setActionLoading] = useState<{ id: string; action: string } | null>(null);
 
   // Daily Pass state
@@ -494,26 +434,6 @@ export default function AnalyzePage() {
     router.push(`/analyze/details/${analysis.id}?email=true`);
   };
 
-  // Filter and sort analyses
-  const filteredAnalyses = analyses.filter(a => {
-    if (verdictFilter !== 'all' && a.verdict !== verdictFilter) return false;
-    if (outcomeFilter === 'live' && (a.outcome === 'correct' || a.outcome === 'incorrect')) return false;
-    if (outcomeFilter === 'tp' && a.outcome !== 'correct') return false;
-    if (outcomeFilter === 'sl' && a.outcome !== 'incorrect') return false;
-    return true;
-  });
-
-  const sortedAnalyses = [...filteredAnalyses].sort((a, b) => {
-    switch (sortBy) {
-      case 'time_desc': return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      case 'time_asc': return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      case 'pnl_desc': return (b.unrealizedPnL ?? -Infinity) - (a.unrealizedPnL ?? -Infinity);
-      case 'pnl_asc': return (a.unrealizedPnL ?? Infinity) - (b.unrealizedPnL ?? Infinity);
-      case 'score_desc': return (b.score ?? -Infinity) - (a.score ?? -Infinity);
-      case 'score_asc': return (a.score ?? Infinity) - (b.score ?? Infinity);
-      default: return 0;
-    }
-  });
 
   // Helper functions
   const safeToFixed = (val: number | undefined | null, decimals: number = 1): string => {
@@ -587,103 +507,28 @@ export default function AnalyzePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#041020]">
 
       {/* ================================================ */}
       {/* MODE SELECTION LANDING                           */}
       {/* ================================================ */}
       {mode === 'select' && (
         <>
-          <div className="max-w-4xl mx-auto px-4 pt-16 pb-10">
+          <div className="max-w-4xl mx-auto px-4 pt-8 sm:pt-16 pb-6 sm:pb-10">
             {/* Title */}
-            <div className="text-center mb-10">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-xl shadow-teal-500/20 mx-auto mb-4">
-                <TrendingUp className="w-7 h-7 text-white" />
+            <div className="text-center mb-6 sm:mb-10">
+              <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-xl shadow-teal-500/20 mx-auto mb-3 sm:mb-4">
+                <TrendingUp className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">
+              <h1 className="text-xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-1.5 sm:mb-2">
                 How would you like to analyze?
               </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                Choose your preferred analysis experience. Both methods use the same Capital Flow intelligence engine.
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                Choose your preferred analysis experience
               </p>
             </div>
 
-            {/* Two Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {/* Analyze via Chat */}
-              <button
-                onClick={() => router.push('/concierge')}
-                className="group relative p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-violet-400 dark:hover:border-violet-500/50 hover:shadow-xl hover:shadow-violet-500/10 transition-all duration-300 text-left"
-              >
-                <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 text-[10px] font-bold uppercase">
-                  Fastest
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20 mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <MessageSquare className="w-6 h-6 text-white" />
-                </div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                  Analyze via Chat
-                </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
-                  Tell the AI what you want to analyze. Capital Flow check, asset selection, and full analysis run automatically. Your saved report opens when done.
-                </p>
-                <ul className="space-y-2 mb-5">
-                  {[
-                    'Type a symbol or ask "What should I buy?"',
-                    'L1-L4 Capital Flow checked automatically',
-                    'Full 7-Step analysis runs in background',
-                    'Report saved and opened for you',
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-400">
-                      <Check className="w-3.5 h-3.5 text-violet-500 mt-0.5 flex-shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <div className="flex items-center gap-2 text-sm font-semibold text-violet-600 dark:text-violet-400 group-hover:gap-3 transition-all">
-                  <MessageSquare className="w-4 h-4" />
-                  Open AI Chat
-                  <ArrowRight className="w-4 h-4" />
-                </div>
-              </button>
-
-              {/* Analyze via Flow */}
-              <button
-                onClick={handleSelectFlow}
-                className="group relative p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-teal-400 dark:hover:border-teal-500/50 hover:shadow-xl hover:shadow-teal-500/10 transition-all duration-300 text-left"
-              >
-                <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400 text-[10px] font-bold uppercase">
-                  Full Control
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/20 mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <GitBranch className="w-6 h-6 text-white" />
-                </div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                  Analyze via Flow
-                </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
-                  Follow the top-down Capital Flow funnel step by step. Review each layer, pick your asset from AI recommendations, and configure your analysis.
-                </p>
-                <ul className="space-y-2 mb-5">
-                  {[
-                    'L1-L3 Capital Flow loads automatically',
-                    'Generate AI Asset Recommendations',
-                    'Select asset and configure timeframe',
-                    'Run analysis with full visibility',
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-400">
-                      <Check className="w-3.5 h-3.5 text-teal-500 mt-0.5 flex-shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <div className="flex items-center gap-2 text-sm font-semibold text-teal-600 dark:text-teal-400 group-hover:gap-3 transition-all">
-                  <GitBranch className="w-4 h-4" />
-                  Start Flow Analysis
-                  <ArrowRight className="w-4 h-4" />
-                </div>
-              </button>
-            </div>
+            <SelectionCards onSelectFlow={handleSelectFlow} />
           </div>
         </>
       )}
@@ -694,25 +539,25 @@ export default function AnalyzePage() {
       {mode === 'flow' && (
         <>
           {/* Header */}
-          <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-            <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="border-b border-slate-200 dark:border-white/5 bg-white dark:bg-[#071023]">
+            <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <button
                     onClick={() => setMode('select')}
-                    className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
                   >
                     <ArrowDown className="w-4 h-4 text-slate-500 rotate-90" />
                   </button>
                   <div>
-                    <h1 className="text-lg font-bold text-slate-900 dark:text-white">Top-Down Analysis</h1>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Capital Flow → AI Recommendation → Asset Analysis</p>
+                    <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Top-Down Analysis</h1>
+                    <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 hidden sm:block">Capital Flow → AI Recommendation → Asset Analysis</p>
                   </div>
                 </div>
                 <button
                   onClick={() => { fetchCapitalFlow(); fetchAnalyses(); }}
                   disabled={capitalFlowLoading}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
                 >
                   <RefreshCw className={cn("w-4 h-4", capitalFlowLoading && "animate-spin")} />
                   <span className="hidden sm:inline">Refresh</span>
@@ -789,7 +634,7 @@ export default function AnalyzePage() {
         {/* ================================================ */}
         {currentStep === 'step0' && (
           <div className="space-y-4">
-            <div className="p-5 rounded-2xl border-2 border-teal-200 dark:border-teal-500/30 bg-gradient-to-br from-white via-teal-50/30 to-white dark:from-slate-900 dark:via-teal-900/10 dark:to-slate-900">
+            <div className="p-4 sm:p-5 rounded-2xl border-2 border-teal-200 dark:border-[#4dd0e1]/20 bg-gradient-to-br from-white via-teal-50/30 to-white dark:from-[#071023] dark:via-[#4dd0e1]/5 dark:to-[#071023]">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Globe className="w-5 h-5 text-teal-600 dark:text-teal-400" />
@@ -803,136 +648,20 @@ export default function AnalyzePage() {
                 </Link>
               </div>
 
-              {capitalFlowLoading ? (
-                <div className="flex items-center justify-center gap-2 py-12">
-                  <Loader2 className="w-6 h-6 text-teal-500 animate-spin" />
-                  <span className="text-sm text-slate-500">Loading Capital Flow data...</span>
-                </div>
-              ) : capitalFlow ? (
+              {/* L1-L4 Analysis Grid (mobile: 2-col with bottom sheet) */}
+              <div className="mb-4">
+                <AnalysisGrid capitalFlow={capitalFlow} loading={capitalFlowLoading} />
+              </div>
+
+              {!capitalFlowLoading && capitalFlow && (
                 <>
-                  {/* L1-L4 Summary Cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-                    {/* L1: Global Liquidity */}
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-500/10 dark:to-emerald-500/10 border border-teal-200/50 dark:border-teal-500/20">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <DollarSign className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                        <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 uppercase">L1: Global Liquidity</span>
-                        <Check className="w-3 h-3 ml-auto text-teal-500" />
-                      </div>
-                      {(() => {
-                        const biasConfig = getBiasConfig(capitalFlow.liquidityBias ?? 'neutral');
-                        const BiasIcon = biasConfig.icon;
-                        return (
-                          <div className={cn("flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold w-fit", biasConfig.bg, biasConfig.color)}>
-                            <BiasIcon className="w-3 h-3" />
-                            {biasConfig.label}
-                          </div>
-                        );
-                      })()}
-                      <div className="mt-2 space-y-1 text-[10px] text-slate-500 dark:text-slate-400">
-                        <div className="flex justify-between">
-                          <span>Net Liquidity</span>
-                          <span className="font-medium">{safeToFixed(capitalFlow.globalLiquidity?.netLiquidity?.change30d ?? capitalFlow.globalLiquidity?.m2MoneySupply?.change30d)}%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>DXY</span>
-                          <span className="font-medium capitalize">{capitalFlow.globalLiquidity?.dxy?.trend || 'stable'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>VIX</span>
-                          <span className="font-medium">{capitalFlow.globalLiquidity?.vix?.value?.toFixed(1) || '—'}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* L2: Market Flows */}
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-500/10 dark:to-blue-500/10 border border-cyan-200/50 dark:border-cyan-500/20">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <TrendingUp className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                        <span className="text-[10px] font-bold text-cyan-700 dark:text-cyan-300 uppercase">L2: Market Flow</span>
-                        <Check className="w-3 h-3 ml-auto text-teal-500" />
-                      </div>
-                      <div className="space-y-1">
-                        {capitalFlow.markets?.filter(m => m && m.market).slice(0, 4).map((market) => {
-                          const phaseConfig = getPhaseConfig(market.phase);
-                          const isPrimary = market.market === capitalFlow.recommendation?.primaryMarket;
-                          return (
-                            <div key={market.market} className={cn("flex items-center justify-between text-[10px]", isPrimary && "font-bold")}>
-                              <span className="text-slate-600 dark:text-slate-400 capitalize">{market.market}</span>
-                              <div className="flex items-center gap-1">
-                                <span className={cn("px-1 py-0.5 rounded text-[8px] font-bold", phaseConfig.bg, phaseConfig.color)}>{phaseConfig.label}</span>
-                                <span className={cn("font-medium", (market.flow7d ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
-                                  {(market.flow7d ?? 0) >= 0 ? '+' : ''}{safeToFixed(market.flow7d)}%
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* L3: Sector Rotation */}
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-500/10 dark:to-purple-500/10 border border-violet-200/50 dark:border-violet-500/20">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <Layers className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
-                        <span className="text-[10px] font-bold text-violet-700 dark:text-violet-300 uppercase">L3: Sectors</span>
-                        <Check className="w-3 h-3 ml-auto text-teal-500" />
-                      </div>
-                      {(() => {
-                        const primaryMarketData = capitalFlow.markets?.find(m => m.market === capitalFlow.recommendation?.primaryMarket);
-                        const sectors = primaryMarketData?.sectors?.slice(0, 3);
-                        if (!sectors || sectors.length === 0) return <span className="text-[10px] text-slate-400">No sector data</span>;
-                        return (
-                          <div className="space-y-1">
-                            {sectors.map((sector, idx) => (
-                              <div key={idx} className="flex items-center justify-between text-[10px]">
-                                <span className="text-slate-600 dark:text-slate-400">{sector.name}</span>
-                                <span className={cn(
-                                  "px-1.5 py-0.5 rounded text-[9px] font-medium",
-                                  sector.trending === 'up' ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
-                                )}>
-                                  {sector.trending === 'up' ? 'Inflow' : sector.trending === 'down' ? 'Outflow' : 'Stable'}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })()}
-                    </div>
-
-                    {/* L4: AI Recommendation Preview */}
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 border border-amber-200/50 dark:border-amber-500/20">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <Brain className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                        <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase">L4: AI Recommendation</span>
-                        <Check className="w-3 h-3 ml-auto text-teal-500" />
-                      </div>
-                      <div className={cn(
-                        "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold w-fit mb-2",
-                        capitalFlow.recommendation?.direction?.toUpperCase() === 'BUY'
-                          ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-                          : capitalFlow.recommendation?.direction?.toUpperCase() === 'SELL'
-                          ? "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
-                          : "bg-slate-100 dark:bg-slate-500/20 text-slate-700 dark:text-slate-400"
-                      )}>
-                        {capitalFlow.recommendation?.direction?.toUpperCase() === 'BUY' ? <TrendingUp className="w-3 h-3" /> :
-                         capitalFlow.recommendation?.direction?.toUpperCase() === 'SELL' ? <TrendingDown className="w-3 h-3" /> :
-                         <Minus className="w-3 h-3" />}
-                        {capitalFlow.recommendation?.direction?.toUpperCase() || 'NEUTRAL'} {capitalFlow.recommendation?.primaryMarket?.toUpperCase()}
-                      </div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                        <span className="font-medium">{capitalFlow.recommendation?.confidence ?? 0}%</span> confidence
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Risk-Off Warning */}
                   {capitalFlow.liquidityBias === 'risk_off' && (
                     <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 flex items-start gap-2 mb-4">
                       <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
                       <div>
                         <p className="text-sm font-medium text-red-700 dark:text-red-400">Risk-Off Environment</p>
-                        <p className="text-xs text-red-600/80 dark:text-red-400/60">Global liquidity contracting. Only safe haven assets (Bonds/Gold) recommended. Avoid risk assets.</p>
+                        <p className="text-xs text-red-600/80 dark:text-red-400/60">Global liquidity contracting. Only safe haven assets (Bonds/Gold) recommended.</p>
                       </div>
                     </div>
                   )}
@@ -946,18 +675,22 @@ export default function AnalyzePage() {
                     {aiRecommendationLoading ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        Generating AI Recommendations...
+                        <span className="hidden sm:inline">Generating AI Recommendations...</span>
+                        <span className="sm:hidden">Generating...</span>
                       </>
                     ) : (
                       <>
                         <Sparkles className="w-5 h-5" />
-                        Generate AI Asset Recommendations
+                        <span className="hidden sm:inline">Generate AI Asset Recommendations</span>
+                        <span className="sm:hidden">Generate Recommendations</span>
                         <ArrowRight className="w-5 h-5" />
                       </>
                     )}
                   </button>
                 </>
-              ) : (
+              )}
+
+              {!capitalFlowLoading && !capitalFlow && (
                 <div className="text-center py-8">
                   <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
                   <p className="text-sm text-slate-500">Failed to load Capital Flow data.</p>
@@ -986,7 +719,7 @@ export default function AnalyzePage() {
             )}
 
             {/* Recommendation Panel */}
-            <div className="p-5 rounded-2xl border-2 border-amber-200 dark:border-amber-500/30 bg-gradient-to-br from-white via-amber-50/30 to-white dark:from-slate-900 dark:via-amber-900/10 dark:to-slate-900">
+            <div className="p-4 sm:p-5 rounded-2xl border-2 border-amber-200 dark:border-amber-500/20 bg-gradient-to-br from-white via-amber-50/30 to-white dark:from-[#071023] dark:via-amber-900/10 dark:to-[#071023]">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Brain className="w-5 h-5 text-amber-600 dark:text-amber-400" />
@@ -1135,7 +868,7 @@ export default function AnalyzePage() {
             )}
 
             {/* Analysis Configuration */}
-            <div className="p-5 rounded-2xl border-2 border-violet-200 dark:border-violet-500/30 bg-gradient-to-br from-white via-violet-50/30 to-white dark:from-slate-900 dark:via-violet-900/10 dark:to-slate-900">
+            <div className="p-4 sm:p-5 rounded-2xl border-2 border-violet-200 dark:border-violet-500/20 bg-gradient-to-br from-white via-violet-50/30 to-white dark:from-[#071023] dark:via-violet-900/10 dark:to-[#071023]">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Zap className="w-5 h-5 text-violet-600 dark:text-violet-400" />
@@ -1262,197 +995,15 @@ export default function AnalyzePage() {
           </div>
         )}
 
-        {/* Recent Analyses - Always visible below */}
-        <div className="mt-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-          {/* Header */}
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                Recent Analyses
-                <span className="text-xs font-normal text-slate-500 ml-1">
-                  ({sortedAnalyses.length})
-                </span>
-              </h3>
-              <button
-                onClick={() => fetchAnalyses()}
-                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-              >
-                <RefreshCw className={cn("w-4 h-4 text-slate-500", analysesLoading && "animate-spin")} />
-              </button>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative">
-                <select
-                  value={verdictFilter}
-                  onChange={(e) => setVerdictFilter(e.target.value as VerdictFilter)}
-                  className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-medium pl-2 pr-6 py-1 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
-                >
-                  {VERDICT_FILTERS.map((f) => (
-                    <option key={f.value} value={f.value}>{f.label}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
-              </div>
-
-              <div className="relative">
-                <select
-                  value={outcomeFilter}
-                  onChange={(e) => setOutcomeFilter(e.target.value as OutcomeFilter)}
-                  className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-medium pl-2 pr-6 py-1 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
-                >
-                  {OUTCOME_FILTERS.map((f) => (
-                    <option key={f.value} value={f.value}>{f.label}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
-              </div>
-
-              <div className="relative">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as SortOption)}
-                  className="appearance-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-[11px] font-medium pl-2 pr-6 py-1 rounded-lg border-0 focus:ring-2 focus:ring-teal-500 cursor-pointer"
-                >
-                  {SORT_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
-          </div>
-
-          {/* Analyses List */}
-          <div className="p-4 max-h-[500px] overflow-y-auto">
-            {analysesLoading ? (
-              <div className="text-center py-8">
-                <RefreshCw className="w-5 h-5 mx-auto mb-2 text-slate-400 animate-spin" />
-                <p className="text-xs text-slate-500">Loading...</p>
-              </div>
-            ) : sortedAnalyses.length === 0 ? (
-              <div className="text-center py-8">
-                <Clock className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
-                <h3 className="font-medium text-sm mb-1 text-slate-700 dark:text-slate-300">No analyses yet</h3>
-                <p className="text-xs text-slate-500">Complete the top-down flow above to run your first analysis</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {sortedAnalyses.map((analysis) => {
-                  const isActive = analysis.expiresAt && new Date(analysis.expiresAt) > new Date() && analysis.outcome !== 'correct' && analysis.outcome !== 'incorrect';
-                  const verdictConfig = VERDICT_CONFIG[analysis.verdict] || VERDICT_CONFIG.wait;
-                  const isLoading = actionLoading?.id === analysis.id;
-
-                  return (
-                    <div
-                      key={analysis.id}
-                      className={cn(
-                        "relative border rounded-xl p-3 hover:shadow-md transition overflow-hidden",
-                        analysis.outcome === 'correct' && "border-teal-500/50 bg-teal-50/50 dark:bg-teal-500/5",
-                        analysis.outcome === 'incorrect' && "border-red-500/50 bg-red-50/50 dark:bg-red-500/5",
-                        isActive && "border-teal-500/30 bg-teal-50/30 dark:bg-teal-500/5",
-                        !analysis.outcome && !isActive && "border-slate-200 dark:border-slate-700"
-                      )}
-                    >
-                      {/* Status Ribbon */}
-                      {isActive && (
-                        <div className="absolute top-0 right-0 px-2 py-0.5 bg-teal-500 text-white text-[8px] font-bold rounded-bl-lg">LIVE</div>
-                      )}
-                      {analysis.outcome === 'correct' && (
-                        <div className="absolute top-0 right-0 px-2 py-0.5 bg-teal-500 text-white text-[8px] font-bold rounded-bl-lg">TP HIT</div>
-                      )}
-                      {analysis.outcome === 'incorrect' && (
-                        <div className="absolute top-0 right-0 px-2 py-0.5 bg-red-500 text-white text-[8px] font-bold rounded-bl-lg">SL HIT</div>
-                      )}
-
-                      {/* Content */}
-                      <Link href={`/analyze/details/${analysis.id}`} className="block">
-                        <div className="flex items-center gap-2 mb-2">
-                          <CoinIcon symbol={analysis.symbol} size={28} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-semibold text-sm">{analysis.symbol}</span>
-                              {analysis.direction && (
-                                <span className={cn(
-                                  "px-1 py-0.5 rounded text-[9px] font-medium",
-                                  analysis.direction?.toLowerCase() === 'long' ? "bg-teal-500/10 text-teal-600 dark:text-teal-400" :
-                                  analysis.direction?.toLowerCase() === 'short' ? "bg-red-500/10 text-red-600 dark:text-red-400" :
-                                  "bg-slate-500/10 text-slate-600 dark:text-slate-400"
-                                )}>
-                                  {analysis.direction?.toLowerCase() === 'long' ? <TrendingUp className="w-2.5 h-2.5 inline" /> :
-                                   analysis.direction?.toLowerCase() === 'short' ? <TrendingDown className="w-2.5 h-2.5 inline" /> :
-                                   <Minus className="w-2.5 h-2.5 inline" />}
-                                </span>
-                              )}
-                              <span className={cn("px-1 py-0.5 rounded text-[9px] font-bold", verdictConfig.bg, verdictConfig.text)}>
-                                {verdictConfig.label}
-                              </span>
-                            </div>
-                            <p className="text-[10px] text-slate-500">{analysis.createdAt}</p>
-                          </div>
-                        </div>
-
-                        {/* Stats Row */}
-                        <div className="flex items-center gap-2 text-[10px]">
-                          {analysis.score !== null && (
-                            <span className={cn(
-                              "px-1.5 py-0.5 rounded font-bold",
-                              analysis.score >= 7 ? "bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400" :
-                              analysis.score >= 5 ? "bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400" :
-                              "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                            )}>
-                              {(analysis.score * 10).toFixed(0)}%
-                            </span>
-                          )}
-                          {typeof analysis.unrealizedPnL === 'number' && (
-                            <span className={cn(
-                              "px-1.5 py-0.5 rounded font-bold",
-                              analysis.unrealizedPnL >= 0
-                                ? "bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-400"
-                                : "bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400"
-                            )}>
-                              {analysis.unrealizedPnL >= 0 ? '+' : ''}{analysis.unrealizedPnL.toFixed(2)}%
-                            </span>
-                          )}
-                        </div>
-                      </Link>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                        <Link
-                          href={`/analyze/details/${analysis.id}`}
-                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-100 dark:bg-teal-500/10 hover:bg-teal-200 dark:hover:bg-teal-500/20 text-teal-600 dark:text-teal-500 transition text-[10px] font-medium"
-                        >
-                          <Eye className="w-3 h-3" />
-                          Details
-                        </Link>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); router.push(`/ai-expert/nexus?analysisId=${analysis.id}`); }}
-                          className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/10 text-red-600 dark:text-red-500 transition"
-                        >
-                          <Bot className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => handleEmail(e, analysis)}
-                          className="p-1.5 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition"
-                        >
-                          <Mail className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => handleDelete(e, analysis.id)}
-                          disabled={isLoading}
-                          className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/10 text-red-500 transition disabled:opacity-50"
-                        >
-                          {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+        {/* Recent Analyses - Mobile-first list */}
+        <div className="mt-6">
+          <RecentAnalysesMobile
+            analyses={analyses}
+            loading={analysesLoading}
+            onRefresh={fetchAnalyses}
+            onDelete={handleDelete}
+            onEmail={handleEmail}
+          />
         </div>
       </div>
 
@@ -1474,48 +1025,16 @@ export default function AnalyzePage() {
       )}
       </>)}
 
-      {/* Recent Analyses - visible in both modes */}
+      {/* Recent Analyses - visible in select mode */}
       {mode === 'select' && analyses.length > 0 && (
-        <div className="max-w-4xl mx-auto px-4 pb-10">
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-            <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                  Recent Analyses
-                  <span className="text-xs font-normal text-slate-500 ml-1">({analyses.length})</span>
-                </h3>
-              </div>
-            </div>
-            <div className="p-4 max-h-[300px] overflow-y-auto">
-              <div className="space-y-2">
-                {analyses.slice(0, 5).map((analysis) => {
-                  const verdictConfig = VERDICT_CONFIG[analysis.verdict] || VERDICT_CONFIG.wait;
-                  return (
-                    <Link
-                      key={analysis.id}
-                      href={`/analyze/details/${analysis.id}`}
-                      className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-md transition"
-                    >
-                      <CoinIcon symbol={analysis.symbol} size={28} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-sm text-slate-900 dark:text-white">{analysis.symbol}</span>
-                          <span className={cn("px-1 py-0.5 rounded text-[9px] font-bold", verdictConfig.bg, verdictConfig.text)}>
-                            {verdictConfig.label}
-                          </span>
-                          {analysis.score !== null && (
-                            <span className="text-[10px] text-slate-500 font-medium">{(analysis.score * 10).toFixed(0)}%</span>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-slate-500">{analysis.createdAt}</p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+        <div className="max-w-4xl mx-auto px-4 pb-6 sm:pb-10">
+          <RecentAnalysesMobile
+            analyses={analyses}
+            loading={analysesLoading}
+            onRefresh={fetchAnalyses}
+            onDelete={handleDelete}
+            onEmail={handleEmail}
+          />
         </div>
       )}
     </div>
