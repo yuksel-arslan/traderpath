@@ -92,8 +92,13 @@ function StrategyCard({
   const applicabilityColor = getApplicabilityColor(strategy.applicability);
   const isLong = strategy.direction === 'long';
 
-  const entryDistance = currentPrice > 0
-    ? (((strategy.entry.price - currentPrice) / currentPrice) * 100)
+  const entryPrice = strategy.entry?.price ?? 0;
+  const slPrice = strategy.stopLoss?.price ?? 0;
+  const rr = strategy.riskReward ?? 0;
+  const tps = strategy.takeProfits ?? [];
+
+  const entryDistance = currentPrice > 0 && entryPrice > 0
+    ? (((entryPrice - currentPrice) / currentPrice) * 100)
     : 0;
 
   return (
@@ -181,10 +186,10 @@ function StrategyCard({
           {/* Entry */}
           <div className="rounded-lg bg-slate-100/50 dark:bg-slate-800/50 p-2">
             <p className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-medium mb-0.5">
-              Entry ({strategy.entry.type})
+              Entry ({strategy.entry?.type || 'limit'})
             </p>
             <p className="text-xs font-bold text-slate-900 dark:text-white notranslate">
-              ${formatPrice(strategy.entry.price)}
+              ${formatPrice(entryPrice)}
             </p>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 notranslate">
               {entryDistance >= 0 ? '+' : ''}{entryDistance.toFixed(1)}%
@@ -197,7 +202,7 @@ function StrategyCard({
               Stop Loss
             </p>
             <p className="text-xs font-bold text-[#F43F5E] notranslate">
-              ${formatPrice(strategy.stopLoss.price)}
+              ${formatPrice(slPrice)}
             </p>
           </div>
 
@@ -207,16 +212,16 @@ function StrategyCard({
               Risk:Reward
             </p>
             <p className={`text-xs font-bold notranslate ${
-              strategy.riskReward >= 2 ? 'text-[#22C55E]' : strategy.riskReward >= 1 ? 'text-amber-400' : 'text-[#F43F5E]'
+              rr >= 2 ? 'text-[#22C55E]' : rr >= 1 ? 'text-amber-400' : 'text-[#F43F5E]'
             }`}>
-              1:{strategy.riskReward.toFixed(1)}
+              1:{rr.toFixed(1)}
             </p>
           </div>
         </div>
 
         {/* Take Profits */}
         <div className="mt-3 space-y-1.5">
-          {strategy.takeProfits.map((tp, idx) => {
+          {tps.map((tp, idx) => {
             const tpDistance = currentPrice > 0
               ? (((tp.price - currentPrice) / currentPrice) * 100)
               : 0;
@@ -253,7 +258,7 @@ function StrategyCard({
                 Entry Condition
               </p>
               <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                {strategy.entry.condition}
+                {strategy.entry?.condition || 'N/A'}
               </p>
             </div>
 
@@ -263,7 +268,7 @@ function StrategyCard({
                 Stop Loss Rationale
               </p>
               <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                {strategy.stopLoss.reason}
+                {strategy.stopLoss?.reason || 'N/A'}
               </p>
             </div>
 
