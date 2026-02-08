@@ -169,9 +169,12 @@ function RangeBar({
 function BandCard({ band, currentPrice }: { band: ForecastBand; currentPrice: number }) {
   const [invalidationsOpen, setInvalidationsOpen] = useState(false);
   const config = HORIZON_CONFIG[band.horizon] || HORIZON_CONFIG.short;
-  const direction = getDirection(band.p50, currentPrice);
+  const safeP10 = band.p10 ?? 0;
+  const safeP50 = band.p50 ?? 0;
+  const safeP90 = band.p90 ?? 0;
+  const direction = getDirection(safeP50, currentPrice);
   const dirColors = getDirectionColor(direction);
-  const changePercent = currentPrice > 0 ? ((band.p50 - currentPrice) / currentPrice) * 100 : 0;
+  const changePercent = currentPrice > 0 ? ((safeP50 - currentPrice) / currentPrice) * 100 : 0;
 
   return (
     <div
@@ -216,7 +219,7 @@ function BandCard({ band, currentPrice }: { band: ForecastBand; currentPrice: nu
             Lower
           </p>
           <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
-            ${formatPrice(band.p10)}
+            ${formatPrice(safeP10)}
           </p>
         </div>
         <div className="text-center">
@@ -224,7 +227,7 @@ function BandCard({ band, currentPrice }: { band: ForecastBand; currentPrice: nu
             Expected
           </p>
           <p className={`text-base font-bold ${dirColors.text}`}>
-            ${formatPrice(band.p50)}
+            ${formatPrice(safeP50)}
           </p>
         </div>
         <div className="text-center">
@@ -232,16 +235,16 @@ function BandCard({ band, currentPrice }: { band: ForecastBand; currentPrice: nu
             Upper
           </p>
           <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
-            ${formatPrice(band.p90)}
+            ${formatPrice(safeP90)}
           </p>
         </div>
       </div>
 
       {/* Range bar */}
       <RangeBar
-        p10={band.p10}
-        p50={band.p50}
-        p90={band.p90}
+        p10={safeP10}
+        p50={safeP50}
+        p90={safeP90}
         currentPrice={currentPrice}
         direction={direction}
       />
@@ -252,12 +255,12 @@ function BandCard({ band, currentPrice }: { band: ForecastBand; currentPrice: nu
           Band Width:
         </span>
         <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 ml-1">
-          {band.bandWidthPercent.toFixed(1)}%
+          {(band.bandWidthPercent ?? 0).toFixed(1)}%
         </span>
       </div>
 
       {/* Drivers */}
-      {band.drivers.length > 0 && (
+      {band.drivers && band.drivers.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3">
           {band.drivers.map((driver, i) => (
             <span
@@ -275,7 +278,7 @@ function BandCard({ band, currentPrice }: { band: ForecastBand; currentPrice: nu
       )}
 
       {/* Invalidations (expandable) */}
-      {band.invalidations.length > 0 && (
+      {band.invalidations && band.invalidations.length > 0 && (
         <div className="border-t border-slate-200/20 dark:border-slate-700/40 pt-2">
           <button
             onClick={() => setInvalidationsOpen(!invalidationsOpen)}

@@ -59,8 +59,9 @@ export function WebResearchPanel({ research }: WebResearchPanelProps) {
   }
 
   const modeStyle = MODE_STYLES[research.mode] || MODE_STYLES.fast;
-  const visibleCitations = expanded ? research.citations : research.citations.slice(0, 3);
-  const hasMoreCitations = research.citations.length > 3;
+  const citations = research.citations ?? [];
+  const visibleCitations = expanded ? citations : citations.slice(0, 3);
+  const hasMoreCitations = citations.length > 3;
   const isFastWithNoSummary = research.mode === 'fast' && !research.summary;
 
   return (
@@ -106,7 +107,7 @@ export function WebResearchPanel({ research }: WebResearchPanelProps) {
         ) : null}
 
         {/* Citations */}
-        {research.citations.length > 0 && (
+        {citations.length > 0 && (
           <div className="space-y-2">
             <div className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Sources
@@ -168,7 +169,7 @@ export function WebResearchPanel({ research }: WebResearchPanelProps) {
                 ) : (
                   <>
                     <ChevronDown className="h-3.5 w-3.5" />
-                    Show all {research.citations.length} sources
+                    Show all {citations.length} sources
                   </>
                 )}
               </button>

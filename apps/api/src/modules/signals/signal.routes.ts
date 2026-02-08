@@ -162,20 +162,35 @@ export async function signalRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const { fromDate, toDate } = request.query as {
-        fromDate?: string;
-        toDate?: string;
-      };
+      try {
+        const { fromDate, toDate } = request.query as {
+          fromDate?: string;
+          toDate?: string;
+        };
 
-      const stats = await signalService.getSignalStats(
-        fromDate ? new Date(fromDate) : undefined,
-        toDate ? new Date(toDate) : undefined
-      );
+        const stats = await signalService.getSignalStats(
+          fromDate ? new Date(fromDate) : undefined,
+          toDate ? new Date(toDate) : undefined
+        );
 
-      return reply.send({
-        success: true,
-        data: stats,
-      });
+        return reply.send({
+          success: true,
+          data: stats,
+        });
+      } catch (error) {
+        console.error('[signals/stats] Error:', error);
+        return reply.status(500).send({
+          success: false,
+          data: {
+            total: 0,
+            published: 0,
+            outcomes: { tp1Hit: 0, tp2Hit: 0, slHit: 0, expired: 0 },
+            winRate: 0,
+            byMarket: [],
+          },
+          error: 'Failed to fetch signal stats',
+        });
+      }
     }
   );
 
