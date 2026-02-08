@@ -1,55 +1,20 @@
 'use client';
 
 // ===========================================
-// Dashboard - Focus Mode
-// Clean terminal design with progressive disclosure
+// Dashboard - Rebuilt with Mobile-First Fintech Design
+// Modern glassmorphism, accordion layout, turkuaz accent
 // ===========================================
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import Link from 'next/link';
-import dynamic from 'next/dynamic';
-import {
-  Gem,
-  Plus,
-  ChevronRight,
-  ChevronDown,
-  TrendingUp,
-  TrendingDown,
-  Target,
-  Activity,
-  BarChart3,
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  ArrowRight,
-  Award,
-  Brain,
-  Globe,
-  Bot,
-  Minus,
-  AlertTriangle,
-  Zap,
-} from 'lucide-react';
-import { cn } from '../../../lib/utils';
-import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
+import { Loader2 } from 'lucide-react';
 import { getApiUrl, authFetch } from '../../../lib/api';
 import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
-import { MetricCard, LiquidityGauge, MarketBiasBar } from '@/components/dashboard/MetricCard';
-import { MarketFilter, useMarketFilter } from '@/components/dashboard/MarketFilter';
-import { TraderProfileCard } from '@/components/dashboard/TraderProfileCard';
 
-// Lazy load chart component
-const PnLChart = dynamic(
-  () => import('../../../components/dashboard/PnLChart').then(mod => ({ default: mod.PnLChart })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-full flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[#5EEDC3]/30 border-t-[#5EEDC3] rounded-full animate-spin" />
-      </div>
-    )
-  }
-);
+// Dashboard components
+import { KpiSection } from '@/components/dashboard/KpiSection';
+import { CategoryBar, useMarketFilter } from '@/components/dashboard/CategoryBar';
+import { AccordionList } from '@/components/dashboard/AccordionList';
+import { ProfileCard } from '@/components/dashboard/ProfileCard';
 
 // ===========================================
 // Types
@@ -134,7 +99,6 @@ interface PerformanceData {
   };
 }
 
-// Capital Flow Types
 interface GlobalLiquidity {
   fedBalanceSheet: {
     value: number;
@@ -207,35 +171,16 @@ interface SignalStats {
     symbol: string;
     direction: 'long' | 'short';
     verdict: string;
-    outcome: 'tp1_hit' | 'tp2_hit' | 'sl_hit' | 'expired' | null;
+    outcome: string | null;
     pnlPercent: number | null;
     publishedAt: string;
   }[];
 }
 
 // ===========================================
-// Helper Functions
-// ===========================================
-
-function formatNumber(num: number): string {
-  if (num >= 1000000) {
-    return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-  }
-  if (num >= 10000) {
-    return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-  }
-  return num.toLocaleString('en-US');
-}
-
-function formatCredits(num: number): string {
-  return num.toLocaleString('en-US');
-}
-
-// ===========================================
 // Symbol → MarketType mapping
 // ===========================================
-
-import type { MarketType } from '@/components/dashboard/MarketFilter';
+import type { MarketType } from '@/components/dashboard/CategoryBar';
 
 const KNOWN_CRYPTO = new Set([
   'BTC','ETH','SOL','BNB','XRP','ADA','DOGE','DOT','AVAX','MATIC',
@@ -272,150 +217,11 @@ function detectMarketType(symbol: string): MarketType {
   return 'crypto';
 }
 
-/** Map Capital Flow market name to our MarketFilter type */
 function cfMarketToFilterType(cfMarket: string): MarketType {
   if (cfMarket === 'stocks') return 'bist';
   if (cfMarket === 'metals') return 'metals';
   if (cfMarket === 'bonds') return 'bonds';
   return 'crypto';
-}
-
-// ===========================================
-// Collapsible Section
-// ===========================================
-
-function CollapsibleSection({
-  title,
-  icon: Icon,
-  defaultOpen = false,
-  children,
-  badge,
-}: {
-  title: string;
-  icon: React.ElementType;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-  badge?: string;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-
-  return (
-    <div className="rounded-lg border border-[#1E293B] bg-[#0F1629] overflow-hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <Icon className="w-4 h-4 text-gray-400" />
-          <span className="text-sm font-medium text-white">{title}</span>
-          {badge && (
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#5EEDC3]/10 text-[#5EEDC3] border border-[#5EEDC3]/20">
-              {badge}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {!open && (
-            <span className="text-xs text-gray-500">View</span>
-          )}
-          <ChevronDown
-            className={cn(
-              'w-4 h-4 text-gray-500 transition-transform duration-300',
-              open && 'rotate-180'
-            )}
-          />
-        </div>
-      </button>
-      <div
-        className={cn(
-          'transition-all duration-300 ease-in-out overflow-hidden',
-          open ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
-        )}
-      >
-        <div className="p-6 pt-2 border-t border-[#1E293B]">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-// Active Trade Card
-function ActiveTradeCard({ trade, counterFlow }: { trade: RecentAnalysis; counterFlow?: boolean }) {
-  const pnlValue = trade.unrealizedPnL;
-  const hasValidPnL = pnlValue !== null && pnlValue !== undefined;
-  const isProfit = hasValidPnL && pnlValue >= 0;
-  const verdictConfig = {
-    go: { bg: 'bg-emerald-500', text: 'GO' },
-    conditional_go: { bg: 'bg-yellow-500', text: 'C-GO' },
-    wait: { bg: 'bg-gray-500', text: 'WAIT' },
-    avoid: { bg: 'bg-[#EF5A6F]', text: 'AVOID' },
-  };
-
-  return (
-    <Link
-      href={`/analyze/details/${trade.id}`}
-      className="flex-shrink-0 w-[200px] rounded-lg border border-[#1E293B] bg-[#0F1629] p-3 hover:border-[#5EEDC3]/30 transition-colors"
-    >
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <img
-            src={getCoinIcon(trade.symbol)}
-            alt={trade.symbol}
-            className="w-5 h-5 rounded-full"
-            onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON; }}
-          />
-          <span className="font-bold text-white text-sm">{trade.symbol}</span>
-        </div>
-        <span className={cn(
-          "px-1.5 py-0.5 rounded text-[10px] font-bold text-white",
-          verdictConfig[trade.verdict].bg
-        )}>
-          {verdictConfig[trade.verdict].text}
-        </span>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 text-xs font-medium text-gray-400">
-          {trade.direction?.toLowerCase() === 'long' ? (
-            <TrendingUp className="w-3 h-3 text-[#5EEDC3]" />
-          ) : trade.direction?.toLowerCase() === 'short' ? (
-            <TrendingDown className="w-3 h-3 text-[#EF5A6F]" />
-          ) : (
-            <Minus className="w-3 h-3 text-gray-400" />
-          )}
-          {trade.direction?.toLowerCase() || 'neutral'}
-        </div>
-        <span className={cn(
-          "font-bold text-sm",
-          !hasValidPnL ? "text-gray-500" :
-          isProfit ? "text-[#5EEDC3]" : "text-[#EF5A6F]"
-        )}>
-          {hasValidPnL ? `${isProfit ? '+' : ''}${pnlValue!.toFixed(1)}%` : 'N/A'}
-        </span>
-      </div>
-
-      {trade.outcome !== 'pending' && (
-        <div className={cn(
-          "mt-2 pt-2 border-t flex items-center justify-center gap-1 text-xs font-semibold",
-          trade.outcome === 'correct'
-            ? "border-emerald-500/20 text-[#5EEDC3]"
-            : "border-red-500/20 text-[#EF5A6F]"
-        )}>
-          {trade.outcome === 'correct' ? (
-            <><CheckCircle2 className="w-3 h-3" /> TP Hit</>
-          ) : (
-            <><XCircle className="w-3 h-3" /> SL Hit</>
-          )}
-        </div>
-      )}
-
-      {counterFlow && (
-        <div className="mt-2 pt-2 border-t border-amber-500/20 flex items-center gap-1 text-[10px] text-amber-400">
-          <AlertTriangle className="w-3 h-3 shrink-0" />
-          <span>Counter-flow</span>
-        </div>
-      )}
-    </Link>
-  );
 }
 
 // ===========================================
@@ -425,7 +231,6 @@ const CACHE_KEY = 'dashboard_unified_cache';
 const CACHE_DURATION = 5 * 60 * 1000;
 
 export default function DashboardPage() {
-  // Market filter state
   const [selectedMarkets, setSelectedMarkets] = useMarketFilter();
 
   const [credits, setCredits] = useState(0);
@@ -440,9 +245,12 @@ export default function DashboardPage() {
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const initialLoadDone = useRef(false);
 
+  // ===========================================
+  // Data Fetching
+  // ===========================================
   const fetchData = useCallback(async (forceRefresh = false) => {
     try {
-      // Check cache first
+      // Check cache
       if (!forceRefresh) {
         try {
           const cached = sessionStorage.getItem(CACHE_KEY);
@@ -475,8 +283,8 @@ export default function DashboardPage() {
       ]);
 
       let newCredits = 0;
-      let newPlatformStats = null;
-      let newUserStats = null;
+      let newPlatformStats: PlatformStats | null = null;
+      let newUserStats: UserStats | null = null;
       let newRecentAnalyses: RecentAnalysis[] = [];
       let newPerformanceData: PerformanceData | null = null;
       let newCapitalFlow: CapitalFlowSummary | null = null;
@@ -504,8 +312,8 @@ export default function DashboardPage() {
       if (livePricesRes.ok) {
         const data = await livePricesRes.json();
         const analyses = data.data?.analyses || [];
-        newRecentAnalyses = analyses.map((a: Record<string, any>) => {
-          const rawVerdict = (a.verdict || '').toLowerCase().replace(/[^a-z_]/g, '');
+        newRecentAnalyses = analyses.map((a: Record<string, unknown>) => {
+          const rawVerdict = (typeof a.verdict === 'string' ? a.verdict : '').toLowerCase().replace(/[^a-z_]/g, '');
           let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
           if (rawVerdict === 'go' || rawVerdict === 'go!') verdict = 'go';
           else if (rawVerdict === 'conditional_go' || rawVerdict === 'conditionalgo') verdict = 'conditional_go';
@@ -524,19 +332,19 @@ export default function DashboardPage() {
           }
 
           return {
-            id: a.id,
-            symbol: a.symbol,
+            id: a.id as string,
+            symbol: a.symbol as string,
             verdict,
-            score: a.totalScore || 0,
+            score: (a.totalScore as number) || 0,
             outcome: outcomeStatus,
-            unrealizedPnL: a.unrealizedPnL,
-            createdAt: a.createdAt,
-            direction: a.direction,
-            entryPrice: a.entryPrice,
-            currentPrice: a.currentPrice,
+            unrealizedPnL: a.unrealizedPnL as number | undefined,
+            createdAt: a.createdAt as string,
+            direction: a.direction as string | undefined,
+            entryPrice: a.entryPrice as number | undefined,
+            currentPrice: a.currentPrice as number | undefined,
             tradeType,
-            stopLoss: a.stopLoss,
-            takeProfit1: a.takeProfit1,
+            stopLoss: a.stopLoss as number | undefined,
+            takeProfit1: a.takeProfit1 as number | undefined,
           };
         });
         setRecentAnalyses(newRecentAnalyses);
@@ -554,7 +362,7 @@ export default function DashboardPage() {
         setCapitalFlow(newCapitalFlow);
       }
 
-      // Calculate AI Stats from available data
+      // AI Stats from available data
       newAIStats = {
         platform: {
           totalExpertQuestions: newPlatformStats?.platform?.totalAnalyses ? Math.floor(newPlatformStats.platform.totalAnalyses * 0.8) : 0,
@@ -570,7 +378,7 @@ export default function DashboardPage() {
       };
       setAIStats(newAIStats);
 
-      // Process signal stats
+      // Signal stats
       if (signalStatsRes.ok) {
         const data = await signalStatsRes.json();
         if (data.success && data.data) {
@@ -581,7 +389,7 @@ export default function DashboardPage() {
           const winRate = totalClosed > 0 ? (wins / totalClosed) * 100 : 0;
 
           const recentSignals = await authFetch('/api/v1/signals?limit=3');
-          let recentSignalsData: Record<string, any>[] = [];
+          let recentSignalsData: Record<string, unknown>[] = [];
           if (recentSignals.ok) {
             const signalsJson = await recentSignals.json();
             recentSignalsData = signalsJson.data?.signals || [];
@@ -594,13 +402,13 @@ export default function DashboardPage() {
             winRate,
             bestPerformer: signalsData.bestPerformer || null,
             recentSignals: recentSignalsData.map((s) => ({
-              id: s.id,
-              symbol: s.symbol,
-              direction: s.direction,
-              verdict: s.classicVerdict,
-              outcome: s.outcome,
-              pnlPercent: s.pnlPercent,
-              publishedAt: s.publishedAt,
+              id: s.id as string,
+              symbol: s.symbol as string,
+              direction: s.direction as 'long' | 'short',
+              verdict: s.classicVerdict as string,
+              outcome: s.outcome as string | null,
+              pnlPercent: s.pnlPercent as number | null,
+              publishedAt: s.publishedAt as string,
             })),
           };
           setSignalStats(newSignalStats);
@@ -643,7 +451,9 @@ export default function DashboardPage() {
     return () => clearInterval(refreshInterval);
   }, [fetchData]);
 
-  // Build chart data from performanceData API
+  // ===========================================
+  // Chart data builder
+  // ===========================================
   const buildChartData = () => {
     if (!performanceData?.daily?.length) {
       if (pnlViewMode === 'daily') {
@@ -651,35 +461,20 @@ export default function DashboardPage() {
         for (let h = 0; h < 24; h += 3) hours.push(h);
         return hours.map(h => ({
           name: `${h.toString().padStart(2, '0')}:00`,
-          pnl: 0,
-          positive: 0,
-          negative: 0,
-          count: 0,
+          pnl: 0, positive: 0, negative: 0, count: 0,
         }));
       }
       if (pnlViewMode === 'monthly') {
         return Array(30).fill(null).map((_, i) => {
           const d = new Date();
           d.setDate(d.getDate() - (29 - i));
-          return {
-            name: d.getDate().toString(),
-            pnl: 0,
-            positive: 0,
-            negative: 0,
-            count: 0,
-          };
+          return { name: d.getDate().toString(), pnl: 0, positive: 0, negative: 0, count: 0 };
         });
       }
       return Array(7).fill(null).map((_, i) => {
         const d = new Date();
         d.setDate(d.getDate() - (6 - i));
-        return {
-          name: d.toLocaleDateString('en-US', { weekday: 'short' }),
-          pnl: 0,
-          positive: 0,
-          negative: 0,
-          count: 0,
-        };
+        return { name: d.toLocaleDateString('en-US', { weekday: 'short' }), pnl: 0, positive: 0, negative: 0, count: 0 };
       });
     }
 
@@ -734,6 +529,7 @@ export default function DashboardPage() {
       });
     }
 
+    // monthly
     const monthDays: string[] = [];
     const monthDayLabels: string[] = [];
     for (let i = 29; i >= 0; i--) {
@@ -790,29 +586,27 @@ export default function DashboardPage() {
   const periodPnL = calculatePeriodPnL();
   const hasChartData = (performanceData?.summary?.totalTrades || 0) > 0 || recentAnalyses.filter(o => o.unrealizedPnL !== undefined).length >= 1;
 
-  // ===== MARKET FILTER: filter analyses by selected markets =====
+  // Market filtered analyses
   const filteredAnalyses = useMemo(
-    () => recentAnalyses.filter((a) => selectedMarkets.includes(detectMarketType(a.symbol))),
+    () => recentAnalyses.filter(a => selectedMarkets.includes(detectMarketType(a.symbol))),
     [recentAnalyses, selectedMarkets]
   );
   const activeTrades = useMemo(
-    () => filteredAnalyses.filter((t) => t.outcome === 'pending'),
+    () => filteredAnalyses.filter(t => t.outcome === 'pending'),
     [filteredAnalyses]
   );
 
-  // ===== COUNTER-FLOW DETECTION =====
+  // Counter-flow detection
   const counterFlowIds = useMemo(() => {
     const ids = new Set<string>();
     if (!capitalFlow?.markets?.length) return ids;
     for (const trade of activeTrades) {
-      const dir = trade.direction?.toLowerCase();
+      const dir = typeof trade.direction === 'string' ? trade.direction.toLowerCase() : '';
       if (!dir || dir === 'neutral') continue;
       const mkt = detectMarketType(trade.symbol);
-      // Map dashboard MarketType back to CF market name
       const cfName = mkt === 'bist' ? 'stocks' : mkt;
-      const flow = capitalFlow.markets.find((m) => m.market === cfName);
+      const flow = capitalFlow.markets.find(m => m.market === cfName);
       if (!flow) continue;
-      // LONG but capital is exiting, or SHORT but capital is entering
       const isLong = dir === 'long';
       const isExiting = (flow.flow7d ?? 0) < -1 || flow.rotationSignal === 'exiting' || flow.phase === 'exit';
       const isEntering = (flow.flow7d ?? 0) > 1 || flow.rotationSignal === 'entering';
@@ -823,17 +617,17 @@ export default function DashboardPage() {
     return ids;
   }, [activeTrades, capitalFlow]);
 
-  // Dashboard tour steps
+  // Tour steps
   const dashboardTourSteps: TourStep[] = [
     {
-      target: '#tour-focus-metrics',
+      target: '#tour-kpi',
       title: 'Key Metrics',
       content: 'Global liquidity status, market bias, and your credit balance at a glance.',
       placement: 'bottom',
       spotlightPadding: 12,
     },
     {
-      target: '#tour-market-filter',
+      target: '#tour-categories',
       title: 'Market Filter',
       content: 'Filter markets you care about. Your selection is saved across sessions.',
       placement: 'bottom',
@@ -842,18 +636,21 @@ export default function DashboardPage() {
     {
       target: '#tour-sections',
       title: 'Expandable Sections',
-      content: 'Click any section header to expand and see details. Everything stays collapsed by default for a clean view.',
+      content: 'Tap any section header to expand. Data is presented in list format for easy mobile viewing.',
       placement: 'top',
       spotlightPadding: 8,
     },
   ];
 
+  // ===========================================
+  // Loading State
+  // ===========================================
   if (loading) {
     return (
-      <div className="relative min-h-screen bg-[#0A0E27]">
+      <div className="relative min-h-screen" style={{ backgroundColor: '#041020' }}>
         <div className="relative z-10 flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-[#5EEDC3] mx-auto mb-4" />
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" style={{ color: '#4dd0e1' }} />
             <p className="text-gray-400 text-sm">Loading dashboard...</p>
           </div>
         </div>
@@ -861,621 +658,57 @@ export default function DashboardPage() {
     );
   }
 
+  // ===========================================
+  // Render
+  // ===========================================
   return (
-    <div className="relative min-h-screen bg-[#0A0E27]">
+    <div className="relative min-h-screen" style={{ backgroundColor: '#041020' }}>
       {/* Onboarding Tour */}
-      <OnboardingTour
-        steps={dashboardTourSteps}
-        tourId="dashboard-focus"
-        autoStart={true}
-      />
+      <OnboardingTour steps={dashboardTourSteps} tourId="dashboard-v2" autoStart={true} />
 
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
-
-        {/* ===== TOP 3 METRIC CARDS ===== */}
-        <div id="tour-focus-metrics" className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-
-          {/* L1: Global Liquidity Status */}
-          <MetricCard title="Global Liquidity">
-            {capitalFlow ? (
-              <LiquidityGauge
-                bias={capitalFlow.liquidityBias}
-                fedTrend={capitalFlow.globalLiquidity.fedBalanceSheet.trend}
-                dxyValue={capitalFlow.globalLiquidity.dxy.value}
-                vixLevel={capitalFlow.globalLiquidity.vix.level}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center py-4">
-                <Globe className="w-6 h-6 text-gray-600 mb-2" />
-                <p className="text-xs text-gray-500">No data</p>
-                <Link href="/analyze" className="mt-2 text-xs text-[#5EEDC3] hover:underline">
-                  View Capital Flow
-                </Link>
-              </div>
-            )}
-          </MetricCard>
-
-          {/* L2: Market Bias Indicator (filtered) */}
-          <MetricCard title="Market Bias">
-            {capitalFlow && capitalFlow.markets.length > 0 ? (
-              <MarketBiasBar
-                markets={capitalFlow.markets
-                  .filter(m => m && m.market && selectedMarkets.includes(cfMarketToFilterType(m.market)))
-                  .map(m => ({
-                    market: m.market,
-                    flow7d: m.flow7d ?? 0,
-                    phase: m.phase || 'mid',
-                  }))}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center py-4">
-                <BarChart3 className="w-6 h-6 text-gray-600 mb-2" />
-                <p className="text-xs text-gray-500">No data</p>
-                <Link href="/analyze" className="mt-2 text-xs text-[#5EEDC3] hover:underline">
-                  View Capital Flow
-                </Link>
-              </div>
-            )}
-          </MetricCard>
-
-          {/* Credits Balance */}
-          <MetricCard title="Credits Balance">
-            <div className="flex flex-col items-center">
-              <div className="flex items-baseline gap-2 mb-1">
-                <Gem className="w-5 h-5 text-amber-400" />
-                <span className="text-3xl font-black text-white tabular-nums">{formatCredits(credits)}</span>
-              </div>
-              {credits < 10 && credits > 0 && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 mb-3">
-                  Running low
-                </span>
-              )}
-              {credits === 0 && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#EF5A6F]/20 text-[#EF5A6F] mb-3">
-                  No credits
-                </span>
-              )}
-              {credits >= 10 && <div className="mb-3" />}
-              <Link
-                href="/pricing"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#5EEDC3] text-[#0A0E27] text-sm font-semibold hover:bg-[#5EEDC3]/90 transition"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Buy More
-              </Link>
-              <Link
-                href="/rewards"
-                className="mt-2 text-xs text-gray-400 hover:text-[#5EEDC3] transition"
-              >
-                Earn free credits
-              </Link>
-            </div>
-          </MetricCard>
+        {/* KPI Section */}
+        <div id="tour-kpi">
+          <KpiSection
+            capitalFlow={capitalFlow}
+            credits={credits}
+            selectedMarkets={selectedMarkets}
+          />
         </div>
 
-        {/* ===== MARKET FILTER ===== */}
-        <div id="tour-market-filter" className="mb-6">
-          <MarketFilter selected={selectedMarkets} onChange={setSelectedMarkets} />
+        {/* Category Bar */}
+        <div id="tour-categories">
+          <CategoryBar selected={selectedMarkets} onChange={setSelectedMarkets} />
         </div>
 
         {/* Tour trigger */}
         <div className="flex justify-end mb-4">
-          <TourTriggerButton tourId="dashboard-focus" />
+          <TourTriggerButton tourId="dashboard-v2" />
         </div>
 
-        {/* ===== COLLAPSIBLE SECTIONS ===== */}
-        <div id="tour-sections" className="space-y-4">
+        {/* Accordion Sections */}
+        <div id="tour-sections">
+          <AccordionList
+            capitalFlow={capitalFlow}
+            platformStats={platformStats}
+            userStats={userStats}
+            performanceData={performanceData}
+            aiStats={aiStats}
+            signalStats={signalStats}
+            activeTrades={activeTrades}
+            counterFlowIds={counterFlowIds}
+            chartData={chartData}
+            periodPnL={periodPnL}
+            hasChartData={hasChartData}
+            pnlViewMode={pnlViewMode}
+            setPnlViewMode={setPnlViewMode}
+            selectedMarkets={selectedMarkets}
+          />
+        </div>
 
-          {/* Capital Flow Summary */}
-          {capitalFlow && (
-            <CollapsibleSection
-              title="Capital Flow"
-              icon={Globe}
-              badge={capitalFlow.recommendation?.action === 'analyze' ? 'OPPORTUNITY' : undefined}
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* L1 */}
-                <Link href="/analyze" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-5 h-5 rounded bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white">1</div>
-                    <span className="text-xs text-gray-400">Global Liquidity</span>
-                  </div>
-                  <span className={cn(
-                    'text-sm font-bold',
-                    capitalFlow.liquidityBias === 'risk_on' ? 'text-[#5EEDC3]' :
-                    capitalFlow.liquidityBias === 'risk_off' ? 'text-[#EF5A6F]' : 'text-gray-400'
-                  )}>
-                    {capitalFlow.liquidityBias === 'risk_on' ? 'RISK ON' :
-                     capitalFlow.liquidityBias === 'risk_off' ? 'RISK OFF' : 'NEUTRAL'}
-                  </span>
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    Fed: {capitalFlow.globalLiquidity.fedBalanceSheet.value.toFixed(1)}T
-                  </p>
-                </Link>
-
-                {/* L2 */}
-                <Link href="/analyze" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-5 h-5 rounded bg-emerald-500 flex items-center justify-center text-[10px] font-bold text-white">2</div>
-                    <span className="text-xs text-gray-400">Market Flow</span>
-                  </div>
-                  <span className="text-sm font-bold text-white">
-                    {(() => {
-                      const valid = capitalFlow.markets.filter(m => m && m.market);
-                      if (valid.length === 0) return 'N/A';
-                      const top = valid.reduce((a, b) => (b.flow7d ?? 0) > (a.flow7d ?? 0) ? b : a);
-                      return `${(top.market || '').toUpperCase()} LEADS`;
-                    })()}
-                  </span>
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    {capitalFlow.markets.filter(m => (m.flow7d ?? 0) > 0).length}/{capitalFlow.markets.length} inflow
-                  </p>
-                </Link>
-
-                {/* L3 */}
-                <Link href="/analyze" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-5 h-5 rounded bg-purple-500 flex items-center justify-center text-[10px] font-bold text-white">3</div>
-                    <span className="text-xs text-gray-400">Sector</span>
-                  </div>
-                  <span className="text-sm font-bold text-white">
-                    {(() => {
-                      const rec = capitalFlow.recommendation;
-                      const market = capitalFlow.markets.find(m => m.market === rec?.primaryMarket);
-                      return market ? `${(market.phase || 'mid').toUpperCase()} PHASE` : 'ANALYZING';
-                    })()}
-                  </span>
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    {capitalFlow.recommendation?.primaryMarket || 'Market'} recommended
-                  </p>
-                </Link>
-
-                {/* L4 */}
-                <Link href="/analyze" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-5 h-5 rounded bg-amber-500 flex items-center justify-center text-[10px] font-bold text-white">4</div>
-                    <span className="text-xs text-gray-400">Recommendation</span>
-                  </div>
-                  <span className={cn(
-                    'text-sm font-bold',
-                    capitalFlow.recommendation?.action === 'analyze' ? 'text-[#5EEDC3]' :
-                    capitalFlow.recommendation?.action === 'wait' ? 'text-amber-400' : 'text-[#EF5A6F]'
-                  )}>
-                    {(capitalFlow.recommendation?.action || 'wait').toUpperCase()} {(capitalFlow.recommendation?.primaryMarket || '').toUpperCase()}
-                  </span>
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    {capitalFlow.recommendation?.confidence || 0}% confidence
-                  </p>
-                </Link>
-              </div>
-            </CollapsibleSection>
-          )}
-
-          {/* Capital Flow Opportunities */}
-          {capitalFlow?.recommendation?.action === 'analyze' && (
-            <CollapsibleSection
-              title="CF Opportunities"
-              icon={Zap}
-              badge="NEW"
-              defaultOpen={true}
-            >
-              <div className="space-y-3">
-                {/* Primary BUY opportunity */}
-                {(() => {
-                  const rec = capitalFlow.recommendation;
-                  const market = capitalFlow.markets.find(m => m.market === rec.primaryMarket);
-                  const filterType = cfMarketToFilterType(rec.primaryMarket);
-                  if (!selectedMarkets.includes(filterType)) return null;
-                  return (
-                    <Link
-                      href={`/analyze?market=${rec.primaryMarket}`}
-                      className="flex items-center justify-between p-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5 hover:border-emerald-500/40 transition group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                          <TrendingUp className="w-4 h-4 text-[#5EEDC3]" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-sm font-bold text-white">{(rec.primaryMarket || '').toUpperCase()}</span>
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-[#5EEDC3]">BUY</span>
-                            {market && (
-                              <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#1E293B] text-gray-400">
-                                {(market.phase || 'mid').toUpperCase()} PHASE
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-gray-400 line-clamp-1">{rec.reason}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {market && (
-                          <span className={cn(
-                            "text-xs font-bold tabular-nums",
-                            (market.flow7d ?? 0) >= 0 ? "text-[#5EEDC3]" : "text-[#EF5A6F]"
-                          )}>
-                            {(market.flow7d ?? 0) >= 0 ? '+' : ''}{(market.flow7d ?? 0).toFixed(1)}% 7d
-                          </span>
-                        )}
-                        <span className="text-xs text-gray-400">{rec.confidence}%</span>
-                        <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-[#5EEDC3] transition" />
-                      </div>
-                    </Link>
-                  );
-                })()}
-
-                {/* Secondary: markets with counter-opportunity (outflow → potential short) */}
-                {capitalFlow.markets
-                  .filter(m => m && m.market && m.market !== capitalFlow.recommendation.primaryMarket && (m.flow7d ?? 0) < -2 && selectedMarkets.includes(cfMarketToFilterType(m.market)))
-                  .slice(0, 1)
-                  .map((m) => (
-                    <Link
-                      key={m.market}
-                      href={`/analyze?market=${m.market}`}
-                      className="flex items-center justify-between p-4 rounded-lg border border-[#EF5A6F]/20 bg-[#EF5A6F]/5 hover:border-[#EF5A6F]/40 transition group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-[#EF5A6F]/20 flex items-center justify-center">
-                          <TrendingDown className="w-4 h-4 text-[#EF5A6F]" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-sm font-bold text-white">{(m.market || '').toUpperCase()}</span>
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#EF5A6F]/20 text-[#EF5A6F]">SELL</span>
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#1E293B] text-gray-400">
-                              {(m.phase || 'mid').toUpperCase()} PHASE
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-400">Capital outflow detected — short opportunity</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold tabular-nums text-[#EF5A6F]">
-                          {(m.flow7d ?? 0).toFixed(1)}% 7d
-                        </span>
-                        <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-[#EF5A6F] transition" />
-                      </div>
-                    </Link>
-                  ))
-                }
-
-                {/* If filter hides the recommended market */}
-                {!selectedMarkets.includes(cfMarketToFilterType(capitalFlow.recommendation.primaryMarket)) && (
-                  <div className="p-3 rounded-lg border border-[#1E293B] text-center">
-                    <p className="text-xs text-gray-500">
-                      Opportunity in <span className="text-white font-medium">{capitalFlow.recommendation.primaryMarket.toUpperCase()}</span> is hidden by your market filter.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CollapsibleSection>
-          )}
-
-          {/* Platform Performance */}
-          <CollapsibleSection title="Platform Performance" icon={Target}>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* Platform P/L Chart */}
-              <div className="lg:col-span-2 rounded-lg border border-[#1E293B] bg-[#0A0E27] p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-white">Platform P/L</span>
-                  <div className={cn(
-                    "px-2 py-0.5 rounded text-xs font-bold",
-                    (performanceData?.summary?.totalRealizedPnL || 0) >= 0
-                      ? "bg-emerald-500/20 text-[#5EEDC3]"
-                      : "bg-red-500/20 text-[#EF5A6F]"
-                  )}>
-                    {performanceData?.summary?.totalRealizedPnL !== undefined
-                      ? `${(performanceData.summary.totalRealizedPnL >= 0 ? '+' : '')}${performanceData.summary.totalRealizedPnL.toFixed(1)}%`
-                      : '--'}
-                  </div>
-                </div>
-                <div className="h-36">
-                  {!hasChartData ? (
-                    <div className="h-full flex items-center justify-center">
-                      <p className="text-xs text-gray-500">No trading data yet</p>
-                    </div>
-                  ) : (
-                    <PnLChart chartData={chartData} />
-                  )}
-                </div>
-              </div>
-
-              {/* Platform Stats */}
-              <div className="space-y-3">
-                <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
-                  <p className="text-xs text-gray-400 mb-1">Accuracy</p>
-                  <p className="text-xl font-bold text-white">{platformStats?.accuracy?.overall ? `${platformStats.accuracy.overall}%` : '--'}</p>
-                  <p className="text-[10px] text-gray-500">{formatNumber(platformStats?.accuracy?.sampleSize || 0)} verified</p>
-                </div>
-                <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
-                  <p className="text-xs text-gray-400 mb-1">Total Analyses</p>
-                  <p className="text-xl font-bold text-white">{formatNumber(platformStats?.platform?.totalAnalyses || 0)}</p>
-                  <p className="text-[10px] text-gray-500">{formatNumber(platformStats?.platform?.weeklyAnalyses || 0)} this week</p>
-                </div>
-                <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
-                  <p className="text-xs text-gray-400 mb-1">Users</p>
-                  <p className="text-xl font-bold text-white">{formatNumber(platformStats?.platform?.totalUsers || 0)}</p>
-                </div>
-              </div>
-            </div>
-          </CollapsibleSection>
-
-          {/* My Performance */}
-          <CollapsibleSection
-            title="My Performance"
-            icon={Award}
-            badge={userStats?.verifiedAnalyses && userStats.accuracy >= 70 ? 'TOP' : undefined}
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-              {/* My P/L Chart */}
-              <div className="lg:col-span-2 rounded-lg border border-[#1E293B] bg-[#0A0E27] p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-white">My P/L</span>
-                  <div className="flex items-center gap-2">
-                    <div className="flex bg-[#1E293B] rounded-lg p-0.5">
-                      {(['daily', 'weekly', 'monthly'] as const).map((mode) => (
-                        <button
-                          key={mode}
-                          onClick={() => setPnlViewMode(mode)}
-                          className={cn(
-                            "px-2.5 py-1 text-[10px] font-medium rounded transition-all",
-                            pnlViewMode === mode
-                              ? "bg-[#0F1629] text-white"
-                              : "text-gray-500 hover:text-gray-300"
-                          )}
-                        >
-                          {mode === 'daily' ? 'Day' : mode === 'weekly' ? 'Week' : 'Month'}
-                        </button>
-                      ))}
-                    </div>
-                    <span className={cn(
-                      "text-xs font-bold",
-                      periodPnL >= 0 ? "text-[#5EEDC3]" : "text-[#EF5A6F]"
-                    )}>
-                      {hasChartData ? `${periodPnL >= 0 ? '+' : ''}${periodPnL.toFixed(1)}%` : '--'}
-                    </span>
-                  </div>
-                </div>
-                <div className="h-36">
-                  {!hasChartData ? (
-                    <div className="h-full flex flex-col items-center justify-center">
-                      <p className="text-xs text-gray-500 mb-2">No trading data yet</p>
-                      <Link href="/analyze" className="text-xs text-[#5EEDC3] hover:underline flex items-center gap-1">
-                        Start your first analysis <ArrowRight className="w-3 h-3" />
-                      </Link>
-                    </div>
-                  ) : (
-                    <PnLChart chartData={chartData} />
-                  )}
-                </div>
-              </div>
-
-              {/* My Stats */}
-              <div className="space-y-3">
-                <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
-                  <p className="text-xs text-gray-400 mb-1">My Accuracy</p>
-                  <p className="text-xl font-bold text-white">
-                    {userStats?.verifiedAnalyses ? `${userStats.accuracy?.toFixed(0)}%` : (userStats?.avgScore ? `${(userStats.avgScore * 10).toFixed(0)}%` : '--')}
-                  </p>
-                  <p className="text-[10px] text-gray-500">
-                    {userStats?.verifiedAnalyses
-                      ? `${userStats.correctAnalyses}/${userStats.verifiedAnalyses} closed`
-                      : (userStats?.avgScore ? 'Avg analysis score' : 'No data yet')}
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
-                  <p className="text-xs text-gray-400 mb-1">GO Signals</p>
-                  <p className="text-xl font-bold text-white">{formatNumber(userStats?.goSignals || 0)}</p>
-                  <p className="text-[10px] text-gray-500">{formatNumber(userStats?.avoidSignals || 0)} avoided</p>
-                </div>
-                <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
-                  <p className="text-xs text-gray-400 mb-1">Active Trades</p>
-                  <p className="text-xl font-bold text-white">{formatNumber(userStats?.activeCount || 0)}</p>
-                  <p className="text-[10px] text-gray-500">{userStats?.activeCount ? `${formatNumber(userStats.activeProfitable || 0)} profitable` : 'Start analyzing'}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Trade summary row */}
-            {userStats && userStats.totalAnalyses > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                <div className="p-3 rounded-lg border border-[#1E293B] bg-[#0A0E27] text-center">
-                  <div className="text-lg font-bold text-white">{userStats.totalAnalyses}</div>
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wider">Total</div>
-                </div>
-                <div className="p-3 rounded-lg border border-blue-500/20 bg-blue-500/5 text-center">
-                  <div className="text-lg font-bold text-blue-400">{userStats.activeCount || userStats.pendingAnalyses}</div>
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wider">Active</div>
-                </div>
-                <div className="p-3 rounded-lg border border-[#1E293B] bg-[#0A0E27] text-center">
-                  <div className="text-lg font-bold text-white">{userStats.verifiedAnalyses}</div>
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wider">Closed</div>
-                </div>
-                <div className="p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 text-center">
-                  <div className="text-lg font-bold text-[#5EEDC3]">{userStats.correctAnalyses}</div>
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wider">TP Hit</div>
-                </div>
-                <div className="p-3 rounded-lg border border-red-500/20 bg-red-500/5 text-center">
-                  <div className="text-lg font-bold text-[#EF5A6F]">{userStats.verifiedAnalyses - userStats.correctAnalyses}</div>
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wider">SL Hit</div>
-                </div>
-              </div>
-            )}
-          </CollapsibleSection>
-
-          {/* Trader Profile */}
-          <div className="rounded-lg border border-[#1E293B] bg-[#0F1629] p-4">
-            <TraderProfileCard />
-          </div>
-
-          {/* Active Trades */}
-          {activeTrades.length > 0 && (
-            <CollapsibleSection
-              title="Active Trades"
-              icon={Activity}
-              badge={`${activeTrades.length}`}
-            >
-              <div className="overflow-x-auto pb-2 -mx-2 px-2">
-                <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
-                  {activeTrades.slice(0, 10).map((trade) => (
-                    <ActiveTradeCard key={trade.id} trade={trade} counterFlow={counterFlowIds.has(trade.id)} />
-                  ))}
-                </div>
-              </div>
-              <div className="mt-3 text-right">
-                <Link href="/reports" className="text-xs text-gray-400 hover:text-[#5EEDC3] transition flex items-center gap-1 justify-end">
-                  View all trades <ChevronRight className="w-3 h-3" />
-                </Link>
-              </div>
-            </CollapsibleSection>
-          )}
-
-          {/* AI & Signals */}
-          {(aiStats || signalStats) && (
-            <CollapsibleSection title="AI Usage & Signals" icon={Brain}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {aiStats && (
-                  <>
-                    {/* My Concierge */}
-                    <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Bot className="w-4 h-4 text-[#5EEDC3]" />
-                        <span className="text-xs font-medium text-gray-400">AI Concierge</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-white">{formatNumber(aiStats.user.conciergeMessages)}</p>
-                          <p className="text-[10px] text-gray-500">Messages</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-white">{formatNumber(Math.floor(aiStats.user.conciergeMessages * 0.4))}</p>
-                          <p className="text-[10px] text-gray-500">Via Chat</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* My Expert */}
-                    <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Brain className="w-4 h-4 text-purple-400" />
-                        <span className="text-xs font-medium text-gray-400">AI Expert</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-white">{formatNumber(aiStats.user.expertQuestions)}</p>
-                          <p className="text-[10px] text-gray-500">Asked</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-white">{Math.max(0, (userStats?.totalAnalyses || 0) * 3 - aiStats.user.expertQuestions)}</p>
-                          <p className="text-[10px] text-gray-500">Free Left</p>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Signal Stats */}
-                {signalStats && (
-                  <div className="p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27]">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-[#5EEDC3]" />
-                        <span className="text-xs font-medium text-gray-400">Signals</span>
-                      </div>
-                      <Link href="/signals" className="text-[10px] text-gray-500 hover:text-[#5EEDC3]">View All</Link>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="text-center">
-                        <p className="text-lg font-bold text-white">{signalStats.totalSignals}</p>
-                        <p className="text-[10px] text-gray-500">Total</p>
-                      </div>
-                      <div className="text-center">
-                        <p className={cn(
-                          "text-lg font-bold",
-                          signalStats.winRate >= 70 ? "text-[#5EEDC3]" :
-                          signalStats.winRate >= 50 ? "text-amber-400" : "text-[#EF5A6F]"
-                        )}>
-                          {signalStats.closedSignals > 0 ? `${signalStats.winRate.toFixed(0)}%` : '--'}
-                        </p>
-                        <p className="text-[10px] text-gray-500">Win Rate</p>
-                      </div>
-                    </div>
-
-                    {signalStats.bestPerformer && (
-                      <div className="mt-3 p-2 rounded border border-emerald-500/20 bg-emerald-500/5 flex items-center justify-between">
-                        <span className="text-[10px] text-gray-400">Best</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-white">{signalStats.bestPerformer.symbol}</span>
-                          <span className="text-xs font-bold text-[#5EEDC3]">+{signalStats.bestPerformer.pnl.toFixed(1)}%</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {signalStats.recentSignals.length > 0 && (
-                      <div className="mt-3 space-y-1.5">
-                        {signalStats.recentSignals.slice(0, 3).map((signal) => (
-                          <Link
-                            key={signal.id}
-                            href={`/signals/${signal.id}`}
-                            className="flex items-center justify-between p-1.5 rounded hover:bg-white/[0.02] transition"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-white">{signal.symbol}</span>
-                              <span className={cn(
-                                "px-1 py-0.5 rounded text-[9px] font-bold",
-                                signal.direction === 'long'
-                                  ? "bg-emerald-500/20 text-[#5EEDC3]"
-                                  : "bg-red-500/20 text-[#EF5A6F]"
-                              )}>
-                                {signal.direction.toUpperCase()}
-                              </span>
-                            </div>
-                            {signal.pnlPercent !== null ? (
-                              <span className={cn(
-                                "text-xs font-bold",
-                                signal.pnlPercent >= 0 ? "text-[#5EEDC3]" : "text-[#EF5A6F]"
-                              )}>
-                                {signal.pnlPercent >= 0 ? '+' : ''}{signal.pnlPercent.toFixed(1)}%
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-blue-400">Live</span>
-                            )}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </CollapsibleSection>
-          )}
-
-          {/* Empty State for New Users */}
-          {(!userStats || userStats.totalAnalyses === 0) && (
-            <div className="rounded-lg border border-[#1E293B] bg-[#0F1629] p-8 text-center">
-              <TrendingUp className="w-10 h-10 text-[#5EEDC3] mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-white mb-2">Start Your Trading Journey</h3>
-              <p className="text-sm text-gray-400 mb-6 max-w-md mx-auto">
-                Follow the Capital Flow, analyze assets, and track your performance.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <Link
-                  href="/analyze"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[#1E293B] text-white text-sm font-medium hover:border-[#5EEDC3]/30 transition"
-                >
-                  <Globe className="w-4 h-4" />
-                  View Capital Flow
-                </Link>
-                <Link
-                  href="/analyze"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#5EEDC3] text-[#0A0E27] text-sm font-semibold hover:bg-[#5EEDC3]/90 transition"
-                >
-                  Start Analysis
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-            </div>
-          )}
+        {/* Trader Profile - Full width at bottom */}
+        <div className="mt-4">
+          <ProfileCard />
         </div>
       </div>
     </div>
