@@ -888,7 +888,7 @@ export default function DashboardPage() {
               <div className="flex flex-col items-center justify-center py-4">
                 <Globe className="w-6 h-6 text-gray-600 mb-2" />
                 <p className="text-xs text-gray-500">No data</p>
-                <Link href="/capital-flow" className="mt-2 text-xs text-[#5EEDC3] hover:underline">
+                <Link href="/analyze" className="mt-2 text-xs text-[#5EEDC3] hover:underline">
                   View Capital Flow
                 </Link>
               </div>
@@ -911,7 +911,7 @@ export default function DashboardPage() {
               <div className="flex flex-col items-center justify-center py-4">
                 <BarChart3 className="w-6 h-6 text-gray-600 mb-2" />
                 <p className="text-xs text-gray-500">No data</p>
-                <Link href="/capital-flow" className="mt-2 text-xs text-[#5EEDC3] hover:underline">
+                <Link href="/analyze" className="mt-2 text-xs text-[#5EEDC3] hover:underline">
                   View Capital Flow
                 </Link>
               </div>
@@ -975,7 +975,7 @@ export default function DashboardPage() {
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* L1 */}
-                <Link href="/capital-flow" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
+                <Link href="/analyze" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-5 h-5 rounded bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white">1</div>
                     <span className="text-xs text-gray-400">Global Liquidity</span>
@@ -994,7 +994,7 @@ export default function DashboardPage() {
                 </Link>
 
                 {/* L2 */}
-                <Link href="/capital-flow" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
+                <Link href="/analyze" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-5 h-5 rounded bg-emerald-500 flex items-center justify-center text-[10px] font-bold text-white">2</div>
                     <span className="text-xs text-gray-400">Market Flow</span>
@@ -1013,7 +1013,7 @@ export default function DashboardPage() {
                 </Link>
 
                 {/* L3 */}
-                <Link href="/capital-flow" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
+                <Link href="/analyze" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-5 h-5 rounded bg-purple-500 flex items-center justify-center text-[10px] font-bold text-white">3</div>
                     <span className="text-xs text-gray-400">Sector</span>
@@ -1031,7 +1031,7 @@ export default function DashboardPage() {
                 </Link>
 
                 {/* L4 */}
-                <Link href="/capital-flow" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
+                <Link href="/analyze" className="block p-4 rounded-lg border border-[#1E293B] bg-[#0A0E27] hover:border-[#5EEDC3]/30 transition">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-5 h-5 rounded bg-amber-500 flex items-center justify-center text-[10px] font-bold text-white">4</div>
                     <span className="text-xs text-gray-400">Recommendation</span>
@@ -1460,7 +1460,7 @@ export default function DashboardPage() {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Link
-                  href="/capital-flow"
+                  href="/analyze"
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-[#1E293B] text-white text-sm font-medium hover:border-[#5EEDC3]/30 transition"
                 >
                   <Globe className="w-4 h-4" />

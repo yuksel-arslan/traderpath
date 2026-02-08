@@ -93,8 +93,8 @@ export default function TwoFactorPage() {
         throw new Error(data.error?.message || 'Invalid code');
       }
 
-      // Redirect to capital-flow on success
-      router.push('/capital-flow');
+      // Redirect to dashboard on success
+      router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed');
       setCode(['', '', '', '', '', '']);

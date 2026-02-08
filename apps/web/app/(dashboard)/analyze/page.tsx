@@ -672,7 +672,7 @@ export default function AnalyzePage() {
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white">Capital Flow Analysis</h2>
                 </div>
                 <Link
-                  href="/capital-flow"
+                  href="/dashboard"
                   className="text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1"
                 >
                   Full Details <ChevronRight className="w-3 h-3" />

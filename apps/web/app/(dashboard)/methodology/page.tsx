@@ -401,7 +401,7 @@ export default function MethodologyPage() {
         <h3 className="text-white font-bold text-lg mb-2">Start Following the Money</h3>
         <p className="text-teal-100 text-sm mb-3">Track global capital flows and find optimal entry points</p>
         <Link
-          href="/capital-flow"
+          href="/analyze"
           className="inline-flex items-center gap-2 px-4 py-2 bg-white text-teal-600 font-bold rounded-lg hover:bg-teal-50 transition-colors"
         >
           <Globe className="w-4 h-4" />
