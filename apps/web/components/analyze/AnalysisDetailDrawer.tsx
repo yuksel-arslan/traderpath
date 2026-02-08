@@ -123,9 +123,9 @@ function L1Content({ gl, bias }: { gl: GlobalLiquidity; bias: LiquidityBias }) {
       <table className="w-full text-xs">
         <tbody>
           {rows.map(([label, value]) => (
-            <tr key={label} className="border-b border-white/5 last:border-0">
-              <td className="py-2 text-slate-400">{label}</td>
-              <td className="py-2 text-right font-medium text-white">{value}</td>
+            <tr key={label} className="border-b border-slate-100 dark:border-white/5 last:border-0">
+              <td className="py-2 text-slate-500 dark:text-slate-400">{label}</td>
+              <td className="py-2 text-right font-medium text-slate-900 dark:text-white">{value}</td>
             </tr>
           ))}
         </tbody>
@@ -144,11 +144,11 @@ function L2Content({ markets, primary }: { markets: MarketFlow[]; primary?: stri
             key={m.market}
             className={cn(
               'p-3 rounded-xl border',
-              isPrimary ? 'border-[#4dd0e1]/40 bg-[#4dd0e1]/5' : 'border-white/5 bg-white/[0.02]'
+              isPrimary ? 'border-[#4dd0e1]/40 bg-[#4dd0e1]/5' : 'border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02]'
             )}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className={cn('text-sm font-bold capitalize', isPrimary && 'text-[#4dd0e1]')}>
+              <span className={cn('text-sm font-bold capitalize text-slate-900 dark:text-white', isPrimary && '!text-[#4dd0e1]')}>
                 {m.market}
                 {isPrimary && <span className="ml-1.5 text-[9px] font-medium bg-[#4dd0e1]/20 text-[#4dd0e1] px-1.5 py-0.5 rounded">PRIMARY</span>}
               </span>
@@ -158,7 +158,7 @@ function L2Content({ markets, primary }: { markets: MarketFlow[]; primary?: stri
             </div>
             <div className="grid grid-cols-3 gap-2 text-[11px]">
               <div>
-                <span className="block text-slate-500">7d Flow</span>
+                <span className="block text-slate-500 dark:text-slate-500">7d Flow</span>
                 <span className={cn('font-semibold', (m.flow7d ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400')}>
                   {(m.flow7d ?? 0) >= 0 ? '+' : ''}{safeFixed(m.flow7d)}%
                 </span>
@@ -171,12 +171,12 @@ function L2Content({ markets, primary }: { markets: MarketFlow[]; primary?: stri
               </div>
               <div>
                 <span className="block text-slate-500">Velocity</span>
-                <span className="font-semibold text-white">{safeFixed(m.flowVelocity, 2)}</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{safeFixed(m.flowVelocity, 2)}</span>
               </div>
             </div>
             {m.rotationSignal && (
               <div className="mt-2 text-[10px] text-slate-400">
-                Rotation: <span className="font-medium text-white capitalize">{m.rotationSignal}</span>
+                Rotation: <span className="font-medium text-slate-900 dark:text-white capitalize">{m.rotationSignal}</span>
                 &nbsp;&bull;&nbsp;{m.daysInPhase}d in phase
               </div>
             )}
@@ -196,12 +196,12 @@ function L3Content({ markets, primary }: { markets: MarketFlow[]; primary?: stri
   return (
     <div className="space-y-2">
       <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">
-        Sectors in <span className="text-white font-semibold capitalize">{primary ?? 'primary market'}</span>
+        Sectors in <span className="text-slate-900 dark:text-white font-semibold capitalize">{primary ?? 'primary market'}</span>
       </p>
       {sectors.map((s, i) => (
-        <div key={i} className="flex items-center justify-between p-2.5 rounded-lg border border-white/5 bg-white/[0.02]">
+        <div key={i} className="flex items-center justify-between p-2.5 rounded-lg border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02]">
           <div>
-            <span className="text-xs font-medium text-white">{s.name}</span>
+            <span className="text-xs font-medium text-slate-900 dark:text-white">{s.name}</span>
             <span className="block text-[10px] text-slate-500">{safeFixed(s.dominance)}% dominance</span>
           </div>
           <div className="flex items-center gap-2">
@@ -243,7 +243,7 @@ function L4Content({ rec, sellRec }: { rec: FlowRecommendation | null | undefine
           </span>
           <span className="ml-auto text-[10px] font-medium text-slate-400">{rec.confidence ?? 0}% confidence</span>
         </div>
-        <p className="text-xs text-slate-300 mb-2">{rec.reason}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-300 mb-2">{rec.reason}</p>
         <div className="flex items-center gap-2 flex-wrap">
           <span className={cn('text-[10px] px-1.5 py-0.5 rounded font-bold', phaseBg[rec.phase ?? 'mid'], phaseColor[rec.phase ?? 'mid'])}>
             {(rec.phase ?? 'mid').toUpperCase()} PHASE
@@ -257,7 +257,7 @@ function L4Content({ rec, sellRec }: { rec: FlowRecommendation | null | undefine
             <span className="text-[10px] text-slate-500 uppercase">Suggested Assets</span>
             {rec.suggestedAssets.map((a, i) => (
               <div key={i} className="flex items-center justify-between text-xs">
-                <span className="text-white font-medium">{a.symbol}</span>
+                <span className="text-slate-900 dark:text-white font-medium">{a.symbol}</span>
                 <span className="text-slate-400">{a.name}</span>
               </div>
             ))}
@@ -275,7 +275,7 @@ function L4Content({ rec, sellRec }: { rec: FlowRecommendation | null | undefine
             </span>
             <span className="ml-auto text-[10px] font-medium text-slate-400">{sellRec.confidence ?? 0}%</span>
           </div>
-          <p className="text-xs text-slate-300">{sellRec.reason}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-300">{sellRec.reason}</p>
         </div>
       )}
     </div>
@@ -350,21 +350,18 @@ export function AnalysisDetailDrawer({ open, layer, capitalFlow, onClose }: Anal
             dragConstraints={{ top: 0 }}
             dragElastic={0.15}
             onDragEnd={handleDragEnd}
-            className="fixed bottom-0 inset-x-0 z-50 max-h-[85vh] flex flex-col rounded-t-3xl overflow-hidden"
+            className="fixed bottom-0 inset-x-0 z-50 max-h-[85vh] flex flex-col rounded-t-3xl overflow-hidden bg-white dark:bg-[#071023]/95 backdrop-blur-2xl"
             style={{
-              background: 'rgba(7, 16, 35, 0.95)',
-              backdropFilter: 'blur(24px)',
-              WebkitBackdropFilter: 'blur(24px)',
-              boxShadow: `0 -8px 40px rgba(0,0,0,0.5), 0 0 1px ${meta.accent}40`,
+              boxShadow: `0 -8px 40px rgba(0,0,0,0.15), 0 0 1px ${meta.accent}40`,
             }}
           >
             {/* Drag Handle */}
             <div className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing flex-shrink-0">
-              <div className="w-10 h-1 rounded-full bg-white/20" />
+              <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-white/20" />
             </div>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-5 pb-3 border-b border-white/5 flex-shrink-0">
+            <div className="flex items-center justify-between px-5 pb-3 border-b border-slate-200 dark:border-white/5 flex-shrink-0">
               <div className="flex items-center gap-2.5">
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -376,12 +373,12 @@ export function AnalysisDetailDrawer({ open, layer, capitalFlow, onClose }: Anal
                   <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: meta.accent }}>
                     {layer}
                   </span>
-                  <h3 className="text-sm font-bold text-white -mt-0.5">{meta.title}</h3>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white -mt-0.5">{meta.title}</h3>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition"
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/10 transition"
               >
                 <X className="w-4 h-4 text-slate-400" />
               </button>
