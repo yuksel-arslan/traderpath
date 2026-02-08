@@ -208,10 +208,14 @@ function hideCanvasesForCapture(container: HTMLElement): Array<{ canvas: HTMLCan
 
 function restoreCanvases(saved: Array<{ canvas: HTMLCanvasElement; parent: HTMLElement; next: ChildNode | null }>) {
   saved.forEach(({ canvas, parent, next }) => {
-    if (next) {
-      parent.insertBefore(canvas, next);
-    } else {
-      parent.appendChild(canvas);
+    try {
+      if (next && next.parentNode === parent) {
+        parent.insertBefore(canvas, next);
+      } else {
+        parent.appendChild(canvas);
+      }
+    } catch {
+      // DOM may have changed (React re-render); silently skip restoration
     }
   });
 }
