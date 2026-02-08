@@ -24,6 +24,7 @@ import {
   FileText,
   Inbox,
   ShieldAlert,
+  Sparkles,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -39,7 +40,8 @@ const PriceTicker = dynamic(
 
 // Direct navigation items (no dropdown) - Top-Down Capital Flow
 const directNav = [
-  { name: 'Analyze', href: '/analyze', icon: TrendingUp },
+  { name: 'Automated', href: '/analyze', icon: Sparkles },
+  { name: 'Tailored', href: '/analyze/tailored', icon: TrendingUp },
   { name: 'Signals', href: '/signals', icon: Activity },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
 ];

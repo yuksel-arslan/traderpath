@@ -2155,6 +2155,38 @@ Kullanıcı Hakları Aktif:
     - User Menu: Profile | Settings | Admin | Logout
   - Dosya: `apps/web/app/(dashboard)/layout.tsx`
 
+### 2026-02-08
+- **Analiz Sistemi Yeniden Yapılandırıldı (3 Mod)**:
+  - **Automated Analysis** (`/analyze`): Tek tıkla tam pipeline çalıştırır
+    - Capital Flow → AI Recommendation → Asset Selection → 7-Step + ML Analysis
+    - Visual pipeline progression: 4 adımlı progress bar (teal→amber→violet→emerald)
+    - Her adım animasyonlu kart ile gösteriliyor (loading spinner, data cards, completion checks)
+    - AI otomatik olarak en yüksek güvenli asset'i seçiyor
+    - Daily Pass otomatik satın alınıyor (yeterli kredi varsa)
+    - Error state: retry butonu ile pipeline yeniden başlatılabilir
+    - Complete state: "Run Another Analysis" butonu ile yeni analiz başlatılabilir
+  - **Tailored Analysis** (`/analyze/tailored`): Kullanıcı istediği herhangi bir asset'i seçebilir
+    - 55+ asset katalog (Crypto, Stocks, Metals, Bonds, BIST)
+    - Arama kutusu + kategori filtreleri (All, Crypto, Stocks, Metals, Bonds, BIST)
+    - Katalogda olmayan semboller için custom symbol input
+    - Capital Flow alignment gate yok - kullanıcı özgür
+    - Uyarı notu: "For best results, use Automated Analysis"
+    - Timeframe seçimi (15m/1H/4H/1D)
+    - Daily Pass kontrolü ve satın alma
+  - **AI Chat** (`/concierge`): Mevcut chat arayüzü + otomasyon komutları
+    - Yeni quick commands: "Set Alert" ve "Morning Briefing"
+    - Alert örneği: "Set a BTC alert when price drops to 55000"
+    - Briefing örneği: "Set my morning briefing to 11:00 AM every day"
+- **Navigation Güncellendi**:
+  - `Analyze` → `Automated` olarak yeniden adlandırıldı (Sparkles ikonu)
+  - `Tailored` eklendi (TrendingUp ikonu, `/analyze/tailored`)
+  - Primary nav: Automated | Tailored | Signals | Dashboard
+- **SelectionCards Kaldırıldı**: Mode selection ekranı (select/flow) yerine doğrudan Automated pipeline
+- **UI Kararları**:
+  - Automated Analysis: Pipeline progression bar (4 adım, her biri kendi gradient rengi)
+  - Tailored Analysis: Grid-based asset picker (2-5 kolon responsive)
+  - AI Chat: 6 quick command butonu (Capital Flow, AI Rec, Market Analysis, Top 5, Set Alert, Morning Briefing)
+
 ---
 
 ## 🔔 SMART ALERTS (L1-L4 Hierarchy Change Detection)
