@@ -311,9 +311,20 @@ export function KpiSection({ capitalFlow, credits, selectedMarkets }: KpiSection
     );
   }
 
+  // Translate CF market name to display name based on the selected filter.
+  // E.g. CF 'stocks' → "BIST" when bist is selected, "Stocks" when forex is selected.
+  function cfMarketDisplayName(cfMarket: string): string {
+    if (cfMarket === 'stocks') {
+      if (selectedMarkets.includes('bist') && !selectedMarkets.includes('forex')) return 'BIST';
+      if (selectedMarkets.includes('forex') && !selectedMarkets.includes('bist')) return 'Stocks';
+      // Both selected — show the CF name as-is
+    }
+    return cfMarket.charAt(0).toUpperCase() + cfMarket.slice(1);
+  }
+
   const filteredMarkets = capitalFlow.markets
     .filter(m => m && m.market && selectedMarkets.some(f => cfMarketMatchesFilter(m.market, f)))
-    .map(m => ({ market: m.market, flow7d: m.flow7d ?? 0, phase: m.phase || 'mid' }));
+    .map(m => ({ market: cfMarketDisplayName(m.market), flow7d: m.flow7d ?? 0, phase: m.phase || 'mid' }));
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
