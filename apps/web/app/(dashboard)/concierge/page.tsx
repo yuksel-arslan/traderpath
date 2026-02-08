@@ -498,31 +498,38 @@ export default function ConciergePage() {
     }
   };
 
-  // Quick commands based on Capital Flow recommendation
+  // Quick commands — follows the 4-step pipeline
   const getSmartCommands = () => {
-    const baseCommands = [
-      { icon: Globe, label: 'Where is money flowing?', command: 'Where is money flowing right now?', gradient: 'from-blue-500/20 to-cyan-500/20 hover:from-blue-500/30 hover:to-cyan-500/30' },
-      { icon: Target, label: 'Best opportunity?', command: 'What is the best trading opportunity right now?', gradient: 'from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30' },
+    const commands = [
+      // Step 1: Capital Flow
+      { icon: Globe, label: 'Capital Flow Overview', command: 'Where is money flowing right now?', gradient: 'from-teal-500/20 to-cyan-500/20 hover:from-teal-500/30 hover:to-cyan-500/30' },
+      // Step 2: AI Recommendation
+      { icon: Target, label: 'AI Recommendation', command: 'What should I trade based on capital flow?', gradient: 'from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30' },
     ];
 
+    // Step 3: Dynamic analysis based on Capital Flow recommendation
     if (capitalFlow?.recommendation?.primaryMarket) {
       const market = capitalFlow.recommendation.primaryMarket;
-      baseCommands.push({
+      const action = capitalFlow.recommendation?.action || 'analyze';
+      commands.push({
         icon: TrendingUp,
         label: `Analyze ${market.toUpperCase()}`,
         command: `Analyze the best ${market} asset right now`,
-        gradient: 'from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30',
+        gradient: action === 'avoid'
+          ? 'from-red-500/20 to-rose-500/20 hover:from-red-500/30 hover:to-rose-500/30'
+          : 'from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30',
       });
     }
 
-    baseCommands.push({
+    // Additional: Top Coins
+    commands.push({
       icon: Crown,
       label: 'Top 5 Coins',
       command: 'Give me top 5 highest probability coins',
       gradient: 'from-purple-500/20 to-violet-500/20 hover:from-purple-500/30 hover:to-violet-500/30',
     });
 
-    return baseCommands;
+    return commands;
   };
 
   // Get bias icon and color
@@ -682,22 +689,25 @@ export default function ConciergePage() {
                 {/* Welcome State */}
                 {messages.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-full text-center">
-                    <div className="relative mb-6">
-                      <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full blur-2xl opacity-30 animate-pulse" />
-                      <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center">
-                        <DollarSign className="w-10 h-10 text-white" />
+                    <div className="relative mb-5">
+                      <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full blur-2xl opacity-20 animate-pulse" />
+                      <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-xl shadow-teal-500/20">
+                        <DollarSign className="w-8 h-8 text-white" />
                       </div>
                     </div>
 
-                    <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
-                      Follow The Money
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-1">
+                      Follow the Money Flow
                     </h2>
-                    <p className="text-slate-600 dark:text-slate-400 max-w-md mb-6">
-                      {capitalFlow?.recommendation?.reasoning || 'Ask me about market flows, trading opportunities, or analyze any asset.'}
+                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mb-1">
+                      Capital Flow → AI Recommendation → Analysis → Trade Plan
+                    </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mb-5">
+                      {capitalFlow?.recommendation?.reasoning || 'Start with capital flow to discover where money is moving, then drill down to trade plans.'}
                     </p>
 
-                    {/* Smart Quick Commands */}
-                    <div className="flex flex-wrap justify-center gap-2">
+                    {/* Pipeline Quick Commands */}
+                    <div className="flex flex-wrap justify-center gap-2 max-w-lg">
                       {getSmartCommands().map((cmd, i) => (
                         <QuickCommand
                           key={i}
@@ -910,7 +920,7 @@ export default function ConciergePage() {
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Ask about market flows, opportunities, or analyze assets..."
+                    placeholder="Capital flow, recommendations, or analyze an asset..."
                     className="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-colors"
                     disabled={isLoading}
                   />
