@@ -510,12 +510,12 @@ export default function ConciergePage() {
     // Step 3: Dynamic analysis based on Capital Flow recommendation
     if (capitalFlow?.recommendation?.primaryMarket) {
       const market = capitalFlow.recommendation.primaryMarket;
-      const direction = capitalFlow.recommendation?.direction?.toUpperCase() || 'BUY';
+      const action = capitalFlow.recommendation?.action || 'analyze';
       commands.push({
         icon: TrendingUp,
-        label: `Analyze ${market.toUpperCase()} (${direction})`,
+        label: `Analyze ${market.toUpperCase()}`,
         command: `Analyze the best ${market} asset right now`,
-        gradient: direction === 'SELL'
+        gradient: action === 'avoid'
           ? 'from-red-500/20 to-rose-500/20 hover:from-red-500/30 hover:to-rose-500/30'
           : 'from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30',
       });
@@ -703,7 +703,7 @@ export default function ConciergePage() {
                       Capital Flow → AI Recommendation → Analysis → Trade Plan
                     </p>
                     <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mb-5">
-                      {capitalFlow?.recommendation?.reason || 'Start with capital flow to discover where money is moving, then drill down to trade plans.'}
+                      {capitalFlow?.recommendation?.reasoning || 'Start with capital flow to discover where money is moving, then drill down to trade plans.'}
                     </p>
 
                     {/* Pipeline Quick Commands */}
