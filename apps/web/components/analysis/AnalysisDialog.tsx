@@ -640,14 +640,24 @@ export function AnalysisDialog({
         8: analysisData.mlisConfirmation || null, // Step 8: ML Confirmation
       };
 
-      // Quick mode: instant results
-      // Include step 8 only if ML confirmation was returned
+      // Progressive reveal: show each step completing one-by-one
+      // so the user can follow the analysis flow.
       const completedIds = analysisData.mlisConfirmation
         ? [1, 2, 3, 4, 5, 6, 7, 8]
         : [1, 2, 3, 4, 5, 6, 7];
-      setCompletedSteps(completedIds);
-      setResults(allResults);
-      setActiveStep(totalSteps);
+
+      const STEP_REVEAL_MS = 900; // time each step is visible before next
+
+      for (let i = 0; i < completedIds.length; i++) {
+        await new Promise<void>(resolve => setTimeout(resolve, i === 0 ? 300 : STEP_REVEAL_MS));
+        const stepId = completedIds[i];
+        setActiveStep(stepId);
+        setResults(prev => ({ ...prev, [stepId]: allResults[stepId] }));
+        setCompletedSteps(completedIds.slice(0, i + 1));
+      }
+
+      // Small pause on the last step so user sees completion
+      await new Promise<void>(resolve => setTimeout(resolve, 600));
       setDialogStep('results');
 
       onComplete?.();
