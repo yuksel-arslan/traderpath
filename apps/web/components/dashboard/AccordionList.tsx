@@ -208,11 +208,17 @@ function formatNumber(num: number): string {
   return num.toLocaleString('en-US');
 }
 
-function cfMarketToFilterType(cfMarket: string): string {
-  if (cfMarket === 'stocks') return 'bist';
-  if (cfMarket === 'metals') return 'metals';
-  if (cfMarket === 'bonds') return 'bonds';
-  return 'crypto';
+// Returns all UI filter types that a CF market maps to
+function cfMarketFilterTypes(cfMarket: string): string[] {
+  if (cfMarket === 'stocks') return ['bist', 'forex'];
+  if (cfMarket === 'metals') return ['metals'];
+  if (cfMarket === 'bonds') return ['bonds'];
+  return ['crypto'];
+}
+
+// Check if a CF market matches any of the selected filters
+function cfMarketMatchesSelected(cfMarket: string, selectedMarkets: string[]): boolean {
+  return cfMarketFilterTypes(cfMarket).some(ft => selectedMarkets.includes(ft));
 }
 
 // ===========================================
@@ -523,8 +529,7 @@ export function AccordionList(props: AccordionListProps) {
             {(() => {
               const rec = capitalFlow.recommendation;
               const market = capitalFlow.markets.find(m => m.market === rec.primaryMarket);
-              const filterType = cfMarketToFilterType(rec.primaryMarket);
-              if (!selectedMarkets.includes(filterType)) return null;
+              if (!cfMarketMatchesSelected(rec.primaryMarket, selectedMarkets)) return null;
 
               return (
                 <Link
@@ -565,7 +570,7 @@ export function AccordionList(props: AccordionListProps) {
 
             {/* SELL opportunities */}
             {capitalFlow.markets
-              .filter(m => m && m.market && m.market !== capitalFlow.recommendation.primaryMarket && (m.flow7d ?? 0) < -2 && selectedMarkets.includes(cfMarketToFilterType(m.market)))
+              .filter(m => m && m.market && m.market !== capitalFlow.recommendation.primaryMarket && (m.flow7d ?? 0) < -2 && cfMarketMatchesSelected(m.market, selectedMarkets))
               .slice(0, 1)
               .map(m => (
                 <Link
@@ -599,7 +604,7 @@ export function AccordionList(props: AccordionListProps) {
             }
 
             {/* Hidden by filter warning */}
-            {!selectedMarkets.includes(cfMarketToFilterType(capitalFlow.recommendation.primaryMarket)) && (
+            {!cfMarketMatchesSelected(capitalFlow.recommendation.primaryMarket, selectedMarkets) && (
               <div className="p-3 rounded-2xl border border-white/5 text-center">
                 <p className="text-xs text-gray-500">
                   Opportunity in <span className="text-white font-medium">{capitalFlow.recommendation.primaryMarket.toUpperCase()}</span> hidden by filter.
