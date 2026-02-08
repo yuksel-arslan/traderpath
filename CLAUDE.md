@@ -630,6 +630,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-06 | Analyze Page: Enforced Top-Down Flow (Step 0→A→B) | Capital Flow zorunlu, AI recommendation sonrası asset seçimi, corporate decision framework |
 | 2026-02-06 | Details Page: Top-Down Evidence Chain | L1-L4 + Analysis + ML Confirmation alignment durumu, "X/Y Aligned" badge |
 | 2026-02-07 | Nav Restructure: Top-Down Flow Order | Explore(L1-L4) → Analyze → Signals → Dashboard. Intelligence→Explore, Signals primary'ye terfi, Profile user menu'ye, Capital Flow ayrı sayfa kaldırıldı |
+| 2026-02-08 | Dashboard: Mobile-First Fintech Rebuild | Monolitik 1483 satır → 5 modüler dosya. SVG Arc Gauge, glassmorphism kartlar, accordion layout, yatay trade kartları, 48px touch targets |
 
 ---
 
@@ -2206,6 +2207,23 @@ Kullanıcı Hakları Aktif:
 - **Production Source Maps Etkinleştirildi**:
   - `next.config.js`'e `productionBrowserSourceMaps: true` eklendi
   - Production'da error stack trace'leri orijinal TypeScript dosyalarına map ediliyor
+- **Dashboard Sayfası Tamamen Yeniden Yazıldı (Mobile-First Fintech Design)**:
+  - Monolitik 1483 satırlık dashboard 5 modüler dosyaya ayrıldı
+  - **Yeni Dosyalar**:
+    - `components/dashboard/KpiSection.tsx`: SVG Arc Gauge (Global Liquidity), Market Bias bars, Credits card
+    - `components/dashboard/CategoryBar.tsx`: Yatay kaydırılabilir market filtre (snap + localStorage)
+    - `components/dashboard/AccordionList.tsx`: Açılır kapanır bölümler (Capital Flow, Performance, Trades, AI)
+    - `components/dashboard/ProfileCard.tsx`: Trader profili turkuaz progress bar ile
+    - `page.tsx`: 717 satırlık slim orchestrator (tüm componentleri compose ediyor)
+  - **Tasarım Sistemi**:
+    - Arka plan: #041020, Glassmorphism kartlar (bg-white/5 backdrop-blur-md border border-white/10)
+    - Turkuaz (#4dd0e1) vurgu rengi, Neon Green (#00f5c4) pozitif, Coral (#ff5f5f) negatif
+    - rounded-2xl köşeler, font-mono finansal veriler, 48px minimum dokunma hedefleri
+    - Skeleton ekranlar animate-pulse ile
+  - **SVG Arc Gauge**: 240° ark, gradient segmentler (risk_off coral → neutral gray → risk_on green), animasyonlu glow dot
+  - **Accordion Layout**: Masaüstü tablo yerine mobil-dostu dikey accordion
+  - **Yatay Trade Kartları**: Aktif pozisyonlar overflow-x-auto ile yatay kaydırılabilir
+  - Build doğrulandı: TypeScript type uyumsuzluğu düzeltildi (CapitalFlowSummary GlobalLiquidity interface alignment)
 
 ---
 
