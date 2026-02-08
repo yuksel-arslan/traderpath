@@ -288,12 +288,15 @@ function CreditsContent({ credits }: { credits: number }) {
 // Main KPI Section
 // ===========================================
 export function KpiSection({ capitalFlow, credits, selectedMarkets }: KpiSectionProps) {
-  // Helper to map CF market name to filter type
-  function cfMarketToFilterType(cfMarket: string): string {
-    if (cfMarket === 'stocks') return 'bist';
-    if (cfMarket === 'metals') return 'metals';
-    if (cfMarket === 'bonds') return 'bonds';
-    return 'crypto';
+  // Map CF market names to the UI filter types they belong to.
+  // A single CF market can match multiple filter types
+  // (e.g. 'stocks' shows under both 'bist' and 'forex').
+  function cfMarketMatchesFilter(cfMarket: string, filterType: string): boolean {
+    if (cfMarket === 'stocks' && (filterType === 'bist' || filterType === 'forex')) return true;
+    if (cfMarket === 'metals' && filterType === 'metals') return true;
+    if (cfMarket === 'bonds' && filterType === 'bonds') return true;
+    if (cfMarket === 'crypto' && filterType === 'crypto') return true;
+    return false;
   }
 
   if (!capitalFlow) {
@@ -309,7 +312,7 @@ export function KpiSection({ capitalFlow, credits, selectedMarkets }: KpiSection
   }
 
   const filteredMarkets = capitalFlow.markets
-    .filter(m => m && m.market && selectedMarkets.includes(cfMarketToFilterType(m.market)))
+    .filter(m => m && m.market && selectedMarkets.some(f => cfMarketMatchesFilter(m.market, f)))
     .map(m => ({ market: m.market, flow7d: m.flow7d ?? 0, phase: m.phase || 'mid' }));
 
   return (

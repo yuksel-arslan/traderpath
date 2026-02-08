@@ -12,7 +12,7 @@ import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboar
 
 // Dashboard components
 import { KpiSection } from '@/components/dashboard/KpiSection';
-import { CategoryBar, useMarketFilter } from '@/components/dashboard/CategoryBar';
+import { CategoryBar, useMarketFilter, useBistSubSector } from '@/components/dashboard/CategoryBar';
 import { AccordionList } from '@/components/dashboard/AccordionList';
 import { ProfileCard } from '@/components/dashboard/ProfileCard';
 
@@ -232,6 +232,7 @@ const CACHE_DURATION = 5 * 60 * 1000;
 
 export default function DashboardPage() {
   const [selectedMarkets, setSelectedMarkets] = useMarketFilter();
+  const [bistSubSector, setBistSubSector] = useBistSubSector();
 
   const [credits, setCredits] = useState(0);
   const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
@@ -678,7 +679,12 @@ export default function DashboardPage() {
 
         {/* Category Bar */}
         <div id="tour-categories">
-          <CategoryBar selected={selectedMarkets} onChange={setSelectedMarkets} />
+          <CategoryBar
+            selected={selectedMarkets}
+            onChange={setSelectedMarkets}
+            bistSubSector={bistSubSector}
+            onBistSubSectorChange={setBistSubSector}
+          />
         </div>
 
         {/* Tour trigger */}
