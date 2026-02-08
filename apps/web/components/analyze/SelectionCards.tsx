@@ -32,8 +32,8 @@ export function SelectionCards({ onSelectFlow }: SelectionCardsProps) {
         onClick={() => router.push('/concierge')}
         className={cn(
           'group relative p-5 sm:p-6 rounded-2xl border-2 text-left transition-all duration-300',
-          'border-[#4dd0e1]/20 bg-[#071023]',
-          'hover:border-violet-400/50 hover:shadow-[0_0_30px_rgba(139,92,246,0.15)]',
+          'border-slate-200 dark:border-[#4dd0e1]/20 bg-white dark:bg-[#071023]',
+          'hover:border-violet-300 dark:hover:border-violet-400/50 hover:shadow-[0_0_30px_rgba(139,92,246,0.1)] dark:hover:shadow-[0_0_30px_rgba(139,92,246,0.15)]',
           'active:scale-[0.98]'
         )}
       >
@@ -45,16 +45,16 @@ export function SelectionCards({ onSelectFlow }: SelectionCardsProps) {
           <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
         </div>
 
-        <h2 className="text-base sm:text-lg font-bold text-white mb-1.5 sm:mb-2">
+        <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-1.5 sm:mb-2">
           Analyze via Chat
         </h2>
-        <p className="text-xs sm:text-sm text-slate-400 leading-relaxed mb-3 sm:mb-4">
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-3 sm:mb-4">
           Tell the AI what you want to analyze. Capital Flow check, asset selection, and full analysis run automatically.
         </p>
 
         <ul className="space-y-1.5 sm:space-y-2 mb-4 sm:mb-5">
           {CHAT_FEATURES.map((item, i) => (
-            <li key={i} className="flex items-start gap-2 text-[11px] sm:text-xs text-slate-400">
+            <li key={i} className="flex items-start gap-2 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
               <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-violet-500 mt-0.5 flex-shrink-0" />
               {item}
             </li>
@@ -73,8 +73,8 @@ export function SelectionCards({ onSelectFlow }: SelectionCardsProps) {
         onClick={onSelectFlow}
         className={cn(
           'group relative p-5 sm:p-6 rounded-2xl border-2 text-left transition-all duration-300',
-          'border-[#4dd0e1]/20 bg-[#071023]',
-          'hover:border-[#4dd0e1]/50 hover:shadow-[0_0_30px_rgba(77,208,225,0.15)]',
+          'border-slate-200 dark:border-[#4dd0e1]/20 bg-white dark:bg-[#071023]',
+          'hover:border-teal-300 dark:hover:border-[#4dd0e1]/50 hover:shadow-[0_0_30px_rgba(77,208,225,0.1)] dark:hover:shadow-[0_0_30px_rgba(77,208,225,0.15)]',
           'active:scale-[0.98]'
         )}
       >
@@ -86,17 +86,17 @@ export function SelectionCards({ onSelectFlow }: SelectionCardsProps) {
           <GitBranch className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
         </div>
 
-        <h2 className="text-base sm:text-lg font-bold text-white mb-1.5 sm:mb-2">
+        <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-1.5 sm:mb-2">
           Analyze via Flow
         </h2>
-        <p className="text-xs sm:text-sm text-slate-400 leading-relaxed mb-3 sm:mb-4">
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-3 sm:mb-4">
           Follow the top-down Capital Flow funnel step by step. Review each layer, pick your asset from AI recommendations.
         </p>
 
         <ul className="space-y-1.5 sm:space-y-2 mb-4 sm:mb-5">
           {FLOW_FEATURES.map((item, i) => (
-            <li key={i} className="flex items-start gap-2 text-[11px] sm:text-xs text-slate-400">
-              <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#4dd0e1] mt-0.5 flex-shrink-0" />
+            <li key={i} className="flex items-start gap-2 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
+              <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-teal-500 dark:text-[#4dd0e1] mt-0.5 flex-shrink-0" />
               {item}
             </li>
           ))}

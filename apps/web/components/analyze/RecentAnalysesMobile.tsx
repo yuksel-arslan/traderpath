@@ -27,7 +27,7 @@ import { getAuthToken, getApiUrl, authFetch } from '../../lib/api';
 
 const CoinIcon = dynamic(
   () => import('../common/CoinIcon').then(mod => ({ default: mod.CoinIcon })),
-  { ssr: false, loading: () => <div className="w-7 h-7 rounded-full bg-slate-700 animate-pulse" /> }
+  { ssr: false, loading: () => <div className="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse" /> }
 );
 
 // ─── Types ────────────────────────────────────────────────────────────
@@ -131,10 +131,10 @@ function AnalysisListItem({
     <div
       className={cn(
         'relative rounded-xl border overflow-hidden transition-all',
-        'bg-[#071023] active:bg-[#0a1530]',
+        'bg-white dark:bg-[#071023] active:bg-slate-50 dark:active:bg-[#0a1530]',
         analysis.outcome === 'correct' && 'border-emerald-500/30',
         analysis.outcome === 'incorrect' && 'border-red-500/30',
-        !analysis.outcome && 'border-white/5'
+        !analysis.outcome && 'border-slate-200 dark:border-white/5'
       )}
     >
       {/* Main row - clickable */}
@@ -161,7 +161,7 @@ function AnalysisListItem({
         {/* Center: Name + metadata */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-sm font-bold text-white">{analysis.symbol}</span>
+            <span className="text-sm font-bold text-slate-900 dark:text-white">{analysis.symbol}</span>
             {/* Verdict dot */}
             <span className={cn('w-2 h-2 rounded-full', verdictConfig.dot)} />
             <span className={cn('text-[10px] font-bold', verdictConfig.text)}>{verdictConfig.label}</span>
@@ -202,7 +202,7 @@ function AnalysisListItem({
       <div className="flex items-center gap-0.5 px-3 pb-2 pt-0">
         <Link
           href={`/analyze/details/${analysis.id}`}
-          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#4dd0e1]/10 text-[#4dd0e1] text-[10px] font-medium hover:bg-[#4dd0e1]/20 transition"
+          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-100 dark:bg-[#4dd0e1]/10 text-teal-700 dark:text-[#4dd0e1] text-[10px] font-medium hover:bg-teal-200 dark:hover:bg-[#4dd0e1]/20 transition"
         >
           <Eye className="w-3 h-3" />
           Details
@@ -246,10 +246,10 @@ function MiniSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="appearance-none bg-white/5 text-white text-[11px] font-medium pl-2 pr-5 py-1 rounded-lg border border-white/5 focus:ring-1 focus:ring-[#4dd0e1] cursor-pointer"
+        className="appearance-none bg-slate-100 dark:bg-white/5 text-slate-900 dark:text-white text-[11px] font-medium pl-2 pr-5 py-1 rounded-lg border border-slate-200 dark:border-white/5 focus:ring-1 focus:ring-[#4dd0e1] cursor-pointer"
       >
         {options.map(o => (
-          <option key={o.value} value={o.value} className="bg-[#071023]">{o.label}</option>
+          <option key={o.value} value={o.value} className="bg-white dark:bg-[#071023]">{o.label}</option>
         ))}
       </select>
       <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 pointer-events-none" />
@@ -304,11 +304,11 @@ export function RecentAnalysesMobile({ analyses, loading, onRefresh, onDelete, o
   };
 
   return (
-    <div className="rounded-2xl border border-white/5 bg-[#071023] overflow-hidden">
+    <div className="rounded-2xl border border-slate-200 dark:border-white/5 bg-white dark:bg-[#071023] overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-white/5">
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-white/5">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-white">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
             Recent
             <span className="text-xs font-normal text-slate-500 ml-1">
               ({sortedAnalyses.length}{verdictFilter !== 'all' || outcomeFilter !== 'all' ? `/${analyses.length}` : ''})
@@ -318,7 +318,7 @@ export function RecentAnalysesMobile({ analyses, loading, onRefresh, onDelete, o
             onClick={onRefresh}
             className="p-1.5 rounded-lg hover:bg-white/5 transition"
           >
-            <RefreshCw className={cn('w-4 h-4 text-slate-500', loading && 'animate-spin')} />
+            <RefreshCw className={cn('w-4 h-4 text-slate-400 dark:text-slate-500', loading && 'animate-spin')} />
           </button>
         </div>
 
@@ -365,7 +365,7 @@ export function RecentAnalysesMobile({ analyses, loading, onRefresh, onDelete, o
             ) : (
               <>
                 <Clock className="w-8 h-8 mx-auto mb-2 text-slate-600" />
-                <h3 className="text-sm font-medium text-slate-400 mb-1">No analyses yet</h3>
+                <h3 className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">No analyses yet</h3>
                 <p className="text-xs text-slate-500">Complete the flow above to run your first analysis</p>
               </>
             )}

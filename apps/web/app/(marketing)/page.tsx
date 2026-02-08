@@ -91,9 +91,9 @@ function StatsBoxes() {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="p-4 bg-white/[0.03] border border-white/10 rounded-xl animate-pulse">
-            <div className="h-8 bg-slate-700 rounded w-1/2 mx-auto mb-2"></div>
-            <div className="h-4 bg-slate-700 rounded w-3/4 mx-auto"></div>
+          <div key={i} className="p-4 bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl animate-pulse">
+            <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-1/2 mx-auto mb-2"></div>
+            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mx-auto"></div>
           </div>
         ))}
       </div>
@@ -110,36 +110,36 @@ function StatsBoxes() {
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-      <div className="p-4 bg-white/[0.03] border border-white/10 rounded-xl text-center">
-        <div className="text-2xl md:text-3xl font-bold text-[#4dd0e1] mb-1">
+      <div className="p-4 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl text-center">
+        <div className="text-2xl md:text-3xl font-bold text-teal-600 dark:text-[#4dd0e1] mb-1">
           {metrics.totalAnalyses.toLocaleString()}
         </div>
         <p className="text-xs text-slate-500">Total Analyses</p>
       </div>
 
-      <div className="p-4 bg-white/[0.03] border border-white/10 rounded-xl text-center">
-        <div className="text-2xl md:text-3xl font-bold text-[#00f5c4] mb-1">
+      <div className="p-4 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl text-center">
+        <div className="text-2xl md:text-3xl font-bold text-emerald-600 dark:text-[#00f5c4] mb-1">
           {metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—'}
         </div>
         <p className="text-xs text-slate-500">Platform Accuracy</p>
       </div>
 
-      <div className="p-4 bg-white/[0.03] border border-white/10 rounded-xl text-center">
-        <div className={`text-2xl md:text-3xl font-bold mb-1 ${metrics.totalPnL >= 0 ? 'text-[#00f5c4]' : 'text-red-400'}`}>
+      <div className="p-4 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl text-center">
+        <div className={`text-2xl md:text-3xl font-bold mb-1 ${metrics.totalPnL >= 0 ? 'text-emerald-600 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400'}`}>
           {metrics.closedCount > 0 ? `${metrics.totalPnL >= 0 ? '+' : ''}${metrics.totalPnL}%` : '—'}
         </div>
         <p className="text-xs text-slate-500">Total P/L</p>
         {metrics.closedCount > 0 && (
-          <p className="text-[10px] text-slate-600 mt-0.5">{metrics.closedCount} closed trades</p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-600 mt-0.5">{metrics.closedCount} closed trades</p>
         )}
       </div>
 
-      <div className="p-4 bg-white/[0.03] border border-white/10 rounded-xl text-center">
-        <div className="text-2xl md:text-3xl font-bold text-blue-400 mb-1">
+      <div className="p-4 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl text-center">
+        <div className="text-2xl md:text-3xl font-bold text-blue-500 dark:text-blue-400 mb-1">
           {metrics.daysSinceStart}
         </div>
         <p className="text-xs text-slate-500">Days Elapsed</p>
-        <p className="text-[10px] text-slate-600 mt-0.5">{analysesPerDay} analyses/day</p>
+        <p className="text-[10px] text-slate-500 dark:text-slate-600 mt-0.5">{analysesPerDay} analyses/day</p>
       </div>
     </div>
   );
@@ -184,20 +184,20 @@ const FAQS = [
 function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [isOpen, setIsOpen] = useState(false);
   return (
-    <div className="border border-white/10 rounded-lg overflow-hidden">
+    <div className="border border-slate-200 dark:border-white/10 rounded-lg overflow-hidden">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full p-4 text-left flex items-center justify-between hover:bg-white/[0.03] transition"
+        className="w-full p-4 text-left flex items-center justify-between hover:bg-slate-50 dark:hover:bg-white/[0.03] transition"
         aria-expanded={isOpen}
       >
-        <span className="font-semibold flex items-center gap-2 text-white text-sm sm:text-base">
-          <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-[#4dd0e1] shrink-0" />
+        <span className="font-semibold flex items-center gap-2 text-slate-900 dark:text-white text-sm sm:text-base">
+          <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600 dark:text-[#4dd0e1] shrink-0" />
           {question}
         </span>
-        <ChevronDown className={`w-4 h-4 sm:w-5 sm:h-5 text-slate-500 transition-transform shrink-0 ml-2 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 sm:w-5 sm:h-5 text-slate-400 dark:text-slate-500 transition-transform shrink-0 ml-2 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       {isOpen && (
-        <div className="px-4 pb-4 text-sm text-slate-400">
+        <div className="px-4 pb-4 text-sm text-slate-600 dark:text-slate-400">
           {answer}
         </div>
       )}
@@ -207,7 +207,7 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#041020', color: '#e2e8f0' }}>
+    <div className="min-h-screen bg-white dark:bg-[#041020] text-slate-900 dark:text-slate-200">
       {/* Live Price Ticker - framer-motion infinite scroll */}
       <PriceTicker />
 
@@ -221,7 +221,7 @@ export default function LandingPage() {
       <FlowAccordion />
 
       {/* Performance Chart & Stats */}
-      <section className="py-8 md:py-12" style={{ backgroundColor: '#041020' }}>
+      <section className="py-8 md:py-12 bg-white dark:bg-[#041020]">
         <div className="container mx-auto px-4 max-w-4xl space-y-6">
           <LandingPerformanceChart />
           <StatsBoxes />
@@ -231,23 +231,18 @@ export default function LandingPage() {
       {/* Pricing CTA */}
       <section
         id="pricing"
-        className="py-16 sm:py-20"
-        style={{ backgroundColor: 'rgba(77,208,225,0.03)' }}
+        className="py-16 sm:py-20 bg-teal-50/50 dark:bg-[#4dd0e1]/[0.03]"
       >
         <div className="container mx-auto px-4 text-center max-w-2xl">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
             Credit-Based Pricing
           </h2>
-          <p className="text-slate-400 mb-8 text-sm sm:text-base">
+          <p className="text-slate-600 dark:text-slate-400 mb-8 text-sm sm:text-base">
             Pay only for what you use. No subscriptions, no hidden fees.
           </p>
           <Link
             href="/pricing"
-            className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold transition-all hover:scale-105 hover:shadow-lg hover:shadow-[#4dd0e1]/20 text-sm sm:text-base"
-            style={{
-              background: 'linear-gradient(135deg, #4dd0e1, #00f5c4)',
-              color: '#041020',
-            }}
+            className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold transition-all hover:scale-105 hover:shadow-lg hover:shadow-teal-500/20 dark:hover:shadow-[#4dd0e1]/20 text-sm sm:text-base bg-gradient-to-r from-teal-500 to-emerald-500 dark:from-[#4dd0e1] dark:to-[#00f5c4] text-white dark:text-[#041020]"
             aria-label="View pricing plans"
           >
             View Pricing Plans
@@ -257,13 +252,13 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="py-16 sm:py-20" style={{ backgroundColor: '#041020' }}>
+      <section id="faq" className="py-16 sm:py-20 bg-white dark:bg-[#041020]">
         <div className="container mx-auto px-4">
           <div className="text-center mb-10 sm:mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
               Frequently Asked Questions
             </h2>
-            <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
+            <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
               Everything you need to know about TraderPath
             </p>
           </div>
@@ -276,47 +271,43 @@ export default function LandingPage() {
       </section>
 
       {/* Trusted By */}
-      <section className="py-12 sm:py-16" style={{ backgroundColor: 'rgba(77,208,225,0.03)' }}>
+      <section className="py-12 sm:py-16 bg-teal-50/50 dark:bg-[#4dd0e1]/[0.03]">
         <div className="container mx-auto px-4">
           <p className="text-center text-slate-500 text-xs mb-6 sm:mb-8 tracking-widest uppercase">
             Trusted By Traders From
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 md:gap-16 opacity-50">
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 md:gap-16 opacity-40 dark:opacity-50">
             {['Binance', 'Coinbase', 'Kraken', 'KuCoin', 'Bybit'].map((name) => (
-              <div key={name} className="text-lg sm:text-2xl font-bold text-slate-500">
+              <div key={name} className="text-lg sm:text-2xl font-bold text-slate-400 dark:text-slate-500">
                 {name}
               </div>
             ))}
           </div>
-          <p className="text-center text-[10px] text-slate-600 mt-4 sm:mt-6">
+          <p className="text-center text-[10px] text-slate-500 dark:text-slate-600 mt-4 sm:mt-6">
             *Users from these platforms trust TraderPath for their trading analysis
           </p>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="py-16 sm:py-20 relative overflow-hidden" style={{ backgroundColor: '#041020' }}>
+      <section className="py-16 sm:py-20 relative overflow-hidden bg-white dark:bg-[#041020]">
         <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-3xl mx-auto text-center p-6 sm:p-8 md:p-12 rounded-2xl border border-white/10 bg-white/[0.03] shadow-2xl">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-amber-400 text-xs sm:text-sm mb-6 border border-amber-500/20 bg-amber-500/10">
+          <div className="max-w-3xl mx-auto text-center p-6 sm:p-8 md:p-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.03] shadow-2xl">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-amber-600 dark:text-amber-400 text-xs sm:text-sm mb-6 border border-amber-300 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10">
               <Zap className="w-4 h-4" />
               Limited Time: 25 Free Credits
             </div>
             <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4 gradient-text-logo-animate">
               Ready to Trade Smarter?
             </h2>
-            <p className="text-base sm:text-lg md:text-xl text-slate-400 mb-8">
+            <p className="text-base sm:text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-8">
               Join 12,000+ traders who already use TraderPath to make informed decisions.
               Start with 25 free credits today.
             </p>
             <div className="px-4 sm:px-0">
               <Link
                 href="/register"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg font-semibold text-base sm:text-lg transition-all hover:scale-105 hover:shadow-lg hover:shadow-[#4dd0e1]/20"
-                style={{
-                  background: 'linear-gradient(135deg, #4dd0e1, #00f5c4)',
-                  color: '#041020',
-                }}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg font-semibold text-base sm:text-lg transition-all hover:scale-105 hover:shadow-lg hover:shadow-teal-500/20 dark:hover:shadow-[#4dd0e1]/20 bg-gradient-to-r from-teal-500 to-emerald-500 dark:from-[#4dd0e1] dark:to-[#00f5c4] text-white dark:text-[#041020]"
                 aria-label="Start free analysis - sign up"
               >
                 Start Free Analysis

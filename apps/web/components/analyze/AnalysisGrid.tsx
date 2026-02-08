@@ -105,10 +105,10 @@ function GridCard({
       onClick={onClick}
       className={cn(
         'relative flex flex-col p-3 sm:p-4 rounded-xl text-left transition-all duration-200 border',
-        'bg-[#071023] active:scale-[0.97]',
+        'bg-white dark:bg-[#071023] active:scale-[0.97]',
         active
           ? 'border-[#4dd0e1]/50 shadow-[0_0_20px_rgba(77,208,225,0.15)]'
-          : 'border-white/5 hover:border-white/10'
+          : 'border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10'
       )}
     >
       {/* Layer badge + chevron */}
@@ -121,11 +121,11 @@ function GridCard({
             {layer}
           </span>
         </div>
-        <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+        <ChevronRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-600" />
       </div>
 
       {/* Title */}
-      <span className="text-[11px] font-medium text-slate-400 mb-1.5">{title}</span>
+      <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1.5">{title}</span>
 
       {/* Summary content */}
       <div className="flex-1">{children}</div>
@@ -143,7 +143,7 @@ function GridSkeleton() {
   return (
     <div className="grid grid-cols-2 gap-3">
       {[1, 2, 3, 4].map(i => (
-        <div key={i} className="h-28 rounded-xl bg-[#071023] border border-white/5 animate-pulse" />
+        <div key={i} className="h-28 rounded-xl bg-white dark:bg-[#071023] border border-slate-200 dark:border-white/5 animate-pulse" />
       ))}
     </div>
   );
@@ -162,8 +162,8 @@ export function AnalysisGrid({ capitalFlow, loading }: AnalysisGridProps) {
     return (
       <div className="grid grid-cols-2 gap-3">
         {[1, 2, 3, 4].map(i => (
-          <div key={i} className="h-28 rounded-xl bg-[#071023] border border-white/5 flex items-center justify-center">
-            <span className="text-[10px] text-slate-600">No data</span>
+          <div key={i} className="h-28 rounded-xl bg-white dark:bg-[#071023] border border-slate-200 dark:border-white/5 flex items-center justify-center">
+            <span className="text-[10px] text-slate-500 dark:text-slate-600">No data</span>
           </div>
         ))}
       </div>
@@ -192,7 +192,7 @@ export function AnalysisGrid({ capitalFlow, loading }: AnalysisGridProps) {
             {biasLabel[bias]}
           </div>
           <div className="mt-1.5 text-[10px] text-slate-500">
-            Net: <span className="text-white font-medium">{safeFixed(capitalFlow.globalLiquidity?.netLiquidity?.change30d ?? capitalFlow.globalLiquidity?.m2MoneySupply?.change30d)}%</span>
+            Net: <span className="text-slate-900 dark:text-white font-medium">{safeFixed(capitalFlow.globalLiquidity?.netLiquidity?.change30d ?? capitalFlow.globalLiquidity?.m2MoneySupply?.change30d)}%</span>
           </div>
         </GridCard>
 
@@ -208,7 +208,7 @@ export function AnalysisGrid({ capitalFlow, loading }: AnalysisGridProps) {
           <div className="space-y-0.5">
             {topMarkets.map(m => (
               <div key={m.market} className="flex items-center justify-between text-[10px]">
-                <span className={cn('capitalize', m.market === primaryMarket ? 'text-[#4dd0e1] font-semibold' : 'text-slate-400')}>
+                <span className={cn('capitalize', m.market === primaryMarket ? 'text-[#4dd0e1] font-semibold' : 'text-slate-600 dark:text-slate-400')}>
                   {m.market}
                 </span>
                 <span className={cn('font-medium', (m.flow7d ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400')}>
@@ -235,7 +235,7 @@ export function AnalysisGrid({ capitalFlow, loading }: AnalysisGridProps) {
               <div className="space-y-0.5">
                 {sectors.map((s: any, i: number) => (
                   <div key={i} className="flex items-center justify-between text-[10px]">
-                    <span className="text-slate-400 truncate max-w-[70px]">{s.name}</span>
+                    <span className="text-slate-600 dark:text-slate-400 truncate max-w-[70px]">{s.name}</span>
                     <span className={cn(
                       'font-medium',
                       s.trending === 'up' ? 'text-emerald-400' : s.trending === 'down' ? 'text-red-400' : 'text-slate-500'
@@ -271,7 +271,7 @@ export function AnalysisGrid({ capitalFlow, loading }: AnalysisGridProps) {
                   {dir || 'NEUTRAL'}
                 </div>
                 <div className="mt-1.5 text-[10px] text-slate-500">
-                  <span className="text-white font-medium capitalize">{capitalFlow.recommendation?.primaryMarket}</span>
+                  <span className="text-slate-900 dark:text-white font-medium capitalize">{capitalFlow.recommendation?.primaryMarket}</span>
                   &nbsp;&bull;&nbsp;{capitalFlow.recommendation?.confidence ?? 0}%
                 </div>
               </>
