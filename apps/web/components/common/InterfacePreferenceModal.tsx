@@ -63,7 +63,9 @@ export function InterfacePreferenceModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="preference-dialog-title">
+      {/* Accessible title for screen readers */}
+      <h2 id="preference-dialog-title" className="sr-only">Choose Interface Preference</h2>
       {/* Backdrop with blur */}
       <div
         className="absolute inset-0 bg-[#030712]/80 backdrop-blur-md"

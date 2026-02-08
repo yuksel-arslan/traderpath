@@ -276,8 +276,10 @@ function calculateAgreement(
   // Key MLIS signals
   mlisResult.keySignals.slice(0, 3).forEach(signal => {
     // Check if signal is bullish/bearish and matches direction
-    const isBullishSignal = signal.toLowerCase().includes('bullish') || signal.toLowerCase().includes('above');
-    const isBearishSignal = signal.toLowerCase().includes('bearish') || signal.toLowerCase().includes('below');
+    // Guard: signal could be non-string from MLIS results
+    const signalLower = typeof signal === 'string' ? signal.toLowerCase() : '';
+    const isBullishSignal = signalLower.includes('bullish') || signalLower.includes('above');
+    const isBearishSignal = signalLower.includes('bearish') || signalLower.includes('below');
 
     if ((isBullishSignal && sevenStepDirection === 'LONG') || (isBearishSignal && sevenStepDirection === 'SHORT')) {
       alignedSignals.push(signal);
@@ -2364,7 +2366,8 @@ Explain the key risks and what conditions would need to change before trading th
         if (report.score !== null) {
           coinStats[report.symbol].scores.push(Number(report.score));
         }
-        const verdict = report.verdict.toLowerCase();
+        // Guard: report.verdict could be null/undefined from DB
+        const verdict = typeof report.verdict === 'string' ? report.verdict.toLowerCase() : '';
         if (verdict === 'go' || verdict === 'go!' || verdict === 'conditional_go' || verdict === 'conditional go') {
           coinStats[report.symbol].goCount++;
         }
@@ -2433,8 +2436,8 @@ Explain the key risks and what conditions would need to change before trading th
 
       // Recent outcomes from real reports with live tracking info
       const recentOutcomes = reportsWithExpiration.map(report => {
-        // Map verdict to standard format
-        const verdictLower = report.verdict.toLowerCase();
+        // Map verdict to standard format — guard: report.verdict could be null from DB
+        const verdictLower = typeof report.verdict === 'string' ? report.verdict.toLowerCase() : '';
         let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
         if (verdictLower === 'go' || verdictLower === 'go!') verdict = 'go';
         else if (verdictLower === 'conditional_go' || verdictLower === 'conditional go' || verdictLower === 'conditional') verdict = 'conditional_go';
@@ -2560,8 +2563,8 @@ Explain the key risks and what conditions would need to change before trading th
           timeAgo = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
         }
 
-        // Map verdict to standard format
-        const verdictLower = report.verdict.toLowerCase();
+        // Map verdict to standard format — guard: report.verdict could be null from DB
+        const verdictLower = typeof report.verdict === 'string' ? report.verdict.toLowerCase() : '';
         let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
         if (verdictLower === 'go' || verdictLower === 'go!') verdict = 'go';
         else if (verdictLower === 'conditional_go' || verdictLower === 'conditional go' || verdictLower === 'conditional') verdict = 'conditional_go';

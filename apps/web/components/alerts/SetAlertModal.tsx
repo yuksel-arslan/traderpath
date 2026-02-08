@@ -136,7 +136,9 @@ export function SetAlertModal({ isOpen, onClose, tradePlan }: SetAlertModalProps
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="set-alert-dialog-title">
+      {/* Accessible title for screen readers */}
+      <h2 id="set-alert-dialog-title" className="sr-only">Set Price Alerts</h2>
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 

@@ -294,7 +294,9 @@ export function CelebrationModal(props: CelebrationModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="celebration-dialog-title">
+      {/* Accessible title for screen readers */}
+      <h2 id="celebration-dialog-title" className="sr-only">Celebration</h2>
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in"

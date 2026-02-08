@@ -571,6 +571,9 @@ Kullanıcı Hakları Aktif:
 | 2026-02-07 | Login "Server error" - backend 500 hatası (2 kök neden) | **Neden 1 (Frontend)**: OAuth callback `backendData.error?.code` Fastify default format'ta (`error` string, object değil) undefined dönüyordu → generic 'backend_error'. **Neden 2 (Backend)**: Tüm auth route'ları `prisma.user.findUnique()` ile `include` kullanıyordu, production'da eksik sütun varsa P2022 hatası veriyordu. **Fix**: 1) Frontend: `parseBackendError()` tüm response formatlarını handle ediyor, `fetchWithTimeout()` 15s timeout, retry for 502/503/504, 2) Backend: Tüm auth route'ları `select` kullanarak sadece gerekli sütunları çekiyor (P2022'ye dayanıklı), P2022/P2021 için spesifik hata mesajları, 3) Migration: `ensure_all_user_columns.sql` tüm eksik sütunları ekliyor | `auth/login/route.ts`, `google/callback/route.ts`, `login/page.tsx`, `auth.routes.ts`, `ensure_all_user_columns.sql` |
 | 2026-02-07 | /me endpoint createdAt undefined döndürüyordu | Prisma `select` clause'unda `createdAt: true` eksikti. Response body'de `user.createdAt` referans ediliyordu ama select'te yoktu → undefined | `auth.routes.ts:668` |
 | 2026-02-07 | Login hala 500 veriyor - security.service.ts P2022 crash | `auth.routes.ts` düzeltilmişti ama çağrılan security helper fonksiyonları düzeltilmemişti. **5 kritik sorun**: 1) `recordFailedLogin()` `findUnique` select clause olmadan → tüm sütunlar çekilip P2022, 2) `recordSuccessfulLogin()` 6 sütun update (loginAttempts, accountLocked, lastLoginAt vb.) → sütun yoksa P2022, 3) `checkSuspiciousActivity()` LoginAuditLog tablosu yoksa crash (try-catch yok), 4) `checkAccountLockout()` select'li ama try-catch yok → sütun yoksa crash, 5) `verifyEmail/resetPassword/createPasswordResetToken` findFirst/findUnique select clause yok. **Fix**: Tüm fonksiyonlara select clause eklendi, tüm login-critical fonksiyonlara try-catch ile graceful degradation eklendi. Security feature yoksa login yine çalışır | `security.service.ts:324-875` |
+| 2026-02-08 | `.toLowerCase()` TypeError crash'leri (21 dosya) | API'den gelen undefined/null değerlerde `.toLowerCase()` çağrılıyordu → `Cannot read properties of undefined`. 18 frontend dosyada ve 3 backend dosyada tüm unsafe `.toLowerCase()` çağrıları `typeof val === 'string' ? val.toLowerCase() : ''` veya `(val \|\| '').toLowerCase()` pattern'leri ile guard edildi | `AnalysisReport.tsx`, `AnalysisDialog.tsx`, `CoinSelector.tsx`, `details/[id]/page.tsx`, `signals/page.tsx`, `reports/page.tsx`, `alerts/page.tsx`, `tailored/page.tsx`, `analysis.routes.ts`, `report.routes.ts`, `outcome.service.ts` ve 10+ dosya |
+| 2026-02-08 | Modal/Dialog bileşenlerinde ARIA erişilebilirlik uyarıları | Custom modal bileşenlerinde `role="dialog"`, `aria-modal="true"`, `aria-labelledby` ve sr-only başlık eksikti. 5 modal bileşenine eklendi | `CelebrationModal.tsx`, `FirstLoginModal.tsx`, `SetAlertModal.tsx`, `InterfacePreferenceModal.tsx`, `AnalysisDialog.tsx` |
+| 2026-02-08 | Credit ve Alert API route'ları try/catch olmadan çalışıyordu (unhandled 500) | `credit.routes.ts` 6 route ve `alert.routes.ts` 7 route'a try/catch, ZodError → 400, generic → 500 hata işleme eklendi. console.error ile server-side loglama | `credit.routes.ts`, `alert.routes.ts` |
 | 2026-02-07 | API timeout - sistem zaman aşımına uğruyordu (6 kök neden) | **1) 3 duplicate PrismaClient instance** connection pool'u tüketiyordu (coin-score-cache, multi-asset-score-cache, asset-logos). **2) Server startup blocking** - `startOutcomeTracker()` ve `initializeAssetLogos()` await ediliyordu, external API'ler yanıt vermezse server hiç başlamıyordu. **3) Binance ticker fetch timeout eksik** - `binance.provider.ts:213`'te AbortSignal.timeout yoktu. **4) Prisma query timeout yok** - hiçbir DB sorgusu timeout'a sahip değildi, tek bir yavaş sorgu tüm pool'u bloke edebilirdi. **5) Polling job'lar overlap** - 30s/15s interval job'lar önceki çalışma bitmeden tekrar tetikleniyordu, DB bağlantıları birikiyordu. **6) Auth middleware P2022 hata yönetimi eksik** - missing column hatası tüm auth'u kırıyordu. **Fix**: 1) Tüm duplicate PrismaClient kaldırıldı → singleton import, 2) Startup non-blocking yapıldı (fire-and-forget + timeout), 3) Binance fetch'e 10s timeout eklendi, 4) Prisma middleware ile 15s query timeout + slow query log eklendi, 5) Overlap guard flag'leri + withTimeout wrapper'ları eklendi, 6) Auth middleware'e P2022 fallback eklendi, duplicate decorator kaldırılıp jwt-middleware'e delege edildi | `database.ts`, `index.ts`, `jwt-middleware.ts`, `binance.provider.ts`, `coin-score-cache.service.ts`, `multi-asset-score-cache.service.ts`, `asset-logos.service.ts`, `schema.prisma` |
 
 ---
@@ -2186,6 +2189,23 @@ Kullanıcı Hakları Aktif:
   - Automated Analysis: Pipeline progression bar (4 adım, her biri kendi gradient rengi)
   - Tailored Analysis: Grid-based asset picker (2-5 kolon responsive)
   - AI Chat: 6 quick command butonu (Capital Flow, AI Rec, Market Analysis, Top 5, Set Alert, Morning Briefing)
+- **Runtime TypeError Crash Koruması (21 dosya)**:
+  - Tüm `.toLowerCase()` çağrıları null/undefined kontrolü ile guard edildi
+  - 18 frontend dosya + 3 backend dosya düzeltildi
+  - İki pattern kullanıldı: `typeof val === 'string' ? val.toLowerCase() : ''` (API verisi) ve `(val || '').toLowerCase()` (arama/filtre)
+  - Etkilenen alanlar: verdict hesaplama, direction parsing, search filtering, regime formatting
+- **Modal Erişilebilirlik Düzeltmeleri (5 bileşen)**:
+  - 5 custom modal bileşenine `role="dialog"`, `aria-modal="true"`, `aria-labelledby` eklendi
+  - Her biri için screen-reader-only (`sr-only`) başlık eklendi
+  - Bileşenler: CelebrationModal, FirstLoginModal, SetAlertModal, InterfacePreferenceModal, AnalysisDialog
+- **API Route Error Handling (13 endpoint)**:
+  - `credit.routes.ts`: 6 route'a try/catch (balance, packages, purchase, history, costs, deduct)
+  - `alert.routes.ts`: 7 route'a try/catch (list, create, delete, history, trade-plan, settings GET/PATCH)
+  - ZodError → 400 (Bad Request), generic error → 500 (Internal Server Error)
+  - Server-side `console.error` logging eklendi
+- **Production Source Maps Etkinleştirildi**:
+  - `next.config.js`'e `productionBrowserSourceMaps: true` eklendi
+  - Production'da error stack trace'leri orijinal TypeScript dosyalarına map ediliyor
 
 ---
 

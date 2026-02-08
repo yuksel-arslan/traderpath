@@ -155,7 +155,8 @@ export default function SignalsPage() {
 
   const filteredSignals = signals.filter(signal => {
     if (searchQuery) {
-      return signal.symbol.toLowerCase().includes(searchQuery.toLowerCase());
+      // Guard: signal.symbol could be undefined from API
+      return (signal.symbol || '').toLowerCase().includes((searchQuery || '').toLowerCase());
     }
     return true;
   });

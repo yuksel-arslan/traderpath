@@ -469,7 +469,8 @@ export default function AnalysisDetailsPage() {
 
   // Classic 7-Step: step5 is trade plan, step7 is verdict
   const rawDirection = (step5.direction || step7.direction || 'long');
-  const direction = rawDirection.toLowerCase();
+  // Guard: rawDirection could be non-string from API response
+  const direction = typeof rawDirection === 'string' ? rawDirection.toLowerCase() : 'long';
   const isNeutral = direction === 'neutral';
   const isLong = direction === 'long';
   const isShort = direction === 'short';
