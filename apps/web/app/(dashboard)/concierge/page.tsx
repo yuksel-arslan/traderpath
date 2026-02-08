@@ -529,6 +529,22 @@ export default function ConciergePage() {
       gradient: 'from-purple-500/20 to-violet-500/20 hover:from-purple-500/30 hover:to-violet-500/30',
     });
 
+    // Automation: Set Alert
+    commands.push({
+      icon: Activity,
+      label: 'Set Alert',
+      command: 'Set a BTC alert when price drops to 55000',
+      gradient: 'from-rose-500/20 to-pink-500/20 hover:from-rose-500/30 hover:to-pink-500/30',
+    });
+
+    // Automation: Morning Briefing
+    commands.push({
+      icon: Clock,
+      label: 'Morning Briefing',
+      command: 'Set my morning briefing to 11:00 AM every day',
+      gradient: 'from-sky-500/20 to-blue-500/20 hover:from-sky-500/30 hover:to-blue-500/30',
+    });
+
     return commands;
   };
 
