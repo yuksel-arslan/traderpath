@@ -130,7 +130,7 @@ export default function LoginPage() {
           setWelcomeName(data.data.user?.name || '');
           setShowWelcomeModal(true);
         } else {
-          router.push('/capital-flow');
+          router.push('/dashboard');
           router.refresh();
         }
       }
@@ -157,7 +157,7 @@ export default function LoginPage() {
   // Handle welcome modal close
   const handleWelcomeModalClose = () => {
     setShowWelcomeModal(false);
-    router.push('/capital-flow');
+    router.push('/dashboard');
     router.refresh();
   };
 
