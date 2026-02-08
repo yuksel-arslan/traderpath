@@ -173,7 +173,7 @@ function AnalysisListItem({
           </div>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-[10px] text-slate-500">{analysis.createdAt}</span>
-            {analysis.score !== null && (
+            {analysis.score != null && typeof analysis.score === 'number' && (
               <span className={cn(
                 'text-[10px] font-semibold',
                 analysis.score >= 7 ? 'text-emerald-400' : analysis.score >= 5 ? 'text-amber-400' : 'text-red-400'

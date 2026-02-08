@@ -152,8 +152,8 @@ function L2Content({ markets, primary }: { markets: MarketFlow[]; primary?: stri
                 {m.market}
                 {isPrimary && <span className="ml-1.5 text-[9px] font-medium bg-[#4dd0e1]/20 text-[#4dd0e1] px-1.5 py-0.5 rounded">PRIMARY</span>}
               </span>
-              <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded', phaseBg[m.phase], phaseColor[m.phase])}>
-                {m.phase.toUpperCase()}
+              <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded', phaseBg[m.phase ?? 'mid'], phaseColor[m.phase ?? 'mid'])}>
+                {(m.phase ?? 'mid').toUpperCase()}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2 text-[11px]">
@@ -226,7 +226,8 @@ function L3Content({ markets, primary }: { markets: MarketFlow[]; primary?: stri
   );
 }
 
-function L4Content({ rec, sellRec }: { rec: FlowRecommendation; sellRec?: FlowRecommendation }) {
+function L4Content({ rec, sellRec }: { rec: FlowRecommendation | null | undefined; sellRec?: FlowRecommendation }) {
+  if (!rec) return <p className="text-xs text-slate-500 text-center py-4">No recommendation data</p>;
   const isBuy = rec.direction?.toUpperCase() === 'BUY';
   return (
     <div className="space-y-4">
@@ -244,11 +245,11 @@ function L4Content({ rec, sellRec }: { rec: FlowRecommendation; sellRec?: FlowRe
         </div>
         <p className="text-xs text-slate-300 mb-2">{rec.reason}</p>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={cn('text-[10px] px-1.5 py-0.5 rounded font-bold', phaseBg[rec.phase], phaseColor[rec.phase])}>
-            {rec.phase.toUpperCase()} PHASE
+          <span className={cn('text-[10px] px-1.5 py-0.5 rounded font-bold', phaseBg[rec.phase ?? 'mid'], phaseColor[rec.phase ?? 'mid'])}>
+            {(rec.phase ?? 'mid').toUpperCase()} PHASE
           </span>
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-500/20 text-slate-400 font-medium">
-            Action: {rec.action.toUpperCase()}
+            Action: {(rec.action ?? 'wait').toUpperCase()}
           </span>
         </div>
         {rec.suggestedAssets && rec.suggestedAssets.length > 0 && (
@@ -318,7 +319,7 @@ export function AnalysisDetailDrawer({ open, layer, capitalFlow, onClose }: Anal
       case 'L3':
         return <L3Content markets={capitalFlow.markets ?? []} primary={capitalFlow.recommendation?.primaryMarket} />;
       case 'L4':
-        return <L4Content rec={capitalFlow.recommendation} sellRec={capitalFlow.sellRecommendation} />;
+        return <L4Content rec={capitalFlow.recommendation ?? null} sellRec={capitalFlow.sellRecommendation} />;
       default:
         return null;
     }
