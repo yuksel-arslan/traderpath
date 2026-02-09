@@ -25,6 +25,10 @@ const protectedPaths = [
   '/methodology',
   '/top-coins',
   '/notifications',
+  '/terminal',
+  '/flow',
+  '/screener',
+  '/trades',
 ];
 
 // Routes that should redirect to dashboard if already authenticated

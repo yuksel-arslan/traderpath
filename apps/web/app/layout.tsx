@@ -3,11 +3,24 @@
 // ===========================================
 
 import type { Metadata, Viewport } from 'next';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 
-// System font stack - fast loading, no external requests needed
-const fontClass = 'font-sans';
+// 2026 Financial Terminal Typography
+// Inter — clean geometric sans for UI chrome
+// JetBrains Mono — precision monospace for prices, data, indicators
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-sans',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-mono',
+});
 
 const siteUrl = 'https://traderpath.io';
 
@@ -174,7 +187,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className={fontClass}>
+      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans`}>
         <Providers>{children}</Providers>
       </body>
     </html>

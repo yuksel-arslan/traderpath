@@ -2,13 +2,12 @@
  * TraderPath MLIS Service (Multi-Layer Intelligence System)
  * =========================================================
  *
- * Advanced multi-layer analysis combining:
- * - Technical Analysis (indicators, patterns)
- * - On-chain Metrics (if available)
- * - Sentiment Analysis
- * - Supply/Demand Dynamics
- *
- * Provides enhanced signal generation with confidence scoring
+ * Advanced multi-layer analysis with real ML inference layers:
+ *   Layer 1: Conv1D convolutional feature extraction (micro-pattern detection)
+ *   Layer 2: Regime-adaptive thresholds (GARCH/ATR-based dynamic levels)
+ *   Layer 3: GARCH(1,1) variance modeling (conditional volatility forecasting)
+ *   Layer 4: Institutional flow estimation (BVC + VPIN + whale detection)
+ *   Layer 5: Platt scaling calibration (probability-calibrated confidence)
  *
  * Supports all asset classes:
  * - Crypto: Binance API
@@ -22,6 +21,13 @@ import {
   getAssetClass,
   AssetClass,
 } from '../providers/multi-asset-data-provider';
+
+// ML Layer imports
+import { extractConv1DFeatures, type Conv1DFeatures } from './ml/conv1d-features.service';
+import { getAdaptiveThresholds, type AdaptiveThresholds } from './ml/regime-thresholds.service';
+import { analyzeGARCH, type GARCHResult } from './ml/garch.service';
+import { estimateInstitutionalFlow, type InstitutionalFlowResult } from './ml/institutional-flow.service';
+import { calibrateScore, type PlattCalibrationResult } from './ml/platt-scaling.service';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -83,6 +89,15 @@ export interface MLISResult {
   keySignals: string[];
   riskFactors: string[];
 
+  // ML Layer enrichments
+  mlEnrichments?: {
+    conv1dFeatures?: Conv1DFeatures;
+    garchResult?: GARCHResult;
+    adaptiveThresholds?: AdaptiveThresholds;
+    institutionalFlow?: InstitutionalFlowResult;
+    plattCalibration?: PlattCalibrationResult;
+  };
+
   // Metadata
   method: 'mlis_pro';
   analysisVersion: string;
@@ -125,7 +140,19 @@ export class MLISService {
         return this.createEmptyResult(symbol, timeframe, timestamp, 'Insufficient data');
       }
 
-      // Run all layer analyses in parallel
+      // ── ML Layer 1: Conv1D Feature Extraction ──
+      const conv1dFeatures = extractConv1DFeatures(candles);
+
+      // ── ML Layer 3: GARCH(1,1) Variance Modeling ──
+      const garchResult = analyzeGARCH(candles);
+
+      // ── ML Layer 2: Regime-Adaptive Thresholds (uses GARCH when available) ──
+      const adaptiveThresholds = getAdaptiveThresholds(candles, garchResult);
+
+      // ── ML Layer 4: Institutional Flow (BVC + VPIN) ──
+      const institutionalFlow = estimateInstitutionalFlow(candles);
+
+      // Run all layer analyses in parallel (now ML-enriched)
       const [
         technicalLayer,
         momentumLayer,
@@ -134,10 +161,10 @@ export class MLISService {
         sentimentLayer,
         onchainLayer,
       ] = await Promise.all([
-        this.analyzeTechnicalLayer(candles),
-        this.analyzeMomentumLayer(candles),
-        this.analyzeVolatilityLayer(candles),
-        this.analyzeVolumeLayer(candles),
+        this.analyzeTechnicalLayer(candles, conv1dFeatures),
+        this.analyzeMomentumLayer(candles, adaptiveThresholds),
+        this.analyzeVolatilityLayer(candles, garchResult),
+        this.analyzeVolumeLayer(candles, institutionalFlow),
         includeSentiment ? this.analyzeSentimentLayer(symbol) : null,
         includeOnchain ? this.analyzeOnchainLayer(symbol) : null,
       ]);
@@ -160,18 +187,38 @@ export class MLISService {
         onchainLayer
       );
 
-      // Determine recommendation and direction
-      // Both should respect confidence threshold for consistency
-      const recommendation = this.getRecommendation(overallScore, confidence, confidenceThreshold);
-      const direction = this.getDirection(signals, overallScore, confidence, confidenceThreshold);
+      // ── ML Layer 5: Platt Scaling Calibration ──
+      // Convert raw score to calibrated probability
+      // TODO: Feed real historical outcomes from DB when available
+      const plattCalibration = calibrateScore(overallScore);
+      const calibratedConfidence = Math.round(plattCalibration.calibratedProbability * 100);
 
-      // Assess risk
+      // Use calibrated confidence for recommendation/direction decisions
+      const effectiveConfidence = plattCalibration.isCalibrated ? calibratedConfidence : confidence;
+
+      // Determine recommendation and direction
+      const recommendation = this.getRecommendation(overallScore, effectiveConfidence, confidenceThreshold);
+      const direction = this.getDirection(signals, overallScore, effectiveConfidence, confidenceThreshold);
+
+      // Assess risk (use GARCH-based volatility regime)
       const riskLevel = this.assessRiskLevel(volatilityLayer, signals);
       const volatilityRegime = this.getVolatilityRegime(volatilityLayer.score);
 
       // Collect key signals and risk factors
       const keySignals = this.collectKeySignals(technicalLayer, momentumLayer, volumeLayer);
       const riskFactors = this.collectRiskFactors(volatilityLayer, sentimentLayer, onchainLayer);
+
+      // Add ML-specific signals
+      if (conv1dFeatures.trendSignal > 0.5) keySignals.push('Conv1D: Strong uptrend pattern');
+      else if (conv1dFeatures.trendSignal < -0.5) keySignals.push('Conv1D: Strong downtrend pattern');
+      if (conv1dFeatures.spikeSignal > 0.5) riskFactors.push('Conv1D: Spike pattern detected');
+
+      if (garchResult.regimeLabel === 'extreme') riskFactors.push(`GARCH: Extreme volatility (${garchResult.annualizedVol.toFixed(1)}% ann.)`);
+      else if (garchResult.regimeLabel === 'high') riskFactors.push(`GARCH: Elevated volatility (${garchResult.annualizedVol.toFixed(1)}% ann.)`);
+
+      if (institutionalFlow.smartMoneyDirection === 'accumulating') keySignals.push('Institutional: Smart money accumulating');
+      else if (institutionalFlow.smartMoneyDirection === 'distributing') riskFactors.push('Institutional: Smart money distributing');
+      if (institutionalFlow.vpin > 0.7) riskFactors.push(`VPIN: High informed trading probability (${(institutionalFlow.vpin * 100).toFixed(0)}%)`);
 
       return {
         symbol,
@@ -187,15 +234,22 @@ export class MLISService {
           ...(onchainLayer && { onchain: onchainLayer }),
         },
         overallScore,
-        confidence,
+        confidence: effectiveConfidence,
         recommendation,
         direction,
         riskLevel,
         volatilityRegime,
-        keySignals,
-        riskFactors,
+        keySignals: keySignals.slice(0, 7),
+        riskFactors: riskFactors.slice(0, 6),
+        mlEnrichments: {
+          conv1dFeatures,
+          garchResult,
+          adaptiveThresholds,
+          institutionalFlow,
+          plattCalibration,
+        },
         method: 'mlis_pro',
-        analysisVersion: '1.0.0',
+        analysisVersion: '2.0.0',
       };
     } catch (error) {
       console.error(`[MLIS] Analysis failed for ${symbol}:`, error);
@@ -233,7 +287,7 @@ export class MLISService {
   // LAYER ANALYSES
   // ============================================================================
 
-  private async analyzeTechnicalLayer(candles: OHLCV[]): Promise<MLISLayer> {
+  private async analyzeTechnicalLayer(candles: OHLCV[], conv1dFeatures?: Conv1DFeatures): Promise<MLISLayer> {
     const signals: string[] = [];
     let bullishCount = 0;
     let bearishCount = 0;
@@ -279,6 +333,29 @@ export class MLISService {
       signals.push(`Strong trend (ADX: ${adx.value.toFixed(1)})`);
     }
 
+    // ── ML Layer 1: Conv1D Feature Extraction ──
+    // Neural convolutional features enhance pattern detection
+    if (conv1dFeatures) {
+      const conv1dWeight = 4; // High weight for ML features
+
+      if (conv1dFeatures.trendSignal > 0.3) {
+        bullishCount += conv1dWeight;
+        signals.push(`Conv1D: Uptrend pattern (${(conv1dFeatures.trendSignal * 100).toFixed(0)}%)`);
+      } else if (conv1dFeatures.trendSignal < -0.3) {
+        bearishCount += conv1dWeight;
+        signals.push(`Conv1D: Downtrend pattern (${(Math.abs(conv1dFeatures.trendSignal) * 100).toFixed(0)}%)`);
+      }
+      totalWeight += conv1dWeight;
+
+      // Momentum kernel alignment
+      if (conv1dFeatures.momentumSignal > 0.3) {
+        bullishCount += 2;
+      } else if (conv1dFeatures.momentumSignal < -0.3) {
+        bearishCount += 2;
+      }
+      totalWeight += 2;
+    }
+
     // Calculate score (-100 to 100, then normalize to 0-100)
     const rawScore = totalWeight > 0
       ? ((bullishCount - bearishCount) / totalWeight) * 100
@@ -289,24 +366,38 @@ export class MLISService {
       name: 'Technical',
       score,
       confidence: Math.min(100, totalWeight * 5),
-      signals: signals.slice(0, 5),
+      signals: signals.slice(0, 6),
       weight: 0.30,
     };
   }
 
-  private async analyzeMomentumLayer(candles: OHLCV[]): Promise<MLISLayer> {
+  private async analyzeMomentumLayer(candles: OHLCV[], thresholds?: AdaptiveThresholds): Promise<MLISLayer> {
     const signals: string[] = [];
     let score = 50; // Start neutral
 
-    // RSI Analysis
+    // ── ML Layer 2: Use regime-adaptive thresholds instead of hardcoded values ──
+    const rsiOB = thresholds?.rsiOverbought ?? 70;
+    const rsiOS = thresholds?.rsiOversold ?? 30;
+    const stochOB = thresholds?.stochOverbought ?? 80;
+    const stochOS = thresholds?.stochOversold ?? 20;
+    const cciOB = thresholds?.cciOverbought ?? 100;
+    const cciOS = thresholds?.cciOversold ?? -100;
+    const willROB = thresholds?.williamsROverbought ?? -20;
+    const willROS = thresholds?.williamsROversold ?? -80;
+
+    if (thresholds) {
+      signals.push(`Regime: ${thresholds.regime} (factor: ${thresholds.regimeFactor.toFixed(2)})`);
+    }
+
+    // RSI Analysis with adaptive thresholds
     const rsi = this.indicatorsService.calculateRSI(candles);
     if (rsi.value) {
-      if (rsi.value > 70) {
+      if (rsi.value > rsiOB) {
         score -= 20;
-        signals.push(`RSI overbought (${rsi.value.toFixed(1)})`);
-      } else if (rsi.value < 30) {
+        signals.push(`RSI overbought (${rsi.value.toFixed(1)} > ${rsiOB.toFixed(0)})`);
+      } else if (rsi.value < rsiOS) {
         score += 20;
-        signals.push(`RSI oversold (${rsi.value.toFixed(1)})`);
+        signals.push(`RSI oversold (${rsi.value.toFixed(1)} < ${rsiOS.toFixed(0)})`);
       } else if (rsi.value > 50) {
         score += 10;
         signals.push(`RSI bullish (${rsi.value.toFixed(1)})`);
@@ -315,38 +406,38 @@ export class MLISService {
       }
     }
 
-    // Stochastic RSI
+    // Stochastic RSI with adaptive thresholds
     const stochRsi = this.indicatorsService.calculateStochRSI(candles);
     if (stochRsi.value) {
-      if (stochRsi.value > 80) {
+      if (stochRsi.value > stochOB) {
         score -= 15;
-        signals.push('StochRSI overbought');
-      } else if (stochRsi.value < 20) {
+        signals.push(`StochRSI overbought (>${stochOB.toFixed(0)})`);
+      } else if (stochRsi.value < stochOS) {
         score += 15;
-        signals.push('StochRSI oversold');
+        signals.push(`StochRSI oversold (<${stochOS.toFixed(0)})`);
       }
     }
 
-    // CCI
+    // CCI with adaptive thresholds
     const cci = this.indicatorsService.calculateCCI(candles);
     if (cci.value) {
-      if (cci.value > 100) {
+      if (cci.value > cciOB) {
         score += 10;
-        signals.push('CCI strong momentum');
-      } else if (cci.value < -100) {
+        signals.push(`CCI strong momentum (>${cciOB.toFixed(0)})`);
+      } else if (cci.value < cciOS) {
         score -= 10;
-        signals.push('CCI weak momentum');
+        signals.push(`CCI weak momentum (<${cciOS.toFixed(0)})`);
       }
     }
 
-    // Williams %R
+    // Williams %R with adaptive thresholds
     const willR = this.indicatorsService.calculateWilliamsR(candles);
     if (willR.value) {
-      if (willR.value > -20) {
+      if (willR.value > willROB) {
         score -= 10;
-      } else if (willR.value < -80) {
+      } else if (willR.value < willROS) {
         score += 10;
-        signals.push('Williams %R oversold');
+        signals.push(`Williams %R oversold (<${willROS.toFixed(0)})`);
       }
     }
 
@@ -357,38 +448,71 @@ export class MLISService {
       name: 'Momentum',
       score,
       confidence: 75,
-      signals: signals.slice(0, 4),
+      signals: signals.slice(0, 5),
       weight: 0.25,
     };
   }
 
-  private async analyzeVolatilityLayer(candles: OHLCV[]): Promise<MLISLayer> {
+  private async analyzeVolatilityLayer(candles: OHLCV[], garchResult?: GARCHResult): Promise<MLISLayer> {
     const signals: string[] = [];
     let volatilityScore = 50;
 
-    // ATR Analysis
-    const atr = this.indicatorsService.calculateATR(candles);
-    const currentPrice = candles[candles.length - 1]?.close || 0;
+    // ── ML Layer 3: GARCH(1,1) Variance Modeling ──
+    if (garchResult && garchResult.varianceSeries.length > 0) {
+      const { varianceRatio, annualizedVol, regimeLabel, forecastVariance1d, halfLife } = garchResult;
 
-    if (atr.value && currentPrice > 0) {
-      const atrPercent = (atr.value / currentPrice) * 100;
-
-      if (atrPercent > 5) {
-        volatilityScore = 90;
-        signals.push(`Extreme volatility (ATR: ${atrPercent.toFixed(2)}%)`);
-      } else if (atrPercent > 3) {
+      // GARCH-based volatility classification
+      if (regimeLabel === 'extreme') {
+        volatilityScore = 92;
+        signals.push(`GARCH: Extreme vol regime (${annualizedVol.toFixed(1)}% ann.)`);
+      } else if (regimeLabel === 'high') {
         volatilityScore = 75;
-        signals.push(`High volatility (ATR: ${atrPercent.toFixed(2)}%)`);
-      } else if (atrPercent > 1.5) {
+        signals.push(`GARCH: High vol regime (${annualizedVol.toFixed(1)}% ann.)`);
+      } else if (regimeLabel === 'normal') {
         volatilityScore = 50;
-        signals.push(`Normal volatility`);
+        signals.push(`GARCH: Normal vol (${annualizedVol.toFixed(1)}% ann.)`);
       } else {
         volatilityScore = 25;
-        signals.push(`Low volatility - breakout potential`);
+        signals.push(`GARCH: Low vol - breakout potential (${annualizedVol.toFixed(1)}% ann.)`);
+      }
+
+      // Variance ratio insight
+      if (varianceRatio > 1.5) {
+        signals.push(`Variance ratio: ${varianceRatio.toFixed(2)}x (elevated vs long-run)`);
+      } else if (varianceRatio < 0.7) {
+        signals.push(`Variance ratio: ${varianceRatio.toFixed(2)}x (suppressed)`);
+      }
+
+      // Half-life of volatility shocks
+      if (halfLife < 5) {
+        signals.push(`Fast mean-reversion (half-life: ${halfLife.toFixed(1)} bars)`);
+      } else if (halfLife > 20) {
+        signals.push(`Persistent shocks (half-life: ${halfLife.toFixed(1)} bars)`);
+      }
+    } else {
+      // Fallback to ATR-based analysis
+      const atr = this.indicatorsService.calculateATR(candles);
+      const currentPrice = candles[candles.length - 1]?.close || 0;
+
+      if (atr.value && currentPrice > 0) {
+        const atrPercent = (atr.value / currentPrice) * 100;
+        if (atrPercent > 5) {
+          volatilityScore = 90;
+          signals.push(`Extreme volatility (ATR: ${atrPercent.toFixed(2)}%)`);
+        } else if (atrPercent > 3) {
+          volatilityScore = 75;
+          signals.push(`High volatility (ATR: ${atrPercent.toFixed(2)}%)`);
+        } else if (atrPercent > 1.5) {
+          volatilityScore = 50;
+          signals.push(`Normal volatility`);
+        } else {
+          volatilityScore = 25;
+          signals.push(`Low volatility - breakout potential`);
+        }
       }
     }
 
-    // Bollinger Bands
+    // Bollinger Bands (always included)
     const bb = this.indicatorsService.calculateBollinger(candles);
     if (bb.metadata?.bandwidth) {
       const bandwidth = bb.metadata.bandwidth as number;
@@ -402,23 +526,23 @@ export class MLISService {
     return {
       name: 'Volatility',
       score: volatilityScore,
-      confidence: 80,
-      signals: signals.slice(0, 3),
+      confidence: garchResult ? 88 : 75, // Higher confidence with GARCH
+      signals: signals.slice(0, 5),
       weight: 0.15,
     };
   }
 
-  private async analyzeVolumeLayer(candles: OHLCV[]): Promise<MLISLayer> {
+  private async analyzeVolumeLayer(candles: OHLCV[], flow?: InstitutionalFlowResult): Promise<MLISLayer> {
     const signals: string[] = [];
     let score = 50;
 
     // OBV Analysis
     const obv = this.indicatorsService.calculateOBV(candles);
     if (obv.signal === 'bullish') {
-      score += 15;
+      score += 10;
       signals.push('OBV trending up');
     } else if (obv.signal === 'bearish') {
-      score -= 15;
+      score -= 10;
       signals.push('OBV trending down');
     }
 
@@ -428,13 +552,13 @@ export class MLISService {
     const currentVolume = candles[candles.length - 1]?.volume || 0;
 
     if (currentVolume > avgVolume * 2) {
-      score += 20;
+      score += 10;
       signals.push('Volume spike (2x average)');
     } else if (currentVolume > avgVolume * 1.5) {
-      score += 10;
+      score += 5;
       signals.push('Above average volume');
     } else if (currentVolume < avgVolume * 0.5) {
-      score -= 10;
+      score -= 5;
       signals.push('Low volume - weak conviction');
     }
 
@@ -442,11 +566,38 @@ export class MLISService {
     const cmf = this.indicatorsService.calculateCMF(candles);
     if (cmf.value) {
       if (cmf.value > 0.1) {
-        score += 10;
+        score += 5;
         signals.push('CMF positive - buying pressure');
       } else if (cmf.value < -0.1) {
-        score -= 10;
+        score -= 5;
         signals.push('CMF negative - selling pressure');
+      }
+    }
+
+    // ── ML Layer 4: Institutional Flow (BVC + VPIN) ──
+    if (flow) {
+      // BVC buy/sell ratio (major contributor)
+      const bvcDirection = (flow.bvcBuyRatio - 0.5) * 2; // -1 to +1
+      score += Math.round(bvcDirection * 20);
+
+      if (flow.bvcBuyRatio > 0.6) {
+        signals.push(`BVC: Buy-initiated ${(flow.bvcBuyRatio * 100).toFixed(0)}%`);
+      } else if (flow.bvcBuyRatio < 0.4) {
+        signals.push(`BVC: Sell-initiated ${((1 - flow.bvcBuyRatio) * 100).toFixed(0)}%`);
+      }
+
+      // VPIN (informed trading probability)
+      if (flow.vpin > 0.6) {
+        signals.push(`VPIN: High informed trading (${(flow.vpin * 100).toFixed(0)}%)`);
+        // High VPIN amplifies the BVC direction
+        score += Math.round(bvcDirection * 5);
+      }
+
+      // Whale activity
+      if (flow.whaleActivity > 0.3) {
+        signals.push(`Whale activity: ${flow.smartMoneyDirection}`);
+        if (flow.smartMoneyDirection === 'accumulating') score += 10;
+        else if (flow.smartMoneyDirection === 'distributing') score -= 10;
       }
     }
 
@@ -456,8 +607,8 @@ export class MLISService {
     return {
       name: 'Volume',
       score,
-      confidence: 70,
-      signals: signals.slice(0, 4),
+      confidence: flow ? 82 : 70, // Higher confidence with institutional flow data
+      signals: signals.slice(0, 6),
       weight: 0.20,
     };
   }

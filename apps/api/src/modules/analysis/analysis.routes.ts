@@ -956,6 +956,29 @@ Warn about potential traps and give protective advice.`;
             confirmationStatus: mlisConfirmation.confirmationStatus,
           }, '[Analysis] Step 8: MLIS Confirmation completed (no trade plan to adjust)');
         }
+
+        // Step 8.5: Verdict downgrade on MLIS contradiction
+        // When dual engines disagree, automatically downgrade conviction one level
+        if (mlisConfirmation && mlisConfirmation.agreementLevel === 'DISAGREEMENT') {
+          const previousVerdict = verdict.verdict;
+          if (verdict.verdict === 'go') {
+            verdict.verdict = 'conditional_go';
+            verdict.verdictDowngraded = true;
+            verdict.verdictDowngradeReason = `MLIS contradicts: ${mlisConfirmation.mlisRecommendation}/${mlisConfirmation.mlisDirection} vs 7-Step GO/${mlisConfirmation.sevenStepDirection}`;
+          } else if (verdict.verdict === 'conditional_go') {
+            verdict.verdict = 'wait';
+            verdict.verdictDowngraded = true;
+            verdict.verdictDowngradeReason = `MLIS contradicts: ${mlisConfirmation.mlisRecommendation}/${mlisConfirmation.mlisDirection} vs 7-Step CONDITIONAL_GO/${mlisConfirmation.sevenStepDirection}`;
+          }
+          if (verdict.verdictDowngraded) {
+            logger.info({
+              symbol: body.symbol,
+              previousVerdict,
+              newVerdict: verdict.verdict,
+              reason: verdict.verdictDowngradeReason,
+            }, '[Analysis] Step 8.5: Verdict downgraded due to MLIS contradiction');
+          }
+        }
       } catch (mlisError) {
         // MLIS Confirmation is non-blocking - log error and continue
         logger.warn({ error: mlisError, symbol: body.symbol }, '[Analysis] MLIS Confirmation failed, proceeding without ML validation');

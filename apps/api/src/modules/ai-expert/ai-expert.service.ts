@@ -13,6 +13,12 @@ import { creditCostsService } from '../costs/credit-costs.service';
 import { getTradingKnowledgeForAI } from './trading-knowledge-base';
 import { callGeminiWithRetry } from '../../core/gemini';
 
+// Quantitative risk services for AI Experts
+import { calculateNexusRiskMetrics, type NexusRiskMetrics } from '../expert/services/nexus-risk.service';
+import { calculateOracleFlowMetrics, type OracleFlowMetrics } from '../expert/services/oracle-flow.service';
+import { calculateSentinelRiskMetrics, type SentinelRiskMetrics } from '../expert/services/sentinel-risk.service';
+import { fetchCandles as fetchMultiAssetCandles, getAssetClass } from '../analysis/providers/multi-asset-data-provider';
+
 // Gemini API configuration (for API key check)
 const GEMINI_API_KEY = config.gemini.apiKey;
 
@@ -1748,6 +1754,7 @@ Reference specific indicators from the data. Focus on ${tradeCtx.focus}. NOT Bit
         break;
 
       case 'oracle':
+        const oracleQuant = analysisData.quantMetrics as OracleFlowMetrics | undefined;
         focusData = {
           ...baseData,
           whaleActivity: analysisData.whaleActivity,
@@ -1756,11 +1763,26 @@ Reference specific indicators from the data. Focus on ${tradeCtx.focus}. NOT Bit
           orderFlowImbalance: (analysisData.advancedMetrics as Record<string, unknown>)?.orderFlowImbalance,
           liquidityScore: (analysisData.advancedMetrics as Record<string, unknown>)?.liquidityScore,
           indicatorDetails: analysisData.indicatorDetails,
+          ...(oracleQuant && {
+            exchangeNetflow: {
+              direction: oracleQuant.netflowDirection,
+              score: oracleQuant.netflowScore,
+            },
+            whaleMetrics: {
+              tradeCount: oracleQuant.whaleTradeCount,
+              buySellRatio: oracleQuant.whaleBuySellRatio,
+            },
+            stablecoinDynamics: oracleQuant.stablecoin,
+            accumulationPhase: oracleQuant.accDistPhase,
+          }),
         };
-        focusPrompt = `You are analyzing ${symbol} whale activity for ${tradeCtx.label}. For ${tradeCtx.holdTime} holds, focus on short-term flow patterns. NOT Bitcoin analysis - specifically ${symbol}.`;
+        focusPrompt = oracleQuant
+          ? `You are analyzing ${symbol} whale activity for ${tradeCtx.label}. Exchange netflow: ${oracleQuant.netflowDirection} (score: ${oracleQuant.netflowScore}/100). Whale trades: ${oracleQuant.whaleTradeCount} detected (buy/sell ratio: ${oracleQuant.whaleBuySellRatio.toFixed(2)}). Stablecoin supply: $${oracleQuant.stablecoin.totalMarketCapB}B (${oracleQuant.stablecoin.trend}). Phase: ${oracleQuant.accDistPhase}. CITE THESE SPECIFIC NUMBERS. NOT Bitcoin analysis - specifically ${symbol}.`
+          : `You are analyzing ${symbol} whale activity for ${tradeCtx.label}. For ${tradeCtx.holdTime} holds, focus on short-term flow patterns. NOT Bitcoin analysis - specifically ${symbol}.`;
         break;
 
       case 'sentinel':
+        const sentinelQuant = analysisData.quantMetrics as SentinelRiskMetrics | undefined;
         focusData = {
           ...baseData,
           riskLevel: analysisData.riskLevel,
@@ -1770,11 +1792,28 @@ Reference specific indicators from the data. Focus on ${tradeCtx.focus}. NOT Bit
           liquidityScore: (analysisData.advancedMetrics as Record<string, unknown>)?.liquidityScore,
           historicalVolatility: (analysisData.advancedMetrics as Record<string, unknown>)?.historicalVolatility,
           indicatorDetails: analysisData.indicatorDetails,
+          ...(sentinelQuant && {
+            regulatoryRisk: {
+              score: sentinelQuant.regulatoryRiskScore,
+              classification: sentinelQuant.classificationRisk,
+              factors: sentinelQuant.regulatoryFactors,
+            },
+            manipulationDetection: {
+              score: sentinelQuant.manipulationScore,
+              patterns: sentinelQuant.manipulationPatterns,
+            },
+            liquidityRisk: sentinelQuant.liquidityRiskScore,
+            exchangeHealth: sentinelQuant.exchangeHealth,
+            securityVerdict: sentinelQuant.verdict,
+          }),
         };
-        focusPrompt = `You are analyzing ${symbol} risks for ${tradeCtx.label}. For ${tradeCtx.holdTime} trades, assess manipulation and trap risks. NOT Bitcoin analysis - specifically ${symbol}.`;
+        focusPrompt = sentinelQuant
+          ? `You are analyzing ${symbol} risks for ${tradeCtx.label}. Regulatory risk: ${sentinelQuant.regulatoryRiskScore}/100 (${sentinelQuant.classificationRisk}). Manipulation score: ${sentinelQuant.manipulationScore}/100. ${sentinelQuant.manipulationPatterns.length > 0 ? 'Patterns: ' + sentinelQuant.manipulationPatterns.join('; ') + '.' : 'No manipulation patterns detected.'} Liquidity risk: ${sentinelQuant.liquidityRiskScore}/100. Volume authenticity: ${sentinelQuant.exchangeHealth.volumeAuthenticity}/100. Security verdict: ${sentinelQuant.verdict}. CITE THESE SPECIFIC NUMBERS. NOT Bitcoin analysis - specifically ${symbol}.`
+          : `You are analyzing ${symbol} risks for ${tradeCtx.label}. For ${tradeCtx.holdTime} trades, assess manipulation and trap risks. NOT Bitcoin analysis - specifically ${symbol}.`;
         break;
 
       case 'nexus':
+        const nexusQuant = analysisData.quantMetrics as NexusRiskMetrics | undefined;
         focusData = {
           ...baseData,
           direction: analysisData.direction,
@@ -1784,8 +1823,26 @@ Reference specific indicators from the data. Focus on ${tradeCtx.focus}. NOT Bit
           riskReward: analysisData.riskReward,
           positionSizePercent: analysisData.positionSizePercent,
           riskAmount: analysisData.riskAmount,
+          ...(nexusQuant && {
+            riskMetrics: {
+              var95: nexusQuant.var95,
+              cvar95: nexusQuant.cvar95,
+              tailEventProbability: nexusQuant.tailEventProbability,
+              maxDrawdown: nexusQuant.maxDrawdown,
+              avgRecoveryBars: nexusQuant.avgRecoveryBars,
+              btcCorrelation: nexusQuant.btcCorrelation,
+              downsideVolatility: nexusQuant.downsideVolatility,
+              sharpeProxy: nexusQuant.sharpeProxy,
+              returnSkewness: nexusQuant.returnSkewness,
+              returnKurtosis: nexusQuant.returnKurtosis,
+              riskScore: nexusQuant.riskScore,
+              riskLevel: nexusQuant.riskLevel,
+            },
+          }),
         };
-        focusPrompt = `You are analyzing ${symbol} trade plan for ${tradeCtx.label}. For ${tradeCtx.holdTime} holds with ${tradeCtx.timeframes} timeframes, assess R/R and position sizing. NOT Bitcoin analysis - specifically ${symbol}.`;
+        focusPrompt = nexusQuant
+          ? `You are analyzing ${symbol} trade plan for ${tradeCtx.label}. QUANTITATIVE RISK: VaR(95%): ${nexusQuant.var95}% daily, CVaR: ${nexusQuant.cvar95}%. Tail-event probability: ${(nexusQuant.tailEventProbability * 100).toFixed(1)}%. Max drawdown: ${nexusQuant.maxDrawdown.toFixed(1)}%. Sharpe ratio: ${nexusQuant.sharpeProxy.toFixed(2)}. Skewness: ${nexusQuant.returnSkewness.toFixed(2)} (${nexusQuant.returnSkewness < -0.5 ? 'fat left tail' : 'normal'}). ${nexusQuant.btcCorrelation !== null ? `BTC correlation: ${nexusQuant.btcCorrelation.toFixed(2)}.` : ''} Risk level: ${nexusQuant.riskLevel}. CITE THESE SPECIFIC NUMBERS in your R/R assessment. NOT Bitcoin analysis - specifically ${symbol}.`
+          : `You are analyzing ${symbol} trade plan for ${tradeCtx.label}. For ${tradeCtx.holdTime} holds with ${tradeCtx.timeframes} timeframes, assess R/R and position sizing. NOT Bitcoin analysis - specifically ${symbol}.`;
         break;
     }
 
@@ -2019,11 +2076,54 @@ FORMAT: Just your professional ${tradeCtx.label} synthesis about ${symbol}. Star
         trapCheck,
       });
 
-      // Prepare combined data for each expert - include tradeType context
+      // ── Compute quantitative metrics for AI Experts ──
+      // Fetch candles for quantitative analysis (non-blocking, graceful degradation)
+      let nexusMetrics: NexusRiskMetrics | null = null;
+      let oracleMetrics: OracleFlowMetrics | null = null;
+      let sentinelMetrics: SentinelRiskMetrics | null = null;
+
+      try {
+        const candles = await fetchMultiAssetCandles(upperSymbol, interval, 250);
+        if (candles && candles.length >= 30) {
+          // Run all quantitative analyses in parallel
+          const [nexusResult, oracleResult] = await Promise.all([
+            Promise.resolve(calculateNexusRiskMetrics(candles)),
+            calculateOracleFlowMetrics(candles, getAssetClass(upperSymbol) === 'crypto'),
+          ]);
+          nexusMetrics = nexusResult;
+          oracleMetrics = oracleResult;
+          sentinelMetrics = calculateSentinelRiskMetrics(upperSymbol, candles);
+        }
+      } catch (err) {
+        console.warn('[AIExpert] Quantitative metrics computation failed (non-critical):', err);
+      }
+
+      // Prepare combined data for each expert - include tradeType context + quantitative metrics
       const ariaData = { ...assetScan, advancedMetrics: safetyCheck.advancedMetrics, tradeType, tradeTypeLabel };
-      const oracleData = { ...safetyCheck, advancedMetrics: safetyCheck.advancedMetrics, tradeType, tradeTypeLabel };
-      const sentinelData = { ...safetyCheck, ...trapCheck, advancedMetrics: safetyCheck.advancedMetrics, tradeType, tradeTypeLabel };
-      const nexusData = { ...tradePlan, tradeType, tradeTypeLabel };
+      const oracleData = {
+        ...safetyCheck,
+        advancedMetrics: safetyCheck.advancedMetrics,
+        tradeType,
+        tradeTypeLabel,
+        // Quantitative oracle metrics
+        ...(oracleMetrics && { quantMetrics: oracleMetrics }),
+      };
+      const sentinelData = {
+        ...safetyCheck,
+        ...trapCheck,
+        advancedMetrics: safetyCheck.advancedMetrics,
+        tradeType,
+        tradeTypeLabel,
+        // Quantitative sentinel metrics
+        ...(sentinelMetrics && { quantMetrics: sentinelMetrics }),
+      };
+      const nexusData = {
+        ...tradePlan,
+        tradeType,
+        tradeTypeLabel,
+        // Quantitative nexus metrics
+        ...(nexusMetrics && { quantMetrics: nexusMetrics }),
+      };
 
       // Get all 4 expert comments sequentially to avoid rate limits
       // Small delay between calls to prevent API throttling
