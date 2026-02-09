@@ -8,6 +8,7 @@ import {
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { cn } from '../../lib/utils';
+import { TraderPathLogo } from '../../components/common/TraderPathLogo';
 
 // Components
 import { PriceTicker } from '../../components/home/PriceTicker';
@@ -80,10 +81,10 @@ function StatsBoxes() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-black/[0.06] dark:bg-white/[0.06]">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-black/[0.04] dark:bg-white/[0.04]">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="bg-white dark:bg-black p-4">
-            <div className="h-6 w-16 bg-black/5 dark:bg-white/5 rounded animate-pulse mb-1" />
+          <div key={i} className="bg-white dark:bg-black p-5">
+            <div className="h-7 w-16 bg-black/5 dark:bg-white/5 rounded animate-pulse mb-1" />
             <div className="h-3 w-24 bg-black/5 dark:bg-white/5 rounded animate-pulse" />
           </div>
         ))}
@@ -95,19 +96,19 @@ function StatsBoxes() {
 
   const stats = [
     { label: 'Total Analyses', value: metrics.totalAnalyses.toLocaleString(), color: '' },
-    { label: 'Platform Accuracy', value: metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—', color: 'text-emerald-500 dark:text-[#00f5c4]' },
-    { label: 'Total P/L', value: metrics.closedCount > 0 ? `${metrics.totalPnL >= 0 ? '+' : ''}${metrics.totalPnL}%` : '—', color: metrics.totalPnL >= 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400' },
+    { label: 'Platform Accuracy', value: metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—', color: 'text-emerald-600 dark:text-[#00f5c4]' },
+    { label: 'Total P/L', value: metrics.closedCount > 0 ? `${metrics.totalPnL >= 0 ? '+' : ''}${metrics.totalPnL}%` : '—', color: metrics.totalPnL >= 0 ? 'text-emerald-600 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400' },
     { label: 'Days Elapsed', value: `${metrics.daysSinceStart}`, color: '' },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-black/[0.06] dark:bg-white/[0.06]">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-black/[0.04] dark:bg-white/[0.04]">
       {stats.map((s) => (
-        <div key={s.label} className="bg-white dark:bg-black p-4">
-          <div className={cn('text-lg sm:text-xl font-mono font-bold tabular-nums', s.color || 'text-black dark:text-white')}>
+        <div key={s.label} className="bg-white dark:bg-black p-5">
+          <div className={cn('text-xl sm:text-2xl font-mono font-bold tabular-nums', s.color || 'text-black dark:text-white')}>
             {s.value}
           </div>
-          <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">{s.label}</div>
+          <div className="text-[11px] text-slate-400 uppercase tracking-wide mt-0.5">{s.label}</div>
         </div>
       ))}
     </div>
@@ -129,7 +130,7 @@ const FAQS = [
   },
   {
     q: 'What are market phases (EARLY, MID, LATE, EXIT)?',
-    a: 'EARLY (0-30d): Capital just started flowing—optimal entry. MID (30-60d): Trend maturing, caution. LATE (60-90d): Trend exhausting, avoid. EXIT (90+d): Capital leaving, do not enter.',
+    a: 'EARLY (0-30d): Capital just started flowing — optimal entry. MID (30-60d): Trend maturing, caution. LATE (60-90d): Trend exhausting, avoid. EXIT (90+d): Capital leaving, do not enter.',
   },
   {
     q: 'Which markets are supported?',
@@ -151,16 +152,16 @@ function FAQItem({ q, a }: { q: string; a: string }) {
     <div className="border-b border-black/[0.06] dark:border-white/[0.06]">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between py-3 px-1 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
+        className="w-full flex items-center justify-between py-4 px-1 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
         aria-expanded={open}
       >
-        <span className="text-xs sm:text-sm font-mono font-semibold text-black dark:text-white pr-4">
+        <span className="text-sm font-semibold text-black dark:text-white pr-4">
           {q}
         </span>
-        <ChevronDown className={cn('w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform', open && 'rotate-180')} />
+        <ChevronDown className={cn('w-4 h-4 text-slate-400 shrink-0 transition-transform', open && 'rotate-180')} />
       </button>
       {open && (
-        <div className="px-1 pb-3 text-xs font-mono text-slate-500 leading-relaxed">
+        <div className="px-1 pb-4 text-sm text-slate-500 leading-relaxed">
           {a}
         </div>
       )}
@@ -169,34 +170,39 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Footer (minimal inline version matching style)
+// Footer
 // ---------------------------------------------------------------------------
 
 function MinimalFooter() {
   return (
     <footer className="border-t border-black/[0.06] dark:border-white/[0.06]">
-      <div className="max-w-[1200px] mx-auto px-4 py-8">
+      <div className="max-w-[1200px] mx-auto px-4 py-10">
+        {/* Logo + tagline */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8">
+          <div>
+            <TraderPathLogo size="sm" showText showTagline />
+          </div>
+          <div className="flex items-center gap-5 text-xs text-slate-400">
+            <Link href="/privacy" className="hover:text-black dark:hover:text-white transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-black dark:hover:text-white transition-colors">Terms</Link>
+            <Link href="/disclaimer" className="hover:text-black dark:hover:text-white transition-colors">Disclaimer</Link>
+            <Link href="/about" className="hover:text-black dark:hover:text-white transition-colors">About</Link>
+          </div>
+        </div>
+
         {/* Disclaimer */}
-        <div className="mb-6 p-4 border border-black/[0.06] dark:border-white/[0.06]">
+        <div className="mb-6 p-4 border border-black/[0.06] dark:border-white/[0.06] rounded-sm">
           <div className="text-[9px] font-mono uppercase tracking-wider text-slate-400 mb-1">DISCLAIMER</div>
-          <p className="text-[10px] font-mono text-slate-400 leading-relaxed">
+          <p className="text-[11px] text-slate-400 leading-relaxed">
             This platform is for informational and educational purposes only and does not constitute financial advice.
             All investments carry risk including loss of principal. Past performance does not guarantee future results.
             Conduct your own research and consult a licensed advisor before investing.
           </p>
         </div>
 
-        {/* Links + copyright */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4 text-[10px] font-mono text-slate-400">
-            <Link href="/privacy" className="hover:text-black dark:hover:text-white transition-colors">Privacy</Link>
-            <Link href="/terms" className="hover:text-black dark:hover:text-white transition-colors">Terms</Link>
-            <Link href="/disclaimer" className="hover:text-black dark:hover:text-white transition-colors">Disclaimer</Link>
-            <Link href="/about" className="hover:text-black dark:hover:text-white transition-colors">About</Link>
-          </div>
-          <div className="text-[10px] font-mono text-slate-400">
-            &copy; {new Date().getFullYear()} TRADERPATH
-          </div>
+        {/* Copyright */}
+        <div className="text-[11px] text-slate-400 text-center">
+          &copy; {new Date().getFullYear()} TraderPath. All rights reserved.
         </div>
       </div>
     </footer>
@@ -223,12 +229,15 @@ export default function LandingPage() {
       <FlowAccordion />
 
       {/* Performance */}
-      <section id="performance" className="py-12 md:py-16 border-t border-black/[0.06] dark:border-white/[0.06]">
+      <section id="performance" className="py-14 md:py-20 border-t border-black/[0.06] dark:border-white/[0.06]">
         <div className="max-w-[1000px] mx-auto px-4">
           <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2">PERFORMANCE</div>
-          <h2 className="text-xl sm:text-2xl font-mono font-bold tracking-tight text-black dark:text-white mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-black dark:text-white mb-2">
             Real Data. Real Results.
           </h2>
+          <p className="text-sm text-slate-500 mb-8 max-w-lg">
+            Verified trade outcomes from our analysis engine. Every number backed by on-chain and market data.
+          </p>
           <LandingPerformanceChart />
           <div className="mt-6">
             <StatsBoxes />
@@ -237,30 +246,30 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing CTA */}
-      <section id="pricing" className="py-12 md:py-16 border-t border-black/[0.06] dark:border-white/[0.06]">
+      <section id="pricing" className="py-14 md:py-20 border-t border-black/[0.06] dark:border-white/[0.06]">
         <div className="max-w-[600px] mx-auto px-4 text-center">
           <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2">PRICING</div>
-          <h2 className="text-xl sm:text-2xl font-mono font-bold tracking-tight text-black dark:text-white mb-3">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-black dark:text-white mb-3">
             Credit-Based. No Subscriptions.
           </h2>
-          <p className="text-xs font-mono text-slate-500 mb-6">
+          <p className="text-sm text-slate-500 mb-8">
             Pay only for what you use. L1-L2 free. L3-L7 premium.
           </p>
           <Link
             href="/pricing"
-            className="inline-flex items-center gap-2 px-6 py-3 text-xs font-mono font-semibold bg-black dark:bg-white text-white dark:text-black hover:opacity-80 transition-opacity"
+            className="inline-flex items-center gap-2 px-7 py-3 text-sm font-semibold bg-black dark:bg-white text-white dark:text-black rounded-sm hover:opacity-80 transition-opacity"
           >
             VIEW PRICING
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="py-12 md:py-16 border-t border-black/[0.06] dark:border-white/[0.06]">
+      <section id="faq" className="py-14 md:py-20 border-t border-black/[0.06] dark:border-white/[0.06]">
         <div className="max-w-[700px] mx-auto px-4">
           <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2">FAQ</div>
-          <h2 className="text-xl sm:text-2xl font-mono font-bold tracking-tight text-black dark:text-white mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-black dark:text-white mb-8">
             Frequently Asked Questions
           </h2>
           <div>
@@ -272,25 +281,30 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-16 md:py-24 border-t border-black/[0.06] dark:border-white/[0.06]">
+      <section className="py-20 md:py-28 border-t border-black/[0.06] dark:border-white/[0.06]">
         <div className="max-w-[600px] mx-auto px-4 text-center">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 mb-4 text-[10px] font-mono text-amber-500 border border-amber-500/20 bg-amber-500/5">
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <TraderPathLogo size="lg" showText={false} animated />
+          </div>
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 mb-5 text-[10px] font-mono text-amber-500 border border-amber-500/20 bg-amber-500/5 rounded-full">
             25 FREE CREDITS ON SIGNUP
           </div>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-mono font-bold tracking-tight text-black dark:text-white mb-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-black dark:text-white mb-4">
             Ready to Trade Smarter?
           </h2>
-          <p className="text-xs sm:text-sm font-mono text-slate-500 mb-8">
+          <p className="text-sm sm:text-base text-slate-500 mb-10">
             Access the 7-layer decision engine. Follow institutional capital flows.
           </p>
           <Link
             href="/register"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 text-sm font-mono font-semibold bg-black dark:bg-white text-white dark:text-black hover:opacity-80 transition-opacity"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 text-sm font-semibold bg-black dark:bg-white text-white dark:text-black rounded-sm hover:opacity-80 transition-opacity"
           >
             START FREE ANALYSIS
             <ArrowRight className="w-4 h-4" />
           </Link>
-          <p className="text-[10px] font-mono text-slate-400 mt-4">
+          <p className="text-[11px] text-slate-400 mt-4">
             No credit card required
           </p>
         </div>
