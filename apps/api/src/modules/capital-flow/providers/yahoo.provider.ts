@@ -568,17 +568,26 @@ export async function getDxyData(): Promise<{
 export async function getVixData(): Promise<{
   value: number;
   level: VixLevel;
+  vix3m: number | null;
+  termStructure: 'contango' | 'backwardation' | 'flat' | null;
+  termSpread: number | null;
 }> {
-  const quote = await fetchYahooQuote(SYMBOLS.VIX);
+  const [vixQuote, vix3mQuote] = await Promise.all([
+    fetchYahooQuote(SYMBOLS.VIX),
+    fetchYahooQuote(SYMBOLS.VIX3M).catch(() => null),
+  ]);
 
-  if (!quote) {
+  if (!vixQuote) {
     return {
       value: 15,
       level: 'neutral',
+      vix3m: null,
+      termStructure: null,
+      termSpread: null,
     };
   }
 
-  const value = quote.price;
+  const value = vixQuote.price;
   let level: VixLevel;
 
   if (value >= 30) {
@@ -591,9 +600,33 @@ export async function getVixData(): Promise<{
     level = 'complacent';
   }
 
+  // VIX Term Structure: VIX vs VIX3M
+  // Contango (VIX < VIX3M): Normal market, short-term calm
+  // Backwardation (VIX > VIX3M): Stress, near-term fear exceeds long-term
+  let vix3m: number | null = null;
+  let termStructure: 'contango' | 'backwardation' | 'flat' | null = null;
+  let termSpread: number | null = null;
+
+  if (vix3mQuote) {
+    vix3m = parseFloat(vix3mQuote.price.toFixed(2));
+    termSpread = parseFloat((value - vix3m).toFixed(2));
+    const spreadPct = Math.abs(termSpread) / vix3m;
+
+    if (spreadPct < 0.02) {
+      termStructure = 'flat';
+    } else if (value > vix3m) {
+      termStructure = 'backwardation'; // near-term fear > long-term
+    } else {
+      termStructure = 'contango'; // normal, calm
+    }
+  }
+
   return {
     value: parseFloat(value.toFixed(2)),
     level,
+    vix3m,
+    termStructure,
+    termSpread,
   };
 }
 

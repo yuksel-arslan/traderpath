@@ -30,6 +30,9 @@ import { economicCalendarService, EconomicEvent } from './services/economic-cale
 // NEW: MLIS (Multi-Layer Intelligence System) import
 import { MLISService, MLISConfig, MLISResult, getMLISService, analyzeMLIS } from './services/mlis.service';
 
+// NEW: Smart Money Index import
+import { calculateSmartMoneyIndex, SmartMoneyIndexResult } from './services/smart-money-index.service';
+
 // NEW: Multi-Asset Data Provider import
 import {
   fetchCandles as fetchMultiAssetCandles,
@@ -1968,6 +1971,14 @@ interface SafetyCheckResult {
   smartMoney: {
     positioning: 'long' | 'short' | 'neutral';
     confidence: number;
+    /** Smart Money Index value (cumulative) */
+    smiValue?: number;
+    /** SMI trend: accumulating | distributing | neutral */
+    smiTrend?: 'accumulating' | 'distributing' | 'neutral';
+    /** SMI divergence from price */
+    smiDivergence?: 'bullish_divergence' | 'bearish_divergence' | 'none';
+    /** Percentage of volume in smart sessions */
+    smartSessionRatio?: number;
   };
   contractSecurity?: {
     isVerified: boolean;
@@ -2271,6 +2282,56 @@ const CACHE_TTL = {
 // Crypto: Binance, Stocks/Bonds/Metals: Yahoo Finance
 // ===========================================
 
+/**
+ * Filter OHLCV outlier spikes (flash crashes, exchange glitches).
+ * Uses rolling median ± 4σ band. Wicks beyond are clamped to band edge.
+ * Only extreme outliers are filtered; normal volatility is preserved.
+ */
+function filterOHLCVOutliers(candles: Candle[], windowSize: number = 20): Candle[] {
+  if (candles.length < windowSize) return candles;
+
+  return candles.map((candle, i) => {
+    // Get window of surrounding candles for local context
+    const start = Math.max(0, i - windowSize);
+    const end = Math.min(candles.length, i + 1);
+    const window = candles.slice(start, end);
+
+    if (window.length < 5) return candle;
+
+    // Calculate median close and standard deviation
+    const closes = window.map(c => c.close).sort((a, b) => a - b);
+    const median = closes[Math.floor(closes.length / 2)];
+    const variance = closes.reduce((sum, c) => sum + (c - median) ** 2, 0) / closes.length;
+    const stdDev = Math.sqrt(variance);
+
+    if (stdDev === 0) return candle;
+
+    // 4-sigma band (very permissive - only catches true outliers)
+    const upperBand = median + 4 * stdDev;
+    const lowerBand = median - 4 * stdDev;
+
+    // Clamp extreme wicks
+    const clampedHigh = Math.min(candle.high, upperBand);
+    const clampedLow = Math.max(candle.low, lowerBand);
+    const clampedOpen = Math.max(lowerBand, Math.min(candle.open, upperBand));
+    const clampedClose = Math.max(lowerBand, Math.min(candle.close, upperBand));
+
+    // Only modify if values were actually clamped
+    if (clampedHigh === candle.high && clampedLow === candle.low &&
+        clampedOpen === candle.open && clampedClose === candle.close) {
+      return candle;
+    }
+
+    return {
+      ...candle,
+      open: clampedOpen,
+      high: clampedHigh,
+      low: clampedLow,
+      close: clampedClose,
+    };
+  });
+}
+
 async function fetchKlines(
   symbol: string,
   interval: string,
@@ -2285,7 +2346,7 @@ async function fetchKlines(
     const candles = await fetchMultiAssetCandles(symbol, interval, limit);
 
     // Convert to Candle format
-    const result: Candle[] = candles.map((c) => ({
+    const raw: Candle[] = candles.map((c) => ({
       openTime: c.timestamp,
       open: c.open,
       high: c.high,
@@ -2294,6 +2355,9 @@ async function fetchKlines(
       volume: c.volume,
       closeTime: c.timestamp + 60000, // Approximate close time
     }));
+
+    // Apply outlier/spike filter to remove flash crash artifacts
+    const result = filterOHLCVOutliers(raw);
 
     setCache(cacheKey, result, CACHE_TTL.KLINES);
     return result;
@@ -2397,6 +2461,44 @@ async function fetchFundingRate(symbol: string = 'BTC'): Promise<FundingRateData
   } catch {
     return { symbol, fundingRate: 0, fundingTime: Date.now(), nextFundingTime: Date.now() + 8 * 60 * 60 * 1000 };
   }
+}
+
+/**
+ * Calculate funding rate spread across multiple perpetual pairs.
+ * Spread = max(rates) - min(rates). High spread indicates market dislocation.
+ * Returns average, spread, individual rates, and interpretation.
+ */
+async function fetchFundingRateSpread(
+  symbols: string[] = ['BTC', 'ETH', 'SOL']
+): Promise<{
+  average: number;
+  spread: number;
+  rates: Array<{ symbol: string; rate: number }>;
+  interpretation: 'compressed' | 'normal' | 'wide' | 'extreme';
+}> {
+  const results = await Promise.all(
+    symbols.map(async (sym) => {
+      const data = await fetchFundingRate(sym);
+      return { symbol: sym, rate: data.fundingRate };
+    })
+  );
+
+  const validRates = results.filter(r => r.rate !== 0);
+  if (validRates.length === 0) {
+    return { average: 0, spread: 0, rates: results, interpretation: 'compressed' };
+  }
+
+  const rateValues = validRates.map(r => r.rate);
+  const average = rateValues.reduce((a, b) => a + b, 0) / rateValues.length;
+  const spread = Math.max(...rateValues) - Math.min(...rateValues);
+
+  let interpretation: 'compressed' | 'normal' | 'wide' | 'extreme' = 'normal';
+  if (spread < 0.02) interpretation = 'compressed';
+  else if (spread < 0.05) interpretation = 'normal';
+  else if (spread < 0.10) interpretation = 'wide';
+  else interpretation = 'extreme';
+
+  return { average, spread, rates: results, interpretation };
 }
 
 interface OpenInterestData {
@@ -2948,6 +3050,231 @@ function calculateMACD(prices: number[]): {
   return { macd, signal, histogram };
 }
 
+/**
+ * Detect MACD divergence (price vs MACD direction disagreement).
+ * Bullish divergence: price makes lower low but MACD makes higher low.
+ * Bearish divergence: price makes higher high but MACD makes lower high.
+ */
+function detectMACDDivergence(
+  closes: number[],
+  lookback: number = 20
+): { type: 'bullish' | 'bearish' | 'none'; strength: number } {
+  if (closes.length < 35) return { type: 'none', strength: 0 };
+
+  // Calculate MACD for recent history
+  const macdHistory: number[] = [];
+  for (let i = Math.max(26, closes.length - lookback - 10); i <= closes.length; i++) {
+    const slice = closes.slice(0, i);
+    if (slice.length < 26) continue;
+    const ema12 = calculateEMA(slice, 12);
+    const ema26 = calculateEMA(slice, 26);
+    macdHistory.push(ema12 - ema26);
+  }
+
+  if (macdHistory.length < lookback) return { type: 'none', strength: 0 };
+
+  const recentPrices = closes.slice(-lookback);
+  const recentMACD = macdHistory.slice(-lookback);
+
+  // Find swing lows and highs in last N bars
+  const halfLB = Math.floor(lookback / 2);
+  const priceFront = recentPrices.slice(0, halfLB);
+  const priceBack = recentPrices.slice(halfLB);
+  const macdFront = recentMACD.slice(0, halfLB);
+  const macdBack = recentMACD.slice(halfLB);
+
+  const priceLow1 = Math.min(...priceFront);
+  const priceLow2 = Math.min(...priceBack);
+  const priceHigh1 = Math.max(...priceFront);
+  const priceHigh2 = Math.max(...priceBack);
+
+  const macdLow1 = Math.min(...macdFront);
+  const macdLow2 = Math.min(...macdBack);
+  const macdHigh1 = Math.max(...macdFront);
+  const macdHigh2 = Math.max(...macdBack);
+
+  // Bullish divergence: price lower low, MACD higher low
+  if (priceLow2 < priceLow1 && macdLow2 > macdLow1) {
+    const priceChange = ((priceLow1 - priceLow2) / priceLow1) * 100;
+    return { type: 'bullish', strength: Math.min(100, priceChange * 20) };
+  }
+
+  // Bearish divergence: price higher high, MACD lower high
+  if (priceHigh2 > priceHigh1 && macdHigh2 < macdHigh1) {
+    const priceChange = ((priceHigh2 - priceHigh1) / priceHigh1) * 100;
+    return { type: 'bearish', strength: Math.min(100, priceChange * 20) };
+  }
+
+  return { type: 'none', strength: 0 };
+}
+
+/**
+ * Calculate Volume Profile and VPOC (Volume Point of Control).
+ * Distributes volume across price bins and finds the price level with most volume.
+ */
+function calculateVolumeProfile(
+  candles: Array<{ high: number; low: number; close: number; volume: number }>,
+  bins: number = 24
+): { vpoc: number; valueAreaHigh: number; valueAreaLow: number; profileBins: Array<{ price: number; volume: number }> } {
+  if (candles.length < 10) {
+    const lastPrice = candles[candles.length - 1]?.close || 0;
+    return { vpoc: lastPrice, valueAreaHigh: lastPrice * 1.02, valueAreaLow: lastPrice * 0.98, profileBins: [] };
+  }
+
+  const allHighs = candles.map(c => c.high);
+  const allLows = candles.map(c => c.low);
+  const priceHigh = Math.max(...allHighs);
+  const priceLow = Math.min(...allLows);
+  const range = priceHigh - priceLow;
+
+  if (range <= 0) {
+    const p = candles[candles.length - 1].close;
+    return { vpoc: p, valueAreaHigh: p, valueAreaLow: p, profileBins: [] };
+  }
+
+  const binSize = range / bins;
+  const profile = new Array(bins).fill(0);
+
+  // Distribute each candle's volume across its price range
+  for (const candle of candles) {
+    const lowBin = Math.floor((candle.low - priceLow) / binSize);
+    const highBin = Math.min(bins - 1, Math.floor((candle.high - priceLow) / binSize));
+    const binsSpanned = highBin - lowBin + 1;
+    const volumePerBin = candle.volume / binsSpanned;
+
+    for (let b = Math.max(0, lowBin); b <= highBin; b++) {
+      profile[b] += volumePerBin;
+    }
+  }
+
+  // Find VPOC (bin with highest volume)
+  let maxVol = 0;
+  let vpocBin = 0;
+  for (let i = 0; i < profile.length; i++) {
+    if (profile[i] > maxVol) {
+      maxVol = profile[i];
+      vpocBin = i;
+    }
+  }
+
+  const vpoc = priceLow + (vpocBin + 0.5) * binSize;
+
+  // Value Area (70% of total volume)
+  const totalVolume = profile.reduce((a, b) => a + b, 0);
+  const targetVolume = totalVolume * 0.7;
+
+  let vaVolume = profile[vpocBin];
+  let vaLow = vpocBin;
+  let vaHigh = vpocBin;
+
+  while (vaVolume < targetVolume && (vaLow > 0 || vaHigh < bins - 1)) {
+    const expandLow = vaLow > 0 ? profile[vaLow - 1] : 0;
+    const expandHigh = vaHigh < bins - 1 ? profile[vaHigh + 1] : 0;
+
+    if (expandLow >= expandHigh && vaLow > 0) {
+      vaLow--;
+      vaVolume += profile[vaLow];
+    } else if (vaHigh < bins - 1) {
+      vaHigh++;
+      vaVolume += profile[vaHigh];
+    } else {
+      break;
+    }
+  }
+
+  const valueAreaLow = priceLow + vaLow * binSize;
+  const valueAreaHigh = priceLow + (vaHigh + 1) * binSize;
+
+  const profileBins = profile.map((vol, i) => ({
+    price: priceLow + (i + 0.5) * binSize,
+    volume: vol,
+  }));
+
+  return { vpoc, valueAreaHigh, valueAreaLow, profileBins };
+}
+
+/**
+ * Calculate Momentum Confluence Score (0-100).
+ * Combines RSI, MACD, ADX, Stochastic signals into a single score.
+ */
+function calculateMomentumConfluence(indicators: {
+  rsi: number;
+  macdHistogram: number;
+  adx: number;
+  stochK?: number;
+  trendDirection: 'bullish' | 'bearish' | 'neutral';
+}): { score: number; signals: { indicator: string; signal: 'bullish' | 'bearish' | 'neutral'; weight: number }[] } {
+  const signals: { indicator: string; signal: 'bullish' | 'bearish' | 'neutral'; weight: number }[] = [];
+
+  // RSI (25% weight)
+  let rsiSignal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  if (indicators.rsi < 35) rsiSignal = 'bullish'; // Oversold = potential reversal up
+  else if (indicators.rsi > 65) rsiSignal = 'bearish'; // Overbought = potential reversal down
+  else if (indicators.rsi > 50) rsiSignal = 'bullish';
+  else rsiSignal = 'bearish';
+  signals.push({ indicator: 'RSI', signal: rsiSignal, weight: 0.25 });
+
+  // MACD Histogram (30% weight)
+  let macdSignal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  if (indicators.macdHistogram > 0) macdSignal = 'bullish';
+  else if (indicators.macdHistogram < 0) macdSignal = 'bearish';
+  signals.push({ indicator: 'MACD', signal: macdSignal, weight: 0.30 });
+
+  // ADX Trend Strength (25% weight)
+  let adxSignal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  if (indicators.adx > 25) {
+    adxSignal = indicators.trendDirection === 'bearish' ? 'bearish' : 'bullish';
+  }
+  signals.push({ indicator: 'ADX', signal: adxSignal, weight: 0.25 });
+
+  // Stochastic K (20% weight)
+  if (indicators.stochK != null) {
+    let stochSignal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+    if (indicators.stochK < 20) stochSignal = 'bullish';
+    else if (indicators.stochK > 80) stochSignal = 'bearish';
+    else if (indicators.stochK > 50) stochSignal = 'bullish';
+    else stochSignal = 'bearish';
+    signals.push({ indicator: 'Stochastic', signal: stochSignal, weight: 0.20 });
+  }
+
+  // Calculate weighted score (0 = full bearish, 100 = full bullish)
+  let totalWeight = 0;
+  let weightedSum = 0;
+  for (const s of signals) {
+    totalWeight += s.weight;
+    if (s.signal === 'bullish') weightedSum += s.weight * 100;
+    else if (s.signal === 'neutral') weightedSum += s.weight * 50;
+    // bearish = 0
+  }
+
+  const score = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 50;
+
+  return { score, signals };
+}
+
+/**
+ * Calculate Open Interest Delta (rate of change).
+ * Positive delta = new money entering, negative = positions closing.
+ */
+function calculateOIDelta(
+  currentOI: number,
+  previousOI: number | null
+): { delta: number; deltaPercent: number; interpretation: 'increasing' | 'decreasing' | 'stable' } {
+  if (!previousOI || previousOI <= 0) {
+    return { delta: 0, deltaPercent: 0, interpretation: 'stable' };
+  }
+
+  const delta = currentOI - previousOI;
+  const deltaPercent = (delta / previousOI) * 100;
+
+  let interpretation: 'increasing' | 'decreasing' | 'stable';
+  if (deltaPercent > 2) interpretation = 'increasing';
+  else if (deltaPercent < -2) interpretation = 'decreasing';
+  else interpretation = 'stable';
+
+  return { delta, deltaPercent: parseFloat(deltaPercent.toFixed(2)), interpretation };
+}
+
 function calculateBollingerBands(
   prices: number[],
   period: number = 20,
@@ -3354,6 +3681,7 @@ export const analysisEngine = {
       fearGreed,
       btcNewsSentiment,
       btcFundingRate,
+      fundingSpread,
       btcOpenInterest,
       btcLongShortRatio,
       btcTopTraderSentiment,
@@ -3366,6 +3694,7 @@ export const analysisEngine = {
       fetchFearGreedIndex(),
       fetchNewsSentiment('BTC'),
       fetchFundingRate('BTC'),
+      fetchFundingRateSpread(['BTC', 'ETH', 'SOL']),
       fetchOpenInterest('BTC'),
       fetchLongShortRatio('BTC'),
       fetchTopTraderSentiment('BTC'),
@@ -3532,6 +3861,8 @@ export const analysisEngine = {
     if (timeframesAligned >= 3) score += 1;
     // Futures data impact
     if (Math.abs(btcFundingRate.fundingRate) < 0.03) score += 0.5; // Healthy funding
+    if (fundingSpread.interpretation === 'extreme') score -= 0.5; // Market dislocation
+    else if (fundingSpread.interpretation === 'compressed') score += 0.3; // Calm market
     if (btcLongShortRatio.longShortRatio > 0.8 && btcLongShortRatio.longShortRatio < 1.5) score += 0.5;
     // News sentiment bonus/penalty
     if (btcNewsSentiment.overallSentiment === 'bullish') score += 0.5;
@@ -3564,6 +3895,12 @@ export const analysisEngine = {
       futuresData: {
         fundingRate: btcFundingRate.fundingRate,
         fundingRateInterpretation,
+        fundingRateSpread: {
+          average: fundingSpread.average,
+          spread: fundingSpread.spread,
+          interpretation: fundingSpread.interpretation,
+          rates: fundingSpread.rates,
+        },
         openInterest: btcOpenInterest.openInterestValue,
         longShortRatio: btcLongShortRatio.longShortRatio,
         longAccount: btcLongShortRatio.longAccount,
@@ -3670,6 +4007,7 @@ export const analysisEngine = {
     // Traditional indicators (kept for backwards compatibility in indicators object)
     const rsi = calculateRSI(prices4h);
     const macd = calculateMACD(prices4h);
+    const macdDivergence = detectMACDDivergence(prices4h);
     const bb = calculateBollingerBands(prices4h);
     const atr = calculateATR(candles4h);
 
@@ -3680,6 +4018,19 @@ export const analysisEngine = {
 
     // Support/Resistance levels - use primary timeframe candles (same timeframe as analysis)
     const levels = findSupportResistance(candlesPrimary);
+
+    // Volume Profile & VPOC
+    const volumeProfile = calculateVolumeProfile(candlesPrimary);
+
+    // Momentum Confluence Score
+    const trendDir = ma20 > ma50 ? 'bullish' : ma20 < ma50 ? 'bearish' : 'neutral';
+    const momentumConfluence = calculateMomentumConfluence({
+      rsi,
+      macdHistogram: macd.histogram,
+      adx: stepIndicators.adx ?? 25,
+      stochK: stepIndicators.stochasticK ?? undefined,
+      trendDirection: trendDir as 'bullish' | 'bearish' | 'neutral',
+    });
 
     // ===== TFT FORECAST (Primary) or Statistical Fallback =====
     // Try to get prediction from TFT service first
@@ -4056,10 +4407,30 @@ export const analysisEngine = {
     if (netFlowUsd > 100000) whaleBias = 'accumulation';
     else if (netFlowUsd < -100000) whaleBias = 'distribution';
 
-    // Smart money positioning
+    // Smart Money Index (SMI) — real formula adapted for crypto
+    // Uses session-weighted volume-price analysis to detect institutional activity
+    const smiCandles = candlesPrimary.map(c => ({
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: c.volume,
+      timestamp: c.timestamp ?? 0,
+    }));
+    const smiResult = calculateSmartMoneyIndex(smiCandles);
+
+    // Determine positioning from SMI trend + order book confirmation
     let smartMoneyPositioning: 'long' | 'short' | 'neutral' = 'neutral';
-    if (orderBookImbalance > 0.2) smartMoneyPositioning = 'long';
-    else if (orderBookImbalance < -0.2) smartMoneyPositioning = 'short';
+    if (smiResult.smiTrend === 'accumulating' && smiResult.confidence >= 50) {
+      smartMoneyPositioning = 'long';
+    } else if (smiResult.smiTrend === 'distributing' && smiResult.confidence >= 50) {
+      smartMoneyPositioning = 'short';
+    } else if (orderBookImbalance > 0.2) {
+      // Fallback to order book when SMI is neutral or low confidence
+      smartMoneyPositioning = 'long';
+    } else if (orderBookImbalance < -0.2) {
+      smartMoneyPositioning = 'short';
+    }
 
     // Overall risk level
     const warnings: string[] = [];
@@ -4247,7 +4618,11 @@ export const analysisEngine = {
       ],
       smartMoney: {
         positioning: smartMoneyPositioning,
-        confidence: Math.round(Math.abs(orderBookImbalance) * 100),
+        confidence: smiResult.confidence > 30 ? smiResult.confidence : Math.round(Math.abs(orderBookImbalance) * 100),
+        smiValue: smiResult.smiValue,
+        smiTrend: smiResult.smiTrend,
+        smiDivergence: smiResult.divergence,
+        smartSessionRatio: smiResult.smartSessionRatio,
       },
       contractSecurity,
       riskLevel,
@@ -4511,6 +4886,20 @@ export const analysisEngine = {
         confidence: timingGateResult.confidence,
         urgency: timingGateResult.urgency,
       },
+      // New: Volume Profile & Momentum Confluence
+      volumeProfile: {
+        vpoc: volumeProfile.vpoc,
+        valueAreaHigh: volumeProfile.valueAreaHigh,
+        valueAreaLow: volumeProfile.valueAreaLow,
+      },
+      momentumConfluence: {
+        score: momentumConfluence.score,
+        signals: momentumConfluence.signals,
+      },
+      macdDivergence: {
+        type: macdDivergence.type,
+        strength: macdDivergence.strength,
+      },
     };
   },
 
@@ -4729,32 +5118,37 @@ export const analysisEngine = {
       fakeoutRisk = 'high';
     }
 
-    // Liquidation levels (estimated)
-    const longLiquidations: TrapCheckResult['liquidationLevels'] = [
-      {
-        price: roundPrice(currentPrice * 0.9),
-        amountUsd: ticker.quoteVolume24h * 0.1,
-        type: 'longs',
-      },
-      {
-        price: roundPrice(currentPrice * 0.85),
-        amountUsd: ticker.quoteVolume24h * 0.15,
-        type: 'longs',
-      },
+    // Liquidation levels (ATR-based estimation)
+    // Common leverage levels: 5x (20% move), 10x (10% move), 20x (5% move), 50x (2% move)
+    const atr = calculateATR(candles4h);
+    const atrPercent = (atr / currentPrice) * 100;
+    const leverageLevels = [
+      { leverage: 50, distance: 0.02, volumeFactor: 0.05 },
+      { leverage: 20, distance: 0.05, volumeFactor: 0.10 },
+      { leverage: 10, distance: 0.10, volumeFactor: 0.15 },
+      { leverage: 5, distance: 0.20, volumeFactor: 0.20 },
     ];
 
-    const shortLiquidations: TrapCheckResult['liquidationLevels'] = [
-      {
-        price: roundPrice(currentPrice * 1.1),
-        amountUsd: ticker.quoteVolume24h * 0.08,
-        type: 'shorts',
-      },
-      {
-        price: roundPrice(currentPrice * 1.15),
-        amountUsd: ticker.quoteVolume24h * 0.12,
-        type: 'shorts',
-      },
-    ];
+    const longLiquidations: TrapCheckResult['liquidationLevels'] = leverageLevels
+      .filter(l => l.distance * 100 <= atrPercent * 3) // Only show levels within 3x ATR
+      .map(l => ({
+        price: roundPrice(currentPrice * (1 - l.distance)),
+        amountUsd: ticker.quoteVolume24h * l.volumeFactor,
+        type: 'longs' as const,
+      }));
+
+    const shortLiquidations: TrapCheckResult['liquidationLevels'] = leverageLevels
+      .filter(l => l.distance * 100 <= atrPercent * 3)
+      .map(l => ({
+        price: roundPrice(currentPrice * (1 + l.distance)),
+        amountUsd: ticker.quoteVolume24h * l.volumeFactor * 0.8,
+        type: 'shorts' as const,
+      }));
+
+    // Open Interest Delta
+    const openInterest = ticker.openInterest ?? 0;
+    const previousOI = ticker.previousOpenInterest ?? null;
+    const oiDelta = calculateOIDelta(openInterest, previousOI);
 
     // Counter strategies
     const counterStrategy: string[] = [];
