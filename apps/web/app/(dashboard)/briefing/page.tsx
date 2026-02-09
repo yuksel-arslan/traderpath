@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { authFetch } from '@/lib/auth';
+import { authFetch } from '@/lib/api';
 import { Clock, TrendingUp, TrendingDown, AlertTriangle, Sparkles, RefreshCw } from 'lucide-react';
 import type { MorningBriefing } from '@/types/morning-briefing';
 
