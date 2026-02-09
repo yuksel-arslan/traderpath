@@ -54,7 +54,7 @@ export default function MethodologyPage() {
               </div>
             </div>
             <Link
-              href="/methodology"
+              href="/how-it-works"
               target="_blank"
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-500/10 rounded-lg border border-teal-200 dark:border-teal-500/20 hover:bg-teal-100 dark:hover:bg-teal-500/20 transition-colors"
             >
