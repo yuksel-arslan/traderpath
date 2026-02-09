@@ -66,6 +66,7 @@ import { ragRoutes } from './modules/rag';
 import notificationCenterRoutes from './modules/notifications/notification-center.routes';
 import smartAlertRoutes from './modules/automation/smart-alerts.routes';
 import { startSmartAlertJob, stopSmartAlertJob } from './modules/automation/smart-alerts.service';
+import { morningBriefingRoutes, startMorningBriefingJob, stopMorningBriefingJob } from './modules/morning-briefing';
 
 // ===========================================
 // Server Configuration
@@ -410,6 +411,10 @@ app.register(notificationCenterRoutes, { prefix: '/api/notifications' }); // Leg
 
 app.register(smartAlertRoutes, { prefix: '/api/v1/smart-alerts' });
 app.register(smartAlertRoutes, { prefix: '/api/smart-alerts' }); // Legacy
+
+// Morning Briefing routes
+app.register(morningBriefingRoutes, { prefix: '/api/v1' });
+app.register(morningBriefingRoutes, { prefix: '/api' }); // Legacy
 
 // ===========================================
 // 404 Handler
