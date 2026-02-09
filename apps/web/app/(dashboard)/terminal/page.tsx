@@ -116,7 +116,7 @@ type SortDir = 'asc' | 'desc';
 // Navigation
 // ---------------------------------------------------------------------------
 
-type SectionId = 'l1' | 'l2' | 'l3' | 'l4' | 'l5' | 'l7' | 'forecast';
+type SectionId = 'l1' | 'l2' | 'l3' | 'l4' | 'l5' | 'l7';
 
 interface NavItem {
   id: SectionId;
@@ -144,7 +144,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'l5', label: 'Asset Screener', tag: 'L5' },
       { id: 'l7', label: 'Trade Visualizer', tag: 'L7' },
-      { id: 'forecast', label: 'Forecast Path' },
     ],
   },
 ];
@@ -269,7 +268,7 @@ function Delta({ value, className }: { value: number; className?: string }) {
     : 'text-neutral-500 dark:text-neutral-400';
   const Icon = value > 0 ? ArrowUpRight : value < 0 ? ArrowDownRight : Minus;
   return (
-    <span className={cn('inline-flex items-center gap-0.5 font-mono text-xs', color, className)}>
+    <span className={cn('inline-flex items-center gap-0.5 font-sans text-xs', color, className)}>
       <Icon className="w-3 h-3" />
       {Math.abs(value).toFixed(1)}%
     </span>
@@ -295,7 +294,7 @@ function PhaseBadge({ phase }: { phase: string }) {
   };
   return (
     <span className={cn(
-      'px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider border rounded',
+      'px-1.5 py-0.5 text-[10px] font-sans uppercase tracking-wider border rounded',
       styles[phase] || styles.MID,
     )}>
       {phase}
@@ -311,7 +310,7 @@ function VerdictBadgeSmall({ verdict }: { verdict: string }) {
     AVOID: 'text-[#EF4444] dark:text-[#F87171]',
   };
   return (
-    <span className={cn('font-mono text-xs font-semibold', styles[verdict] || 'text-neutral-500')}>
+    <span className={cn('font-sans text-xs font-semibold', styles[verdict] || 'text-neutral-500')}>
       {verdict}
     </span>
   );
@@ -320,19 +319,19 @@ function VerdictBadgeSmall({ verdict }: { verdict: string }) {
 function DirectionTag({ direction }: { direction: string }) {
   if (direction === 'LONG') {
     return (
-      <span className="inline-flex items-center gap-0.5 text-[#22C55E] dark:text-[#4ADE80] text-xs font-mono">
+      <span className="inline-flex items-center gap-0.5 text-[#22C55E] dark:text-[#4ADE80] text-xs font-sans">
         <ArrowUpRight className="w-3 h-3" /> L
       </span>
     );
   }
   if (direction === 'SHORT') {
     return (
-      <span className="inline-flex items-center gap-0.5 text-[#EF4444] dark:text-[#F87171] text-xs font-mono">
+      <span className="inline-flex items-center gap-0.5 text-[#EF4444] dark:text-[#F87171] text-xs font-sans">
         <ArrowDownRight className="w-3 h-3" /> S
       </span>
     );
   }
-  return <span className="text-neutral-400 dark:text-neutral-500 text-xs font-mono">—</span>;
+  return <span className="text-neutral-400 dark:text-neutral-500 text-xs font-sans">—</span>;
 }
 
 function TrendIndicator({ trend }: { trend: string }) {
@@ -344,7 +343,7 @@ function TrendIndicator({ trend }: { trend: string }) {
     STRONG_DOWN: { icon: TrendingDown, color: 'text-[#EF4444] dark:text-[#F87171]', label: '▼▼' },
   };
   const c = config[trend] || config.FLAT;
-  return <span className={cn('font-mono text-xs', c.color)}>{c.label}</span>;
+  return <span className={cn('font-sans text-xs', c.color)}>{c.label}</span>;
 }
 
 function ScoreBar({ score }: { score: number }) {
@@ -363,7 +362,7 @@ function ScoreBar({ score }: { score: number }) {
           style={{ width: `${width}%` }}
         />
       </div>
-      <span className="font-mono text-xs text-neutral-600 dark:text-neutral-300 w-6 text-right tabular-nums">
+      <span className="font-sans text-xs text-neutral-600 dark:text-neutral-300 w-6 text-right tabular-nums">
         {score}
       </span>
     </div>
@@ -378,7 +377,7 @@ function SectionLabel({ label, layer, count }: { label: string; layer: string; c
   return (
     <div className="flex items-center justify-between mb-3">
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+        <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
           {layer}
         </span>
         <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">
@@ -386,7 +385,7 @@ function SectionLabel({ label, layer, count }: { label: string; layer: string; c
         </span>
       </div>
       {count !== undefined && (
-        <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+        <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
           {count}
         </span>
       )}
@@ -410,11 +409,11 @@ function L1MacroGrid({ metrics }: { metrics: MacroMetric[] }) {
           >
             <div className="flex items-center gap-1">
               <SignalDot signal={m.signal} />
-              <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider truncate">
+              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-wider truncate">
                 {m.label}
               </span>
             </div>
-            <span className="text-sm font-mono font-semibold text-neutral-900 dark:text-white tabular-nums">
+            <span className="text-sm font-sans font-semibold text-neutral-900 dark:text-white tabular-nums">
               {m.value}
             </span>
             {m.delta !== undefined && <Delta value={m.delta} />}
@@ -424,10 +423,10 @@ function L1MacroGrid({ metrics }: { metrics: MacroMetric[] }) {
 
       {/* Signal summary */}
       <div className="mt-3 border border-neutral-200 dark:border-neutral-800 rounded-sm bg-neutral-50/50 dark:bg-neutral-900/30 p-3">
-        <span className="text-[10px] font-mono text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest block mb-1.5">
+        <span className="text-[10px] font-sans text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest block mb-1.5">
           Interpretation
         </span>
-        <p className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
+        <p className="text-[11px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed">
           M2 money supply expanding (+2.3%) with Fed balance sheet contraction slowing. DXY weakening supports risk assets. Low VIX (14.2) indicates complacency — favorable for momentum strategies. Yield curve positive (+0.32) — no recession signal.
         </p>
       </div>
@@ -456,12 +455,12 @@ function L2MarketFlow({ flows }: { flows: MarketFlow[] }) {
               <PhaseBadge phase={f.phase} />
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="font-mono text-lg font-semibold tabular-nums text-neutral-900 dark:text-white">
+              <span className="font-sans text-lg font-semibold tabular-nums text-neutral-900 dark:text-white">
                 {f.flow7d > 0 ? '+' : ''}{f.flow7d.toFixed(1)}%
               </span>
-              <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">7D</span>
+              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">7D</span>
             </div>
-            <div className="flex items-center justify-between text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+            <div className="flex items-center justify-between text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
               <span>30D: {f.flow30d > 0 ? '+' : ''}{f.flow30d.toFixed(1)}%</span>
               <span>v: {f.velocity > 0 ? '+' : ''}{f.velocity.toFixed(1)}</span>
             </div>
@@ -481,10 +480,10 @@ function L2MarketFlow({ flows }: { flows: MarketFlow[] }) {
 
       {/* Rotation insight */}
       <div className="mt-3 border border-neutral-200 dark:border-neutral-800 rounded-sm bg-neutral-50/50 dark:bg-neutral-900/30 p-3">
-        <span className="text-[10px] font-mono text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest block mb-1.5">
+        <span className="text-[10px] font-sans text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest block mb-1.5">
           Rotation Signal
         </span>
-        <p className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
+        <p className="text-[11px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed">
           Capital rotating from Bonds (EXIT) → Crypto (EARLY). Stocks in MID phase with moderate inflow. Metals showing deceleration — approaching LATE phase. Strongest velocity in Crypto (+2.1).
         </p>
       </div>
@@ -504,10 +503,10 @@ function L3Sectors({ sectors }: { sectors: SectorData[] }) {
         <table className="w-full text-xs">
           <thead>
             <tr className="bg-neutral-50 dark:bg-neutral-900/50">
-              <th className="text-left p-2 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Sector</th>
-              <th className="text-right p-2 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Flow 7D</th>
-              <th className="text-right p-2 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Dom.</th>
-              <th className="text-center p-2 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Trend</th>
+              <th className="text-left p-2 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Sector</th>
+              <th className="text-right p-2 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Flow 7D</th>
+              <th className="text-right p-2 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Dom.</th>
+              <th className="text-center p-2 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Trend</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
@@ -517,7 +516,7 @@ function L3Sectors({ sectors }: { sectors: SectorData[] }) {
                 <td className="p-2 text-right">
                   <Delta value={s.flow} />
                 </td>
-                <td className="p-2 text-right font-mono text-neutral-500 dark:text-neutral-400 tabular-nums">
+                <td className="p-2 text-right font-sans text-neutral-500 dark:text-neutral-400 tabular-nums">
                   {s.dominance.toFixed(1)}%
                 </td>
                 <td className="p-2 text-center">
@@ -533,14 +532,14 @@ function L3Sectors({ sectors }: { sectors: SectorData[] }) {
 
       {/* Top sectors */}
       <div className="mt-3 flex items-center gap-3">
-        <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider shrink-0">
+        <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-wider shrink-0">
           Leading
         </span>
         <div className="flex flex-wrap gap-1">
           {sectors.filter((s) => s.trending === 'up').map((s) => (
             <span
               key={s.name}
-              className="px-1.5 py-0.5 text-[10px] font-mono border border-[#22C55E]/20 dark:border-[#4ADE80]/20 text-[#22C55E] dark:text-[#4ADE80] rounded"
+              className="px-1.5 py-0.5 text-[10px] font-sans border border-[#22C55E]/20 dark:border-[#4ADE80]/20 text-[#22C55E] dark:text-[#4ADE80] rounded"
             >
               {s.name} +{s.flow.toFixed(1)}%
             </span>
@@ -568,10 +567,10 @@ function OpportunityCard({ opportunity, type }: { opportunity: VerdictOpportunit
     <div className="bg-white dark:bg-neutral-950 p-3 flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <span className={cn('text-xl font-mono font-bold tracking-tight', actionColor)}>
+          <span className={cn('text-xl font-sans font-bold tracking-tight', actionColor)}>
             {opportunity.action}
           </span>
-          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase">
+          <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase">
             {opportunity.market}
           </span>
         </div>
@@ -580,10 +579,10 @@ function OpportunityCard({ opportunity, type }: { opportunity: VerdictOpportunit
 
       <div>
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+          <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
             Confidence
           </span>
-          <span className={cn('text-sm font-mono font-bold tabular-nums', actionColor)}>
+          <span className={cn('text-sm font-sans font-bold tabular-nums', actionColor)}>
             {opportunity.confidence}%
           </span>
         </div>
@@ -604,7 +603,7 @@ function OpportunityCard({ opportunity, type }: { opportunity: VerdictOpportunit
           {opportunity.suggestedAssets.map((s) => (
             <span
               key={s}
-              className="px-1.5 py-0.5 text-[10px] font-mono border border-neutral-200 dark:border-neutral-800 rounded text-neutral-600 dark:text-neutral-300"
+              className="px-1.5 py-0.5 text-[10px] font-sans border border-neutral-200 dark:border-neutral-800 rounded text-neutral-600 dark:text-neutral-300"
             >
               {s}
             </span>
@@ -635,14 +634,14 @@ function L4VerdictEngine({ verdict }: { verdict: VerdictData }) {
         {/* Regime bar */}
         <div className="bg-neutral-50 dark:bg-neutral-900/50 px-3 py-2 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center gap-2">
-            <span className={cn('text-xs font-mono font-bold tracking-wider', regime.color)}>
+            <span className={cn('text-xs font-sans font-bold tracking-wider', regime.color)}>
               {regime.label}
             </span>
-            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
               {passedCount}/{totalGates} gates passed
             </span>
           </div>
-          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 tabular-nums">
+          <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 tabular-nums">
             {verdict.timestamp}
           </span>
         </div>
@@ -653,7 +652,7 @@ function L4VerdictEngine({ verdict }: { verdict: VerdictData }) {
             {verdict.gates.map((gate, i) => (
               <div key={i} className="flex items-start gap-2">
                 <span className={cn(
-                  'text-xs font-mono shrink-0 mt-0.5',
+                  'text-xs font-sans shrink-0 mt-0.5',
                   gate.passed
                     ? 'text-[#22C55E] dark:text-[#4ADE80]'
                     : 'text-[#EF4444] dark:text-[#F87171]',
@@ -662,7 +661,7 @@ function L4VerdictEngine({ verdict }: { verdict: VerdictData }) {
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-mono font-medium text-neutral-900 dark:text-white">
+                    <span className="text-[11px] font-sans font-medium text-neutral-900 dark:text-white">
                       {gate.label}
                     </span>
                   </div>
@@ -681,14 +680,14 @@ function L4VerdictEngine({ verdict }: { verdict: VerdictData }) {
             <OpportunityCard opportunity={verdict.buy} type="buy" />
           ) : (
             <div className="bg-white dark:bg-neutral-950 p-3 flex items-center justify-center">
-              <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">No BUY signal</span>
+              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">No BUY signal</span>
             </div>
           )}
           {verdict.sell ? (
             <OpportunityCard opportunity={verdict.sell} type="sell" />
           ) : (
             <div className="bg-white dark:bg-neutral-950 p-3 flex items-center justify-center">
-              <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">No SELL signal</span>
+              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">No SELL signal</span>
             </div>
           )}
         </div>
@@ -696,7 +695,7 @@ function L4VerdictEngine({ verdict }: { verdict: VerdictData }) {
         {/* Summary line */}
         {allPassed && verdict.buy && (
           <div className="bg-white dark:bg-neutral-950 px-3 py-2 border-t border-neutral-200 dark:border-neutral-800">
-            <p className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 leading-relaxed">
+            <p className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 leading-relaxed">
               All gates passed. Primary opportunity in {verdict.buy.market} ({verdict.buy.phase} phase).
               {verdict.sell ? ` Consider reducing ${verdict.sell.market} exposure.` : ''}
             </p>
@@ -783,7 +782,7 @@ function L5Screener({
   const SortHeader = ({ label, sKey, className }: { label: string; sKey: SortKey; className?: string }) => (
     <th
       className={cn(
-        'p-2 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider cursor-pointer select-none hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors',
+        'p-2 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider cursor-pointer select-none hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors',
         className,
       )}
       onClick={() => handleSort(sKey)}
@@ -811,7 +810,7 @@ function L5Screener({
             placeholder="Search symbol or name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 text-xs font-mono bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600 focus:outline-none focus:border-neutral-400 dark:focus:border-neutral-600 transition-colors"
+            className="w-full pl-8 pr-3 py-2 text-xs font-sans bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600 focus:outline-none focus:border-neutral-400 dark:focus:border-neutral-600 transition-colors"
           />
         </div>
         {/* Market filter */}
@@ -821,7 +820,7 @@ function L5Screener({
               key={m}
               onClick={() => setMarketFilter(m)}
               className={cn(
-                'px-2.5 py-2 text-[10px] font-mono uppercase tracking-wider transition-colors min-w-[48px]',
+                'px-2.5 py-2 text-[10px] font-sans uppercase tracking-wider transition-colors min-w-[48px]',
                 marketFilter === m
                   ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
                   : 'bg-white dark:bg-neutral-950 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white',
@@ -846,8 +845,8 @@ function L5Screener({
                 <SortHeader label="Volume" sKey="volume" className="text-right hidden md:table-cell" />
                 <SortHeader label="AI Score" sKey="aiScore" className="text-left" />
                 <SortHeader label="Trend" sKey="trend" className="text-center" />
-                <th className="p-2 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider text-center">Verdict</th>
-                <th className="p-2 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider text-center">Dir</th>
+                <th className="p-2 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider text-center">Verdict</th>
+                <th className="p-2 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider text-center">Dir</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
@@ -862,12 +861,12 @@ function L5Screener({
                       : 'hover:bg-neutral-50 dark:hover:bg-neutral-900/30',
                   )}
                 >
-                  <td className="p-2 text-center font-mono text-neutral-400 dark:text-neutral-500 tabular-nums">
+                  <td className="p-2 text-center font-sans text-neutral-400 dark:text-neutral-500 tabular-nums">
                     {asset.rank}
                   </td>
                   <td className="p-2">
                     <div className="flex flex-col">
-                      <span className="font-mono font-semibold text-neutral-900 dark:text-white">
+                      <span className="font-sans font-semibold text-neutral-900 dark:text-white">
                         {asset.symbol}
                       </span>
                       <span className="text-[10px] text-neutral-400 dark:text-neutral-500 truncate max-w-[120px]">
@@ -875,13 +874,13 @@ function L5Screener({
                       </span>
                     </div>
                   </td>
-                  <td className="p-2 text-right font-mono font-medium text-neutral-900 dark:text-white tabular-nums">
+                  <td className="p-2 text-right font-sans font-medium text-neutral-900 dark:text-white tabular-nums">
                     {formatPrice(asset.price)}
                   </td>
                   <td className="p-2 text-right">
                     <Delta value={asset.change24h} />
                   </td>
-                  <td className="p-2 text-right font-mono text-neutral-500 dark:text-neutral-400 hidden md:table-cell tabular-nums">
+                  <td className="p-2 text-right font-sans text-neutral-500 dark:text-neutral-400 hidden md:table-cell tabular-nums">
                     {formatNumber(asset.volume)}
                   </td>
                   <td className="p-2 w-28">
@@ -900,7 +899,7 @@ function L5Screener({
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-xs text-neutral-400 dark:text-neutral-500 font-mono">
+                  <td colSpan={9} className="p-8 text-center text-xs text-neutral-400 dark:text-neutral-500 font-sans">
                     No assets match your criteria
                   </td>
                 </tr>
@@ -950,7 +949,7 @@ function L7TradeVisualizer({
         layout: {
           background: { type: ColorType.Solid, color: isDark ? '#0a0a0a' : '#FFFFFF' },
           textColor: isDark ? '#737373' : '#A3A3A3',
-          fontFamily: "'Geist Mono', monospace",
+          fontFamily: "'Inter', sans-serif",
           fontSize: 10,
         },
         grid: {
@@ -1049,6 +1048,72 @@ function L7TradeVisualizer({
         });
       }
 
+      // --- Forecast Path (P10 / P50 / P90 projection) ---
+      const isLong = selectedAsset.direction === 'LONG';
+      const score = selectedAsset.aiScore;
+      const pctMove = (score / 100) * 8; // max ~8% expected move
+      const lastCandle = candles[candles.length - 1];
+      const lastClose = lastCandle.close;
+      const lastTime = lastCandle.time as number;
+      const forecastHours = 48;
+
+      const p50Data: { time: Time; value: number }[] = [];
+      const p90Data: { time: Time; value: number }[] = [];
+      const p10Data: { time: Time; value: number }[] = [];
+
+      for (let h = 0; h <= forecastHours; h++) {
+        const t = (lastTime + h * 3600) as Time;
+        const progress = h / forecastHours;
+        // Smooth easing curve
+        const ease = 1 - Math.pow(1 - progress, 2);
+
+        const p50Offset = (pctMove / 100) * ease * (isLong ? 1 : -1);
+        const bandWidth = (pctMove / 100) * 0.6 * ease; // P90/P10 spread
+        const p90Offset = p50Offset + bandWidth * (isLong ? 1 : -1);
+        const p10Offset = p50Offset - bandWidth * (isLong ? 1 : -1);
+
+        p50Data.push({ time: t, value: lastClose * (1 + p50Offset) });
+        p90Data.push({ time: t, value: lastClose * (1 + p90Offset) });
+        p10Data.push({ time: t, value: lastClose * (1 + p10Offset) });
+      }
+
+      // P90 upper band area (semi-transparent fill to baseline)
+      const p90Area = chart.addAreaSeries({
+        lineColor: 'rgba(34, 197, 94, 0.3)',
+        topColor: 'rgba(34, 197, 94, 0.08)',
+        bottomColor: 'rgba(34, 197, 94, 0.0)',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dotted,
+        priceLineVisible: false,
+        crosshairMarkerVisible: false,
+        lastValueVisible: false,
+      });
+      p90Area.setData(p90Data);
+
+      // P10 lower band area
+      const p10Area = chart.addAreaSeries({
+        lineColor: 'rgba(34, 197, 94, 0.3)',
+        topColor: 'rgba(34, 197, 94, 0.0)',
+        bottomColor: 'rgba(34, 197, 94, 0.08)',
+        lineWidth: 1,
+        lineStyle: LineStyle.Dotted,
+        priceLineVisible: false,
+        crosshairMarkerVisible: false,
+        lastValueVisible: false,
+      });
+      p10Area.setData(p10Data);
+
+      // P50 median forecast line
+      const p50Line = chart.addLineSeries({
+        color: '#22C55E',
+        lineWidth: 2,
+        lineStyle: LineStyle.Dashed,
+        priceLineVisible: false,
+        crosshairMarkerVisible: false,
+        lastValueVisible: true,
+      });
+      p50Line.setData(p50Data);
+
       chart.timeScale().fitContent();
 
       // Resize handler
@@ -1084,7 +1149,7 @@ function L7TradeVisualizer({
         <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 h-[300px] sm:h-[400px] flex items-center justify-center">
           <div className="text-center">
             <Eye className="w-5 h-5 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
-            <p className="text-xs font-mono text-neutral-400 dark:text-neutral-500">
+            <p className="text-xs font-sans text-neutral-400 dark:text-neutral-500">
               Select an asset from the screener
             </p>
           </div>
@@ -1099,13 +1164,13 @@ function L7TradeVisualizer({
       {/* Asset header */}
       <div className="flex items-center justify-between mb-2 px-1">
         <div className="flex items-center gap-2">
-          <span className="font-mono font-bold text-sm text-neutral-900 dark:text-white">
+          <span className="font-sans font-bold text-sm text-neutral-900 dark:text-white">
             {selectedAsset.symbol}
           </span>
           <DirectionTag direction={selectedAsset.direction} />
           <VerdictBadgeSmall verdict={selectedAsset.verdict} />
         </div>
-        <span className="font-mono text-sm font-semibold text-neutral-900 dark:text-white tabular-nums">
+        <span className="font-sans text-sm font-semibold text-neutral-900 dark:text-white tabular-nums">
           {formatPrice(selectedAsset.price)}
         </span>
       </div>
@@ -1129,104 +1194,39 @@ function L7TradeVisualizer({
             { label: 'R:R', value: tradePlan.rr, color: 'text-neutral-900 dark:text-white' },
           ].map((item) => (
             <div key={item.label} className="bg-white dark:bg-neutral-950 p-2 text-center">
-              <div className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-0.5">
+              <div className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-0.5">
                 {item.label}
               </div>
-              <div className={cn('text-xs font-mono font-semibold tabular-nums', item.color)}>
+              <div className={cn('text-xs font-sans font-semibold tabular-nums', item.color)}>
                 {item.label === 'R:R' ? `${item.value.toFixed(1)}x` : formatPriceValue(item.value)}
               </div>
             </div>
           ))}
         </div>
       )}
-    </section>
-  );
-}
 
-// ---------------------------------------------------------------------------
-// Forecast Path (probabilistic projection)
-// ---------------------------------------------------------------------------
-
-function ForecastPath({ selectedAsset }: { selectedAsset: ScreenerAsset | null }) {
-  if (!selectedAsset) {
-    return (
-      <section>
-        <SectionLabel layer="—" label="Forecast Path" />
-        <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 h-[180px] flex items-center justify-center">
-          <div className="text-center">
-            <Eye className="w-5 h-5 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
-            <p className="text-xs font-mono text-neutral-400 dark:text-neutral-500">
-              Select an asset from the screener
-            </p>
+      {/* Forecast path info bar */}
+      {(() => {
+        const isLong = selectedAsset.direction === 'LONG';
+        const score = selectedAsset.aiScore;
+        const pctMove = (score / 100) * 8;
+        const p50Target = selectedAsset.price * (1 + (isLong ? pctMove : -pctMove) / 100);
+        return (
+          <div className="mt-2 border border-neutral-200 dark:border-neutral-800 rounded-sm bg-neutral-50/50 dark:bg-neutral-900/30 px-3 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-sans text-[#22C55E] dark:text-[#4ADE80] uppercase tracking-widest">
+                Forecast 48h
+              </span>
+              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
+                Expected: <span className="text-neutral-600 dark:text-neutral-300 tabular-nums">{isLong ? '+' : '-'}{pctMove.toFixed(1)}%</span>
+              </span>
+            </div>
+            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
+              P50 target: <span className="text-neutral-600 dark:text-neutral-300 font-semibold tabular-nums">{formatPrice(p50Target)}</span>
+            </span>
           </div>
-        </div>
-      </section>
-    );
-  }
-
-  const isLong = selectedAsset.direction === 'LONG';
-  const score = selectedAsset.aiScore;
-  const pctMove = (score / 100) * 8;
-
-  return (
-    <section>
-      <SectionLabel layer="—" label="Forecast Path" />
-      <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 p-3">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
-            Price Path Projection (48h) — {selectedAsset.symbol}
-          </span>
-          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
-            AI Score: {score}
-          </span>
-        </div>
-
-        {/* SVG Probabilistic bands */}
-        <svg viewBox="0 0 400 80" className="w-full h-16 sm:h-20">
-          {/* P90 band */}
-          <path
-            d={isLong
-              ? 'M0,65 C100,62 200,45 300,25 L400,20 L400,70 L300,68 C200,72 100,72 0,70 Z'
-              : 'M0,15 C100,18 200,35 300,55 L400,60 L400,10 L300,12 C200,8 100,8 0,10 Z'
-            }
-            className="fill-[#22C55E]/5 dark:fill-[#4ADE80]/5"
-          />
-          {/* P50 band */}
-          <path
-            d={isLong
-              ? 'M0,60 C100,56 200,42 300,30 L400,28 L400,62 L300,58 C200,65 100,67 0,65 Z'
-              : 'M0,20 C100,24 200,38 300,50 L400,52 L400,18 L300,22 C200,15 100,13 0,15 Z'
-            }
-            className="fill-[#22C55E]/10 dark:fill-[#4ADE80]/10"
-          />
-          {/* P50 line (median) */}
-          <path
-            d={isLong
-              ? 'M0,62 C100,58 200,48 300,38 L400,34'
-              : 'M0,18 C100,22 200,32 300,42 L400,46'
-            }
-            fill="none"
-            className="stroke-[#22C55E] dark:stroke-[#4ADE80]"
-            strokeWidth="1.5"
-            strokeDasharray="4,2"
-          />
-          {/* Current price line */}
-          <line x1="0" y1="40" x2="400" y2="40" className="stroke-neutral-300 dark:stroke-neutral-700" strokeWidth="0.5" strokeDasharray="2,2" />
-          {/* Labels */}
-          <text x="385" y={isLong ? 18 : 58} className="fill-[#22C55E]/40 dark:fill-[#4ADE80]/40 text-[8px] font-mono" textAnchor="end">P90</text>
-          <text x="385" y={isLong ? 32 : 50} className="fill-[#22C55E]/60 dark:fill-[#4ADE80]/60 text-[8px] font-mono" textAnchor="end">P50</text>
-          <text x="385" y="43" className="fill-neutral-400 text-[8px] font-mono" textAnchor="end">NOW</text>
-        </svg>
-
-        <div className="flex items-center justify-between mt-1">
-          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
-            Expected: {isLong ? '+' : '-'}{pctMove.toFixed(1)}%
-          </span>
-          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
-            P50 target: {formatPrice(selectedAsset.price * (1 + (isLong ? pctMove : -pctMove) / 100))}
-          </span>
-        </div>
-      </div>
+        );
+      })()}
     </section>
   );
 }
@@ -1250,10 +1250,10 @@ function TerminalHeader() {
           <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
           <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
         </div>
-        <span className="text-sm font-mono font-bold text-neutral-900 dark:text-white tracking-tight">
+        <span className="text-sm font-sans font-bold text-neutral-900 dark:text-white tracking-tight">
           TraderPath
         </span>
-        <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+        <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
           Terminal
         </span>
       </div>
@@ -1265,7 +1265,7 @@ function TerminalHeader() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22C55E] dark:bg-[#4ADE80] opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-[#22C55E] dark:bg-[#4ADE80]" />
           </span>
-          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden sm:inline">
+          <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden sm:inline">
             Live
           </span>
         </div>
@@ -1338,8 +1338,6 @@ function ContentPanel({
           tradePlan={tradePlan}
         />
       );
-    case 'forecast':
-      return <ForecastPath selectedAsset={selectedAsset} />;
     default:
       return null;
   }
@@ -1430,7 +1428,7 @@ export default function TestPage() {
                       >
                         {item.tag && (
                           <span className={cn(
-                            'text-[9px] font-mono tabular-nums w-4 shrink-0',
+                            'text-[9px] font-sans tabular-nums w-4 shrink-0',
                             isActive
                               ? 'text-[#14B8A6] dark:text-[#5EEAD4]'
                               : 'text-neutral-400 dark:text-neutral-600',
@@ -1461,13 +1459,13 @@ export default function TestPage() {
                     Selected
                   </span>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-mono font-semibold text-neutral-900 dark:text-white">
+                    <span className="text-xs font-sans font-semibold text-neutral-900 dark:text-white">
                       {selectedAsset.symbol}
                     </span>
                     <DirectionTag direction={selectedAsset.direction} />
                     <VerdictBadgeSmall verdict={selectedAsset.verdict} />
                   </div>
-                  <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 tabular-nums">
+                  <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 tabular-nums">
                     {formatPrice(selectedAsset.price)}
                   </span>
                 </div>
@@ -1498,10 +1496,10 @@ export default function TestPage() {
         {/* Footer */}
         <footer className="shrink-0 py-3 border-t border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
               TraderPath Financial Intelligence Terminal
             </span>
-            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
               Data for educational purposes only
             </span>
           </div>

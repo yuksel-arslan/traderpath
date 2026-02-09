@@ -264,7 +264,7 @@ function FlowBar({ value }: { value: number }) {
       <div className="w-16 h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
         <div className={cn('h-full rounded-full', color)} style={{ width: `${w}%` }} />
       </div>
-      <span className="text-[10px] font-mono tabular-nums">{value}</span>
+      <span className="text-[10px] font-sans tabular-nums">{value}</span>
     </div>
   );
 }
@@ -332,12 +332,12 @@ function StepPanel({ asset, stepId }: { asset: Asset; stepId: string }) {
       {/* Step header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-[9px] font-mono text-[#14B8A6] dark:text-[#5EEAD4] bg-[#14B8A6]/10 dark:bg-[#5EEAD4]/10 px-1.5 py-0.5 rounded">
+          <span className="text-[9px] font-sans text-[#14B8A6] dark:text-[#5EEAD4] bg-[#14B8A6]/10 dark:bg-[#5EEAD4]/10 px-1.5 py-0.5 rounded">
             S{stepNum}
           </span>
           <h3 className="text-sm font-sans font-semibold">{stepNames[stepId]}</h3>
         </div>
-        <div className={cn('flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold', statusBg(data.status), statusColor(data.status))}>
+        <div className={cn('flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-sans font-semibold', statusBg(data.status), statusColor(data.status))}>
           {data.status === 'pass' ? 'PASS' : data.status === 'warn' ? 'WARN' : 'FAIL'}
           <span className="text-[9px] opacity-70">{data.score.toFixed(1)}</span>
         </div>
@@ -349,7 +349,7 @@ function StepPanel({ asset, stepId }: { asset: Asset; stepId: string }) {
       {/* Details */}
       <div className="space-y-1.5">
         {data.details.map((d, i) => (
-          <div key={i} className="flex items-center gap-2 text-[11px] font-mono">
+          <div key={i} className="flex items-center gap-2 text-[11px] font-sans">
             <span className="text-slate-300 dark:text-slate-600">&middot;</span>
             <span className="text-slate-600 dark:text-slate-300">{d}</span>
           </div>
@@ -358,7 +358,7 @@ function StepPanel({ asset, stepId }: { asset: Asset; stepId: string }) {
 
       {/* Score bar */}
       <div className="pt-2">
-        <div className="flex items-center justify-between text-[10px] font-mono mb-1">
+        <div className="flex items-center justify-between text-[10px] font-sans mb-1">
           <span className="text-slate-400">Score</span>
           <span className={statusColor(data.status)}>{data.score.toFixed(1)}/10</span>
         </div>
@@ -393,44 +393,44 @@ function MLISPanel({ asset, layerId }: { asset: Asset; layerId: string }) {
       {/* Layer header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-[9px] font-mono text-violet-500 dark:text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded">
+          <span className="text-[9px] font-sans text-violet-500 dark:text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded">
             M{layerNum}
           </span>
           <h3 className="text-sm font-sans font-semibold">{layerNames[layerId]}</h3>
         </div>
-        <div className={cn('flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase', signalColor(data.signal))}>
+        <div className={cn('flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-sans font-semibold uppercase', signalColor(data.signal))}>
           {data.signal}
         </div>
       </div>
 
       {/* Confidence */}
       <div className="flex items-center gap-3">
-        <div className="text-[10px] font-mono text-slate-400">Confidence</div>
+        <div className="text-[10px] font-sans text-slate-400">Confidence</div>
         <div className="flex-1 h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full bg-violet-500 dark:bg-violet-400 transition-all"
             style={{ width: `${data.confidence}%` }}
           />
         </div>
-        <div className="text-[10px] font-mono font-semibold text-violet-500 dark:text-violet-400">{data.confidence}%</div>
+        <div className="text-[10px] font-sans font-semibold text-violet-500 dark:text-violet-400">{data.confidence}%</div>
       </div>
 
       {/* Score */}
       <div className="flex items-center gap-3">
-        <div className="text-[10px] font-mono text-slate-400">Score</div>
+        <div className="text-[10px] font-sans text-slate-400">Score</div>
         <div className="flex-1 h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
           <div
             className={cn('h-full rounded-full transition-all', data.signal === 'bullish' ? 'bg-emerald-500 dark:bg-[#00f5c4]' : data.signal === 'bearish' ? 'bg-red-500' : 'bg-slate-400')}
             style={{ width: `${data.score}%` }}
           />
         </div>
-        <div className={cn('text-[10px] font-mono font-semibold', signalColor(data.signal))}>{data.score}</div>
+        <div className={cn('text-[10px] font-sans font-semibold', signalColor(data.signal))}>{data.score}</div>
       </div>
 
       {/* Details */}
       <div className="space-y-1.5 pt-1">
         {data.details.map((d, i) => (
-          <div key={i} className="flex items-center gap-2 text-[11px] font-mono">
+          <div key={i} className="flex items-center gap-2 text-[11px] font-sans">
             <span className="text-slate-300 dark:text-slate-600">&middot;</span>
             <span className="text-slate-600 dark:text-slate-300">{d}</span>
           </div>
@@ -461,7 +461,7 @@ function AssetTable({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-xs font-mono">
+      <table className="w-full text-xs font-sans">
         <thead>
           <tr className="border-b border-black/[0.06] dark:border-white/[0.06]">
             <th className="text-left px-3 py-2">
@@ -599,7 +599,7 @@ function ContentPanel({
           <p className="text-xs text-slate-400">Select an asset from the table to view analysis.</p>
           <button
             onClick={() => {/* Switch to table handled by parent */}}
-            className="text-[10px] font-mono text-[#14B8A6] dark:text-[#5EEAD4] hover:underline"
+            className="text-[10px] font-sans text-[#14B8A6] dark:text-[#5EEAD4] hover:underline"
           >
             Go to Asset Table
           </button>
@@ -614,13 +614,13 @@ function ContentPanel({
       <div>
         {/* Asset context bar */}
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
-          <span className="text-xs font-mono font-semibold">{selectedAsset.symbol}</span>
+          <span className="text-xs font-sans font-semibold">{selectedAsset.symbol}</span>
           <span className="text-[10px] text-slate-400">{selectedAsset.name}</span>
           <ChevronRight className="w-3 h-3 text-slate-300" />
-          <span className={cn('text-[10px] font-mono font-bold', verdictColor(selectedAsset.verdict))}>
+          <span className={cn('text-[10px] font-sans font-bold', verdictColor(selectedAsset.verdict))}>
             {selectedAsset.verdict}
           </span>
-          <span className="text-[10px] font-mono tabular-nums text-slate-500">{selectedAsset.score.toFixed(1)}/10</span>
+          <span className="text-[10px] font-sans tabular-nums text-slate-500">{selectedAsset.score.toFixed(1)}/10</span>
         </div>
         <StepPanel asset={selectedAsset} stepId={activeSection} />
       </div>
@@ -633,10 +633,10 @@ function ContentPanel({
       <div>
         {/* Asset context bar */}
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
-          <span className="text-xs font-mono font-semibold">{selectedAsset.symbol}</span>
+          <span className="text-xs font-sans font-semibold">{selectedAsset.symbol}</span>
           <span className="text-[10px] text-slate-400">{selectedAsset.name}</span>
           <ChevronRight className="w-3 h-3 text-slate-300" />
-          <span className="text-[10px] font-mono text-violet-500 dark:text-violet-400 font-semibold">MLIS Pro</span>
+          <span className="text-[10px] font-sans text-violet-500 dark:text-violet-400 font-semibold">MLIS Pro</span>
         </div>
         <MLISPanel asset={selectedAsset} layerId={activeSection} />
       </div>
@@ -716,12 +716,12 @@ export default function ScreenerPage() {
         <div className="max-w-[1400px] mx-auto px-3 py-3 flex items-center justify-between gap-3">
           <div>
             <h1 className="text-sm font-sans font-semibold tracking-tight">SCREENER</h1>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-sans">
               L5 &middot; Full Asset Table &middot; {filtered.length} assets
             </p>
           </div>
 
-          <div className="hidden sm:flex items-center gap-4 text-[10px] font-mono">
+          <div className="hidden sm:flex items-center gap-4 text-[10px] font-sans">
             <span className="text-slate-400">GO: <span className="text-emerald-500 dark:text-[#00f5c4] font-semibold">{goCount}</span></span>
             <span className="text-slate-400">AVG: <span className="text-black dark:text-white font-semibold">{avgScore}</span></span>
             <span className="text-slate-400">TOTAL: <span className="text-black dark:text-white font-semibold">{filtered.length}</span></span>
@@ -740,7 +740,7 @@ export default function ScreenerPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search symbol or name..."
-              className="w-full pl-7 pr-7 py-1.5 text-xs font-mono bg-transparent border border-black/[0.06] dark:border-white/[0.06] rounded focus:outline-none focus:border-black/20 dark:focus:border-white/20 placeholder:text-slate-400"
+              className="w-full pl-7 pr-7 py-1.5 text-xs font-sans bg-transparent border border-black/[0.06] dark:border-white/[0.06] rounded focus:outline-none focus:border-black/20 dark:focus:border-white/20 placeholder:text-slate-400"
             />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2">
@@ -756,7 +756,7 @@ export default function ScreenerPage() {
                 key={m}
                 onClick={() => setMarket(m)}
                 className={cn(
-                  'px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors whitespace-nowrap',
+                  'px-2.5 py-1 text-[10px] font-sans uppercase tracking-wider transition-colors whitespace-nowrap',
                   market === m
                     ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
                     : 'text-slate-400 hover:text-black dark:hover:text-white',
@@ -771,7 +771,7 @@ export default function ScreenerPage() {
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={cn(
-              'flex items-center gap-1 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors',
+              'flex items-center gap-1 px-2.5 py-1 text-[10px] font-sans uppercase tracking-wider transition-colors',
               showFilters
                 ? 'text-black dark:text-white'
                 : 'text-slate-400 hover:text-black dark:hover:text-white',
@@ -785,14 +785,14 @@ export default function ScreenerPage() {
         {/* Expanded filters */}
         {showFilters && (
           <div className="max-w-[1400px] mx-auto px-3 pb-2 flex items-center gap-3">
-            <span className="text-[10px] text-slate-400 font-mono">VERDICT:</span>
+            <span className="text-[10px] text-slate-400 font-sans">VERDICT:</span>
             <div className="flex items-center gap-px">
               {VERDICTS.map((v) => (
                 <button
                   key={v}
                   onClick={() => setVerdictFilter(v)}
                   className={cn(
-                    'px-2 py-0.5 text-[10px] font-mono uppercase transition-colors',
+                    'px-2 py-0.5 text-[10px] font-sans uppercase transition-colors',
                     verdictFilter === v
                       ? v === 'ALL'
                         ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
@@ -862,7 +862,7 @@ export default function ScreenerPage() {
                     >
                       {item.tag && (
                         <span className={cn(
-                          'text-[9px] font-mono tabular-nums w-5 shrink-0',
+                          'text-[9px] font-sans tabular-nums w-5 shrink-0',
                           isActive
                             ? isMLIS
                               ? 'text-violet-500 dark:text-violet-400'
@@ -895,13 +895,13 @@ export default function ScreenerPage() {
                   Selected
                 </span>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-mono font-semibold">{selectedAsset.symbol}</span>
+                  <span className="text-xs font-sans font-semibold">{selectedAsset.symbol}</span>
                   <DirIcon dir={selectedAsset.direction} />
-                  <span className={cn('text-[9px] font-mono font-bold px-1 py-0.5 rounded', verdictBg(selectedAsset.verdict), verdictColor(selectedAsset.verdict))}>
+                  <span className={cn('text-[9px] font-sans font-bold px-1 py-0.5 rounded', verdictBg(selectedAsset.verdict), verdictColor(selectedAsset.verdict))}>
                     {selectedAsset.verdict}
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 tabular-nums">
+                <span className="text-[10px] font-sans text-slate-400 dark:text-slate-500 tabular-nums">
                   ${fmtPrice(selectedAsset.price)}
                 </span>
               </div>
@@ -929,7 +929,7 @@ export default function ScreenerPage() {
 
       {/* Footer summary */}
       <div className="border-t border-black/[0.06] dark:border-white/[0.06] shrink-0">
-        <div className="max-w-[1400px] mx-auto px-3 py-2 flex items-center justify-between text-[10px] font-mono text-slate-400">
+        <div className="max-w-[1400px] mx-auto px-3 py-2 flex items-center justify-between text-[10px] font-sans text-slate-400">
           <span>
             {filtered.length} of {MOCK_ASSETS.length} assets &middot; Sorted by {sortKey} {sortDir}
           </span>

@@ -168,7 +168,7 @@ function Delta({ value, size = 'sm' }: { value: number; size?: 'sm' | 'md' }) {
   const Icon = value > 0 ? ArrowUpRight : value < 0 ? ArrowDownRight : Minus;
   const textSize = size === 'md' ? 'text-sm' : 'text-xs';
   return (
-    <span className={cn('inline-flex items-center gap-0.5 font-mono', textSize, color)}>
+    <span className={cn('inline-flex items-center gap-0.5 font-sans', textSize, color)}>
       <Icon className={size === 'md' ? 'w-4 h-4' : 'w-3 h-3'} />
       {Math.abs(value).toFixed(1)}%
     </span>
@@ -212,7 +212,7 @@ function PhaseBadge({ phase, days }: { phase: string; days?: number }) {
     EXIT: 'text-[#EF4444] dark:text-[#F87171] border-[#EF4444]/20 dark:border-[#F87171]/20',
   };
   return (
-    <span className={cn('px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wider border rounded', styles[phase] || styles.MID)}>
+    <span className={cn('px-1.5 py-0.5 text-[10px] font-sans uppercase tracking-wider border rounded', styles[phase] || styles.MID)}>
       {phase}{days !== undefined ? ` · ${days}d` : ''}
     </span>
   );
@@ -226,7 +226,7 @@ function RotationBadge({ signal }: { signal: string | null }) {
     exiting: 'text-[#EF4444] dark:text-[#F87171]',
   };
   return (
-    <span className={cn('text-[10px] font-mono uppercase tracking-wider', styles[signal] || '')}>
+    <span className={cn('text-[10px] font-sans uppercase tracking-wider', styles[signal] || '')}>
       {signal === 'entering' ? '↗ Entering' : signal === 'exiting' ? '↘ Exiting' : '→ Stable'}
     </span>
   );
@@ -236,11 +236,11 @@ function SectionLabel({ label, layer, count }: { label: string; layer: string; c
   return (
     <div className="flex items-center justify-between mb-3">
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">{layer}</span>
+        <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">{layer}</span>
         <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">{label}</span>
       </div>
       {count !== undefined && (
-        <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">{count}</span>
+        <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">{count}</span>
       )}
     </div>
   );
@@ -274,13 +274,13 @@ function L1Liquidity({ metrics }: { metrics: LiquidityMetric[] }) {
               )} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-neutral-500 dark:text-neutral-400 font-mono uppercase tracking-wider truncate">
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400 font-sans uppercase tracking-wider truncate">
                     {m.label}
                   </span>
                   <MiniSparkline data={m.sparkline} positive={m.change >= 0} />
                 </div>
                 <div className="flex items-baseline gap-2 mt-0.5">
-                  <span className="text-lg font-mono font-semibold text-neutral-900 dark:text-white tabular-nums">
+                  <span className="text-lg font-sans font-semibold text-neutral-900 dark:text-white tabular-nums">
                     {m.value}
                   </span>
                   <Delta value={m.change} />
@@ -335,9 +335,9 @@ function L2Markets({ flows }: { flows: MarketFlowDetail[] }) {
                 { label: '90D', value: f.flow90d },
               ].map((item) => (
                 <div key={item.label} className="bg-white dark:bg-black p-2 text-center">
-                  <div className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">{item.label}</div>
+                  <div className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">{item.label}</div>
                   <div className={cn(
-                    'text-sm font-mono font-semibold tabular-nums',
+                    'text-sm font-sans font-semibold tabular-nums',
                     item.value > 0 ? 'text-[#22C55E] dark:text-[#4ADE80]' : item.value < 0 ? 'text-[#EF4444] dark:text-[#F87171]' : 'text-neutral-500',
                   )}>
                     {item.value > 0 ? '+' : ''}{item.value.toFixed(1)}%
@@ -345,7 +345,7 @@ function L2Markets({ flows }: { flows: MarketFlowDetail[] }) {
                 </div>
               ))}
             </div>
-            <div className="flex items-center justify-between text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+            <div className="flex items-center justify-between text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
               <span>MCap: {f.marketCap}</span>
               <span>Dom: {f.dominance}%</span>
               <span>Vel: {f.velocity > 0 ? '+' : ''}{f.velocity.toFixed(1)}</span>
@@ -376,23 +376,23 @@ function L3Sectors({ sectors: sectorData, marketFilter }: { sectors: SectorDetai
           <table className="w-full text-xs min-w-[500px]">
             <thead>
               <tr className="bg-neutral-50 dark:bg-neutral-900/50">
-                <th className="text-left p-2.5 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Sector</th>
-                <th className="text-left p-2.5 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Market</th>
-                <th className="text-right p-2.5 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">7D Flow</th>
-                <th className="text-right p-2.5 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden sm:table-cell">30D Flow</th>
-                <th className="text-right p-2.5 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden sm:table-cell">Dom.</th>
-                <th className="text-center p-2.5 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Trend</th>
-                <th className="text-left p-2.5 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden md:table-cell">Top Assets</th>
+                <th className="text-left p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Sector</th>
+                <th className="text-left p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Market</th>
+                <th className="text-right p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">7D Flow</th>
+                <th className="text-right p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden sm:table-cell">30D Flow</th>
+                <th className="text-right p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden sm:table-cell">Dom.</th>
+                <th className="text-center p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Trend</th>
+                <th className="text-left p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden md:table-cell">Top Assets</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
               {filtered.map((s) => (
                 <tr key={s.name} className="bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition-colors">
                   <td className="p-2.5 font-medium text-neutral-900 dark:text-white">{s.name}</td>
-                  <td className="p-2.5 text-neutral-400 dark:text-neutral-500 font-mono text-[10px]">{s.market}</td>
+                  <td className="p-2.5 text-neutral-400 dark:text-neutral-500 font-sans text-[10px]">{s.market}</td>
                   <td className="p-2.5 text-right"><Delta value={s.flow7d} /></td>
                   <td className="p-2.5 text-right hidden sm:table-cell"><Delta value={s.flow30d} /></td>
-                  <td className="p-2.5 text-right font-mono text-neutral-500 dark:text-neutral-400 hidden sm:table-cell tabular-nums">{s.dominance}%</td>
+                  <td className="p-2.5 text-right font-sans text-neutral-500 dark:text-neutral-400 hidden sm:table-cell tabular-nums">{s.dominance}%</td>
                   <td className="p-2.5 text-center">
                     {s.trending === 'up' && <ArrowUpRight className="w-3.5 h-3.5 text-[#22C55E] dark:text-[#4ADE80] mx-auto" />}
                     {s.trending === 'down' && <ArrowDownRight className="w-3.5 h-3.5 text-[#EF4444] dark:text-[#F87171] mx-auto" />}
@@ -401,7 +401,7 @@ function L3Sectors({ sectors: sectorData, marketFilter }: { sectors: SectorDetai
                   <td className="p-2.5 hidden md:table-cell">
                     <div className="flex gap-1">
                       {s.topAssets.map((a) => (
-                        <span key={a} className="px-1 py-0.5 text-[10px] font-mono bg-neutral-100 dark:bg-neutral-800 rounded text-neutral-600 dark:text-neutral-400">
+                        <span key={a} className="px-1 py-0.5 text-[10px] font-sans bg-neutral-100 dark:bg-neutral-800 rounded text-neutral-600 dark:text-neutral-400">
                           {a}
                         </span>
                       ))}
@@ -441,7 +441,7 @@ function RotationMatrix({ flows }: { flows: MarketFlowDetail[] }) {
                     : 'border-neutral-200 dark:border-neutral-700',
                 )}>
                   <span className={cn(
-                    'text-lg font-mono font-bold tabular-nums',
+                    'text-lg font-sans font-bold tabular-nums',
                     isActive ? 'text-[#22C55E] dark:text-[#4ADE80]'
                     : isExiting ? 'text-[#EF4444] dark:text-[#F87171]'
                     : 'text-neutral-400 dark:text-neutral-500',
@@ -449,13 +449,13 @@ function RotationMatrix({ flows }: { flows: MarketFlowDetail[] }) {
                     {f.flow7d > 0 ? '+' : ''}{f.flow7d.toFixed(0)}
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400">{f.market}</span>
+                <span className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400">{f.market}</span>
               </div>
             );
           })}
         </div>
         <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800/50">
-          <p className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 text-center">
+          <p className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 text-center">
             Capital rotating: Bonds → Metals → Stocks → <span className="text-[#22C55E] dark:text-[#4ADE80] font-semibold">Crypto</span>
           </p>
         </div>
@@ -489,7 +489,7 @@ function L4Recommendation({ recs }: { recs: Recommendation[] }) {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <span className={cn(
-                    'text-xl font-mono font-bold tracking-tight',
+                    'text-xl font-sans font-bold tracking-tight',
                     isBuy ? 'text-[#22C55E] dark:text-[#4ADE80]' : 'text-[#EF4444] dark:text-[#F87171]',
                   )}>
                     {r.direction}
@@ -498,9 +498,9 @@ function L4Recommendation({ recs }: { recs: Recommendation[] }) {
                   <PhaseBadge phase={r.phase} />
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase">Confidence</div>
+                  <div className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase">Confidence</div>
                   <div className={cn(
-                    'text-sm font-mono font-bold tabular-nums',
+                    'text-sm font-sans font-bold tabular-nums',
                     r.confidence >= 70 ? 'text-[#22C55E] dark:text-[#4ADE80]' : 'text-[#F59E0B] dark:text-[#FBBF24]',
                   )}>
                     {r.confidence}%
@@ -515,7 +515,7 @@ function L4Recommendation({ recs }: { recs: Recommendation[] }) {
 
               {/* Suggested assets */}
               <div>
-                <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+                <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
                   Suggested Assets
                 </span>
                 <div className="flex gap-1.5 mt-1">
@@ -523,7 +523,7 @@ function L4Recommendation({ recs }: { recs: Recommendation[] }) {
                     <span
                       key={a}
                       className={cn(
-                        'px-1.5 py-0.5 text-[10px] font-mono border rounded',
+                        'px-1.5 py-0.5 text-[10px] font-sans border rounded',
                         isBuy
                           ? 'border-[#22C55E]/20 dark:border-[#4ADE80]/20 text-[#22C55E] dark:text-[#4ADE80]'
                           : 'border-[#EF4444]/20 dark:border-[#F87171]/20 text-[#EF4444] dark:text-[#F87171]',
@@ -567,7 +567,7 @@ function ContentPanel({
               key={m}
               onClick={() => setMarketFilter(m)}
               className={cn(
-                'px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wider transition-colors min-w-[48px]',
+                'px-2.5 py-1.5 text-[10px] font-sans uppercase tracking-wider transition-colors min-w-[48px]',
                 marketFilter === m
                   ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
                   : 'bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white',
@@ -606,7 +606,7 @@ export default function FlowPage() {
         {/* Header */}
         <div className="shrink-0 pt-4 pb-3 border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
               L1 · L2 · L3 · L4
             </span>
             <span className="text-sm font-medium text-neutral-900 dark:text-white">
@@ -661,7 +661,7 @@ export default function FlowPage() {
                         )}
                       >
                         <span className={cn(
-                          'text-[9px] font-mono tabular-nums w-4 shrink-0',
+                          'text-[9px] font-sans tabular-nums w-4 shrink-0',
                           isActive
                             ? 'text-[#14B8A6] dark:text-[#5EEAD4]'
                             : 'text-neutral-400 dark:text-neutral-600',
@@ -690,7 +690,7 @@ export default function FlowPage() {
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] dark:bg-[#4ADE80]" />
-                <span className="text-xs font-mono font-semibold text-[#22C55E] dark:text-[#4ADE80]">
+                <span className="text-xs font-sans font-semibold text-[#22C55E] dark:text-[#4ADE80]">
                   RISK ON
                 </span>
               </div>
@@ -713,10 +713,10 @@ export default function FlowPage() {
         {/* Footer */}
         <footer className="shrink-0 py-3 border-t border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
               Capital Flow Intelligence · L1–L4
             </span>
-            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
               Data for educational purposes only
             </span>
           </div>

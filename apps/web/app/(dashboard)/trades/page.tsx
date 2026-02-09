@@ -314,7 +314,7 @@ function CandlestickChart({
           opacity={0.6}
         />
         <rect x={W - PAD.right + 2} y={y - 7} width={56} height={14} rx={2} fill={color} opacity={0.15} />
-        <text x={W - PAD.right + 5} y={y + 3} fontSize={8} fontFamily="monospace" fill={color} opacity={0.9}>
+        <text x={W - PAD.right + 5} y={y + 3} fontSize={8} fontFamily="Inter, sans-serif" fill={color} opacity={0.9}>
           {lbl} {fmtPrice(price)}
         </text>
       </g>
@@ -326,12 +326,12 @@ function CandlestickChart({
   return (
     <div className="relative">
       <div className="absolute top-1 left-2 z-10 flex items-center gap-1.5">
-        <span className="text-[9px] font-mono font-semibold text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-black/80 px-1.5 py-0.5 rounded">
+        <span className="text-[9px] font-sans font-semibold text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-black/80 px-1.5 py-0.5 rounded">
           {label}
         </span>
         {showOutcome && (
           <span className={cn(
-            'text-[9px] font-mono font-bold px-1.5 py-0.5 rounded',
+            'text-[9px] font-sans font-bold px-1.5 py-0.5 rounded',
             trade.status === 'TP_HIT' ? 'bg-emerald-500/10 text-emerald-500 dark:text-[#00f5c4]' : 'bg-red-500/10 text-red-500',
           )}>
             {trade.status === 'TP_HIT' ? 'TARGET HIT' : 'STOP HIT'}
@@ -393,7 +393,7 @@ function CandlestickChart({
                 points={`${mx - 4},${my + 5} ${mx + 4},${my + 5} ${mx},${my - 1}`}
                 fill="#3b82f6" opacity={0.8}
               />
-              <text x={mx} y={my + 14} fontSize={7} fontFamily="monospace" fill="#3b82f6" textAnchor="middle" opacity={0.7}>
+              <text x={mx} y={my + 14} fontSize={7} fontFamily="Inter, sans-serif" fill="#3b82f6" textAnchor="middle" opacity={0.7}>
                 ENTRY
               </text>
             </g>
@@ -410,7 +410,7 @@ function CandlestickChart({
             <g>
               <circle cx={ox} cy={oy} r={4} fill={color} opacity={0.3} />
               <circle cx={ox} cy={oy} r={2} fill={color} opacity={0.8} />
-              <text x={ox} y={oy - 8} fontSize={7} fontFamily="monospace" fill={color} textAnchor="middle" fontWeight="bold">
+              <text x={ox} y={oy - 8} fontSize={7} fontFamily="Inter, sans-serif" fill={color} textAnchor="middle" fontWeight="bold">
                 {trade.status === 'TP_HIT' ? 'TP HIT' : 'SL HIT'}
               </text>
             </g>
@@ -431,8 +431,8 @@ function FlowHealth({ value, signal }: { value: number; signal: string }) {
   return (
     <div className="space-y-0.5">
       <div className="flex items-center justify-between">
-        <span className="text-[9px] text-slate-400 font-mono">FLOW HEALTH</span>
-        <span className={cn('text-[9px] font-bold font-mono', color)}>{label}</span>
+        <span className="text-[9px] text-slate-400 font-sans">FLOW HEALTH</span>
+        <span className={cn('text-[9px] font-bold font-sans', color)}>{label}</span>
       </div>
       <div className="w-full h-1 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
         <div className={cn('h-full rounded-full transition-all', barColor)} style={{ width: `${value}%` }} />
@@ -480,13 +480,13 @@ function OverviewPanel({
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <span className="font-mono font-semibold text-xs">{trade.symbol}</span>
+                <span className="font-sans font-semibold text-xs">{trade.symbol}</span>
                 <span className={cn('text-[9px] font-bold uppercase px-1 py-0.5 rounded', statusBg(trade.status), statusColor(trade.status))}>
                   {trade.status.replace('_', ' ')}
                 </span>
-                <span className="text-[9px] text-slate-400 font-mono hidden sm:inline">{trade.market}</span>
+                <span className="text-[9px] text-slate-400 font-sans hidden sm:inline">{trade.market}</span>
               </div>
-              <div className="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center gap-2">
+              <div className="text-[10px] text-slate-400 font-sans mt-0.5 flex items-center gap-2">
                 <span>{trade.duration}</span>
                 <span className="hidden sm:inline">&middot; Entry ${fmtPrice(trade.entry)}</span>
               </div>
@@ -494,25 +494,25 @@ function OverviewPanel({
 
             <div className="text-right">
               <div className={cn(
-                'text-xs font-mono font-bold tabular-nums',
+                'text-xs font-sans font-bold tabular-nums',
                 trade.pnlPercent >= 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400',
               )}>
                 {trade.pnlPercent >= 0 ? '+' : ''}{trade.pnlPercent.toFixed(2)}%
               </div>
-              <div className={cn('text-[10px] font-mono tabular-nums', trade.pnl >= 0 ? 'text-emerald-500/60' : 'text-red-500/60')}>
+              <div className={cn('text-[10px] font-sans tabular-nums', trade.pnl >= 0 ? 'text-emerald-500/60' : 'text-red-500/60')}>
                 {trade.pnl >= 0 ? '+' : ''}{trade.pnl >= 1 ? `$${fmtPrice(trade.pnl)}` : `${trade.pnl.toFixed(4)}`}
               </div>
             </div>
 
             <div className="hidden sm:block w-16 text-right">
-              <span className={cn('text-[9px] font-bold font-mono', flowColor)}>{flowLabel}</span>
+              <span className={cn('text-[9px] font-bold font-sans', flowColor)}>{flowLabel}</span>
             </div>
           </button>
         );
       })}
 
       {trades.length === 0 && (
-        <div className="text-center py-16 text-slate-400 text-xs font-mono">
+        <div className="text-center py-16 text-slate-400 text-xs font-sans">
           No trades match this filter.
         </div>
       )}
@@ -540,8 +540,8 @@ function TradeDetailPanel({ trade }: { trade: Trade }) {
     <div className="space-y-4">
       {/* Trade header context bar */}
       <div className="flex items-center gap-2 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
-        <span className="text-xs font-mono font-semibold">{trade.symbol}</span>
-        <span className="text-[10px] text-slate-400 font-mono">{trade.market}</span>
+        <span className="text-xs font-sans font-semibold">{trade.symbol}</span>
+        <span className="text-[10px] text-slate-400 font-sans">{trade.market}</span>
         <span className={cn(
           'text-[9px] font-bold px-1 py-0.5 rounded',
           trade.direction === 'long'
@@ -553,7 +553,7 @@ function TradeDetailPanel({ trade }: { trade: Trade }) {
         <span className={cn('text-[9px] font-bold uppercase px-1 py-0.5 rounded', statusBg(trade.status), statusColor(trade.status))}>
           {trade.status.replace('_', ' ')}
         </span>
-        <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 uppercase ml-auto">{trade.method}</span>
+        <span className="text-[9px] font-sans text-slate-400 dark:text-slate-500 uppercase ml-auto">{trade.method}</span>
       </div>
 
       {/* Trade levels */}
@@ -562,8 +562,8 @@ function TradeDetailPanel({ trade }: { trade: Trade }) {
           <div key={l.label} className="flex items-center gap-1.5">
             <span className={l.color}>{l.icon}</span>
             <div>
-              <div className="text-[9px] text-slate-400 font-mono">{l.label}</div>
-              <div className="text-xs font-mono font-semibold tabular-nums">${fmtPrice(l.value)}</div>
+              <div className="text-[9px] text-slate-400 font-sans">{l.label}</div>
+              <div className="text-xs font-sans font-semibold tabular-nums">${fmtPrice(l.value)}</div>
             </div>
           </div>
         ))}
@@ -621,8 +621,8 @@ function TradeDetailPanel({ trade }: { trade: Trade }) {
           { label: 'OPENED', value: trade.openedAt.split(' ')[0], color: '' },
         ].map((m) => (
           <div key={m.label}>
-            <div className="text-[9px] text-slate-400 font-mono">{m.label}</div>
-            <div className={cn('text-xs font-mono font-semibold tabular-nums', m.color)}>{m.value}</div>
+            <div className="text-[9px] text-slate-400 font-sans">{m.label}</div>
+            <div className={cn('text-xs font-sans font-semibold tabular-nums', m.color)}>{m.value}</div>
           </div>
         ))}
       </div>
@@ -663,7 +663,7 @@ function ContentPanel({
   if (!trade) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-xs text-slate-400 font-mono">Trade not found.</p>
+        <p className="text-xs text-slate-400 font-sans">Trade not found.</p>
       </div>
     );
   }
@@ -746,13 +746,13 @@ export default function TradesPage() {
         <div className="max-w-[1400px] mx-auto px-3 py-3 flex items-center justify-between gap-3">
           <div>
             <h1 className="text-sm font-sans font-semibold tracking-tight">TRADES</h1>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-sans">
               Active Position Monitor &middot; {activeTrades.length} open
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-4 text-[10px] font-mono">
+            <div className="hidden sm:flex items-center gap-4 text-[10px] font-sans">
               <span className="text-slate-400">
                 P/L: <span className={cn('font-semibold', totalPnl >= 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400')}>
                   {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}%
@@ -765,7 +765,7 @@ export default function TradesPage() {
             {warnings > 0 && (
               <div className="flex items-center gap-1 px-2 py-1 rounded bg-amber-500/10 text-amber-500">
                 <AlertTriangle className="w-3 h-3" />
-                <span className="text-[10px] font-mono font-bold">{warnings}</span>
+                <span className="text-[10px] font-sans font-bold">{warnings}</span>
               </div>
             )}
           </div>
@@ -790,7 +790,7 @@ export default function TradesPage() {
               >
                 {item.tag && (
                   <span className={cn(
-                    'text-[9px] font-mono opacity-60',
+                    'text-[9px] font-sans opacity-60',
                     trade && (trade.status === 'TP_HIT' ? 'text-emerald-400' : trade.status === 'SL_HIT' ? 'text-red-400' : ''),
                   )}>
                     {item.tag}
@@ -836,7 +836,7 @@ export default function TradesPage() {
                     >
                       {item.tag && (
                         <span className={cn(
-                          'text-[9px] font-mono tabular-nums w-5 shrink-0',
+                          'text-[9px] font-sans tabular-nums w-5 shrink-0',
                           isActive
                             ? isClosed
                               ? trade.status === 'TP_HIT'
@@ -857,7 +857,7 @@ export default function TradesPage() {
                         {item.label}
                       </span>
                       {item.sublabel && (
-                        <span className={cn('text-[9px] font-mono tabular-nums', item.color || 'text-slate-400')}>
+                        <span className={cn('text-[9px] font-sans tabular-nums', item.color || 'text-slate-400')}>
                           {item.sublabel}
                         </span>
                       )}
@@ -875,14 +875,14 @@ export default function TradesPage() {
             </span>
             <div className="space-y-1">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-slate-400">Total P/L</span>
-                <span className={cn('text-[10px] font-mono font-semibold tabular-nums', totalPnl >= 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400')}>
+                <span className="text-[10px] font-sans text-slate-400">Total P/L</span>
+                <span className={cn('text-[10px] font-sans font-semibold tabular-nums', totalPnl >= 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400')}>
                   {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}%
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-slate-400">Win Rate</span>
-                <span className="text-[10px] font-mono font-semibold tabular-nums">
+                <span className="text-[10px] font-sans text-slate-400">Win Rate</span>
+                <span className="text-[10px] font-sans font-semibold tabular-nums">
                   {closedTrades.length > 0
                     ? `${Math.round((closedTrades.filter((t) => t.status === 'TP_HIT').length / closedTrades.length) * 100)}%`
                     : '—'
@@ -890,8 +890,8 @@ export default function TradesPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-slate-400">Warnings</span>
-                <span className={cn('text-[10px] font-mono font-semibold tabular-nums', warnings > 0 ? 'text-amber-500' : 'text-slate-400')}>
+                <span className="text-[10px] font-sans text-slate-400">Warnings</span>
+                <span className={cn('text-[10px] font-sans font-semibold tabular-nums', warnings > 0 ? 'text-amber-500' : 'text-slate-400')}>
                   {warnings}
                 </span>
               </div>
@@ -912,7 +912,7 @@ export default function TradesPage() {
 
       {/* Footer summary */}
       <div className="border-t border-black/[0.06] dark:border-white/[0.06] shrink-0">
-        <div className="max-w-[1400px] mx-auto px-3 py-2 flex items-center justify-between text-[10px] font-mono text-slate-400">
+        <div className="max-w-[1400px] mx-auto px-3 py-2 flex items-center justify-between text-[10px] font-sans text-slate-400">
           <span>
             {activeTrades.length} active &middot; {MOCK_TRADES.filter((t) => t.status === 'TP_HIT').length} TP &middot; {MOCK_TRADES.filter((t) => t.status === 'SL_HIT').length} SL
           </span>
