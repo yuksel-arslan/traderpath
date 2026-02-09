@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import {
   Database,
   LineChart,
@@ -24,8 +25,15 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Activity,
+  ExternalLink,
+  GitBranch,
 } from 'lucide-react';
 import Link from 'next/link';
+
+const BacktestPerformance = dynamic(
+  () => import('../../../components/methodology/BacktestPerformance'),
+  { ssr: false, loading: () => <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" /> }
+);
 
 export default function MethodologyPage() {
   return (
@@ -35,14 +43,24 @@ export default function MethodologyPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-teal-500/5 dark:from-teal-500/10 via-transparent to-transparent" />
 
         <div className="relative z-10 p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/30">
-              <Globe className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/30">
+                <Globe className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold gradient-text-logo-animate">Capital Flow Methodology</h1>
+                <p className="text-xs text-gray-500 dark:text-slate-400">&ldquo;Where money flows, potential exists&rdquo;</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold gradient-text-logo-animate">Capital Flow Methodology</h1>
-              <p className="text-xs text-gray-500 dark:text-slate-400">&ldquo;Where money flows, potential exists&rdquo;</p>
-            </div>
+            <Link
+              href="/methodology"
+              target="_blank"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-500/10 rounded-lg border border-teal-200 dark:border-teal-500/20 hover:bg-teal-100 dark:hover:bg-teal-500/20 transition-colors"
+            >
+              <ExternalLink className="w-3 h-3" />
+              Full Technical Paper
+            </Link>
           </div>
         </div>
       </div>
@@ -155,6 +173,55 @@ export default function MethodologyPage() {
         </p>
       </div>
 
+      {/* ===== Dual-Engine Confirmation ===== */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
+        <h3 className="font-bold gradient-text-logo-animate mb-3 flex items-center gap-2">
+          <GitBranch className="w-4 h-4" />
+          Dual-Engine Confirmation
+        </h3>
+        <p className="text-xs text-gray-600 dark:text-slate-400 mb-3">
+          Every analysis passes through two independent engines. Agreement elevates confidence; contradiction triggers caution.
+        </p>
+        <div className="space-y-3">
+          <div className="p-3 bg-teal-50 dark:bg-teal-500/10 rounded-lg border border-teal-200 dark:border-teal-500/30">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-bold text-teal-700 dark:text-teal-400 text-sm">7-Step Classic</span>
+              <span className="text-[10px] bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-300 px-1.5 py-0.5 rounded">40+ Indicators</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {['Market Pulse', 'Asset Scanner', 'Safety Check', 'Timing', 'Trade Plan', 'Trap Check', 'Verdict'].map((step, i) => (
+                <span key={step} className="text-[9px] bg-teal-100 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 px-1.5 py-0.5 rounded">
+                  {i + 1}. {step}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-3 bg-gradient-to-r from-violet-50 to-teal-50 dark:from-violet-500/10 dark:to-teal-500/10 rounded-lg border border-violet-200 dark:border-violet-500/30">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-violet-700 dark:text-violet-400 text-sm">MLIS Pro Confirmation</span>
+                <span className="text-[10px] bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 px-1.5 py-0.5 rounded">Step 8</span>
+              </div>
+              <span className="text-[10px] bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 px-1.5 py-0.5 rounded">AI Validation</span>
+            </div>
+            <p className="text-[10px] text-slate-600 dark:text-slate-400 mb-2">
+              Neural network validates 7-Step findings with 5 independent layers:
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {['Technical', 'Momentum', 'Volatility', 'Volume', 'Verdict'].map((layer, i) => (
+                <span key={layer} className="text-[9px] bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded">
+                  L{i + 1}. {layer}
+                </span>
+              ))}
+            </div>
+            <p className="text-[9px] text-slate-500 dark:text-slate-500 mt-2 italic">
+              Confirms, partially confirms, or contradicts the 7-Step verdict
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* ===== Phase Detection ===== */}
       <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
         <h3 className="font-bold gradient-text-logo-animate mb-3 flex items-center gap-2">
@@ -165,7 +232,6 @@ export default function MethodologyPage() {
           We track how long capital has been flowing into each market to identify the optimal entry timing.
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {/* Early Phase */}
           <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg border border-emerald-200 dark:border-emerald-500/30">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -174,8 +240,6 @@ export default function MethodologyPage() {
             <p className="text-[10px] text-emerald-600 dark:text-emerald-300/80">0-30 days</p>
             <p className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium mt-1">Best Entry Point</p>
           </div>
-
-          {/* Mid Phase */}
           <div className="p-3 bg-yellow-50 dark:bg-yellow-500/10 rounded-lg border border-yellow-200 dark:border-yellow-500/30">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-2 h-2 rounded-full bg-yellow-500" />
@@ -184,8 +248,6 @@ export default function MethodologyPage() {
             <p className="text-[10px] text-yellow-600 dark:text-yellow-300/80">30-60 days</p>
             <p className="text-[10px] text-yellow-700 dark:text-yellow-400 font-medium mt-1">Careful Entry</p>
           </div>
-
-          {/* Late Phase */}
           <div className="p-3 bg-orange-50 dark:bg-orange-500/10 rounded-lg border border-orange-200 dark:border-orange-500/30">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-2 h-2 rounded-full bg-orange-500" />
@@ -194,8 +256,6 @@ export default function MethodologyPage() {
             <p className="text-[10px] text-orange-600 dark:text-orange-300/80">60-90 days</p>
             <p className="text-[10px] text-orange-700 dark:text-orange-400 font-medium mt-1">No New Entry</p>
           </div>
-
-          {/* Exit Phase */}
           <div className="p-3 bg-red-50 dark:bg-red-500/10 rounded-lg border border-red-200 dark:border-red-500/30">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-2 h-2 rounded-full bg-red-500" />
@@ -209,7 +269,6 @@ export default function MethodologyPage() {
 
       {/* ===== Rotation & Recommendations ===== */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Rotation Detection */}
         <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
           <h3 className="font-bold gradient-text-logo-animate mb-3 flex items-center gap-2">
             <Activity className="w-4 h-4" />
@@ -240,7 +299,6 @@ export default function MethodologyPage() {
           </div>
         </div>
 
-        {/* AI Recommendations */}
         <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
           <h3 className="font-bold gradient-text-logo-animate mb-3 flex items-center gap-2">
             <Zap className="w-4 h-4" />
@@ -271,7 +329,6 @@ export default function MethodologyPage() {
 
       {/* ===== Data Sources ===== */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Macro Data */}
         <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
@@ -280,22 +337,11 @@ export default function MethodologyPage() {
             <h3 className="font-bold gradient-text-logo-animate">Macro Data</h3>
           </div>
           <ul className="text-xs text-gray-600 dark:text-slate-300 space-y-1.5">
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-              FRED API (Fed Data)
-            </li>
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-              Yahoo Finance (DXY, VIX)
-            </li>
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-              Treasury Yields
-            </li>
+            <li className="flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" /> FRED API (Fed Data)</li>
+            <li className="flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" /> Yahoo Finance (DXY, VIX)</li>
+            <li className="flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" /> Treasury Yields</li>
           </ul>
         </div>
-
-        {/* Market Data */}
         <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
@@ -304,22 +350,11 @@ export default function MethodologyPage() {
             <h3 className="font-bold gradient-text-logo-animate">Market Data</h3>
           </div>
           <ul className="text-xs text-gray-600 dark:text-slate-300 space-y-1.5">
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-              Binance (Crypto)
-            </li>
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-              Yahoo Finance (Stocks/Metals)
-            </li>
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-              DefiLlama (DeFi TVL)
-            </li>
+            <li className="flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" /> Binance (Crypto)</li>
+            <li className="flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" /> Yahoo Finance (Stocks/Metals)</li>
+            <li className="flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" /> DefiLlama (DeFi TVL)</li>
           </ul>
         </div>
-
-        {/* AI Analysis */}
         <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
@@ -328,73 +363,16 @@ export default function MethodologyPage() {
             <h3 className="font-bold gradient-text-logo-animate">AI Experts</h3>
           </div>
           <ul className="text-xs text-gray-600 dark:text-slate-300 space-y-1.5">
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-              <span><strong className="text-blue-500">ARIA</strong> - Technical</span>
-            </li>
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-              <span><strong className="text-amber-500">NEXUS</strong> - Risk</span>
-            </li>
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-              <span><strong className="text-purple-500">ORACLE</strong> - On-Chain</span>
-            </li>
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-              <span><strong className="text-red-500">SENTINEL</strong> - Security</span>
-            </li>
+            <li className="flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" /> <span><strong className="text-blue-500">ARIA</strong> - Technical</span></li>
+            <li className="flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" /> <span><strong className="text-amber-500">NEXUS</strong> - Risk</span></li>
+            <li className="flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" /> <span><strong className="text-purple-500">ORACLE</strong> - On-Chain</span></li>
+            <li className="flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" /> <span><strong className="text-red-500">SENTINEL</strong> - Security</span></li>
           </ul>
         </div>
       </div>
 
-      {/* ===== Analysis Methods ===== */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
-        <h3 className="font-bold gradient-text-logo-animate mb-3 flex items-center gap-2">
-          <Brain className="w-4 h-4" />
-          Asset Analysis Methods (Layer 4)
-        </h3>
-        <div className="space-y-3">
-          {/* 7-Step Analysis - Main Method */}
-          <div className="p-3 bg-teal-50 dark:bg-teal-500/10 rounded-lg border border-teal-200 dark:border-teal-500/30">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-bold text-teal-700 dark:text-teal-400 text-sm">7-Step Analysis</span>
-              <span className="text-[10px] bg-teal-100 dark:bg-teal-500/20 text-teal-600 dark:text-teal-300 px-1.5 py-0.5 rounded">40+ Indicators</span>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {['Market Pulse', 'Asset Scanner', 'Safety Check', 'Timing', 'Trade Plan', 'Trap Check', 'Verdict'].map((step, i) => (
-                <span key={step} className="text-[9px] bg-teal-100 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 px-1.5 py-0.5 rounded">
-                  {i + 1}. {step}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* MLIS Pro Confirmation - Step 8 */}
-          <div className="p-3 bg-gradient-to-r from-violet-50 to-teal-50 dark:from-violet-500/10 dark:to-teal-500/10 rounded-lg border border-violet-200 dark:border-violet-500/30">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-violet-700 dark:text-violet-400 text-sm">MLIS Pro Confirmation</span>
-                <span className="text-[10px] bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300 px-1.5 py-0.5 rounded">Step 8</span>
-              </div>
-              <span className="text-[10px] bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 px-1.5 py-0.5 rounded">AI Validation</span>
-            </div>
-            <p className="text-[10px] text-slate-600 dark:text-slate-400 mb-2">
-              Neural network validates 7-Step findings with 5 independent layers:
-            </p>
-            <div className="flex flex-wrap gap-1">
-              {['Technical', 'Momentum', 'Volatility', 'Volume', 'Verdict'].map((layer, i) => (
-                <span key={layer} className="text-[9px] bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded">
-                  L{i + 1}. {layer}
-                </span>
-              ))}
-            </div>
-            <p className="text-[9px] text-slate-500 dark:text-slate-500 mt-2 italic">
-              Confirms, partially confirms, or contradicts the 7-Step verdict
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* ===== Verified Performance (Backtest Component) ===== */}
+      <BacktestPerformance />
 
       {/* ===== CTA ===== */}
       <div className="bg-gradient-to-r from-teal-500 to-emerald-600 rounded-xl p-4 text-center">
@@ -419,7 +397,10 @@ export default function MethodologyPage() {
           <div>
             <h4 className="font-bold text-amber-800 dark:text-amber-300 text-sm mb-1">Important Disclaimer</h4>
             <p className="text-xs text-amber-700 dark:text-amber-200/80">
-              This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. All investments carry risk, including the potential loss of principal. Past performance does not guarantee future results. Conduct your own research and consult with a licensed financial advisor before making any investment decisions.
+              This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. All investments carry risk, including the potential loss of principal. Past performance does not guarantee future results. Conduct your own research and consult with a licensed financial advisor before making any investment decisions.{' '}
+              <Link href="/disclaimer" className="underline font-medium hover:text-amber-900 dark:hover:text-amber-100">
+                Read full Risk Disclosure Statement
+              </Link>
             </p>
           </div>
         </div>
