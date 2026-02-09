@@ -11,10 +11,7 @@ import {
   useCallback,
   useRef,
   useMemo,
-  createContext,
-  useContext,
 } from 'react';
-import dynamic from 'next/dynamic';
 import {
   Search,
   ArrowUpRight,
@@ -24,18 +21,20 @@ import {
   ChevronDown,
   Sun,
   Moon,
-  Activity,
   TrendingUp,
   TrendingDown,
-  Target,
-  Shield,
-  Zap,
-  BarChart3,
-  Layers,
   Eye,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { authFetch } from '../../../lib/api';
+import {
+  createChart,
+  ColorType,
+  CrosshairMode,
+  LineStyle,
+  IChartApi,
+  CandlestickData,
+  Time,
+} from 'lightweight-charts';
 import { cn, formatNumber, formatPrice, formatPriceValue } from '../../../lib/utils';
 
 // ---------------------------------------------------------------------------
@@ -759,7 +758,7 @@ function L7TradeVisualizer({
   tradePlan: TradePlan | null;
 }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<ReturnType<typeof import('lightweight-charts').createChart> | null>(null);
+  const chartRef = useRef<IChartApi | null>(null);
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -771,20 +770,18 @@ function L7TradeVisualizer({
   useEffect(() => {
     if (!mounted || !chartContainerRef.current || !selectedAsset) return;
 
-    let chart: ReturnType<typeof import('lightweight-charts').createChart> | null = null;
+    let chart: IChartApi | null = null;
 
-    const initChart = async () => {
-      const lc = await import('lightweight-charts');
-
+    const initChart = () => {
       if (!chartContainerRef.current) return;
 
       const isDark = resolvedTheme === 'dark';
 
-      chart = lc.createChart(chartContainerRef.current, {
+      chart = createChart(chartContainerRef.current, {
         width: chartContainerRef.current.clientWidth,
         height: chartContainerRef.current.clientHeight,
         layout: {
-          background: { type: lc.ColorType.Solid, color: isDark ? '#000000' : '#FFFFFF' },
+          background: { type: ColorType.Solid, color: isDark ? '#000000' : '#FFFFFF' },
           textColor: isDark ? '#737373' : '#A3A3A3',
           fontFamily: "'Inter', 'Geist Sans', monospace",
           fontSize: 10,
@@ -794,17 +791,17 @@ function L7TradeVisualizer({
           horzLines: { color: isDark ? '#171717' : '#F5F5F5' },
         },
         crosshair: {
-          mode: lc.CrosshairMode.Normal,
+          mode: CrosshairMode.Normal,
           vertLine: {
             color: isDark ? '#404040' : '#D4D4D4',
             width: 1,
-            style: lc.LineStyle.Dotted,
+            style: LineStyle.Dotted,
             labelBackgroundColor: isDark ? '#262626' : '#F5F5F5',
           },
           horzLine: {
             color: isDark ? '#404040' : '#D4D4D4',
             width: 1,
-            style: lc.LineStyle.Dotted,
+            style: LineStyle.Dotted,
             labelBackgroundColor: isDark ? '#262626' : '#F5F5F5',
           },
         },
@@ -824,10 +821,10 @@ function L7TradeVisualizer({
       // Generate mock candle data
       const basePrice = selectedAsset.price;
       const now = Math.floor(Date.now() / 1000);
-      const candles: lc.CandlestickData<lc.Time>[] = [];
+      const candles: CandlestickData<Time>[] = [];
 
       for (let i = 100; i >= 0; i--) {
-        const time = (now - i * 3600) as lc.Time;
+        const time = (now - i * 3600) as Time;
         const noise = (Math.random() - 0.5) * basePrice * 0.02;
         const trendBias = ((100 - i) / 100) * basePrice * 0.05 * (selectedAsset.direction === 'LONG' ? 1 : -1);
         const open = basePrice + noise + trendBias;
@@ -856,7 +853,7 @@ function L7TradeVisualizer({
           price: tradePlan.entry,
           color: '#3B82F6',
           lineWidth: 1,
-          lineStyle: lc.LineStyle.Solid,
+          lineStyle: LineStyle.Solid,
           axisLabelVisible: true,
           title: 'ENTRY',
         });
@@ -865,7 +862,7 @@ function L7TradeVisualizer({
           price: tradePlan.sl,
           color: '#EF4444',
           lineWidth: 1,
-          lineStyle: lc.LineStyle.Dashed,
+          lineStyle: LineStyle.Dashed,
           axisLabelVisible: true,
           title: 'SL',
         });
@@ -874,7 +871,7 @@ function L7TradeVisualizer({
           price: tradePlan.tp1,
           color: '#22C55E',
           lineWidth: 1,
-          lineStyle: lc.LineStyle.Dashed,
+          lineStyle: LineStyle.Dashed,
           axisLabelVisible: true,
           title: 'TP1',
         });
@@ -883,7 +880,7 @@ function L7TradeVisualizer({
           price: tradePlan.tp2,
           color: '#84CC16',
           lineWidth: 1,
-          lineStyle: lc.LineStyle.Dashed,
+          lineStyle: LineStyle.Dashed,
           axisLabelVisible: true,
           title: 'TP2',
         });
@@ -905,10 +902,10 @@ function L7TradeVisualizer({
       };
     };
 
-    const cleanup = initChart();
+    const cleanupFn = initChart();
 
     return () => {
-      cleanup?.then((fn) => fn?.());
+      cleanupFn?.();
       if (chart) {
         chart.remove();
         chart = null;
