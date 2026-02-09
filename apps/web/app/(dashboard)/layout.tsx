@@ -298,7 +298,7 @@ export default function DashboardLayout({
       <PriceTicker />
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 border-b border-border">
+      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg supports-[backdrop-filter]:bg-card/60 border-b border-border/50">
         <div className="w-full px-1 sm:px-3 lg:px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
