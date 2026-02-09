@@ -140,7 +140,7 @@ export const ACTIVE_SUBSCRIPTIONS: ActiveSubscription[] = [
     priceDisplay: '$29/mo',
     dailyCredits: 50,
     features: [
-      'Capital Flow L1-L4 (full access)',
+      'Capital Flow L1-L2 (Liquidity & Market Flow)',
       '50 credits/day included',
       'PDF & Email reports',
       'Scheduled reports (3 max)',
@@ -163,11 +163,13 @@ export const ACTIVE_SUBSCRIPTIONS: ActiveSubscription[] = [
     popular: true,
     features: [
       'Everything in Starter',
+      'Capital Flow L1-L4 (full 4-layer access)',
       '100 credits/day included',
-      '7-Step + MLIS Pro analysis',
+      '7-Step + MLIS Pro dual-engine analysis',
       '5 analyses/day included',
+      'AI Expert Panel (ARIA, NEXUS, ORACLE, SENTINEL)',
+      'RAG Intelligence enrichment',
       'Scheduled reports (5 max)',
-      'Priority support',
     ],
     limits: {
       maxDailyAnalyses: 5,
@@ -185,10 +187,12 @@ export const ACTIVE_SUBSCRIPTIONS: ActiveSubscription[] = [
     features: [
       'Everything in Pro',
       '200 credits/day included',
+      'Raw L1 Global Liquidity data exports',
       'AI Concierge (unlimited)',
       'AI Expert questions (unlimited)',
-      'Unlimited analyses',
+      'Unlimited dual-engine analyses',
       'Unlimited scheduled reports',
+      'Capital Flow PDF & email reports',
     ],
     limits: {
       maxDailyAnalyses: 'unlimited',
