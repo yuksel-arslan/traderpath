@@ -3,7 +3,7 @@
  * Generates daily market briefings with L1-L4 Capital Flow analysis
  */
 
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 import { redis } from '../../core/cache';
 import { getCapitalFlowSummary } from '../capital-flow/capital-flow.service';
 import { prisma } from '../../core/database';
@@ -33,7 +33,7 @@ export class MorningBriefingService {
       const opportunities = this.generateOpportunities(capitalFlow);
 
       const briefing: MorningBriefing = {
-        id: uuidv4(),
+        id: nanoid(),
         date: new Date().toISOString().split('T')[0],
         generatedAt: new Date(),
 
