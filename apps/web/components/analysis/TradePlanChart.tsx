@@ -156,7 +156,7 @@ export function TradePlanChart({
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: '#9ca3af',
-        fontFamily: "'Geist Sans', sans-serif",
+        fontFamily: "'Inter', sans-serif",
       },
       grid: {
         vertLines: { color: 'rgba(255, 255, 255, 0.03)' },
