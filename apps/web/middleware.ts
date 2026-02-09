@@ -25,6 +25,7 @@ const protectedPaths = [
   '/methodology',
   '/top-coins',
   '/notifications',
+  '/test',
 ];
 
 // Routes that should redirect to dashboard if already authenticated
