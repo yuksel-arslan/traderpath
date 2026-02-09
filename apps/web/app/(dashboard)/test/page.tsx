@@ -27,14 +27,14 @@ import {
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import {
+  createChart,
   ColorType,
   CrosshairMode,
   LineStyle,
-  type CandlestickData,
-  type Time,
-  type IChartApi,
+  IChartApi,
+  CandlestickData,
+  Time,
 } from 'lightweight-charts';
-import { authFetch } from '../../../lib/api';
 import { cn, formatNumber, formatPrice, formatPriceValue } from '../../../lib/utils';
 
 // ---------------------------------------------------------------------------
@@ -772,9 +772,7 @@ function L7TradeVisualizer({
 
     let chart: IChartApi | null = null;
 
-    const initChart = async () => {
-      const { createChart } = await import('lightweight-charts');
-
+    const initChart = () => {
       if (!chartContainerRef.current) return;
 
       const isDark = resolvedTheme === 'dark';
@@ -904,10 +902,10 @@ function L7TradeVisualizer({
       };
     };
 
-    const cleanup = initChart();
+    const cleanupFn = initChart();
 
     return () => {
-      cleanup?.then((fn) => fn?.());
+      cleanupFn?.();
       if (chart) {
         chart.remove();
         chart = null;
