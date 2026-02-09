@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { authFetch } from '@/lib/auth';
+import { authFetch } from '@/lib/api';
 import { Clock, ChevronDown, ChevronUp, Sparkles, ExternalLink, AlertTriangle } from 'lucide-react';
 import type { MorningBriefing } from '@/types/morning-briefing';
 
