@@ -1,11 +1,12 @@
 'use client';
 
 // =============================================================================
-// TraderPath Trades – Active Position Monitor
+// TraderPath Trades – Active Position Monitor + Before/After Charts
 // Hyper-Minimalist Financial Intelligence Terminal
+// Sidebar + Content Panel pattern (matches Terminal / Flow / Screener)
 // =============================================================================
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -14,8 +15,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  ChevronDown,
-  ChevronUp,
   Target,
   Shield,
 } from 'lucide-react';
@@ -27,13 +26,11 @@ import { cn } from '../../../lib/utils';
 
 type TradeStatus = 'ACTIVE' | 'TP_HIT' | 'SL_HIT' | 'CLOSED';
 
-interface TradePlan {
-  entry: number;
-  stopLoss: number;
-  tp1: number;
-  tp2: number;
-  currentPrice: number;
-  direction: 'long' | 'short';
+interface Candle {
+  o: number;
+  h: number;
+  l: number;
+  c: number;
 }
 
 interface Trade {
@@ -56,6 +53,111 @@ interface Trade {
   flowHealth: number;
   flowSignal: 'hold' | 'tighten' | 'take_profit' | 'close';
   method: 'classic' | 'mlis';
+}
+
+type SectionId = 'overview' | string; // 'overview' or trade id
+
+interface NavItem {
+  id: SectionId;
+  tag?: string;
+  label: string;
+  sublabel?: string;
+  color?: string;
+}
+
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
+// ---------------------------------------------------------------------------
+// Mock candle generator – deterministic from seed
+// ---------------------------------------------------------------------------
+
+function seededRandom(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+function generateCandles(
+  basePrice: number,
+  count: number,
+  seed: number,
+  trend: 'up' | 'down' | 'flat',
+  volatilityPct: number = 0.015,
+): Candle[] {
+  const rng = seededRandom(seed);
+  const candles: Candle[] = [];
+  let price = basePrice;
+
+  for (let i = 0; i < count; i++) {
+    const trendBias = trend === 'up' ? 0.0008 : trend === 'down' ? -0.0008 : 0;
+    const change = (rng() - 0.48 + trendBias) * volatilityPct * price;
+    const open = price;
+    const close = price + change;
+    const wickUp = Math.abs(change) * (0.3 + rng() * 0.8);
+    const wickDown = Math.abs(change) * (0.3 + rng() * 0.8);
+    const high = Math.max(open, close) + wickUp;
+    const low = Math.min(open, close) - wickDown;
+    candles.push({ o: open, h: high, l: low, c: close });
+    price = close;
+  }
+  return candles;
+}
+
+function generateBeforeCandles(trade: Trade): Candle[] {
+  const trend = trade.direction === 'long' ? 'up' : 'down';
+  const seed = trade.id.charCodeAt(0) * 1000 + 42;
+  const startPrice = trade.direction === 'long'
+    ? trade.entry * 0.97
+    : trade.entry * 1.03;
+  return generateCandles(startPrice, 40, seed, trend, 0.012);
+}
+
+function generateAfterCandles(trade: Trade): Candle[] {
+  const seed = trade.id.charCodeAt(0) * 1000 + 99;
+  if (trade.status === 'TP_HIT') {
+    const trend = trade.direction === 'long' ? 'up' : 'down';
+    return generateCandles(trade.entry, 30, seed, trend, 0.014);
+  }
+  if (trade.status === 'SL_HIT') {
+    const trend = trade.direction === 'long' ? 'down' : 'up';
+    return generateCandles(trade.entry, 25, seed, trend, 0.016);
+  }
+  return generateCandles(trade.entry, 20, seed, 'flat', 0.010);
+}
+
+function generateForecastBand(
+  entry: number,
+  direction: 'long' | 'short',
+  candleCount: number,
+  tp1: number,
+  stopLoss: number,
+): { p10: number[]; p50: number[]; p90: number[] } {
+  const p10: number[] = [];
+  const p50: number[] = [];
+  const p90: number[] = [];
+
+  for (let i = 0; i <= candleCount; i++) {
+    const t = i / candleCount;
+    if (direction === 'long') {
+      const target = entry + (tp1 - entry) * t;
+      const spread = (tp1 - stopLoss) * 0.15 * Math.sqrt(t + 0.1);
+      p50.push(target);
+      p90.push(target + spread);
+      p10.push(target - spread * 1.3);
+    } else {
+      const target = entry - (entry - tp1) * t;
+      const spread = (stopLoss - tp1) * 0.15 * Math.sqrt(t + 0.1);
+      p50.push(target);
+      p10.push(target - spread);
+      p90.push(target + spread * 1.3);
+    }
+  }
+  return { p10, p50, p90 };
 }
 
 // ---------------------------------------------------------------------------
@@ -111,9 +213,6 @@ const MOCK_TRADES: Trade[] = [
 // Helpers
 // ---------------------------------------------------------------------------
 
-type StatusFilter = 'ALL' | TradeStatus;
-const STATUSES: StatusFilter[] = ['ALL', 'ACTIVE', 'TP_HIT', 'SL_HIT', 'CLOSED'];
-
 function statusColor(s: TradeStatus) {
   switch (s) {
     case 'ACTIVE': return 'text-blue-500';
@@ -158,42 +257,166 @@ function fmtPrice(v: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Progress bar for TP progress
+// SVG Candlestick Chart with Trade Plan + Forecast
 // ---------------------------------------------------------------------------
 
-function TPProgress({ trade }: { trade: Trade }) {
-  const { entry, currentPrice, stopLoss, tp1, direction } = trade;
-  // Normalize: 0% = entry, 100% = tp1, negative = towards SL
-  const range = direction === 'long' ? tp1 - entry : entry - tp1;
-  const current = direction === 'long' ? currentPrice - entry : entry - currentPrice;
-  const pct = range !== 0 ? Math.min(Math.max((current / range) * 100, -50), 120) : 0;
-  const slRange = direction === 'long' ? entry - stopLoss : stopLoss - entry;
-  const slPct = range !== 0 ? -(slRange / range) * 100 : 0;
+function CandlestickChart({
+  candles,
+  trade,
+  label,
+  showForecast,
+  showOutcome,
+}: {
+  candles: Candle[];
+  trade: Trade;
+  label: string;
+  showForecast: boolean;
+  showOutcome?: boolean;
+}) {
+  const W = 520;
+  const H = 220;
+  const PAD = { top: 28, right: 60, bottom: 20, left: 8 };
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+
+  const allPrices = candles.flatMap((c) => [c.h, c.l]);
+  allPrices.push(trade.entry, trade.stopLoss, trade.tp1, trade.tp2);
+  const minP = Math.min(...allPrices) * 0.998;
+  const maxP = Math.max(...allPrices) * 1.002;
+  const range = maxP - minP || 1;
+
+  const yScale = (p: number) => PAD.top + chartH - ((p - minP) / range) * chartH;
+  const xScale = (i: number) => PAD.left + (i / candles.length) * chartW;
+  const candleW = Math.max(1, (chartW / candles.length) * 0.6);
+
+  const forecast = showForecast
+    ? generateForecastBand(trade.entry, trade.direction, candles.length, trade.tp1, trade.stopLoss)
+    : null;
+
+  let bandPath = '';
+  let p50Path = '';
+  if (forecast) {
+    const pts10 = forecast.p10.map((v, i) => `${xScale(i)},${yScale(v)}`);
+    const pts90 = forecast.p90.map((v, i) => `${xScale(i)},${yScale(v)}`);
+    bandPath = `M ${pts10.join(' L ')} L ${pts90.reverse().join(' L ')} Z`;
+    p50Path = forecast.p50.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i)},${yScale(v)}`).join(' ');
+  }
+
+  function levelLine(price: number, color: string, lbl: string, dashed: boolean = false) {
+    const y = yScale(price);
+    if (y < PAD.top - 5 || y > H - PAD.bottom + 5) return null;
+    return (
+      <g key={lbl}>
+        <line
+          x1={PAD.left} y1={y} x2={W - PAD.right} y2={y}
+          stroke={color} strokeWidth={0.8}
+          strokeDasharray={dashed ? '3,3' : 'none'}
+          opacity={0.6}
+        />
+        <rect x={W - PAD.right + 2} y={y - 7} width={56} height={14} rx={2} fill={color} opacity={0.15} />
+        <text x={W - PAD.right + 5} y={y + 3} fontSize={8} fontFamily="monospace" fill={color} opacity={0.9}>
+          {lbl} {fmtPrice(price)}
+        </text>
+      </g>
+    );
+  }
+
+  const entryIdx = Math.floor(candles.length * 0.5);
 
   return (
-    <div className="w-full">
-      <div className="relative h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-visible">
-        {/* SL zone */}
-        <div
-          className="absolute top-0 h-full bg-red-500/20 rounded-l-full"
-          style={{ left: `${Math.max(slPct, -50)}%`, width: `${Math.abs(Math.max(slPct, -50))}%` }}
-        />
-        {/* Progress */}
-        <div
-          className={cn(
-            'absolute top-0 left-0 h-full rounded-full transition-all duration-500',
-            pct >= 0 ? 'bg-emerald-500 dark:bg-[#00f5c4]' : 'bg-red-500 dark:bg-red-400',
-          )}
-          style={{ width: `${Math.abs(Math.min(pct, 100))}%`, left: pct < 0 ? `${pct}%` : 0 }}
-        />
-        {/* TP1 marker */}
-        <div className="absolute top-1/2 -translate-y-1/2 w-px h-3 bg-emerald-500 dark:bg-[#00f5c4]" style={{ left: '100%' }} />
+    <div className="relative">
+      <div className="absolute top-1 left-2 z-10 flex items-center gap-1.5">
+        <span className="text-[9px] font-mono font-semibold text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-black/80 px-1.5 py-0.5 rounded">
+          {label}
+        </span>
+        {showOutcome && (
+          <span className={cn(
+            'text-[9px] font-mono font-bold px-1.5 py-0.5 rounded',
+            trade.status === 'TP_HIT' ? 'bg-emerald-500/10 text-emerald-500 dark:text-[#00f5c4]' : 'bg-red-500/10 text-red-500',
+          )}>
+            {trade.status === 'TP_HIT' ? 'TARGET HIT' : 'STOP HIT'}
+          </span>
+        )}
       </div>
-      <div className="flex justify-between mt-0.5 text-[9px] font-mono text-slate-400">
-        <span>SL ${fmtPrice(stopLoss)}</span>
-        <span>Entry ${fmtPrice(entry)}</span>
-        <span>TP1 ${fmtPrice(tp1)}</span>
-      </div>
+
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" style={{ maxHeight: 220 }}>
+        <rect x={0} y={0} width={W} height={H} className="fill-white dark:fill-black" rx={4} />
+
+        {[0.25, 0.5, 0.75].map((pct) => {
+          const y = PAD.top + chartH * pct;
+          return (
+            <line key={pct} x1={PAD.left} y1={y} x2={W - PAD.right} y2={y}
+              className="stroke-black/[0.04] dark:stroke-white/[0.04]" strokeWidth={0.5} />
+          );
+        })}
+
+        {forecast && bandPath && (
+          <path d={bandPath} fill="#14B8A6" opacity={0.06} />
+        )}
+        {forecast && p50Path && (
+          <path d={p50Path} fill="none" stroke="#14B8A6" strokeWidth={1} opacity={0.3} strokeDasharray="4,2" />
+        )}
+
+        {candles.map((c, i) => {
+          const x = xScale(i);
+          const bullish = c.c >= c.o;
+          const bodyTop = yScale(Math.max(c.o, c.c));
+          const bodyBot = yScale(Math.min(c.o, c.c));
+          const bodyH = Math.max(bodyBot - bodyTop, 0.5);
+          const color = bullish ? '#22c55e' : '#ef4444';
+
+          return (
+            <g key={i}>
+              <line x1={x} y1={yScale(c.h)} x2={x} y2={yScale(c.l)} stroke={color} strokeWidth={0.6} opacity={0.5} />
+              <rect
+                x={x - candleW / 2} y={bodyTop}
+                width={candleW} height={bodyH}
+                fill={color}
+                opacity={bullish ? 0.8 : 0.7}
+                rx={0.3}
+              />
+            </g>
+          );
+        })}
+
+        {levelLine(trade.entry, '#3b82f6', 'ENT', false)}
+        {levelLine(trade.stopLoss, '#ef4444', 'SL', true)}
+        {levelLine(trade.tp1, '#22c55e', 'TP1', true)}
+        {levelLine(trade.tp2, '#10b981', 'TP2', true)}
+
+        {(() => {
+          const mx = xScale(entryIdx);
+          const my = yScale(trade.entry);
+          return (
+            <g>
+              <polygon
+                points={`${mx - 4},${my + 5} ${mx + 4},${my + 5} ${mx},${my - 1}`}
+                fill="#3b82f6" opacity={0.8}
+              />
+              <text x={mx} y={my + 14} fontSize={7} fontFamily="monospace" fill="#3b82f6" textAnchor="middle" opacity={0.7}>
+                ENTRY
+              </text>
+            </g>
+          );
+        })()}
+
+        {showOutcome && (() => {
+          const outcomePrice = trade.status === 'TP_HIT' ? trade.tp1 : trade.stopLoss;
+          const outIdx = candles.length - 3;
+          const ox = xScale(Math.max(0, outIdx));
+          const oy = yScale(outcomePrice);
+          const color = trade.status === 'TP_HIT' ? '#22c55e' : '#ef4444';
+          return (
+            <g>
+              <circle cx={ox} cy={oy} r={4} fill={color} opacity={0.3} />
+              <circle cx={ox} cy={oy} r={2} fill={color} opacity={0.8} />
+              <text x={ox} y={oy - 8} fontSize={7} fontFamily="monospace" fill={color} textAnchor="middle" fontWeight="bold">
+                {trade.status === 'TP_HIT' ? 'TP HIT' : 'SL HIT'}
+              </text>
+            </g>
+          );
+        })()}
+      </svg>
     </div>
   );
 }
@@ -208,7 +431,7 @@ function FlowHealth({ value, signal }: { value: number; signal: string }) {
   return (
     <div className="space-y-0.5">
       <div className="flex items-center justify-between">
-        <span className="text-[9px] text-slate-400 font-mono">FLOW</span>
+        <span className="text-[9px] text-slate-400 font-mono">FLOW HEALTH</span>
         <span className={cn('text-[9px] font-bold font-mono', color)}>{label}</span>
       </div>
       <div className="w-full h-1 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
@@ -219,10 +442,93 @@ function FlowHealth({ value, signal }: { value: number; signal: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Expanded Trade Detail
+// Content: Overview (trade list)
 // ---------------------------------------------------------------------------
 
-function TradeDetail({ trade }: { trade: Trade }) {
+function OverviewPanel({
+  trades,
+  onSelect,
+  selectedId,
+}: {
+  trades: Trade[];
+  onSelect: (id: string) => void;
+  selectedId: string | null;
+}) {
+  return (
+    <div>
+      {trades.map((trade) => {
+        const { label: flowLabel, color: flowColor } = flowSignalLabel(trade.flowSignal);
+
+        return (
+          <button
+            key={trade.id}
+            onClick={() => onSelect(trade.id)}
+            className={cn(
+              'w-full px-3 py-3 flex items-center gap-3 transition-colors text-left border-b border-black/[0.03] dark:border-white/[0.03]',
+              selectedId === trade.id
+                ? 'bg-[#14B8A6]/5 dark:bg-[#5EEAD4]/5'
+                : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]',
+            )}
+          >
+            <div className="flex flex-col items-center gap-0.5 w-8">
+              <StatusIcon status={trade.status} />
+              {trade.direction === 'long'
+                ? <ArrowUpRight className="w-3 h-3 text-emerald-500 dark:text-[#00f5c4]" />
+                : <ArrowDownRight className="w-3 h-3 text-red-500 dark:text-red-400" />
+              }
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono font-semibold text-xs">{trade.symbol}</span>
+                <span className={cn('text-[9px] font-bold uppercase px-1 py-0.5 rounded', statusBg(trade.status), statusColor(trade.status))}>
+                  {trade.status.replace('_', ' ')}
+                </span>
+                <span className="text-[9px] text-slate-400 font-mono hidden sm:inline">{trade.market}</span>
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center gap-2">
+                <span>{trade.duration}</span>
+                <span className="hidden sm:inline">&middot; Entry ${fmtPrice(trade.entry)}</span>
+              </div>
+            </div>
+
+            <div className="text-right">
+              <div className={cn(
+                'text-xs font-mono font-bold tabular-nums',
+                trade.pnlPercent >= 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400',
+              )}>
+                {trade.pnlPercent >= 0 ? '+' : ''}{trade.pnlPercent.toFixed(2)}%
+              </div>
+              <div className={cn('text-[10px] font-mono tabular-nums', trade.pnl >= 0 ? 'text-emerald-500/60' : 'text-red-500/60')}>
+                {trade.pnl >= 0 ? '+' : ''}{trade.pnl >= 1 ? `$${fmtPrice(trade.pnl)}` : `${trade.pnl.toFixed(4)}`}
+              </div>
+            </div>
+
+            <div className="hidden sm:block w-16 text-right">
+              <span className={cn('text-[9px] font-bold font-mono', flowColor)}>{flowLabel}</span>
+            </div>
+          </button>
+        );
+      })}
+
+      {trades.length === 0 && (
+        <div className="text-center py-16 text-slate-400 text-xs font-mono">
+          No trades match this filter.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Content: Trade Detail with Charts
+// ---------------------------------------------------------------------------
+
+function TradeDetailPanel({ trade }: { trade: Trade }) {
+  const isClosed = trade.status === 'TP_HIT' || trade.status === 'SL_HIT' || trade.status === 'CLOSED';
+  const beforeCandles = useMemo(() => generateBeforeCandles(trade), [trade]);
+  const afterCandles = useMemo(() => isClosed ? generateAfterCandles(trade) : [], [trade, isClosed]);
+
   const levels = [
     { label: 'ENTRY', value: trade.entry, icon: <Target className="w-3 h-3" />, color: 'text-blue-500' },
     { label: 'STOP LOSS', value: trade.stopLoss, icon: <Shield className="w-3 h-3" />, color: 'text-red-500 dark:text-red-400' },
@@ -231,7 +537,26 @@ function TradeDetail({ trade }: { trade: Trade }) {
   ];
 
   return (
-    <div className="px-3 py-3 border-t border-black/[0.03] dark:border-white/[0.03] bg-black/[0.01] dark:bg-white/[0.01]">
+    <div className="space-y-4">
+      {/* Trade header context bar */}
+      <div className="flex items-center gap-2 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
+        <span className="text-xs font-mono font-semibold">{trade.symbol}</span>
+        <span className="text-[10px] text-slate-400 font-mono">{trade.market}</span>
+        <span className={cn(
+          'text-[9px] font-bold px-1 py-0.5 rounded',
+          trade.direction === 'long'
+            ? 'bg-emerald-500/10 text-emerald-500 dark:text-[#00f5c4]'
+            : 'bg-red-500/10 text-red-500 dark:text-red-400',
+        )}>
+          {trade.direction.toUpperCase()}
+        </span>
+        <span className={cn('text-[9px] font-bold uppercase px-1 py-0.5 rounded', statusBg(trade.status), statusColor(trade.status))}>
+          {trade.status.replace('_', ' ')}
+        </span>
+        <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 uppercase ml-auto">{trade.method}</span>
+      </div>
+
+      {/* Trade levels */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {levels.map((l) => (
           <div key={l.label} className="flex items-center gap-1.5">
@@ -244,30 +569,106 @@ function TradeDetail({ trade }: { trade: Trade }) {
         ))}
       </div>
 
-      <div className="mt-3">
-        <TPProgress trade={trade} />
+      {/* Charts */}
+      {isClosed ? (
+        <div className="space-y-2">
+          <div className="text-[9px] font-sans font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            Before / After Comparison
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="border border-black/[0.06] dark:border-white/[0.06] rounded overflow-hidden">
+              <CandlestickChart
+                candles={beforeCandles}
+                trade={trade}
+                label="BEFORE"
+                showForecast={true}
+              />
+            </div>
+            <div className="border border-black/[0.06] dark:border-white/[0.06] rounded overflow-hidden">
+              <CandlestickChart
+                candles={afterCandles}
+                trade={trade}
+                label="AFTER"
+                showForecast={false}
+                showOutcome={true}
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="text-[9px] font-sans font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            Current Position &middot; Forecast Band
+          </div>
+          <div className="border border-black/[0.06] dark:border-white/[0.06] rounded overflow-hidden">
+            <CandlestickChart
+              candles={beforeCandles}
+              trade={trade}
+              label="CURRENT"
+              showForecast={true}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Meta row */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {[
+          { label: 'P/L', value: `${trade.pnlPercent >= 0 ? '+' : ''}${trade.pnlPercent.toFixed(2)}%`, color: trade.pnlPercent >= 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400' },
+          { label: 'R:R', value: trade.rr.toFixed(1), color: '' },
+          { label: 'SCORE', value: trade.score.toFixed(1), color: '' },
+          { label: 'DURATION', value: trade.duration, color: '' },
+          { label: 'OPENED', value: trade.openedAt.split(' ')[0], color: '' },
+        ].map((m) => (
+          <div key={m.label}>
+            <div className="text-[9px] text-slate-400 font-mono">{m.label}</div>
+            <div className={cn('text-xs font-mono font-semibold tabular-nums', m.color)}>{m.value}</div>
+          </div>
+        ))}
       </div>
 
-      <div className="mt-3">
-        <FlowHealth value={trade.flowHealth} signal={trade.flowSignal} />
-      </div>
-
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-        <div>
-          <div className="text-[9px] text-slate-400 font-mono">R:R</div>
-          <div className="text-xs font-mono font-semibold tabular-nums">{trade.rr.toFixed(1)}</div>
-        </div>
-        <div>
-          <div className="text-[9px] text-slate-400 font-mono">SCORE</div>
-          <div className="text-xs font-mono font-semibold tabular-nums">{trade.score.toFixed(1)}</div>
-        </div>
-        <div>
-          <div className="text-[9px] text-slate-400 font-mono">METHOD</div>
-          <div className="text-xs font-mono font-semibold uppercase">{trade.method}</div>
-        </div>
-      </div>
+      {/* Flow health */}
+      <FlowHealth value={trade.flowHealth} signal={trade.flowSignal} />
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Content Panel dispatcher
+// ---------------------------------------------------------------------------
+
+function ContentPanel({
+  activeSection,
+  trades,
+  onSelectTrade,
+  selectedTradeId,
+}: {
+  activeSection: SectionId;
+  trades: Trade[];
+  onSelectTrade: (id: string) => void;
+  selectedTradeId: string | null;
+}) {
+  if (activeSection === 'overview') {
+    return (
+      <OverviewPanel
+        trades={trades}
+        onSelect={onSelectTrade}
+        selectedId={selectedTradeId}
+      />
+    );
+  }
+
+  // Find trade by id
+  const trade = MOCK_TRADES.find((t) => t.id === activeSection);
+  if (!trade) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-xs text-slate-400 font-mono">Trade not found.</p>
+      </div>
+    );
+  }
+
+  return <TradeDetailPanel trade={trade} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -275,159 +676,243 @@ function TradeDetail({ trade }: { trade: Trade }) {
 // ---------------------------------------------------------------------------
 
 export default function TradesPage() {
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<SectionId>('overview');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | TradeStatus>('ALL');
+
+  const activeTrades = MOCK_TRADES.filter((t) => t.status === 'ACTIVE');
+  const closedTrades = MOCK_TRADES.filter((t) => t.status === 'TP_HIT' || t.status === 'SL_HIT' || t.status === 'CLOSED');
+  const totalPnl = activeTrades.reduce((s, t) => s + t.pnlPercent, 0);
+  const warnings = activeTrades.filter((t) => t.flowSignal === 'close' || t.flowSignal === 'tighten').length;
 
   const filtered = useMemo(() => {
     if (statusFilter === 'ALL') return MOCK_TRADES;
     return MOCK_TRADES.filter((t) => t.status === statusFilter);
   }, [statusFilter]);
 
-  const activeTrades = MOCK_TRADES.filter((t) => t.status === 'ACTIVE');
-  const totalPnl = activeTrades.reduce((s, t) => s + t.pnlPercent, 0);
-  const warnings = activeTrades.filter((t) => t.flowSignal === 'close' || t.flowSignal === 'tighten').length;
+  // Build nav groups
+  const navGroups: NavGroup[] = useMemo(() => {
+    const groups: NavGroup[] = [
+      {
+        title: 'Overview',
+        items: [
+          { id: 'overview', label: 'All Trades' },
+        ],
+      },
+    ];
+
+    if (activeTrades.length > 0) {
+      groups.push({
+        title: `Active (${activeTrades.length})`,
+        items: activeTrades.map((t) => ({
+          id: t.id,
+          tag: t.direction === 'long' ? 'L' : 'S',
+          label: t.symbol,
+          sublabel: `${t.pnlPercent >= 0 ? '+' : ''}${t.pnlPercent.toFixed(1)}%`,
+          color: t.pnlPercent >= 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400',
+        })),
+      });
+    }
+
+    if (closedTrades.length > 0) {
+      groups.push({
+        title: `Closed (${closedTrades.length})`,
+        items: closedTrades.map((t) => ({
+          id: t.id,
+          tag: t.status === 'TP_HIT' ? 'TP' : 'SL',
+          label: t.symbol,
+          sublabel: `${t.pnlPercent >= 0 ? '+' : ''}${t.pnlPercent.toFixed(1)}%`,
+          color: t.status === 'TP_HIT' ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400',
+        })),
+      });
+    }
+
+    return groups;
+  }, [activeTrades, closedTrades]);
+
+  const allNavItems = navGroups.flatMap((g) => g.items);
+
+  const handleNavClick = useCallback((id: SectionId) => {
+    setActiveSection(id);
+  }, []);
+
+  const handleSelectFromOverview = useCallback((id: string) => {
+    setActiveSection(id);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
+    <div className="h-screen flex flex-col bg-white dark:bg-black text-black dark:text-white overflow-hidden">
       {/* Header */}
-      <div className="border-b border-black/[0.06] dark:border-white/[0.06]">
-        <div className="max-w-[1200px] mx-auto px-3 py-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-sm font-mono font-semibold tracking-tight">TRADES</h1>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
-                Active Position Monitor &middot; {activeTrades.length} open
-              </p>
-            </div>
+      <div className="border-b border-black/[0.06] dark:border-white/[0.06] shrink-0">
+        <div className="max-w-[1400px] mx-auto px-3 py-3 flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-sm font-sans font-semibold tracking-tight">TRADES</h1>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+              Active Position Monitor &middot; {activeTrades.length} open
+            </p>
+          </div>
 
-            {/* Summary badges */}
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="text-[9px] text-slate-400 font-mono">TOTAL P/L</div>
-                <div className={cn(
-                  'text-sm font-mono font-bold tabular-nums',
-                  totalPnl >= 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400',
-                )}>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-4 text-[10px] font-mono">
+              <span className="text-slate-400">
+                P/L: <span className={cn('font-semibold', totalPnl >= 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400')}>
                   {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}%
-                </div>
-              </div>
-              {warnings > 0 && (
-                <div className="flex items-center gap-1 px-2 py-1 rounded bg-amber-500/10 text-amber-500">
-                  <AlertTriangle className="w-3 h-3" />
-                  <span className="text-[10px] font-mono font-bold">{warnings}</span>
-                </div>
-              )}
+                </span>
+              </span>
+              <span className="text-slate-400">
+                ACTIVE: <span className="text-black dark:text-white font-semibold">{activeTrades.length}</span>
+              </span>
             </div>
+            {warnings > 0 && (
+              <div className="flex items-center gap-1 px-2 py-1 rounded bg-amber-500/10 text-amber-500">
+                <AlertTriangle className="w-3 h-3" />
+                <span className="text-[10px] font-mono font-bold">{warnings}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Status filter */}
-      <div className="border-b border-black/[0.06] dark:border-white/[0.06]">
-        <div className="max-w-[1200px] mx-auto px-3 py-2 flex items-center gap-px overflow-x-auto">
-          {STATUSES.map((s) => {
-            const count = s === 'ALL'
-              ? MOCK_TRADES.length
-              : MOCK_TRADES.filter((t) => t.status === s).length;
+      {/* Mobile: Horizontal scroll tab bar */}
+      <div className="lg:hidden shrink-0 border-b border-black/[0.06] dark:border-white/[0.06] overflow-x-auto scrollbar-none">
+        <div className="flex gap-px w-max">
+          {allNavItems.map((item) => {
+            const trade = MOCK_TRADES.find((t) => t.id === item.id);
             return (
               <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
                 className={cn(
-                  'px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider transition-colors whitespace-nowrap flex items-center gap-1',
-                  statusFilter === s
-                    ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
-                    : 'text-slate-400 hover:text-black dark:hover:text-white',
+                  'px-3 py-2 text-[10px] font-sans uppercase tracking-wider transition-colors whitespace-nowrap flex items-center gap-1',
+                  activeSection === item.id
+                    ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
+                    : 'text-neutral-500 dark:text-neutral-400',
                 )}
               >
-                {s.replace('_', ' ')}
-                <span className="text-[9px] opacity-60">{count}</span>
+                {item.tag && (
+                  <span className={cn(
+                    'text-[9px] font-mono opacity-60',
+                    trade && (trade.status === 'TP_HIT' ? 'text-emerald-400' : trade.status === 'SL_HIT' ? 'text-red-400' : ''),
+                  )}>
+                    {item.tag}
+                  </span>
+                )}
+                {item.label}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Trade list */}
-      <div className="max-w-[1200px] mx-auto">
-        {filtered.map((trade) => {
-          const isExpanded = expanded === trade.id;
-          const { label: flowLabel, color: flowColor } = flowSignalLabel(trade.flowSignal);
+      {/* Desktop: Sidebar + Content Panel */}
+      <div className="flex-1 min-h-0 flex max-w-[1400px] mx-auto w-full">
+        {/* Sidebar Navigation */}
+        <nav className="hidden lg:block w-52 shrink-0 border-r border-black/[0.06] dark:border-white/[0.06] overflow-y-auto scrollbar-none pr-3 py-3">
+          {navGroups.map((group, gi) => (
+            <div key={group.title} className={cn(gi > 0 && 'mt-5')}>
+              {/* Group header */}
+              <div className="text-[9px] font-sans text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em] mb-2 px-2">
+                {group.title}
+              </div>
 
-          return (
-            <div key={trade.id} className="border-b border-black/[0.03] dark:border-white/[0.03]">
-              <button
-                onClick={() => setExpanded(isExpanded ? null : trade.id)}
-                className="w-full px-3 py-3 flex items-center gap-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors text-left"
-              >
-                {/* Status + Direction */}
-                <div className="flex flex-col items-center gap-0.5 w-8">
-                  <StatusIcon status={trade.status} />
-                  {trade.direction === 'long'
-                    ? <ArrowUpRight className="w-3 h-3 text-emerald-500 dark:text-[#00f5c4]" />
-                    : <ArrowDownRight className="w-3 h-3 text-red-500 dark:text-red-400" />
-                  }
-                </div>
+              {/* Items */}
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const isActive = activeSection === item.id;
+                  const trade = MOCK_TRADES.find((t) => t.id === item.id);
+                  const isClosed = trade && (trade.status === 'TP_HIT' || trade.status === 'SL_HIT' || trade.status === 'CLOSED');
 
-                {/* Symbol */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono font-semibold text-xs">{trade.symbol}</span>
-                    <span className={cn('text-[9px] font-bold uppercase px-1 py-0.5 rounded', statusBg(trade.status), statusColor(trade.status))}>
-                      {trade.status.replace('_', ' ')}
-                    </span>
-                    <span className="text-[9px] text-slate-400 font-mono hidden sm:inline">{trade.market}</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center gap-2">
-                    <span>{trade.duration}</span>
-                    <span className="hidden sm:inline">&middot; Entry ${fmtPrice(trade.entry)}</span>
-                    <span className="hidden sm:inline">&middot; Now ${fmtPrice(trade.currentPrice)}</span>
-                  </div>
-                </div>
-
-                {/* P/L */}
-                <div className="text-right">
-                  <div className={cn(
-                    'text-xs font-mono font-bold tabular-nums',
-                    trade.pnlPercent >= 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400',
-                  )}>
-                    {trade.pnlPercent >= 0 ? '+' : ''}{trade.pnlPercent.toFixed(2)}%
-                  </div>
-                  <div className={cn('text-[10px] font-mono tabular-nums', trade.pnl >= 0 ? 'text-emerald-500/60' : 'text-red-500/60')}>
-                    {trade.pnl >= 0 ? '+' : ''}{trade.pnl >= 1 ? `$${fmtPrice(trade.pnl)}` : `${trade.pnl.toFixed(4)}`}
-                  </div>
-                </div>
-
-                {/* Flow signal */}
-                <div className="hidden sm:block w-16 text-right">
-                  <span className={cn('text-[9px] font-bold font-mono', flowColor)}>{flowLabel}</span>
-                </div>
-
-                {/* Expand */}
-                <div className="text-slate-400">
-                  {isExpanded
-                    ? <ChevronUp className="w-3.5 h-3.5" />
-                    : <ChevronDown className="w-3.5 h-3.5" />
-                  }
-                </div>
-              </button>
-
-              {/* Expanded detail */}
-              {isExpanded && <TradeDetail trade={trade} />}
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleNavClick(item.id)}
+                      className={cn(
+                        'w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-left transition-all duration-150',
+                        isActive
+                          ? isClosed
+                            ? 'bg-neutral-100 dark:bg-neutral-900/50 border-l-2 border-slate-400 dark:border-slate-500 -ml-px'
+                            : 'bg-neutral-100 dark:bg-neutral-900/50 border-l-2 border-[#14B8A6] dark:border-[#5EEAD4] -ml-px'
+                          : 'border-l-2 border-transparent hover:bg-neutral-50 dark:hover:bg-neutral-900/20 -ml-px',
+                      )}
+                    >
+                      {item.tag && (
+                        <span className={cn(
+                          'text-[9px] font-mono tabular-nums w-5 shrink-0',
+                          isActive
+                            ? isClosed
+                              ? trade.status === 'TP_HIT'
+                                ? 'text-emerald-500 dark:text-[#00f5c4]'
+                                : 'text-red-500 dark:text-red-400'
+                              : 'text-[#14B8A6] dark:text-[#5EEAD4]'
+                            : 'text-slate-400 dark:text-slate-600',
+                        )}>
+                          {item.tag}
+                        </span>
+                      )}
+                      <span className={cn(
+                        'text-[11px] font-sans truncate flex-1',
+                        isActive
+                          ? 'text-black dark:text-white font-medium'
+                          : 'text-slate-500 dark:text-slate-400',
+                      )}>
+                        {item.label}
+                      </span>
+                      {item.sublabel && (
+                        <span className={cn('text-[9px] font-mono tabular-nums', item.color || 'text-slate-400')}>
+                          {item.sublabel}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          );
-        })}
+          ))}
 
-        {filtered.length === 0 && (
-          <div className="text-center py-16 text-slate-400 text-xs font-mono">
-            No trades match this filter.
+          {/* Sidebar footer: P/L summary */}
+          <div className="mt-6 px-2 pt-4 border-t border-black/[0.06] dark:border-white/[0.06]">
+            <span className="text-[9px] font-sans text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-1">
+              Portfolio
+            </span>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono text-slate-400">Total P/L</span>
+                <span className={cn('text-[10px] font-mono font-semibold tabular-nums', totalPnl >= 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400')}>
+                  {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)}%
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono text-slate-400">Win Rate</span>
+                <span className="text-[10px] font-mono font-semibold tabular-nums">
+                  {closedTrades.length > 0
+                    ? `${Math.round((closedTrades.filter((t) => t.status === 'TP_HIT').length / closedTrades.length) * 100)}%`
+                    : '—'
+                  }
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono text-slate-400">Warnings</span>
+                <span className={cn('text-[10px] font-mono font-semibold tabular-nums', warnings > 0 ? 'text-amber-500' : 'text-slate-400')}>
+                  {warnings}
+                </span>
+              </div>
+            </div>
           </div>
-        )}
+        </nav>
+
+        {/* Content Panel */}
+        <main className="flex-1 min-w-0 overflow-y-auto scrollbar-none lg:pl-4 py-1 pb-4">
+          <ContentPanel
+            activeSection={activeSection}
+            trades={filtered}
+            onSelectTrade={handleSelectFromOverview}
+            selectedTradeId={activeSection !== 'overview' ? activeSection : null}
+          />
+        </main>
       </div>
 
-      {/* Summary footer */}
-      <div className="border-t border-black/[0.06] dark:border-white/[0.06]">
-        <div className="max-w-[1200px] mx-auto px-3 py-2 flex items-center justify-between text-[10px] font-mono text-slate-400">
+      {/* Footer summary */}
+      <div className="border-t border-black/[0.06] dark:border-white/[0.06] shrink-0">
+        <div className="max-w-[1400px] mx-auto px-3 py-2 flex items-center justify-between text-[10px] font-mono text-slate-400">
           <span>
             {activeTrades.length} active &middot; {MOCK_TRADES.filter((t) => t.status === 'TP_HIT').length} TP &middot; {MOCK_TRADES.filter((t) => t.status === 'SL_HIT').length} SL
           </span>
