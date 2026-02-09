@@ -41,17 +41,22 @@ export default async function alertRoutes(app: FastifyInstance) {
    * Get user's price alerts
    */
   app.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    try {
+      const userId = request.user!.id;
 
-    const alerts = await prisma.priceAlert.findMany({
-      where: { userId, isActive: true },
-      orderBy: { createdAt: 'desc' },
-    });
+      const alerts = await prisma.priceAlert.findMany({
+        where: { userId, isActive: true },
+        orderBy: { createdAt: 'desc' },
+      });
 
-    return reply.send({
-      success: true,
-      data: { alerts },
-    });
+      return reply.send({
+        success: true,
+        data: { alerts },
+      });
+    } catch (error) {
+      console.error('GET /api/alerts error:', error);
+      return reply.status(500).send({ success: false, error: 'Failed to fetch alerts' });
+    }
   });
 
   /**
@@ -65,43 +70,51 @@ export default async function alertRoutes(app: FastifyInstance) {
   });
 
   app.post('/', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
-    const body = createSchema.parse(request.body);
+    try {
+      const userId = request.user!.id;
+      const body = createSchema.parse(request.body);
 
-    // Charge credits
-    const cost = await creditCostsService.getCreditCost('PRICE_ALERT');
-    const chargeResult = await creditService.charge(userId, cost, 'price_alert', {
-      symbol: body.symbol,
-      targetPrice: body.targetPrice,
-    });
-
-    if (!chargeResult.success) {
-      return reply.status(402).send({
-        success: false,
-        error: {
-          code: 'CREDIT_001',
-          message: 'Insufficient credits',
-          required: cost,
-        },
-      });
-    }
-
-    const alert = await prisma.priceAlert.create({
-      data: {
-        userId,
+      // Charge credits
+      const cost = await creditCostsService.getCreditCost('PRICE_ALERT');
+      const chargeResult = await creditService.charge(userId, cost, 'price_alert', {
         symbol: body.symbol,
         targetPrice: body.targetPrice,
-        direction: body.direction,
-        creditsSpent: cost,
-      },
-    });
+      });
 
-    return reply.status(201).send({
-      success: true,
-      data: { alert },
-      creditsSpent: cost,
-      remainingCredits: chargeResult.newBalance,
-    });
+      if (!chargeResult.success) {
+        return reply.status(402).send({
+          success: false,
+          error: {
+            code: 'CREDIT_001',
+            message: 'Insufficient credits',
+            required: cost,
+          },
+        });
+      }
+
+      const alert = await prisma.priceAlert.create({
+        data: {
+          userId,
+          symbol: body.symbol,
+          targetPrice: body.targetPrice,
+          direction: body.direction,
+          creditsSpent: cost,
+        },
+      });
+
+      return reply.status(201).send({
+        success: true,
+        data: { alert },
+        creditsSpent: cost,
+        remainingCredits: chargeResult.newBalance,
+      });
+    } catch (error: any) {
+      if (error?.name === 'ZodError') {
+        return reply.status(400).send({ success: false, error: 'Invalid input parameters' });
+      }
+      console.error('POST /api/alerts error:', error);
+      return reply.status(500).send({ success: false, error: 'Failed to create alert' });
+    }
   });
 
   /**
@@ -109,32 +122,37 @@ export default async function alertRoutes(app: FastifyInstance) {
    * Delete a price alert
    */
   app.delete('/:id', async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-    const userId = request.user!.id;
-    const { id } = request.params;
+    try {
+      const userId = request.user!.id;
+      const { id } = request.params;
 
-    const alert = await prisma.priceAlert.findFirst({
-      where: { id, userId },
-    });
-
-    if (!alert) {
-      return reply.status(404).send({
-        success: false,
-        error: {
-          code: 'ALERT_NOT_FOUND',
-          message: 'Alert not found',
-        },
+      const alert = await prisma.priceAlert.findFirst({
+        where: { id, userId },
       });
+
+      if (!alert) {
+        return reply.status(404).send({
+          success: false,
+          error: {
+            code: 'ALERT_NOT_FOUND',
+            message: 'Alert not found',
+          },
+        });
+      }
+
+      await prisma.priceAlert.update({
+        where: { id },
+        data: { isActive: false },
+      });
+
+      return reply.send({
+        success: true,
+        message: 'Alert deleted',
+      });
+    } catch (error) {
+      console.error('DELETE /api/alerts/:id error:', error);
+      return reply.status(500).send({ success: false, error: 'Failed to delete alert' });
     }
-
-    await prisma.priceAlert.update({
-      where: { id },
-      data: { isActive: false },
-    });
-
-    return reply.send({
-      success: true,
-      message: 'Alert deleted',
-    });
   });
 
   /**
@@ -142,18 +160,23 @@ export default async function alertRoutes(app: FastifyInstance) {
    * Get triggered alerts history
    */
   app.get('/history', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    try {
+      const userId = request.user!.id;
 
-    const alerts = await prisma.priceAlert.findMany({
-      where: { userId, isTriggered: true },
-      orderBy: { triggeredAt: 'desc' },
-      take: 50,
-    });
+      const alerts = await prisma.priceAlert.findMany({
+        where: { userId, isTriggered: true },
+        orderBy: { triggeredAt: 'desc' },
+        take: 50,
+      });
 
-    return reply.send({
-      success: true,
-      data: { alerts },
-    });
+      return reply.send({
+        success: true,
+        data: { alerts },
+      });
+    } catch (error) {
+      console.error('GET /api/alerts/history error:', error);
+      return reply.status(500).send({ success: false, error: 'Failed to fetch alert history' });
+    }
   });
 
   /**
@@ -171,58 +194,66 @@ export default async function alertRoutes(app: FastifyInstance) {
   });
 
   app.post('/trade-plan', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
-    const body = tradePlanAlertSchema.parse(request.body);
+    try {
+      const userId = request.user!.id;
+      const body = tradePlanAlertSchema.parse(request.body);
 
-    // Calculate total cost (1 credit per alert: entry + SL + TPs)
-    const alertCount = 2 + body.takeProfits.length; // entry + SL + TPs
-    const cost = alertCount;
+      // Calculate total cost (1 credit per alert: entry + SL + TPs)
+      const alertCount = 2 + body.takeProfits.length; // entry + SL + TPs
+      const cost = alertCount;
 
-    // Charge credits
-    const chargeResult = await creditService.charge(userId, cost, 'trade_plan_alerts', {
-      symbol: body.symbol,
-      alertCount,
-    });
-
-    if (!chargeResult.success) {
-      return reply.status(402).send({
-        success: false,
-        error: {
-          code: 'CREDIT_001',
-          message: 'Insufficient credits',
-          required: cost,
-        },
+      // Charge credits
+      const chargeResult = await creditService.charge(userId, cost, 'trade_plan_alerts', {
+        symbol: body.symbol,
+        alertCount,
       });
+
+      if (!chargeResult.success) {
+        return reply.status(402).send({
+          success: false,
+          error: {
+            code: 'CREDIT_001',
+            message: 'Insufficient credits',
+            required: cost,
+          },
+        });
+      }
+
+      // Create all alerts
+      const result = await notificationService.createTradePlanAlerts(
+        userId,
+        body.symbol,
+        {
+          direction: body.direction,
+          entryPrice: body.entryPrice,
+          stopLoss: body.stopLoss,
+          takeProfits: body.takeProfits,
+        },
+        body.channels,
+        body.reportId
+      );
+
+      return reply.status(201).send({
+        success: true,
+        data: {
+          alertsCreated: result.alerts.length,
+          alerts: result.alerts.map(a => ({
+            symbol: a.symbol,
+            alertType: a.alertType,
+            targetPrice: a.targetPrice,
+            direction: a.direction,
+          })),
+        },
+        creditsSpent: cost,
+        remainingCredits: chargeResult.newBalance,
+      });
+    } catch (error: any) {
+      if (error?.name === 'ZodError') {
+        return reply.status(400).send({ success: false, error: 'Invalid trade plan parameters' });
+      }
+      console.error('POST /api/alerts/trade-plan error:', error);
+      return reply.status(500).send({ success: false, error: 'Failed to create trade plan alerts' });
     }
-
-    // Create all alerts
-    const result = await notificationService.createTradePlanAlerts(
-      userId,
-      body.symbol,
-      {
-        direction: body.direction,
-        entryPrice: body.entryPrice,
-        stopLoss: body.stopLoss,
-        takeProfits: body.takeProfits,
-      },
-      body.channels,
-      body.reportId
-    );
-
-    return reply.status(201).send({
-      success: true,
-      data: {
-        alertsCreated: result.alerts.length,
-        alerts: result.alerts.map(a => ({
-          symbol: a.symbol,
-          alertType: a.alertType,
-          targetPrice: a.targetPrice,
-          direction: a.direction,
-        })),
-      },
-      creditsSpent: cost,
-      remainingCredits: chargeResult.newBalance,
-    });
   });
 
   /**
@@ -230,17 +261,22 @@ export default async function alertRoutes(app: FastifyInstance) {
    * Get user's notification settings
    */
   app.get('/settings', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
+    try {
+      const userId = request.user!.id;
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { notificationSettings: true },
-    });
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { notificationSettings: true },
+      });
 
-    return reply.send({
-      success: true,
-      data: { settings: user?.notificationSettings || {} },
-    });
+      return reply.send({
+        success: true,
+        data: { settings: user?.notificationSettings || {} },
+      });
+    } catch (error) {
+      console.error('GET /api/alerts/settings error:', error);
+      return reply.status(500).send({ success: false, error: 'Failed to fetch settings' });
+    }
   });
 
   /**
@@ -268,28 +304,36 @@ export default async function alertRoutes(app: FastifyInstance) {
   });
 
   app.patch('/settings', async (request: FastifyRequest, reply: FastifyReply) => {
-    const userId = request.user!.id;
-    const body = settingsSchema.parse(request.body);
+    try {
+      const userId = request.user!.id;
+      const body = settingsSchema.parse(request.body);
 
-    // Get current settings and merge
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { notificationSettings: true },
-    });
+      // Get current settings and merge
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { notificationSettings: true },
+      });
 
-    const currentSettings = (user?.notificationSettings as Record<string, unknown>) || {};
-    const newSettings = { ...currentSettings, ...body };
+      const currentSettings = (user?.notificationSettings as Record<string, unknown>) || {};
+      const newSettings = { ...currentSettings, ...body };
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { notificationSettings: newSettings },
-    });
+      await prisma.user.update({
+        where: { id: userId },
+        data: { notificationSettings: newSettings },
+      });
 
-    return reply.send({
-      success: true,
-      data: { settings: newSettings },
-      message: 'Notification settings updated',
-    });
+      return reply.send({
+        success: true,
+        data: { settings: newSettings },
+        message: 'Notification settings updated',
+      });
+    } catch (error: any) {
+      if (error?.name === 'ZodError') {
+        return reply.status(400).send({ success: false, error: 'Invalid settings parameters' });
+      }
+      console.error('PATCH /api/alerts/settings error:', error);
+      return reply.status(500).send({ success: false, error: 'Failed to update settings' });
+    }
   });
 
   /**

@@ -379,7 +379,7 @@ export function TrafficLight({
         {/* Bottom info bar */}
         <div className="px-6 py-3 bg-white/5 border-t border-white/10 flex items-center justify-between text-xs text-white/40">
           <span>AI scanning every 15 min</span>
-          <Link href="/explore" className="hover:text-white/70 transition-colors">
+          <Link href="/analyze" className="hover:text-white/70 transition-colors">
             Power User View →
           </Link>
         </div>

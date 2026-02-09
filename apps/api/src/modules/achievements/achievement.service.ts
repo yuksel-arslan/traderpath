@@ -1,16 +1,18 @@
 /**
  * Achievement Service
- * Tracks and unlocks user achievements
+ * Tracks and unlocks user achievements, awards Analysis Points (AP)
  */
 
 import { prisma } from '../../core/database';
 import { creditService } from '../credits/credit.service';
 import { logger } from '../../core/logger';
+import { getTierForAP } from '../rewards/tier-benefits';
 
 export class AchievementService {
   /**
    * Increment achievement progress
    * Automatically unlocks if requirement is met
+   * Awards Analysis Points (AP) and credits on unlock
    */
   async incrementProgress(
     userId: string,
@@ -71,12 +73,20 @@ export class AchievementService {
           },
         });
 
-        // Award XP
+        // Award Analysis Points (AP) - stored in DB as `xp`
         if (achievement.xpReward > 0) {
+          const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { xp: true },
+          });
+          const newAP = (user?.xp || 0) + achievement.xpReward;
+          const newTier = getTierForAP(newAP);
+
           await prisma.user.update({
             where: { id: userId },
             data: {
               xp: { increment: achievement.xpReward },
+              level: newTier.tier,
             },
           });
         }
@@ -99,7 +109,7 @@ export class AchievementService {
           achievement: {
             code: achievement.code,
             name: achievement.name,
-            xpReward: achievement.xpReward,
+            apReward: achievement.xpReward,     // Expose as AP, not XP
             creditReward: achievement.creditReward,
           },
         };

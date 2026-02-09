@@ -244,9 +244,10 @@ export function CoinSelector({ timeframe = '4h' }: CoinSelectorProps) {
   // Filter coins based on search (handles both "BTC" and "BTCUSDT" format)
   const filteredCoins = search
     ? ALL_COINS.filter((coin) => {
-        const searchLower = search.toLowerCase().replace('usdt', '');
-        const symbolLower = coin.symbol.toLowerCase();
-        const nameLower = coin.name.toLowerCase();
+        // Guard: coin properties could be undefined from API
+        const searchLower = (search || '').toLowerCase().replace('usdt', '');
+        const symbolLower = (coin.symbol || '').toLowerCase();
+        const nameLower = (coin.name || '').toLowerCase();
         return (
           symbolLower.includes(searchLower) ||
           searchLower.includes(symbolLower) ||

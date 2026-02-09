@@ -31,6 +31,7 @@ export async function signalRoutes(fastify: FastifyInstance) {
             status: { type: 'string', enum: ['pending', 'published', 'expired', 'cancelled'] },
             minConfidence: { type: 'number', minimum: 0, maximum: 100 },
             minScore: { type: 'number', minimum: 0, maximum: 10 },
+            minQualityScore: { type: 'number', minimum: 0, maximum: 100 },
             direction: { type: 'string', enum: ['long', 'short'] },
             limit: { type: 'number', minimum: 1, maximum: 100, default: 20 },
             offset: { type: 'number', minimum: 0, default: 0 },
@@ -46,6 +47,7 @@ export async function signalRoutes(fastify: FastifyInstance) {
         status: query.status,
         minConfidence: query.minConfidence,
         minScore: query.minScore,
+        minQualityScore: query.minQualityScore,
         direction: query.direction,
       };
 
@@ -160,20 +162,35 @@ export async function signalRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const { fromDate, toDate } = request.query as {
-        fromDate?: string;
-        toDate?: string;
-      };
+      try {
+        const { fromDate, toDate } = request.query as {
+          fromDate?: string;
+          toDate?: string;
+        };
 
-      const stats = await signalService.getSignalStats(
-        fromDate ? new Date(fromDate) : undefined,
-        toDate ? new Date(toDate) : undefined
-      );
+        const stats = await signalService.getSignalStats(
+          fromDate ? new Date(fromDate) : undefined,
+          toDate ? new Date(toDate) : undefined
+        );
 
-      return reply.send({
-        success: true,
-        data: stats,
-      });
+        return reply.send({
+          success: true,
+          data: stats,
+        });
+      } catch (error) {
+        console.error('[signals/stats] Error:', error);
+        return reply.status(500).send({
+          success: false,
+          data: {
+            total: 0,
+            published: 0,
+            outcomes: { tp1Hit: 0, tp2Hit: 0, slHit: 0, expired: 0 },
+            winRate: 0,
+            byMarket: [],
+          },
+          error: 'Failed to fetch signal stats',
+        });
+      }
     }
   );
 
@@ -487,6 +504,8 @@ function serializeSignal(signal: any) {
     mlisRecommendation: signal.mlisRecommendation,
     mlisConfidence: signal.mlisConfidence,
     overallConfidence: signal.overallConfidence,
+    qualityScore: signal.qualityScore ?? null,
+    qualityData: signal.qualityData ?? null,
     capitalFlowPhase: signal.capitalFlowPhase,
     capitalFlowBias: signal.capitalFlowBias,
     sectorFlow: signal.sectorFlow ? Number(signal.sectorFlow) : null,

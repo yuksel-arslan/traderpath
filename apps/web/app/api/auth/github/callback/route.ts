@@ -103,8 +103,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=no_token', baseUrl));
     }
 
-    // Create response with redirect to capital-flow
-    const response = NextResponse.redirect(new URL('/capital-flow', baseUrl));
+    // Create response with redirect to dashboard
+    const response = NextResponse.redirect(new URL('/dashboard', baseUrl));
 
     // Set cookies
     response.cookies.set('auth-token', accessToken, {

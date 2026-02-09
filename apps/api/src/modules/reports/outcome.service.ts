@@ -324,7 +324,8 @@ function calculateStepOutcomes(
   // Final Verdict outcome - THE OVERALL RECOMMENDATION
   const finalVerdict = reportData.finalVerdict as Record<string, unknown> | undefined;
   const verdict = (finalVerdict?.verdict as string) || '';
-  const verdictLower = verdict.toLowerCase();
+  // Guard: verdict could be non-string from DB JSON
+  const verdictLower = typeof verdict === 'string' ? verdict.toLowerCase() : '';
 
   // GO/Conditional GO should result in TP hit, WAIT/AVOID should result in avoiding loss
   const wasGoSignal = verdictLower.includes('go') && !verdictLower.includes('wait') && !verdictLower.includes('avoid');

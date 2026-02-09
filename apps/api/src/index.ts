@@ -63,7 +63,9 @@ import { startDailyCreditsJob, stopDailyCreditsJob } from './modules/subscriptio
 import { startReconciliationJob, stopReconciliationJob } from './modules/admin/reconciliation.cron';
 import { unifiedAnalysisRoutes } from './modules/unified-analysis';
 import { ragRoutes } from './modules/rag';
-import { morningBriefingRoutes, startMorningBriefingJob, stopMorningBriefingJob } from './modules/morning-briefing';
+import notificationCenterRoutes from './modules/notifications/notification-center.routes';
+import smartAlertRoutes from './modules/automation/smart-alerts.routes';
+import { startSmartAlertJob, stopSmartAlertJob } from './modules/automation/smart-alerts.service';
 
 // ===========================================
 // Server Configuration
@@ -402,8 +404,12 @@ app.register(unifiedAnalysisRoutes, { prefix: '/api/unified-analysis' }); // Leg
 app.register(ragRoutes, { prefix: '/api/v1/rag' });
 app.register(ragRoutes, { prefix: '/api/rag' }); // Legacy
 
-// Morning Briefing routes (daily market briefing)
-app.register(morningBriefingRoutes, { prefix: '/api' });
+// Notification Center routes (centralized notification management)
+app.register(notificationCenterRoutes, { prefix: '/api/v1/notifications' });
+app.register(notificationCenterRoutes, { prefix: '/api/notifications' }); // Legacy
+
+app.register(smartAlertRoutes, { prefix: '/api/v1/smart-alerts' });
+app.register(smartAlertRoutes, { prefix: '/api/smart-alerts' }); // Legacy
 
 // ===========================================
 // 404 Handler
@@ -693,6 +699,10 @@ const start = async () => {
       startSignalOutcomeTracker();
       logger.info('✓ Signal outcome tracker cron started');
 
+      // Start Smart Alert scan cron job (every 15 minutes)
+      startSmartAlertJob();
+      logger.info('✓ Smart alert cron started');
+
       // Start subscription daily credits cron job (00:00 UTC)
       startDailyCreditsJob();
       logger.info('✓ Subscription daily credits cron started');
@@ -768,6 +778,10 @@ const shutdown = async (signal: string) => {
     // Stop Signal Outcome Tracker cron
     stopSignalOutcomeTracker();
     logger.info('✓ Signal outcome tracker cron stopped');
+
+    // Stop Smart Alert scan cron
+    stopSmartAlertJob();
+    logger.info('✓ Smart alert cron stopped');
 
     // Stop subscription daily credits cron
     stopDailyCreditsJob();

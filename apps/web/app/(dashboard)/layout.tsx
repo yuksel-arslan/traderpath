@@ -8,7 +8,6 @@ import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
   TrendingUp,
-  Coins,
   Gift,
   Bell,
   Settings,
@@ -19,16 +18,17 @@ import {
   ChevronDown,
   Server,
   Brain,
-  TrendingDown,
-  BookOpen,
   Calendar,
   Bot,
-  Globe,
   Activity,
-  Compass,
   FileText,
+  Inbox,
+  ShieldAlert,
   Sparkles,
-  Clock,
+  Monitor,
+  Waves,
+  SlidersHorizontal,
+  BarChart3,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -42,43 +42,37 @@ const PriceTicker = dynamic(
   { ssr: false, loading: () => <div className="w-full h-10 bg-card/50 border-b border-border/50" /> }
 );
 
-// Direct navigation items (no dropdown)
+// Primary navigation - Top-Down Methodology Flow (L1→L7)
 const directNav = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Briefing', href: '/briefing', icon: Clock },
-  { name: 'Intelligence', href: '/intelligence', icon: Sparkles },
-  { name: 'Analyze', href: '/analyze', icon: TrendingUp },
-  { name: 'Report', href: '/report', icon: FileText },
+  { name: 'Terminal', href: '/terminal', icon: Monitor },
+  { name: 'Flow', href: '/flow', icon: Waves },
+  { name: 'Screener', href: '/screener', icon: SlidersHorizontal },
+  { name: 'Analyze', href: '/analyze', icon: BarChart3 },
+  { name: 'Signals', href: '/signals', icon: Activity },
+  { name: 'Trades', href: '/trades', icon: TrendingUp },
 ];
 
 // Dropdown navigation groups
 const dropdownNav = [
   {
-    name: 'AI Chat',
-    icon: Brain,
-    items: [
-      { name: 'Concierge', href: '/concierge', icon: Bot },
-      { name: 'AI Experts', href: '/ai-expert', icon: Brain },
-    ],
-  },
-  {
-    name: 'Tools',
+    name: 'More',
     icon: Settings,
     items: [
-      { name: 'Signals', href: '/signals', icon: Activity },
+      { name: 'Concierge', href: '/concierge', icon: Bot },
+      { name: 'Reports', href: '/reports', icon: FileText },
+      { name: 'Smart Alerts', href: '/alerts/smart', icon: ShieldAlert },
       { name: 'Scheduled', href: '/scheduled', icon: Calendar },
-      { name: 'Alerts', href: '/alerts', icon: Bell },
+      { name: 'Notifications', href: '/notifications', icon: Inbox },
     ],
   },
 ];
 
 // End navigation items (after dropdowns)
-const endNav = [
-  { name: 'Rewards', href: '/rewards', icon: Gift },
-];
+const endNav: { name: string; href: string; icon: typeof Gift }[] = [];
 
-// User menu items (Settings, Admin, Logout)
+// User menu items (Profile, Settings, Admin, Logout)
 const userMenuNav = [
+  { name: 'Profile', href: '/profile', icon: User },
   { name: 'Settings', href: '/settings', icon: Settings },
   { name: 'Admin', href: '/admin', icon: Server },
 ];
@@ -201,16 +195,6 @@ function MobileNavGroup({
   );
 }
 
-// Alert type for notifications
-interface PriceAlert {
-  id: string;
-  symbol: string;
-  type: 'above' | 'below';
-  price: number;
-  triggered: boolean;
-  createdAt: string;
-}
-
 // User type
 interface UserInfo {
   id: string;
@@ -266,26 +250,34 @@ export default function DashboardLayout({
   // Get admin status from user
   const isAdmin = user?.isAdmin || false;
 
-  // Fetch alerts only when notification menu is open (no background polling)
-  const { data: alertsData } = useQuery<PriceAlert[]>({
-    queryKey: ['alerts-notifications'],
+  // Fetch notification unread count (lightweight, always fetched)
+  const { data: unreadCountData } = useQuery<{ total: number }>({
+    queryKey: ['notification-unread-counts'],
     queryFn: async () => {
-      const res = await authFetch('/api/alerts');
-      if (!res.ok) return [];
-      const result = await res.json();
-      const data = result.data;
-      return Array.isArray(data) ? data : [];
+      const res = await authFetch('/api/notifications/unread-count');
+      if (!res.ok) return { total: 0 };
+      const json = await res.json();
+      return json.data || { total: 0 };
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes stale time
-    enabled: notificationMenuOpen, // Only fetch when dropdown is open
-    refetchOnMount: false,
+    staleTime: 60_000,
     retry: false,
   });
 
-  // Ensure alerts is always an array
-  const alerts = Array.isArray(alertsData) ? alertsData : [];
-  const triggeredAlerts = alerts.filter((a: PriceAlert) => a.triggered);
-  const activeAlerts = alerts.filter((a: PriceAlert) => !a.triggered);
+  const totalUnread = unreadCountData?.total ?? 0;
+
+  // Fetch recent notifications only when dropdown is open
+  const { data: recentNotifications } = useQuery<{ id: string; type: string; title: string; message: string; read: boolean; createdAt: string }[]>({
+    queryKey: ['notifications-dropdown'],
+    queryFn: async () => {
+      const res = await authFetch('/api/notifications?limit=5');
+      if (!res.ok) return [];
+      const json = await res.json();
+      return json.data?.notifications || [];
+    },
+    staleTime: 30_000,
+    enabled: notificationMenuOpen,
+    retry: false,
+  });
 
   const handleLogout = async () => {
     try {
@@ -306,12 +298,12 @@ export default function DashboardLayout({
       <PriceTicker />
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 border-b border-border">
+      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg supports-[backdrop-filter]:bg-card/60 border-b border-border/50">
         <div className="w-full px-1 sm:px-3 lg:px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <TraderPathLogo size="sm" showText={true} showTagline={false} href="/dashboard" className="flex sm:hidden" />
-            <TraderPathLogo size="md" showText={true} showTagline={true} href="/dashboard" className="hidden sm:flex" />
+            <TraderPathLogo size="sm" showText={true} showTagline={false} href="/terminal" className="flex sm:hidden" />
+            <TraderPathLogo size="md" showText={true} showTagline={true} href="/terminal" className="hidden sm:flex" />
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-1">
@@ -370,14 +362,9 @@ export default function DashboardLayout({
                   className="relative p-2 rounded-lg hover:bg-accent transition-colors"
                 >
                   <Bell className="w-5 h-5" />
-                  {(triggeredAlerts.length > 0 || activeAlerts.length > 0) && (
-                    <span className={cn(
-                      "absolute -top-0.5 -right-0.5 w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center",
-                      triggeredAlerts.length > 0
-                        ? "bg-amber-500 text-white animate-pulse"
-                        : "bg-primary text-primary-foreground"
-                    )}>
-                      {triggeredAlerts.length > 0 ? triggeredAlerts.length : activeAlerts.length}
+                  {totalUnread > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-5 h-5 text-xs font-bold rounded-full flex items-center justify-center bg-primary text-primary-foreground animate-pulse">
+                      {totalUnread > 9 ? '9+' : totalUnread}
                     </span>
                   )}
                 </button>
@@ -396,7 +383,7 @@ export default function DashboardLayout({
                       <div className="p-3 border-b border-border flex items-center justify-between">
                         <h3 className="font-semibold">Notifications</h3>
                         <Link
-                          href="/alerts"
+                          href="/notifications"
                           onClick={() => setNotificationMenuOpen(false)}
                           className="text-xs text-primary hover:underline"
                         >
@@ -405,94 +392,61 @@ export default function DashboardLayout({
                       </div>
 
                       <div className="max-h-80 overflow-y-auto">
-                        {alerts.length === 0 ? (
+                        {(!recentNotifications || recentNotifications.length === 0) ? (
                           <div className="p-6 text-center">
                             <Bell className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                            <p className="text-sm text-muted-foreground">No alerts yet</p>
-                            <Link
-                              href="/alerts"
-                              onClick={() => setNotificationMenuOpen(false)}
-                              className="text-xs text-primary hover:underline mt-1 inline-block"
-                            >
-                              Create your first alert
-                            </Link>
+                            <p className="text-sm text-muted-foreground">No notifications yet</p>
                           </div>
                         ) : (
                           <div className="divide-y divide-border">
-                            {triggeredAlerts.length > 0 && (
-                              <div className="p-2">
-                                <p className="text-xs font-semibold text-amber-500 px-2 py-1">TRIGGERED</p>
-                                {triggeredAlerts.slice(0, 3).map((alert: PriceAlert) => (
-                                  <Link
-                                    key={alert.id}
-                                    href="/alerts"
-                                    onClick={() => setNotificationMenuOpen(false)}
-                                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors"
-                                  >
-                                    <div className="w-8 h-8 bg-amber-500/10 rounded-full flex items-center justify-center">
-                                      {alert.type === 'above' ? (
-                                        <TrendingUp className="w-4 h-4 text-amber-500" />
-                                      ) : (
-                                        <TrendingDown className="w-4 h-4 text-amber-500" />
-                                      )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium">{alert.symbol}/USDT</p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {alert.type === 'above' ? 'Above' : 'Below'} ${alert.price.toLocaleString()}
-                                      </p>
-                                    </div>
-                                  </Link>
-                                ))}
-                              </div>
-                            )}
-
-                            {activeAlerts.length > 0 && (
-                              <div className="p-2">
-                                <p className="text-xs font-semibold text-muted-foreground px-2 py-1">ACTIVE ALERTS</p>
-                                {activeAlerts.slice(0, 3).map((alert: PriceAlert) => (
-                                  <Link
-                                    key={alert.id}
-                                    href="/alerts"
-                                    onClick={() => setNotificationMenuOpen(false)}
-                                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors"
-                                  >
-                                    <div className={cn(
-                                      "w-8 h-8 rounded-full flex items-center justify-center",
-                                      alert.type === 'above' ? "bg-green-500/10" : "bg-red-500/10"
-                                    )}>
-                                      {alert.type === 'above' ? (
-                                        <TrendingUp className="w-4 h-4 text-green-500" />
-                                      ) : (
-                                        <TrendingDown className="w-4 h-4 text-red-500" />
-                                      )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium">{alert.symbol}/USDT</p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {alert.type === 'above' ? 'Above' : 'Below'} ${alert.price.toLocaleString()}
-                                      </p>
-                                    </div>
-                                  </Link>
-                                ))}
-                              </div>
-                            )}
+                            {recentNotifications.map((n) => (
+                              <Link
+                                key={n.id}
+                                href="/notifications"
+                                onClick={() => setNotificationMenuOpen(false)}
+                                className={cn(
+                                  "flex items-center gap-3 p-3 hover:bg-accent transition-colors",
+                                  !n.read && "bg-primary/5"
+                                )}
+                              >
+                                <div className={cn(
+                                  "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                                  n.type === 'BRIEFING' ? 'bg-amber-500/10' :
+                                  n.type === 'ALERT' ? 'bg-red-500/10' :
+                                  n.type === 'SIGNAL' ? 'bg-teal-500/10' :
+                                  n.type === 'REWARD' ? 'bg-purple-500/10' :
+                                  'bg-blue-500/10'
+                                )}>
+                                  <Bell className={cn(
+                                    "w-4 h-4",
+                                    n.type === 'BRIEFING' ? 'text-amber-500' :
+                                    n.type === 'ALERT' ? 'text-red-500' :
+                                    n.type === 'SIGNAL' ? 'text-teal-500' :
+                                    n.type === 'REWARD' ? 'text-purple-500' :
+                                    'text-blue-500'
+                                  )} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={cn("text-sm truncate", !n.read ? "font-semibold" : "font-medium text-muted-foreground")}>{n.title}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{n.message}</p>
+                                </div>
+                                {!n.read && <div className="w-2 h-2 rounded-full bg-[#5EEDC3] shrink-0" />}
+                              </Link>
+                            ))}
                           </div>
                         )}
                       </div>
 
-                      {alerts.length > 0 && (
-                        <div className="p-2 border-t border-border">
-                          <Link
-                            href="/alerts"
-                            onClick={() => setNotificationMenuOpen(false)}
-                            className="flex items-center justify-center gap-2 p-2 rounded-lg hover:bg-accent transition-colors text-sm font-medium"
-                          >
-                            <Bell className="w-4 h-4" />
-                            Manage All Alerts
-                          </Link>
-                        </div>
-                      )}
+                      <div className="p-2 border-t border-border">
+                        <Link
+                          href="/notifications"
+                          onClick={() => setNotificationMenuOpen(false)}
+                          className="flex items-center justify-center gap-2 p-2 rounded-lg hover:bg-accent transition-colors text-sm font-medium"
+                        >
+                          <Bell className="w-4 h-4" />
+                          View All Notifications
+                        </Link>
+                      </div>
                     </div>
                   </>
                 )}

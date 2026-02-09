@@ -10,6 +10,7 @@ import type {
   SignalFilterCriteria,
   SignalPublishResult,
   SignalOutcome,
+  SignalQualityEnrichment,
   SIGNAL_REQUIREMENTS,
   SIGNAL_EXPIRY_HOURS,
 } from './types';
@@ -21,7 +22,7 @@ export class SignalService {
   /**
    * Create a new signal from analysis results
    */
-  async createSignal(data: SignalData): Promise<string> {
+  async createSignal(data: SignalData, qualityEnrichment?: SignalQualityEnrichment): Promise<string> {
     // Calculate expiry time based on typical trade type
     const expiryHours = this.getExpiryHours(data);
     const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
@@ -48,6 +49,13 @@ export class SignalService {
         sectorFlow: data.sectorFlow,
         classicAnalysisId: data.classicAnalysisId,
         mlisAnalysisId: data.mlisAnalysisId,
+        qualityScore: qualityEnrichment?.qualityScore.qualityScore ?? null,
+        qualityData: qualityEnrichment ? {
+          breakdown: qualityEnrichment.qualityScore.breakdown,
+          qualityLabel: qualityEnrichment.qualityScore.qualityLabel,
+          tooltip: qualityEnrichment.qualityScore.tooltip,
+          forecastBands: qualityEnrichment.forecastBands,
+        } : undefined,
         status: 'pending',
         expiresAt,
       },
@@ -103,6 +111,9 @@ export class SignalService {
     }
     if (criteria.verdicts?.length) {
       where.classicVerdict = { in: criteria.verdicts };
+    }
+    if (criteria.minQualityScore !== undefined && criteria.minQualityScore > 0) {
+      where.qualityScore = { gte: criteria.minQualityScore };
     }
     if (criteria.fromDate) {
       where.createdAt = { gte: criteria.fromDate };

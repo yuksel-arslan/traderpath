@@ -17,45 +17,7 @@ import {
   Target
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-
-// Type definitions matching the API response
-interface IndicatorDetail {
-  name: string;
-  value: number | string | null;
-  signal: 'bullish' | 'bearish' | 'neutral';
-  signalStrength: 'strong' | 'moderate' | 'weak';
-  interpretation: string;
-  category: 'trend' | 'momentum' | 'volatility' | 'volume' | 'advanced';
-  isLeadingIndicator: boolean;
-  weight: number;
-  metadata?: Record<string, unknown>;
-}
-
-interface DivergenceInfo {
-  type: 'bullish' | 'bearish' | 'none';
-  indicator: string;
-  description: string;
-  reliability: 'high' | 'medium' | 'low';
-  isEarlySignal: boolean;
-}
-
-interface IndicatorAnalysis {
-  trend: Record<string, IndicatorDetail | undefined>;
-  momentum: Record<string, IndicatorDetail | undefined>;
-  volatility: Record<string, IndicatorDetail | undefined>;
-  volume: Record<string, IndicatorDetail | undefined>;
-  advanced: Record<string, IndicatorDetail | undefined>;
-  divergences: DivergenceInfo[];
-  summary: {
-    bullishIndicators: number;
-    bearishIndicators: number;
-    neutralIndicators: number;
-    totalIndicatorsUsed: number;
-    overallSignal: 'bullish' | 'bearish' | 'neutral';
-    signalConfidence: number;
-    leadingIndicatorsSignal: 'bullish' | 'bearish' | 'neutral' | 'mixed';
-  };
-}
+import type { IndicatorDetail, IndicatorAnalysis, DivergenceInfo } from '@/lib/types';
 
 interface IndicatorDetailsProps {
   data?: IndicatorAnalysis;
@@ -368,21 +330,28 @@ export function IndicatorDetails({ data, title = 'Indicator Analysis', compact =
             <span className="font-medium text-amber-500">Divergences Detected (Early Signals)</span>
           </div>
           <div className="space-y-2">
-            {divergences.map((div, i) => (
+            {divergences.map((div, i) => {
+              const isBullish = div.type === 'bullish' || div.type === 'hidden_bullish';
+              const isBearish = div.type === 'bearish' || div.type === 'hidden_bearish';
+              const displayType = div.type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+              return (
               <div key={i} className="flex items-start gap-2 text-sm">
-                {div.type === 'bullish' ? (
+                {isBullish ? (
                   <TrendingUp className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                ) : (
+                ) : isBearish ? (
                   <TrendingDown className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <Minus className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
                 )}
                 <div>
                   <span
                     className={cn(
                       'font-medium',
-                      div.type === 'bullish' ? 'text-green-500' : 'text-red-500'
+                      isBullish ? 'text-green-500' : isBearish ? 'text-red-500' : 'text-gray-500'
                     )}
                   >
-                    {div.type.charAt(0).toUpperCase() + div.type.slice(1)} {div.indicator} Divergence
+                    {displayType} {div.indicator} Divergence
                   </span>
                   <span className="text-muted-foreground"> - </span>
                   <span>{div.description}</span>
@@ -400,7 +369,8 @@ export function IndicatorDetails({ data, title = 'Indicator Analysis', compact =
                   </span>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         </div>
       )}

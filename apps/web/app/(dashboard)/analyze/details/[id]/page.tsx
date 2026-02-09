@@ -87,10 +87,14 @@ function hideCanvasesForCapture(container: HTMLElement): Array<{ canvas: HTMLCan
 
 function restoreCanvases(saved: Array<{ canvas: HTMLCanvasElement; parent: HTMLElement; next: ChildNode | null }>) {
   saved.forEach(({ canvas, parent, next }) => {
-    if (next) {
-      parent.insertBefore(canvas, next);
-    } else {
-      parent.appendChild(canvas);
+    try {
+      if (next && next.parentNode === parent) {
+        parent.insertBefore(canvas, next);
+      } else {
+        parent.appendChild(canvas);
+      }
+    } catch {
+      // DOM may have changed (React re-render); silently skip restoration
     }
   });
 }
@@ -469,7 +473,8 @@ export default function AnalysisDetailsPage() {
 
   // Classic 7-Step: step5 is trade plan, step7 is verdict
   const rawDirection = (step5.direction || step7.direction || 'long');
-  const direction = rawDirection.toLowerCase();
+  // Guard: rawDirection could be non-string from API response
+  const direction = typeof rawDirection === 'string' ? rawDirection.toLowerCase() : 'long';
   const isNeutral = direction === 'neutral';
   const isLong = direction === 'long';
   const isShort = direction === 'short';
@@ -478,7 +483,7 @@ export default function AnalysisDetailsPage() {
   // Determine verdict for display
   const getVerdict = () => {
     const classicScore = Number(step7.overallScore) || 0;
-    if (step7.verdict) return step7.verdict.toUpperCase();
+    if (step7.verdict && typeof step7.verdict === 'string') return step7.verdict.toUpperCase();
     if (classicScore >= 7) return 'GO';
     if (classicScore >= 5) return 'COND';
     if (classicScore >= 3) return 'WAIT';
@@ -844,7 +849,7 @@ export default function AnalysisDetailsPage() {
                         assetSentiment === 'bearish' ? 'text-red-600 dark:text-red-400' :
                         'text-amber-600 dark:text-amber-400'
                       )}>
-                        {assetSentiment?.charAt(0).toUpperCase() + assetSentiment?.slice(1)}
+                        {assetSentiment ? (assetSentiment.charAt(0).toUpperCase() + assetSentiment.slice(1)) : 'N/A'}
                       </span>
                       <span className="text-sm text-gray-500 dark:text-slate-400">
                         ({assetSentimentScore}/100)
@@ -883,7 +888,7 @@ export default function AnalysisDetailsPage() {
                         interMarketRegime === 'deflation' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' :
                         'bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300'
                       )}>
-                        {interMarketRegime.replace('_', ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                        {String(interMarketRegime).replace('_', ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
                         {regimeConfidence >= 50 && ` (${regimeConfidence}%)`}
                       </span>
                     </div>
@@ -1065,7 +1070,7 @@ export default function AnalysisDetailsPage() {
               {
                 label: 'L2 Market Flow',
                 status: l2Pass,
-                detail: selectedMarket ? `${selectedMarket.market.charAt(0).toUpperCase() + selectedMarket.market.slice(1)} – ${selectedMarket.phase.toUpperCase()} Phase (${(selectedMarket.flow7d >= 0 ? '+' : '')}${selectedMarket.flow7d.toFixed(1)}%)` : 'N/A',
+                detail: selectedMarket?.market ? `${selectedMarket.market.charAt(0).toUpperCase() + selectedMarket.market.slice(1)} – ${(selectedMarket.phase || 'mid').toUpperCase()} Phase (${((selectedMarket.flow7d ?? 0) >= 0 ? '+' : '')}${(selectedMarket.flow7d ?? 0).toFixed(1)}%)` : 'N/A',
               },
               {
                 label: 'L3 Sector Activity',
@@ -1075,7 +1080,7 @@ export default function AnalysisDetailsPage() {
               {
                 label: 'L4 AI Recommendation',
                 status: l4Pass,
-                detail: l4 ? `${(cfCtx.direction || 'N/A')} (${l4.confidence}% confidence)` : 'N/A',
+                detail: l4 ? `${(cfCtx.direction || 'N/A')} (${l4.confidence ?? 0}% confidence)` : 'N/A',
               },
               {
                 label: '7-Step Analysis',

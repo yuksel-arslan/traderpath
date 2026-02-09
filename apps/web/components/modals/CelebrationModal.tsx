@@ -10,7 +10,7 @@ export type CelebrationReason =
   | 'spin_jackpot'
   | 'quiz_correct'
   | 'achievement_unlocked'
-  | 'level_up'
+  | 'level_up'  // kept for backward compat — now represents tier advancement
   | 'trade_type_bonus'
   | 'referral_bonus'
   | 'first_analysis'
@@ -159,8 +159,8 @@ function getCelebrationContent(reason: CelebrationReason, credits: number, props
     case 'level_up':
       return {
         icon: Sparkles,
-        title: props.title || 'Level Up!',
-        subtitle: props.subtitle || `Congratulations! You're now ${props.newLevel}!`,
+        title: props.title || 'Tier Advanced',
+        subtitle: props.subtitle || `You've advanced to ${props.newLevel || 'the next tier'}. Keep analyzing to unlock more benefits.`,
         gradient: 'from-blue-500 to-cyan-500',
         iconBg: 'from-blue-400 to-cyan-500',
       };
@@ -294,7 +294,9 @@ export function CelebrationModal(props: CelebrationModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="celebration-dialog-title">
+      {/* Accessible title for screen readers */}
+      <h2 id="celebration-dialog-title" className="sr-only">Celebration</h2>
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm animate-fade-in"

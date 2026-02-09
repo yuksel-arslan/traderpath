@@ -3,7 +3,8 @@
  * Formats trading signals for Telegram publication
  */
 
-import type { SignalData } from './types';
+import type { SignalData, SignalQualityEnrichment } from './types';
+import { QUALITY_THRESHOLDS } from './types';
 
 // Direction emojis
 const DIRECTION_EMOJI = {
@@ -63,10 +64,18 @@ const getMLISBadge = (confirmed: boolean, recommendation?: string): string => {
   }
 };
 
+// Quality score emoji/badge
+const getQualityBadge = (score: number | undefined): string => {
+  if (score === undefined || score === null) return '';
+  if (score >= QUALITY_THRESHOLDS.medium + 1) return `🟢 ${score}/100 High`;
+  if (score >= QUALITY_THRESHOLDS.low + 1) return `🟡 ${score}/100 Medium`;
+  return `🔴 ${score}/100 Low`;
+};
+
 /**
  * Format signal for Telegram publication
  */
-export function formatTelegramSignal(signal: SignalData, signalId: string): string {
+export function formatTelegramSignal(signal: SignalData, signalId: string, qualityEnrichment?: SignalQualityEnrichment): string {
   const directionEmoji = DIRECTION_EMOJI[signal.direction];
   const verdictEmoji = VERDICT_EMOJI[signal.classicVerdict] || '❓';
   const marketEmoji = MARKET_EMOJI[signal.market as keyof typeof MARKET_EMOJI] || '📊';
@@ -85,12 +94,30 @@ export function formatTelegramSignal(signal: SignalData, signalId: string): stri
   const tp2Percent = signal.direction === 'long' ? entryToTp2 : -entryToTp2;
   const slPercent = signal.direction === 'long' ? entryToSl : -entryToSl;
 
+  // Quality score section
+  const qs = qualityEnrichment?.qualityScore;
+  const qualitySection = qs ? `
+<b>━━━ Quality Score ━━━</b>
+📊 Score: <b>${getQualityBadge(qs.qualityScore)}</b>
+  L1-L4 Alignment: ${qs.breakdown.l1l4Alignment}%
+  Technical: ${qs.breakdown.technicalStrength}%
+  Momentum: ${qs.breakdown.momentum}%
+  Volatility: ${qs.breakdown.volatilityAdjusted}%
+` : '';
+
+  // Forecast bands section
+  const bands = qualityEnrichment?.forecastBands;
+  const forecastSection = bands && bands.length > 0 ? `
+<b>━━━ Price Forecast ━━━</b>
+${bands.map(b => `${b.timeframe}: P10 ${formatPrice(b.p10)} (${b.p10Percent >= 0 ? '+' : ''}${b.p10Percent.toFixed(1)}%) | P50 ${formatPrice(b.p50)} (${b.p50Percent >= 0 ? '+' : ''}${b.p50Percent.toFixed(1)}%) | P90 ${formatPrice(b.p90)} (${b.p90Percent >= 0 ? '+' : ''}${b.p90Percent.toFixed(1)}%)`).join('\n')}
+` : '';
+
   const message = `
 ${directionEmoji} <b>TraderPath Signal</b> ${directionEmoji}
 
 <b>━━━━━━━━━━━━━━━━━━━━</b>
 
-${marketEmoji} <b>${signal.symbol}</b> | ${direction}
+${marketEmoji} <b>${signal.symbol}</b> | ${direction}${qs ? ` | ${getQualityBadge(qs.qualityScore)}` : ''}
 
 <b>━━━ Trade Plan ━━━</b>
 📍 Entry: <code>${formatPrice(signal.entryPrice)}</code>
@@ -103,12 +130,12 @@ ${marketEmoji} <b>${signal.symbol}</b> | ${direction}
 ${verdictEmoji} Classic: <b>${signal.classicVerdict}</b> (${signal.classicScore.toFixed(1)}/10)
 🤖 MLIS Pro: ${getMLISBadge(signal.mlisConfirmation, signal.mlisRecommendation)}
 🎯 Confidence: <b>${signal.overallConfidence}%</b> ${getConfidenceBadge(signal.overallConfidence)}
-
+${qualitySection}
 <b>━━━ Capital Flow ━━━</b>
 ${phaseEmoji} Phase: <b>${signal.capitalFlowPhase.toUpperCase()}</b>
 🌊 Bias: <b>${signal.capitalFlowBias.replace('_', ' ').toUpperCase()}</b>
 ${signal.sectorFlow ? `📊 Sector Flow: <b>${signal.sectorFlow > 0 ? '+' : ''}${signal.sectorFlow.toFixed(1)}%</b>` : ''}
-
+${forecastSection}
 <b>━━━━━━━━━━━━━━━━━━━━</b>
 
 ⏰ ${new Date().toUTCString()}

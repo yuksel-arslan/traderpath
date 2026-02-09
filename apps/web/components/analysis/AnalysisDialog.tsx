@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getAuthToken, getApiUrl } from '../../lib/api';
-import { CREDIT_COSTS } from '@traderpath/types';
+import { CREDIT_COSTS } from '@/lib/types';
 import { useCreditNotification } from '../../contexts/CreditNotificationContext';
 import { CoinIcon } from '../common/CoinIcon';
 
@@ -640,14 +640,24 @@ export function AnalysisDialog({
         8: analysisData.mlisConfirmation || null, // Step 8: ML Confirmation
       };
 
-      // Quick mode: instant results
-      // Include step 8 only if ML confirmation was returned
+      // Progressive reveal: show each step completing one-by-one
+      // so the user can follow the analysis flow.
       const completedIds = analysisData.mlisConfirmation
         ? [1, 2, 3, 4, 5, 6, 7, 8]
         : [1, 2, 3, 4, 5, 6, 7];
-      setCompletedSteps(completedIds);
-      setResults(allResults);
-      setActiveStep(totalSteps);
+
+      const STEP_REVEAL_MS = 900; // time each step is visible before next
+
+      for (let i = 0; i < completedIds.length; i++) {
+        await new Promise<void>(resolve => setTimeout(resolve, i === 0 ? 300 : STEP_REVEAL_MS));
+        const stepId = completedIds[i];
+        setActiveStep(stepId);
+        setResults(prev => ({ ...prev, [stepId]: allResults[stepId] }));
+        setCompletedSteps(completedIds.slice(0, i + 1));
+      }
+
+      // Small pause on the last step so user sees completion
+      await new Promise<void>(resolve => setTimeout(resolve, 600));
       setDialogStep('results');
 
       onComplete?.();
@@ -690,12 +700,15 @@ export function AnalysisDialog({
   const mlConfirmation = results[8] as { confirmationStatus?: string; agreementLevel?: string } | undefined;
   // Handle verdict action
   const verdictAction = verdict?.action || verdict?.verdict || verdict?.recommendation || '';
-  const normalizedVerdict = verdictAction.toLowerCase().replace('_', ' ');
+  // Guard: verdictAction could be non-string if verdict properties are non-string truthy values
+  const normalizedVerdict = (typeof verdictAction === 'string' ? verdictAction : '').toLowerCase().replace('_', ' ');
   const isGo = (normalizedVerdict.includes('go') || normalizedVerdict.includes('buy') || normalizedVerdict.includes('strong buy'))
     && !normalizedVerdict.includes('wait') && !normalizedVerdict.includes('avoid') && !normalizedVerdict.includes('sell');
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 isolate">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 isolate" role="dialog" aria-modal="true" aria-labelledby="analysis-dialog-title">
+      {/* Accessible title for screen readers */}
+      <h2 id="analysis-dialog-title" className="sr-only">Analysis Results</h2>
       {/* Backdrop with blur */}
       <div
         className="absolute inset-0 bg-[#030712]/80 backdrop-blur-md"
@@ -1129,7 +1142,7 @@ export function AnalysisDialog({
               </div>
 
               {/* Direction Arrow (if available) */}
-              {direction && (
+              {direction && typeof direction === 'string' && (
                 <DirectionArrow
                   direction={direction.toLowerCase() as 'long' | 'short'}
                   size="sm"

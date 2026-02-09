@@ -39,6 +39,7 @@ export interface SignalFilterCriteria {
   status?: 'pending' | 'published' | 'expired' | 'cancelled';
   minConfidence?: number;
   minScore?: number;
+  minQualityScore?: number;
   direction?: 'long' | 'short';
   verdicts?: string[];
   fromDate?: Date;
@@ -112,4 +113,79 @@ export const SIGNAL_REQUIREMENTS = {
   minOverallConfidence: 70,
   allowedVerdicts: ['GO', 'CONDITIONAL_GO'],
   allowedPhases: ['early', 'mid'], // Only early and mid phase markets
+} as const;
+
+// =====================================================
+// SIGNAL QUALITY SCORING
+// =====================================================
+
+/**
+ * Signal quality score breakdown
+ * Composite 0-100 score based on L1-L4 alignment, technicals, momentum, volatility
+ */
+export interface SignalQualityScore {
+  /** Final composite score (0-100) */
+  qualityScore: number;
+
+  /** Human-readable label */
+  qualityLabel: 'Low Confidence' | 'Medium Confidence' | 'High Confidence';
+
+  /** Breakdown of sub-scores (each 0-100) */
+  breakdown: {
+    /** L1-L4 alignment across Capital Flow layers (weight: 0.4) */
+    l1l4Alignment: number;
+    /** RSI, MACD, volume confluence (weight: 0.3) */
+    technicalStrength: number;
+    /** Momentum (ADX trend strength, MACD histogram) (weight: 0.2) */
+    momentum: number;
+    /** Inverse volatility penalty (high vol → lower score) (weight: 0.1) */
+    volatilityAdjusted: number;
+  };
+
+  /** Tooltip explanation */
+  tooltip: string;
+}
+
+/**
+ * Probability band for price forecast (P10/P50/P90)
+ */
+export interface SignalForecastBand {
+  /** Forecast horizon label */
+  horizon: string;
+  /** Forecast horizon timeframe (e.g., "7D") */
+  timeframe: string;
+  /** 10th percentile - worst case */
+  p10: number;
+  /** 50th percentile - base case */
+  p50: number;
+  /** 90th percentile - best case */
+  p90: number;
+  /** % change from entry to P10 */
+  p10Percent: number;
+  /** % change from entry to P50 */
+  p50Percent: number;
+  /** % change from entry to P90 */
+  p90Percent: number;
+}
+
+/**
+ * Complete quality enrichment for a signal
+ */
+export interface SignalQualityEnrichment {
+  qualityScore: SignalQualityScore;
+  forecastBands: SignalForecastBand[];
+}
+
+/** Thresholds for quality labels */
+export const QUALITY_THRESHOLDS = {
+  low: 40,
+  medium: 70,
+  high: 100,
+} as const;
+
+/** Quality score colors (frontend reference) */
+export const QUALITY_COLORS = {
+  low: '#EF5A6F',
+  medium: '#F59E0B',
+  high: '#5EEDC3',
 } as const;

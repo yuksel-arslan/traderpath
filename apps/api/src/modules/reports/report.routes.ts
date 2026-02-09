@@ -194,7 +194,8 @@ export async function reportRoutes(fastify: FastifyInstance) {
 
         // Auto-create price alerts for trade plan (if GO or CONDITIONAL_GO verdict)
         const tradePlan = reportData?.tradePlan as Record<string, unknown> | undefined;
-        const verdictLower = verdict.toLowerCase();
+        // Guard: verdict could be non-string from report data
+        const verdictLower = typeof verdict === 'string' ? verdict.toLowerCase() : '';
         const shouldCreateAlerts = verdictLower === 'go' || verdictLower === 'go!' || verdictLower === 'conditional_go' || verdictLower === 'conditional go';
 
         let alertsCreated = 0;
@@ -1349,9 +1350,28 @@ export async function reportRoutes(fastify: FastifyInstance) {
           generatedAt: generatedAt || new Date().toLocaleString('tr-TR'),
           pdfBase64,
           fileName,
+          analysisId,
         });
 
         if (!result.success) {
+          // Refund credits if email failed and credits were charged
+          if (!isFreeEmail) {
+            try {
+              await creditService.add(userId, EMAIL_SEND_CREDIT_COST, 'BONUS', 'email_send_error_refund', { isRefund: true, symbol, analysisId });
+              fastify.log.info({ userId, credits: EMAIL_SEND_CREDIT_COST }, 'Refunded credits after email failure');
+            } catch (refundErr) {
+              fastify.log.error(refundErr, 'Failed to refund credits after email failure');
+            }
+          }
+          // Decrement email counter if it was incremented
+          if (analysis) {
+            try {
+              await prisma.analysis.update({
+                where: { id: analysisId },
+                data: { emailsSentUsed: { decrement: 1 } },
+              });
+            } catch { /* ignore */ }
+          }
           fastify.log.error({ error: result.error }, 'Failed to send PDF email');
           return reply.code(500).send({
             error: { code: 'EMAIL_FAILED', message: 'Failed to send email', details: result.error },
@@ -1591,6 +1611,16 @@ export async function reportRoutes(fastify: FastifyInstance) {
         });
 
         if (!result.success) {
+          // Refund credits if they were charged (non-admin, exhausted free emails)
+          if (!user.isAdmin && analysisId) {
+            try {
+              const analysis = await prisma.analysis.findUnique({ where: { id: analysisId }, select: { emailsSentUsed: true } });
+              if (analysis && (analysis.emailsSentUsed || 0) > FREE_EMAILS_PER_ANALYSIS) {
+                await creditService.add(userId, EMAIL_SEND_CREDIT_COST, 'BONUS', 'email_send_error_refund', { isRefund: true, symbol, analysisId });
+                await prisma.analysis.update({ where: { id: analysisId }, data: { emailsSentUsed: { decrement: 1 } } });
+              }
+            } catch { /* best effort refund */ }
+          }
           return reply.code(500).send({
             error: { code: 'EMAIL_FAILED', message: 'Failed to send email', details: result.error },
           });
@@ -1723,6 +1753,16 @@ export async function reportRoutes(fastify: FastifyInstance) {
         });
 
         if (!result.success) {
+          // Refund credits if they were charged
+          if (!user.isAdmin && analysisId) {
+            try {
+              const analysis = await prisma.analysis.findUnique({ where: { id: analysisId }, select: { emailsSentUsed: true } });
+              if (analysis && (analysis.emailsSentUsed || 0) > FREE_EMAILS_PER_ANALYSIS) {
+                await creditService.add(userId, EMAIL_SEND_CREDIT_COST, 'BONUS', 'email_send_error_refund', { isRefund: true, symbol, analysisId });
+                await prisma.analysis.update({ where: { id: analysisId }, data: { emailsSentUsed: { decrement: 1 } } });
+              }
+            } catch { /* best effort refund */ }
+          }
           return reply.code(500).send({
             error: { code: 'EMAIL_FAILED', message: 'Failed to send email', details: result.error },
           });

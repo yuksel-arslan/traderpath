@@ -93,6 +93,7 @@ const withPWA = require('next-pwa')({
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  productionBrowserSourceMaps: true,
 
   // Environment variables exposed to the browser
   env: {

@@ -10,7 +10,7 @@ import { cn } from '../../lib/utils';
 import { IndicatorDetails } from './IndicatorDetails';
 
 // Import type from the shared types package
-import type { IndicatorAnalysis } from '@traderpath/types';
+import type { IndicatorAnalysis } from '@/lib/types';
 
 interface AssetScannerData {
   symbol?: string;

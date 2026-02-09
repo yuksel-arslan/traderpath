@@ -117,6 +117,7 @@ class EmailService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(emailPayload),
+        signal: AbortSignal.timeout(30000),
       });
 
       const responseText = await response.text();
@@ -124,10 +125,15 @@ class EmailService {
       if (!response.ok) {
         console.error('[EmailService] Failed to send email. Status:', response.status);
         console.error('[EmailService] Response:', responseText);
-        return { success: false, error: responseText };
+        return { success: false, error: `Resend API error (${response.status}): ${responseText}` };
       }
 
-      const data = JSON.parse(responseText);
+      let data: { id?: string } = {};
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        console.warn('[EmailService] Could not parse response as JSON:', responseText);
+      }
       console.log('[EmailService] Email sent successfully. ID:', data.id);
       return { success: true, messageId: data.id };
     } catch (error) {

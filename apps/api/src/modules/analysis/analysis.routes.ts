@@ -276,8 +276,10 @@ function calculateAgreement(
   // Key MLIS signals
   mlisResult.keySignals.slice(0, 3).forEach(signal => {
     // Check if signal is bullish/bearish and matches direction
-    const isBullishSignal = signal.toLowerCase().includes('bullish') || signal.toLowerCase().includes('above');
-    const isBearishSignal = signal.toLowerCase().includes('bearish') || signal.toLowerCase().includes('below');
+    // Guard: signal could be non-string from MLIS results
+    const signalLower = typeof signal === 'string' ? signal.toLowerCase() : '';
+    const isBullishSignal = signalLower.includes('bullish') || signalLower.includes('above');
+    const isBearishSignal = signalLower.includes('bearish') || signalLower.includes('below');
 
     if ((isBullishSignal && sevenStepDirection === 'LONG') || (isBearishSignal && sevenStepDirection === 'SHORT')) {
       alignedSignals.push(signal);
@@ -953,6 +955,29 @@ Warn about potential traps and give protective advice.`;
             agreementLevel: mlisConfirmation.agreementLevel,
             confirmationStatus: mlisConfirmation.confirmationStatus,
           }, '[Analysis] Step 8: MLIS Confirmation completed (no trade plan to adjust)');
+        }
+
+        // Step 8.5: Verdict downgrade on MLIS contradiction
+        // When dual engines disagree, automatically downgrade conviction one level
+        if (mlisConfirmation && mlisConfirmation.agreementLevel === 'DISAGREEMENT') {
+          const previousVerdict = verdict.verdict;
+          if (verdict.verdict === 'go') {
+            verdict.verdict = 'conditional_go';
+            verdict.verdictDowngraded = true;
+            verdict.verdictDowngradeReason = `MLIS contradicts: ${mlisConfirmation.mlisRecommendation}/${mlisConfirmation.mlisDirection} vs 7-Step GO/${mlisConfirmation.sevenStepDirection}`;
+          } else if (verdict.verdict === 'conditional_go') {
+            verdict.verdict = 'wait';
+            verdict.verdictDowngraded = true;
+            verdict.verdictDowngradeReason = `MLIS contradicts: ${mlisConfirmation.mlisRecommendation}/${mlisConfirmation.mlisDirection} vs 7-Step CONDITIONAL_GO/${mlisConfirmation.sevenStepDirection}`;
+          }
+          if (verdict.verdictDowngraded) {
+            logger.info({
+              symbol: body.symbol,
+              previousVerdict,
+              newVerdict: verdict.verdict,
+              reason: verdict.verdictDowngradeReason,
+            }, '[Analysis] Step 8.5: Verdict downgraded due to MLIS contradiction');
+          }
         }
       } catch (mlisError) {
         // MLIS Confirmation is non-blocking - log error and continue
@@ -2364,7 +2389,8 @@ Explain the key risks and what conditions would need to change before trading th
         if (report.score !== null) {
           coinStats[report.symbol].scores.push(Number(report.score));
         }
-        const verdict = report.verdict.toLowerCase();
+        // Guard: report.verdict could be null/undefined from DB
+        const verdict = typeof report.verdict === 'string' ? report.verdict.toLowerCase() : '';
         if (verdict === 'go' || verdict === 'go!' || verdict === 'conditional_go' || verdict === 'conditional go') {
           coinStats[report.symbol].goCount++;
         }
@@ -2433,8 +2459,8 @@ Explain the key risks and what conditions would need to change before trading th
 
       // Recent outcomes from real reports with live tracking info
       const recentOutcomes = reportsWithExpiration.map(report => {
-        // Map verdict to standard format
-        const verdictLower = report.verdict.toLowerCase();
+        // Map verdict to standard format — guard: report.verdict could be null from DB
+        const verdictLower = typeof report.verdict === 'string' ? report.verdict.toLowerCase() : '';
         let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
         if (verdictLower === 'go' || verdictLower === 'go!') verdict = 'go';
         else if (verdictLower === 'conditional_go' || verdictLower === 'conditional go' || verdictLower === 'conditional') verdict = 'conditional_go';
@@ -2560,8 +2586,8 @@ Explain the key risks and what conditions would need to change before trading th
           timeAgo = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
         }
 
-        // Map verdict to standard format
-        const verdictLower = report.verdict.toLowerCase();
+        // Map verdict to standard format — guard: report.verdict could be null from DB
+        const verdictLower = typeof report.verdict === 'string' ? report.verdict.toLowerCase() : '';
         let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
         if (verdictLower === 'go' || verdictLower === 'go!') verdict = 'go';
         else if (verdictLower === 'conditional_go' || verdictLower === 'conditional go' || verdictLower === 'conditional') verdict = 'conditional_go';

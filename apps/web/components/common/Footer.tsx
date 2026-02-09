@@ -45,8 +45,8 @@ export function Footer({ className, variant = 'default' }: FooterProps) {
                 <h4 className="font-semibold text-slate-900 dark:text-white mb-4">Platform</h4>
                 <ul className="space-y-2">
                   <li>
-                    <Link href="/capital-flow" className="text-sm text-slate-500 dark:text-slate-400 hover:text-emerald-500 transition">
-                      Capital Flow
+                    <Link href="/dashboard" className="text-sm text-slate-500 dark:text-slate-400 hover:text-emerald-500 transition">
+                      Dashboard
                     </Link>
                   </li>
                   <li>

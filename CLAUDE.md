@@ -571,6 +571,13 @@ Kullanıcı Hakları Aktif:
 | 2026-02-07 | Login "Server error" - backend 500 hatası (2 kök neden) | **Neden 1 (Frontend)**: OAuth callback `backendData.error?.code` Fastify default format'ta (`error` string, object değil) undefined dönüyordu → generic 'backend_error'. **Neden 2 (Backend)**: Tüm auth route'ları `prisma.user.findUnique()` ile `include` kullanıyordu, production'da eksik sütun varsa P2022 hatası veriyordu. **Fix**: 1) Frontend: `parseBackendError()` tüm response formatlarını handle ediyor, `fetchWithTimeout()` 15s timeout, retry for 502/503/504, 2) Backend: Tüm auth route'ları `select` kullanarak sadece gerekli sütunları çekiyor (P2022'ye dayanıklı), P2022/P2021 için spesifik hata mesajları, 3) Migration: `ensure_all_user_columns.sql` tüm eksik sütunları ekliyor | `auth/login/route.ts`, `google/callback/route.ts`, `login/page.tsx`, `auth.routes.ts`, `ensure_all_user_columns.sql` |
 | 2026-02-07 | /me endpoint createdAt undefined döndürüyordu | Prisma `select` clause'unda `createdAt: true` eksikti. Response body'de `user.createdAt` referans ediliyordu ama select'te yoktu → undefined | `auth.routes.ts:668` |
 | 2026-02-07 | Login hala 500 veriyor - security.service.ts P2022 crash | `auth.routes.ts` düzeltilmişti ama çağrılan security helper fonksiyonları düzeltilmemişti. **5 kritik sorun**: 1) `recordFailedLogin()` `findUnique` select clause olmadan → tüm sütunlar çekilip P2022, 2) `recordSuccessfulLogin()` 6 sütun update (loginAttempts, accountLocked, lastLoginAt vb.) → sütun yoksa P2022, 3) `checkSuspiciousActivity()` LoginAuditLog tablosu yoksa crash (try-catch yok), 4) `checkAccountLockout()` select'li ama try-catch yok → sütun yoksa crash, 5) `verifyEmail/resetPassword/createPasswordResetToken` findFirst/findUnique select clause yok. **Fix**: Tüm fonksiyonlara select clause eklendi, tüm login-critical fonksiyonlara try-catch ile graceful degradation eklendi. Security feature yoksa login yine çalışır | `security.service.ts:324-875` |
+| 2026-02-08 | `.toLowerCase()` TypeError crash'leri (21 dosya) | API'den gelen undefined/null değerlerde `.toLowerCase()` çağrılıyordu → `Cannot read properties of undefined`. 18 frontend dosyada ve 3 backend dosyada tüm unsafe `.toLowerCase()` çağrıları `typeof val === 'string' ? val.toLowerCase() : ''` veya `(val \|\| '').toLowerCase()` pattern'leri ile guard edildi | `AnalysisReport.tsx`, `AnalysisDialog.tsx`, `CoinSelector.tsx`, `details/[id]/page.tsx`, `signals/page.tsx`, `reports/page.tsx`, `alerts/page.tsx`, `tailored/page.tsx`, `analysis.routes.ts`, `report.routes.ts`, `outcome.service.ts` ve 10+ dosya |
+| 2026-02-08 | Modal/Dialog bileşenlerinde ARIA erişilebilirlik uyarıları | Custom modal bileşenlerinde `role="dialog"`, `aria-modal="true"`, `aria-labelledby` ve sr-only başlık eksikti. 5 modal bileşenine eklendi | `CelebrationModal.tsx`, `FirstLoginModal.tsx`, `SetAlertModal.tsx`, `InterfacePreferenceModal.tsx`, `AnalysisDialog.tsx` |
+| 2026-02-08 | Credit ve Alert API route'ları try/catch olmadan çalışıyordu (unhandled 500) | `credit.routes.ts` 6 route ve `alert.routes.ts` 7 route'a try/catch, ZodError → 400, generic → 500 hata işleme eklendi. console.error ile server-side loglama | `credit.routes.ts`, `alert.routes.ts` |
+| 2026-02-08 | Analysis details sayfası crash - ForecastBandOverlay toFixed undefined | `band.bandWidthPercent`, `band.p10/p50/p90`, `band.drivers`, `band.invalidations` API'den undefined gelebiliyordu. Tüm değerler `?? 0` ve `?? []` ile guard edildi | `ForecastBandOverlay.tsx` |
+| 2026-02-08 | MultiStrategyCards crash - strategy.entry/stopLoss/takeProfits undefined | `strategy.entry?.price`, `strategy.stopLoss?.price`, `strategy.takeProfits ?? []`, `strategy.riskReward ?? 0` ile guard edildi | `MultiStrategyCards.tsx` |
+| 2026-02-08 | WebResearchPanel crash - research.citations undefined | `research.citations ?? []` ile guard edildi, tüm `.length` ve `.slice()` çağrıları güvenli hale getirildi | `WebResearchPanel.tsx` |
+| 2026-02-08 | signals/stats 500 error - try/catch eksikti | Route handler'a try/catch eklendi, hata durumunda fallback boş stats objesi döndürülüyor | `signal.routes.ts` |
 | 2026-02-07 | API timeout - sistem zaman aşımına uğruyordu (6 kök neden) | **1) 3 duplicate PrismaClient instance** connection pool'u tüketiyordu (coin-score-cache, multi-asset-score-cache, asset-logos). **2) Server startup blocking** - `startOutcomeTracker()` ve `initializeAssetLogos()` await ediliyordu, external API'ler yanıt vermezse server hiç başlamıyordu. **3) Binance ticker fetch timeout eksik** - `binance.provider.ts:213`'te AbortSignal.timeout yoktu. **4) Prisma query timeout yok** - hiçbir DB sorgusu timeout'a sahip değildi, tek bir yavaş sorgu tüm pool'u bloke edebilirdi. **5) Polling job'lar overlap** - 30s/15s interval job'lar önceki çalışma bitmeden tekrar tetikleniyordu, DB bağlantıları birikiyordu. **6) Auth middleware P2022 hata yönetimi eksik** - missing column hatası tüm auth'u kırıyordu. **Fix**: 1) Tüm duplicate PrismaClient kaldırıldı → singleton import, 2) Startup non-blocking yapıldı (fire-and-forget + timeout), 3) Binance fetch'e 10s timeout eklendi, 4) Prisma middleware ile 15s query timeout + slow query log eklendi, 5) Overlap guard flag'leri + withTimeout wrapper'ları eklendi, 6) Auth middleware'e P2022 fallback eklendi, duplicate decorator kaldırılıp jwt-middleware'e delege edildi | `database.ts`, `index.ts`, `jwt-middleware.ts`, `binance.provider.ts`, `coin-score-cache.service.ts`, `multi-asset-score-cache.service.ts`, `asset-logos.service.ts`, `schema.prisma` |
 
 ---
@@ -626,6 +633,8 @@ Kullanıcı Hakları Aktif:
 | 2026-02-06 | Intelligence Dashboard: Performance Attribution Matrix | 4-layer katkı analizi (Capital Flow, Sector, Timing, ML) - "Explainable AI" |
 | 2026-02-06 | Analyze Page: Enforced Top-Down Flow (Step 0→A→B) | Capital Flow zorunlu, AI recommendation sonrası asset seçimi, corporate decision framework |
 | 2026-02-06 | Details Page: Top-Down Evidence Chain | L1-L4 + Analysis + ML Confirmation alignment durumu, "X/Y Aligned" badge |
+| 2026-02-07 | Nav Restructure: Top-Down Flow Order | Explore(L1-L4) → Analyze → Signals → Dashboard. Intelligence→Explore, Signals primary'ye terfi, Profile user menu'ye, Capital Flow ayrı sayfa kaldırıldı |
+| 2026-02-08 | Dashboard: Mobile-First Fintech Rebuild | Monolitik 1483 satır → 5 modüler dosya. SVG Arc Gauge, glassmorphism kartlar, accordion layout, yatay trade kartları, 48px touch targets |
 
 ---
 
@@ -1934,6 +1943,26 @@ Kullanıcı Hakları Aktif:
   - Dosya: `apps/api/src/modules/analysis/analysis.engine.ts:5371-5378,5530-5548`
 
 ### 2026-02-07
+- **Notification Center (Merkezi Bildirim Yönetimi) eklendi**:
+  - **Yeni Tablo**: `Notification` - Merkezi bildirim tablosu (type, title, message, metadata, read)
+  - **5 Bildirim Tipi**: BRIEFING (sabah raporu), ALERT (L1-L4 hiyerarşi değişimi), SIGNAL (trade sinyali), REWARD (tier/AP kazanımı), SYSTEM (genel duyuru)
+  - **Backend**:
+    - `notification-center.service.ts`: create, broadcast, list, getUnreadCount, getUnreadCounts, markAsRead, markAllAsRead, clearRead, delete
+    - `notification-center.routes.ts`: GET /api/notifications (pagination + filter), GET /unread-count, PATCH /:id/read, POST /mark-all-read, DELETE /clear-read, DELETE /:id
+    - Routes index.ts'e register edildi: `/api/v1/notifications` + `/api/notifications`
+  - **Frontend**:
+    - Yeni sayfa: `apps/web/app/(dashboard)/notifications/page.tsx` - Sol sidebar filtre (All/Briefing/Alerts/Signals/Rewards/System), ana alan bildirim listesi, unread badge'ler, pagination
+    - Her bildirim kartı: type icon + badge, title, message preview (2 satır), timestamp, Mark as Read / View / Delete aksiyonları
+    - Okunmamış = `border-[#5EEDC3]`, okunmuş = `border-border/50`
+    - Mark All Read ve Clear Read toplu işlemler
+  - **Header Entegrasyonu**:
+    - Bell icon badge artık notification center unread count gösteriyor (eski: price alerts)
+    - Dropdown son 5 bildirimi gösteriyor, "View All" → `/notifications`
+    - Her bildirim tipi için ayrı renk (amber/red/teal/purple/blue)
+  - **Sidebar**: Tools grubuna "Notifications" (Inbox icon) eklendi
+  - **Middleware**: `/notifications` protected paths'e eklendi
+  - Migration: `apps/api/prisma/migrations/add_notifications_table.sql`
+  - Dosyalar: `schema.prisma`, `notification-center.service.ts`, `notification-center.routes.ts`, `notifications/page.tsx`, `layout.tsx`, `middleware.ts`, `index.ts`
 - **API Timeout Sorunu Kökten Çözüldü (6 kök neden)**:
   - **3 Duplicate PrismaClient instance** kaldırıldı (coin-score-cache, multi-asset-score-cache, asset-logos) → tek singleton import
   - **Server startup non-blocking** yapıldı: `startOutcomeTracker()` ve `initializeAssetLogos()` artık fire-and-forget (server'ı bloke etmiyor)
@@ -1944,6 +1973,66 @@ Kullanıcı Hakları Aktif:
   - **Duplicate authenticate decorator** kaldırıldı: index.ts'deki hardcoded decorator yerine jwt-middleware'e delege
   - **Startup outcome checks parallelleştirildi**: Sequential → `Promise.all` ile paralel (15s timeout/each)
   - Dosyalar: `database.ts`, `index.ts`, `jwt-middleware.ts`, `binance.provider.ts`, `coin-score-cache.service.ts`, `multi-asset-score-cache.service.ts`, `asset-logos.service.ts`, `schema.prisma`
+
+- **Smart Alerts (Akıllı Alarmlar) - L1-L4 Hierarchy Change Detection**:
+  - **Yeni Modül**: `apps/api/src/modules/automation/`
+  - **Backend Dosyaları**:
+    - `alert-triggers.ts`: L1-L4 tetikleyici tanımları ve değerlendirme mantığı
+      - L1: Liquidity bias shift, VIX spike (>25/>30), DXY significant move (>1.5% weekly), Fed BS change (>5%), Yield curve inversion flip
+      - L2: Market phase change (early→mid→late→exit), rotation detected (entering/exiting), market bias change
+      - L3: Sector flow anomaly (>10% weekly change), sector dominance shift (>5pp)
+      - L4: AI recommendation direction flip (BUY↔SELL), high momentum detection
+    - `smart-alerts.service.ts`: Ana alarm motoru
+      - `runSmartAlertScan()`: Capital Flow verisi çeker, önceki snapshot ile karşılaştırır, tetikleyicileri değerlendirir
+      - `deliverAlerts()`: Kullanıcı tercihlerine göre notification center üzerinden bildirim gönderir
+      - Alert cooldown sistemi (Redis): aynı alert tipi için tekrar spam engeli
+      - `getUserPreferences()` / `upsertUserPreferences()`: Kullanıcı tercih CRUD
+      - Cron job: Her 15 dakikada bir otomatik tarama
+    - `smart-alerts.routes.ts`: API endpoint'leri
+  - **API Endpoint'leri**:
+    - `GET /api/smart-alerts` - Kullanıcının akıllı alarmları (layer/severity/market filtre)
+    - `GET /api/smart-alerts/preferences` - Tercihler
+    - `PATCH /api/smart-alerts/preferences` - Tercih güncelleme
+    - `GET /api/smart-alerts/status` - Motor durumu
+    - `POST /api/smart-alerts/scan` - Manuel tarama (admin)
+  - **Database**: `smart_alert_preferences` tablosu (user_id, enabled, markets JSON, min_severity, email_enabled, push_enabled)
+  - **Frontend Sayfaları**:
+    - `/alerts/smart` - Akıllı alarm listesi (L1-L4 layer kartları, severity/market filtreleri, action önerileri)
+    - `/alerts/smart/settings` - Alarm tercihleri (market toggle, severity threshold, delivery channel seçimi)
+  - **Sidebar**: Tools grubuna "Smart Alerts" (ShieldAlert ikonu) eklendi
+  - **Bildirim Entegrasyonu**: Notification Center `ALERT` tipini kullanarak mevcut bell icon ve bildirim sistemi ile çalışır
+  - **Alarm Severity'leri**: INFO (gray), WARNING (teal), CRITICAL (coral/red)
+  - **Alert Cooldown'lar**: VIX spike 30dk, phase change 2 saat, Fed BS 1 gün vb. (Redis TTL)
+  - Dosyalar: `alert-triggers.ts`, `smart-alerts.service.ts`, `smart-alerts.routes.ts`, `index.ts`, `layout.tsx`, `alerts/smart/page.tsx`, `alerts/smart/settings/page.tsx`
+- **Signal Quality Scoring System eklendi** (Talimat #5):
+  - **Yeni Dosya**: `apps/api/src/modules/signals/signal-scoring.service.ts` (~310 satir)
+    - `calculateSignalQuality(input: ScoringInput): SignalQualityEnrichment` - Composite 0-100 skor hesaplama
+    - **L1-L4 Alignment (40%)**: Liquidity bias, market phase+rotation, sector flow, AI recommendation
+    - **Technical Strength (30%)**: RSI, MACD histogram, volume confirmation
+    - **Momentum (20%)**: ADX trend strength, classic score proxy
+    - **Volatility Adjustment (10%)**: BB width + ATR relative penalty
+    - `buildForecastBands()`: P10/P50/P90 olasilik bantlari (entry fiyatindan % degisim)
+    - Eksik indikatör verisi için fallback nötr skorlar
+  - **Types güncellendi** (`types.ts`):
+    - `SignalQualityScore` interface (qualityScore, qualityLabel, breakdown, tooltip)
+    - `SignalForecastBand` interface (horizon, timeframe, p10/p50/p90, percent changes)
+    - `SignalQualityEnrichment` interface (qualityScore + forecastBands)
+    - `QUALITY_THRESHOLDS` (low: 40, medium: 70, high: 100)
+    - `QUALITY_COLORS` (low: #EF5A6F, medium: #F59E0B, high: #5EEDC3)
+    - `SignalFilterCriteria`'ya `minQualityScore` eklendi
+  - **Database**: `qualityScore` (Int?) ve `qualityData` (Json?) sütunlari Signal tablosuna eklendi + index
+  - **Migration**: `apps/api/prisma/migrations/add_signal_quality_score.sql`
+  - **Signal Generator Job**: Scoring pipeline entegre edildi (step7Result indicators + capitalFlowSummary -> scoring -> createSignal)
+  - **Signal Service**: `createSignal()` artik `qualityEnrichment` kabul ediyor, `getSignals()` `minQualityScore` filtresi destekliyor
+  - **Signal Routes**: GET /signals query'ye `minQualityScore` parametresi eklendi, serialization'a `qualityScore` ve `qualityData` eklendi
+  - **Telegram Formatter**: Quality Score ve Price Forecast bölümleri eklendi
+  - **Yeni Komponent**: `apps/web/components/signals/SignalCard.tsx` (~490 satir)
+    - `QualityScoreBadge`: Renk kodlu skor badge (>70 yesil, >40 sari, <=40 kirmizi) + hover tooltip
+    - `QualityBreakdown`: 4 progress bar (L1-L4 Alignment, Technical, Momentum, Volatility) + agirliklar
+    - `ForecastBands`: P10/P50/P90 görsel gradient bar'lar + entry marker
+    - Expandable quality details bölümü
+  - **Signals Page güncellendi**: SignalCard komponenti entegre edildi, Min Quality Score slider filtresi (0-100, step 5) eklendi, 5 kolonlu filtre grid'i
+  - Dosyalar: `signal-scoring.service.ts`, `types.ts`, `signal-generator.job.ts`, `signal.service.ts`, `signal.routes.ts`, `telegram-formatter.ts`, `SignalCard.tsx`, `signals/page.tsx`, `schema.prisma`
 
 ### 2026-02-06
 - **Email gönderme ve PDF indirme canvas hatası düzeltildi**:
@@ -2057,6 +2146,133 @@ Kullanıcı Hakları Aktif:
     - `step1Result.capitalFlowContext` verisi kullanılıyor
     - Capital Flow context olmadan yapılan analizlerde evidence chain gizleniyor
   - Dosyalar: `capital-flow.routes.ts`, `analysis.routes.ts`, `AnalysisDialog.tsx`, `analyze/page.tsx`, `details/[id]/page.tsx`
+- **Navigation Restructure (Top-Down Capital Flow Order)**:
+  - **directNav yeniden düzenlendi**: Explore → Analyze → Signals → Dashboard
+  - Intelligence → **Explore** olarak yeniden adlandırıldı (Compass ikonu, `/intelligence` path)
+  - **Signals** Tools dropdown'dan primary nav'a terfi etti
+  - **Report** directNav'dan kaldırıldı → Tools dropdown'a **Reports** (`/reports`) olarak taşındı
+  - **Profile** endNav'dan kaldırıldı → User menu dropdown'a taşındı
+  - **Alerts** (`/alerts`) kaldırıldı → sadece **Smart Alerts** (`/alerts/smart`) kaldı
+  - **Trader Program** endNav'da kaldı (Pricing politikasıyla uyumlu)
+  - Kullanılmayan ikon import'ları temizlendi (Coins, BookOpen, Globe, Sparkles)
+  - **Yeni nav yapısı**:
+    - Primary: Explore | Analyze | Signals | Dashboard
+    - Dropdown "AI Chat": Concierge | AI Experts
+    - Dropdown "Tools": Reports | Smart Alerts | Scheduled | Notifications
+    - End: Trader Program
+    - User Menu: Profile | Settings | Admin | Logout
+  - Dosya: `apps/web/app/(dashboard)/layout.tsx`
+
+### 2026-02-08
+- **Analiz Sistemi Yeniden Yapılandırıldı (3 Mod)**:
+  - **Automated Analysis** (`/analyze`): Tek tıkla tam pipeline çalıştırır
+    - Capital Flow → AI Recommendation → Asset Selection → 7-Step + ML Analysis
+    - Visual pipeline progression: 4 adımlı progress bar (teal→amber→violet→emerald)
+    - Her adım animasyonlu kart ile gösteriliyor (loading spinner, data cards, completion checks)
+    - AI otomatik olarak en yüksek güvenli asset'i seçiyor
+    - Daily Pass otomatik satın alınıyor (yeterli kredi varsa)
+    - Error state: retry butonu ile pipeline yeniden başlatılabilir
+    - Complete state: "Run Another Analysis" butonu ile yeni analiz başlatılabilir
+  - **Tailored Analysis** (`/analyze/tailored`): Kullanıcı istediği herhangi bir asset'i seçebilir
+    - 55+ asset katalog (Crypto, Stocks, Metals, Bonds, BIST)
+    - Arama kutusu + kategori filtreleri (All, Crypto, Stocks, Metals, Bonds, BIST)
+    - Katalogda olmayan semboller için custom symbol input
+    - Capital Flow alignment gate yok - kullanıcı özgür
+    - Uyarı notu: "For best results, use Automated Analysis"
+    - Timeframe seçimi (15m/1H/4H/1D)
+    - Daily Pass kontrolü ve satın alma
+  - **AI Chat** (`/concierge`): Mevcut chat arayüzü + otomasyon komutları
+    - Yeni quick commands: "Set Alert" ve "Morning Briefing"
+    - Alert örneği: "Set a BTC alert when price drops to 55000"
+    - Briefing örneği: "Set my morning briefing to 11:00 AM every day"
+- **Navigation Güncellendi**:
+  - `Analyze` → `Automated` olarak yeniden adlandırıldı (Sparkles ikonu)
+  - `Tailored` eklendi (TrendingUp ikonu, `/analyze/tailored`)
+  - Primary nav: Automated | Tailored | Signals | Dashboard
+- **SelectionCards Kaldırıldı**: Mode selection ekranı (select/flow) yerine doğrudan Automated pipeline
+- **UI Kararları**:
+  - Automated Analysis: Pipeline progression bar (4 adım, her biri kendi gradient rengi)
+  - Tailored Analysis: Grid-based asset picker (2-5 kolon responsive)
+  - AI Chat: 6 quick command butonu (Capital Flow, AI Rec, Market Analysis, Top 5, Set Alert, Morning Briefing)
+- **Runtime TypeError Crash Koruması (21 dosya)**:
+  - Tüm `.toLowerCase()` çağrıları null/undefined kontrolü ile guard edildi
+  - 18 frontend dosya + 3 backend dosya düzeltildi
+  - İki pattern kullanıldı: `typeof val === 'string' ? val.toLowerCase() : ''` (API verisi) ve `(val || '').toLowerCase()` (arama/filtre)
+  - Etkilenen alanlar: verdict hesaplama, direction parsing, search filtering, regime formatting
+- **Modal Erişilebilirlik Düzeltmeleri (5 bileşen)**:
+  - 5 custom modal bileşenine `role="dialog"`, `aria-modal="true"`, `aria-labelledby` eklendi
+  - Her biri için screen-reader-only (`sr-only`) başlık eklendi
+  - Bileşenler: CelebrationModal, FirstLoginModal, SetAlertModal, InterfacePreferenceModal, AnalysisDialog
+- **API Route Error Handling (13 endpoint)**:
+  - `credit.routes.ts`: 6 route'a try/catch (balance, packages, purchase, history, costs, deduct)
+  - `alert.routes.ts`: 7 route'a try/catch (list, create, delete, history, trade-plan, settings GET/PATCH)
+  - ZodError → 400 (Bad Request), generic error → 500 (Internal Server Error)
+  - Server-side `console.error` logging eklendi
+- **Production Source Maps Etkinleştirildi**:
+  - `next.config.js`'e `productionBrowserSourceMaps: true` eklendi
+  - Production'da error stack trace'leri orijinal TypeScript dosyalarına map ediliyor
+- **Dashboard Sayfası Tamamen Yeniden Yazıldı (Mobile-First Fintech Design)**:
+  - Monolitik 1483 satırlık dashboard 5 modüler dosyaya ayrıldı
+  - **Yeni Dosyalar**:
+    - `components/dashboard/KpiSection.tsx`: SVG Arc Gauge (Global Liquidity), Market Bias bars, Credits card
+    - `components/dashboard/CategoryBar.tsx`: Yatay kaydırılabilir market filtre (snap + localStorage)
+    - `components/dashboard/AccordionList.tsx`: Açılır kapanır bölümler (Capital Flow, Performance, Trades, AI)
+    - `components/dashboard/ProfileCard.tsx`: Trader profili turkuaz progress bar ile
+    - `page.tsx`: 717 satırlık slim orchestrator (tüm componentleri compose ediyor)
+  - **Tasarım Sistemi**:
+    - Arka plan: #041020, Glassmorphism kartlar (bg-white/5 backdrop-blur-md border border-white/10)
+    - Turkuaz (#4dd0e1) vurgu rengi, Neon Green (#00f5c4) pozitif, Coral (#ff5f5f) negatif
+    - rounded-2xl köşeler, font-mono finansal veriler, 48px minimum dokunma hedefleri
+    - Skeleton ekranlar animate-pulse ile
+  - **SVG Arc Gauge**: 240° ark, gradient segmentler (risk_off coral → neutral gray → risk_on green), animasyonlu glow dot
+  - **Accordion Layout**: Masaüstü tablo yerine mobil-dostu dikey accordion
+  - **Yatay Trade Kartları**: Aktif pozisyonlar overflow-x-auto ile yatay kaydırılabilir
+  - Build doğrulandı: TypeScript type uyumsuzluğu düzeltildi (CapitalFlowSummary GlobalLiquidity interface alignment)
+
+---
+
+## 🔔 SMART ALERTS (L1-L4 Hierarchy Change Detection)
+
+### Temel Prensip
+> **Sadece fiyat değil, Capital Flow hiyerarşisindeki kritik değişimleri otomatik bildir.**
+
+### Alarm Tetikleyicileri
+
+| Layer | Tetikleyici | Severity | Cooldown |
+|-------|------------|----------|----------|
+| L1 | Liquidity bias değişimi (risk_on↔risk_off) | CRITICAL/WARNING | 1 saat |
+| L1 | VIX > 25 spike | WARNING | 30 dk |
+| L1 | VIX > 30 extreme | CRITICAL | 30 dk |
+| L1 | DXY > 1.5% haftalık hareket | WARNING | 1 saat |
+| L1 | Fed BS > 5% aylık değişim | WARNING | 1 gün |
+| L1 | Yield curve inversion flip | CRITICAL/INFO | 1 gün |
+| L2 | Market phase değişimi (early→mid→late→exit) | varies | 2 saat |
+| L2 | Rotation tespit (entering/exiting) | WARNING | 1 saat |
+| L2 | Market preference değişimi (Crypto→Stocks vb.) | WARNING | 1 saat |
+| L3 | Sector flow anomalisi (>10% haftalık) | WARNING/CRITICAL | 1 saat |
+| L3 | Sector dominance kayması (>5pp) | INFO | 2 saat |
+| L4 | AI recommendation yön değişimi (BUY↔SELL) | WARNING | 30 dk |
+| L4 | High momentum tespiti | INFO | 1 saat |
+
+### API Endpoint'leri
+
+| Endpoint | Method | Açıklama |
+|----------|--------|----------|
+| `/api/smart-alerts` | GET | Kullanıcının akıllı alarmları |
+| `/api/smart-alerts/preferences` | GET | Tercihler |
+| `/api/smart-alerts/preferences` | PATCH | Tercih güncelleme |
+| `/api/smart-alerts/status` | GET | Motor durumu |
+| `/api/smart-alerts/scan` | POST | Manuel tarama (admin) |
+
+### Kod Lokasyonları
+
+| Dosya | Açıklama |
+|-------|----------|
+| `apps/api/src/modules/automation/alert-triggers.ts` | L1-L4 tetikleyici logic |
+| `apps/api/src/modules/automation/smart-alerts.service.ts` | Ana servis, cron job, delivery |
+| `apps/api/src/modules/automation/smart-alerts.routes.ts` | API routes |
+| `apps/web/app/(dashboard)/alerts/smart/page.tsx` | Alarm listesi sayfası |
+| `apps/web/app/(dashboard)/alerts/smart/settings/page.tsx` | Tercih ayarları |
 
 ---
 
