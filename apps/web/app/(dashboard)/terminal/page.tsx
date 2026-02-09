@@ -77,11 +77,27 @@ interface ScreenerAsset {
   market: string;
 }
 
-interface VerdictData {
+interface DecisionGate {
+  label: string;
+  passed: boolean;
+  detail: string;
+}
+
+interface VerdictOpportunity {
   action: 'BUY' | 'SELL' | 'HOLD' | 'AVOID';
+  market: string;
   confidence: number;
-  primaryMarket: string;
   reason: string;
+  phase: 'EARLY' | 'MID' | 'LATE' | 'EXIT';
+  suggestedAssets: string[];
+}
+
+interface VerdictData {
+  gates: DecisionGate[];
+  buy: VerdictOpportunity | null;
+  sell: VerdictOpportunity | null;
+  regime: 'RISK_ON' | 'RISK_OFF' | 'NEUTRAL';
+  timestamp: string;
 }
 
 interface TradePlan {
@@ -159,10 +175,31 @@ function generateScreenerData(): ScreenerAsset[] {
 
 function generateVerdict(): VerdictData {
   return {
-    action: 'BUY',
-    confidence: 78,
-    primaryMarket: 'Crypto',
-    reason: 'Strong capital inflow to crypto. DeFi and L2 sectors leading. Early phase with accelerating velocity.',
+    gates: [
+      { label: 'Liquidity Expanding', passed: true, detail: 'M2 +2.3%, Fed BS contracting but slowing' },
+      { label: 'USD Weakening', passed: true, detail: 'DXY 103.42 (-0.8%), supportive for risk assets' },
+      { label: 'Capital Destination', passed: true, detail: 'Crypto leads (+5.2% 7D), early phase entry' },
+      { label: 'Sector Confirmed', passed: true, detail: 'DeFi +8.4%, L2 +6.1% — strongest flows' },
+      { label: 'Phase Timing', passed: true, detail: 'EARLY phase (< 30 days), optimal entry window' },
+    ],
+    buy: {
+      action: 'BUY',
+      market: 'Crypto',
+      confidence: 78,
+      reason: 'Strong inflow, early phase, DeFi & L2 leading.',
+      phase: 'EARLY',
+      suggestedAssets: ['BTC', 'ETH', 'SOL', 'AAVE', 'LINK'],
+    },
+    sell: {
+      action: 'SELL',
+      market: 'Bonds',
+      confidence: 62,
+      reason: 'Capital outflow accelerating, yield curve steepening.',
+      phase: 'EXIT',
+      suggestedAssets: ['TLT'],
+    },
+    regime: 'RISK_ON',
+    timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
   };
 }
 
@@ -444,56 +481,158 @@ function L3Sectors({ sectors }: { sectors: SectorData[] }) {
 // L4: AI Verdict Engine
 // ---------------------------------------------------------------------------
 
-function L4Verdict({ verdict }: { verdict: VerdictData }) {
-  const actionColor: Record<string, string> = {
-    BUY: 'text-[#22C55E] dark:text-[#4ADE80]',
-    SELL: 'text-[#EF4444] dark:text-[#F87171]',
-    HOLD: 'text-[#F59E0B] dark:text-[#FBBF24]',
-    AVOID: 'text-[#EF4444] dark:text-[#F87171]',
+function OpportunityCard({ opportunity, type }: { opportunity: VerdictOpportunity; type: 'buy' | 'sell' }) {
+  const isBuy = type === 'buy';
+  const actionColor = isBuy
+    ? 'text-[#22C55E] dark:text-[#4ADE80]'
+    : 'text-[#EF4444] dark:text-[#F87171]';
+  const barColor = isBuy
+    ? 'bg-[#22C55E] dark:bg-[#4ADE80]'
+    : 'bg-[#EF4444] dark:bg-[#F87171]';
+
+  return (
+    <div className="bg-white dark:bg-black p-3 flex flex-col gap-2">
+      {/* Header: Action + Market */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <span className={cn('text-xl font-mono font-bold tracking-tight', actionColor)}>
+            {opportunity.action}
+          </span>
+          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase">
+            {opportunity.market}
+          </span>
+        </div>
+        <PhaseBadge phase={opportunity.phase} />
+      </div>
+
+      {/* Confidence */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+            Confidence
+          </span>
+          <span className={cn('text-sm font-mono font-bold tabular-nums', actionColor)}>
+            {opportunity.confidence}%
+          </span>
+        </div>
+        <div className="h-[2px] bg-neutral-100 dark:bg-neutral-900 rounded-full overflow-hidden">
+          <div
+            className={cn('h-full rounded-full transition-all duration-700', barColor)}
+            style={{ width: `${opportunity.confidence}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Reason */}
+      <p className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
+        {opportunity.reason}
+      </p>
+
+      {/* Suggested Assets */}
+      {opportunity.suggestedAssets.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {opportunity.suggestedAssets.map((s) => (
+            <span
+              key={s}
+              className="px-1.5 py-0.5 text-[10px] font-mono border border-neutral-200 dark:border-neutral-800 rounded text-neutral-600 dark:text-neutral-300"
+            >
+              {s}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function L4VerdictEngine({ verdict }: { verdict: VerdictData }) {
+  const passedCount = verdict.gates.filter((g) => g.passed).length;
+  const totalGates = verdict.gates.length;
+  const allPassed = passedCount === totalGates;
+
+  const regimeStyles: Record<string, { label: string; color: string }> = {
+    RISK_ON: { label: 'RISK ON', color: 'text-[#22C55E] dark:text-[#4ADE80]' },
+    RISK_OFF: { label: 'RISK OFF', color: 'text-[#EF4444] dark:text-[#F87171]' },
+    NEUTRAL: { label: 'NEUTRAL', color: 'text-[#F59E0B] dark:text-[#FBBF24]' },
   };
+
+  const regime = regimeStyles[verdict.regime] || regimeStyles.NEUTRAL;
 
   return (
     <section>
-      <SectionLabel layer="L4" label="AI Verdict" />
-      <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-black p-4">
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <span className={cn(
-              'text-3xl sm:text-4xl font-mono font-bold tracking-tight',
-              actionColor[verdict.action] || 'text-neutral-500',
-            )}>
-              {verdict.action}
+      <SectionLabel layer="L4" label="Verdict Engine" />
+      <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
+
+        {/* Regime bar */}
+        <div className="bg-neutral-50 dark:bg-neutral-900/50 px-3 py-2 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
+          <div className="flex items-center gap-2">
+            <span className={cn('text-xs font-mono font-bold tracking-wider', regime.color)}>
+              {regime.label}
             </span>
-            <span className="ml-2 text-xs font-mono text-neutral-400 dark:text-neutral-500">
-              {verdict.primaryMarket}
+            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+              {passedCount}/{totalGates} gates passed
             </span>
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-mono font-bold text-neutral-900 dark:text-white tabular-nums">
-              {verdict.confidence}%
-            </div>
-            <div className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
-              Confidence
-            </div>
+          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 tabular-nums">
+            {verdict.timestamp}
+          </span>
+        </div>
+
+        {/* Decision Gate checklist */}
+        <div className="bg-white dark:bg-black px-3 py-2 border-b border-neutral-200 dark:border-neutral-800">
+          <div className="space-y-1.5">
+            {verdict.gates.map((gate, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className={cn(
+                  'text-xs font-mono shrink-0 mt-0.5',
+                  gate.passed
+                    ? 'text-[#22C55E] dark:text-[#4ADE80]'
+                    : 'text-[#EF4444] dark:text-[#F87171]',
+                )}>
+                  {gate.passed ? '✓' : '✗'}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-mono font-medium text-neutral-900 dark:text-white">
+                      {gate.label}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-neutral-400 dark:text-neutral-500 leading-snug block">
+                    {gate.detail}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-        <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed font-light">
-          {verdict.reason}
-        </p>
-        {/* Confidence bar */}
-        <div className="mt-3 h-[2px] bg-neutral-100 dark:bg-neutral-900 rounded-full overflow-hidden">
-          <div
-            className={cn(
-              'h-full rounded-full transition-all duration-700',
-              verdict.confidence >= 70
-                ? 'bg-[#22C55E] dark:bg-[#4ADE80]'
-                : verdict.confidence >= 50
-                ? 'bg-[#F59E0B] dark:bg-[#FBBF24]'
-                : 'bg-[#EF4444] dark:bg-[#F87171]',
-            )}
-            style={{ width: `${verdict.confidence}%` }}
-          />
+
+        {/* BUY / SELL split */}
+        <div className="grid grid-cols-2 gap-px bg-neutral-200 dark:bg-neutral-800">
+          {verdict.buy ? (
+            <OpportunityCard opportunity={verdict.buy} type="buy" />
+          ) : (
+            <div className="bg-white dark:bg-black p-3 flex items-center justify-center">
+              <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">No BUY signal</span>
+            </div>
+          )}
+          {verdict.sell ? (
+            <OpportunityCard opportunity={verdict.sell} type="sell" />
+          ) : (
+            <div className="bg-white dark:bg-black p-3 flex items-center justify-center">
+              <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">No SELL signal</span>
+            </div>
+          )}
         </div>
+
+        {/* Summary line */}
+        {allPassed && verdict.buy && (
+          <div className="bg-white dark:bg-black px-3 py-2 border-t border-neutral-200 dark:border-neutral-800">
+            <p className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 leading-relaxed">
+              All gates passed. Primary opportunity in {verdict.buy.market} ({verdict.buy.phase} phase).
+              {verdict.sell ? ` Consider reducing ${verdict.sell.market} exposure.` : ''}
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -705,46 +844,7 @@ function L5Screener({
   );
 }
 
-// ---------------------------------------------------------------------------
-// L6: Sell-Side Verdict
-// ---------------------------------------------------------------------------
-
-function L6SellVerdict() {
-  return (
-    <section>
-      <SectionLabel layer="L6" label="Risk Assessment" />
-      <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-black p-4">
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <span className="text-3xl sm:text-4xl font-mono font-bold tracking-tight text-[#F59E0B] dark:text-[#FBBF24]">
-              CAUTION
-            </span>
-            <span className="ml-2 text-xs font-mono text-neutral-400 dark:text-neutral-500">
-              Bonds
-            </span>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-mono font-bold text-neutral-900 dark:text-white tabular-nums">
-              62%
-            </div>
-            <div className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
-              Confidence
-            </div>
-          </div>
-        </div>
-        <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed font-light">
-          Capital outflow from bonds accelerating. Yield curve steepening signals potential regime shift. Monitor DXY for confirmation.
-        </p>
-        <div className="mt-3 h-[2px] bg-neutral-100 dark:bg-neutral-900 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full bg-[#F59E0B] dark:bg-[#FBBF24] transition-all duration-700"
-            style={{ width: '62%' }}
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
+// L6SellVerdict removed — SELL data now integrated into L4 Verdict Engine
 
 // ---------------------------------------------------------------------------
 // L7: Trade Visualizer (Lightweight Charts)
@@ -1164,15 +1264,14 @@ export default function TestPage() {
                 <ForecastPath selectedAsset={selectedAsset} />
 
                 {/* Compact verdict reminder */}
-                <L4Verdict verdict={verdict} />
+                <L4VerdictEngine verdict={verdict} />
               </>
             ) : (
               <>
                 <L1MacroGrid metrics={macroMetrics} />
                 <L2MarketFlow flows={marketFlows} />
                 <L3Sectors sectors={sectors} />
-                <L4Verdict verdict={verdict} />
-                <L6SellVerdict />
+                <L4VerdictEngine verdict={verdict} />
               </>
             )}
           </div>
