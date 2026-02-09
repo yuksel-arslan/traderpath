@@ -950,7 +950,7 @@ function L7TradeVisualizer({
         layout: {
           background: { type: ColorType.Solid, color: isDark ? '#0a0a0a' : '#FFFFFF' },
           textColor: isDark ? '#737373' : '#A3A3A3',
-          fontFamily: "'Inter', 'Geist Sans', monospace",
+          fontFamily: "'Geist Mono', monospace",
           fontSize: 10,
         },
         grid: {
