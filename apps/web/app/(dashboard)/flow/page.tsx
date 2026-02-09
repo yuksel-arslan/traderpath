@@ -1,11 +1,11 @@
 'use client';
 
 // =============================================================================
-// Flow — Capital Flow Deep Drill (L1 · L2 · L3)
-// Hyper-Minimalist Financial Intelligence Terminal
+// Flow — Capital Flow Deep Drill (L1 · L2 · L3 · L4)
+// Sidebar + Content Panel — Hyper-Minimalist Financial Intelligence Terminal
 // =============================================================================
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -19,6 +19,19 @@ import { cn, formatNumber } from '../../../lib/utils';
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+type SectionId = 'l1' | 'l2' | 'rotation' | 'l3' | 'l4';
+
+interface NavItem {
+  id: SectionId;
+  tag: string;
+  label: string;
+}
+
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
 
 interface LiquidityMetric {
   id: string;
@@ -54,6 +67,42 @@ interface SectorDetail {
   topAssets: string[];
 }
 
+interface Recommendation {
+  direction: 'BUY' | 'SELL';
+  market: string;
+  phase: string;
+  confidence: number;
+  reason: string;
+  suggestedAssets: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Navigation
+// ---------------------------------------------------------------------------
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    title: 'Macro',
+    items: [
+      { id: 'l1', tag: 'L1', label: 'Global Liquidity' },
+    ],
+  },
+  {
+    title: 'Markets',
+    items: [
+      { id: 'l2', tag: 'L2', label: 'Market Flow' },
+      { id: 'rotation', tag: 'L2', label: 'Rotation Matrix' },
+      { id: 'l3', tag: 'L3', label: 'Sector Activity' },
+    ],
+  },
+  {
+    title: 'Action',
+    items: [
+      { id: 'l4', tag: 'L4', label: 'AI Recommendation' },
+    ],
+  },
+];
+
 // ---------------------------------------------------------------------------
 // Mock Data
 // ---------------------------------------------------------------------------
@@ -85,6 +134,25 @@ const sectors: SectorDetail[] = [
   { name: 'Meme', market: 'Crypto', flow7d: -2.3, flow30d: -4.8, dominance: 5.1, trending: 'down', topAssets: ['DOGE', 'SHIB', 'PEPE'] },
   { name: 'Gold', market: 'Metals', flow7d: -0.2, flow30d: 2.4, dominance: 72.1, trending: 'flat', topAssets: ['GLD', 'IAU', 'XAUUSD'] },
   { name: 'Silver', market: 'Metals', flow7d: -1.1, flow30d: -0.8, dominance: 18.4, trending: 'down', topAssets: ['SLV', 'XAGUSD'] },
+];
+
+const recommendations: Recommendation[] = [
+  {
+    direction: 'BUY',
+    market: 'Crypto',
+    phase: 'EARLY',
+    confidence: 78,
+    reason: 'Capital entering crypto at accelerating pace. M2 expanding, DXY weakening — optimal entry window.',
+    suggestedAssets: ['BTC', 'ETH', 'SOL', 'AAVE'],
+  },
+  {
+    direction: 'SELL',
+    market: 'Bonds',
+    phase: 'EXIT',
+    confidence: 65,
+    reason: 'Capital exiting bonds for 95 days. Velocity negative. Rotation toward risk assets confirmed.',
+    suggestedAssets: ['TLT', 'IEF', 'BND'],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -179,7 +247,7 @@ function SectionLabel({ label, layer, count }: { label: string; layer: string; c
 }
 
 // ---------------------------------------------------------------------------
-// L1: Global Liquidity Deep View
+// L1: Global Liquidity
 // ---------------------------------------------------------------------------
 
 function L1Liquidity({ metrics }: { metrics: LiquidityMetric[] }) {
@@ -198,15 +266,12 @@ function L1Liquidity({ metrics }: { metrics: LiquidityMetric[] }) {
               onClick={() => setExpanded(expanded === m.id ? null : m.id)}
               className="w-full flex items-center gap-3 p-3 hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition-colors text-left"
             >
-              {/* Signal dot */}
               <span className={cn(
                 'w-1.5 h-1.5 rounded-full shrink-0',
                 m.signal === 'bullish' ? 'bg-[#22C55E] dark:bg-[#4ADE80]' :
                 m.signal === 'bearish' ? 'bg-[#EF4444] dark:bg-[#F87171]' :
                 'bg-neutral-400 dark:bg-neutral-500',
               )} />
-
-              {/* Label + value */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-neutral-500 dark:text-neutral-400 font-mono uppercase tracking-wider truncate">
@@ -221,13 +286,11 @@ function L1Liquidity({ metrics }: { metrics: LiquidityMetric[] }) {
                   <Delta value={m.change} />
                 </div>
               </div>
-
               <ChevronRight className={cn(
                 'w-3.5 h-3.5 text-neutral-300 dark:text-neutral-600 transition-transform shrink-0',
                 expanded === m.id && 'rotate-90',
               )} />
             </button>
-
             {expanded === m.id && (
               <div className="px-3 pb-3 pt-0">
                 <div className="border-t border-neutral-100 dark:border-neutral-800/50 pt-2">
@@ -245,7 +308,7 @@ function L1Liquidity({ metrics }: { metrics: LiquidityMetric[] }) {
 }
 
 // ---------------------------------------------------------------------------
-// L2: Market Flow Deep View
+// L2: Market Flow
 // ---------------------------------------------------------------------------
 
 function L2Markets({ flows }: { flows: MarketFlowDetail[] }) {
@@ -258,7 +321,6 @@ function L2Markets({ flows }: { flows: MarketFlowDetail[] }) {
             key={f.market}
             className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-black p-3"
           >
-            {/* Header */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-neutral-900 dark:text-white">{f.market}</span>
@@ -266,8 +328,6 @@ function L2Markets({ flows }: { flows: MarketFlowDetail[] }) {
               </div>
               <RotationBadge signal={f.rotationSignal} />
             </div>
-
-            {/* Flow metrics grid */}
             <div className="grid grid-cols-3 gap-px bg-neutral-100 dark:bg-neutral-800/50 rounded-sm overflow-hidden mb-2">
               {[
                 { label: '7D', value: f.flow7d },
@@ -285,8 +345,6 @@ function L2Markets({ flows }: { flows: MarketFlowDetail[] }) {
                 </div>
               ))}
             </div>
-
-            {/* Bottom row */}
             <div className="flex items-center justify-between text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
               <span>MCap: {f.marketCap}</span>
               <span>Dom: {f.dominance}%</span>
@@ -301,14 +359,14 @@ function L2Markets({ flows }: { flows: MarketFlowDetail[] }) {
 }
 
 // ---------------------------------------------------------------------------
-// L3: Sector Deep View
+// L3: Sector Activity
 // ---------------------------------------------------------------------------
 
-function L3Sectors({ sectors, marketFilter }: { sectors: SectorDetail[]; marketFilter: string }) {
+function L3Sectors({ sectors: sectorData, marketFilter }: { sectors: SectorDetail[]; marketFilter: string }) {
   const filtered = useMemo(() => {
-    if (marketFilter === 'All') return sectors;
-    return sectors.filter((s) => s.market === marketFilter);
-  }, [sectors, marketFilter]);
+    if (marketFilter === 'All') return sectorData;
+    return sectorData.filter((s) => s.market === marketFilter);
+  }, [sectorData, marketFilter]);
 
   return (
     <section>
@@ -360,7 +418,7 @@ function L3Sectors({ sectors, marketFilter }: { sectors: SectorDetail[]; marketF
 }
 
 // ---------------------------------------------------------------------------
-// Rotation Matrix
+// L2: Rotation Matrix
 // ---------------------------------------------------------------------------
 
 function RotationMatrix({ flows }: { flows: MarketFlowDetail[] }) {
@@ -396,7 +454,6 @@ function RotationMatrix({ flows }: { flows: MarketFlowDetail[] }) {
             );
           })}
         </div>
-        {/* Flow arrows */}
         <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800/50">
           <p className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 text-center">
             Capital rotating: Bonds → Metals → Stocks → <span className="text-[#22C55E] dark:text-[#4ADE80] font-semibold">Crypto</span>
@@ -408,60 +465,262 @@ function RotationMatrix({ flows }: { flows: MarketFlowDetail[] }) {
 }
 
 // ---------------------------------------------------------------------------
+// L4: AI Recommendation
+// ---------------------------------------------------------------------------
+
+function L4Recommendation({ recs }: { recs: Recommendation[] }) {
+  return (
+    <section>
+      <SectionLabel layer="L4" label="AI Recommendation" count={recs.length} />
+      <div className="space-y-3">
+        {recs.map((r) => {
+          const isBuy = r.direction === 'BUY';
+          return (
+            <div
+              key={`${r.direction}-${r.market}`}
+              className={cn(
+                'border rounded-sm bg-white dark:bg-black p-4',
+                isBuy
+                  ? 'border-[#22C55E]/30 dark:border-[#4ADE80]/30'
+                  : 'border-[#EF4444]/30 dark:border-[#F87171]/30',
+              )}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    'text-xl font-mono font-bold tracking-tight',
+                    isBuy ? 'text-[#22C55E] dark:text-[#4ADE80]' : 'text-[#EF4444] dark:text-[#F87171]',
+                  )}>
+                    {r.direction}
+                  </span>
+                  <span className="text-sm font-semibold text-neutral-900 dark:text-white">{r.market}</span>
+                  <PhaseBadge phase={r.phase} />
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase">Confidence</div>
+                  <div className={cn(
+                    'text-sm font-mono font-bold tabular-nums',
+                    r.confidence >= 70 ? 'text-[#22C55E] dark:text-[#4ADE80]' : 'text-[#F59E0B] dark:text-[#FBBF24]',
+                  )}>
+                    {r.confidence}%
+                  </div>
+                </div>
+              </div>
+
+              {/* Reason */}
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed mb-3">
+                {r.reason}
+              </p>
+
+              {/* Suggested assets */}
+              <div>
+                <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+                  Suggested Assets
+                </span>
+                <div className="flex gap-1.5 mt-1">
+                  {r.suggestedAssets.map((a) => (
+                    <span
+                      key={a}
+                      className={cn(
+                        'px-1.5 py-0.5 text-[10px] font-mono border rounded',
+                        isBuy
+                          ? 'border-[#22C55E]/20 dark:border-[#4ADE80]/20 text-[#22C55E] dark:text-[#4ADE80]'
+                          : 'border-[#EF4444]/20 dark:border-[#F87171]/20 text-[#EF4444] dark:text-[#F87171]',
+                      )}
+                    >
+                      {a}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Content Panel
+// ---------------------------------------------------------------------------
+
+function ContentPanel({
+  activeSection,
+  marketFilter,
+  setMarketFilter,
+}: {
+  activeSection: SectionId;
+  marketFilter: string;
+  setMarketFilter: (f: string) => void;
+}) {
+  const markets = ['All', 'Crypto', 'Stocks', 'Metals', 'Bonds'];
+
+  return (
+    <div className="space-y-6">
+      {/* Market filter — shown for L3 */}
+      {activeSection === 'l3' && (
+        <div className="flex gap-px bg-neutral-200 dark:bg-neutral-800 rounded-sm overflow-hidden w-max">
+          {markets.map((m) => (
+            <button
+              key={m}
+              onClick={() => setMarketFilter(m)}
+              className={cn(
+                'px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wider transition-colors min-w-[48px]',
+                marketFilter === m
+                  ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
+                  : 'bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white',
+              )}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {activeSection === 'l1' && <L1Liquidity metrics={liquidityMetrics} />}
+      {activeSection === 'l2' && <L2Markets flows={marketFlows} />}
+      {activeSection === 'rotation' && <RotationMatrix flows={marketFlows} />}
+      {activeSection === 'l3' && <L3Sectors sectors={sectors} marketFilter={marketFilter} />}
+      {activeSection === 'l4' && <L4Recommendation recs={recommendations} />}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main Page
 // ---------------------------------------------------------------------------
 
 export default function FlowPage() {
+  const [activeSection, setActiveSection] = useState<SectionId>('l1');
   const [marketFilter, setMarketFilter] = useState('All');
-  const markets = ['All', 'Crypto', 'Stocks', 'Metals', 'Bonds'];
+
+  const handleNavClick = useCallback((id: SectionId) => {
+    setActiveSection(id);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 pb-8">
-        {/* Page header */}
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-neutral-200 dark:border-neutral-800">
+    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 flex flex-col h-full">
+        {/* Header */}
+        <div className="shrink-0 pt-4 pb-3 border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
-              L1 · L2 · L3
+              L1 · L2 · L3 · L4
             </span>
             <span className="text-sm font-medium text-neutral-900 dark:text-white">
               Capital Flow Intelligence
             </span>
           </div>
+        </div>
 
-          {/* Market filter */}
-          <div className="flex gap-px bg-neutral-200 dark:bg-neutral-800 rounded-sm overflow-hidden">
-            {markets.map((m) => (
+        {/* Mobile: Horizontal tab bar */}
+        <div className="lg:hidden mt-3 -mx-3 px-3 overflow-x-auto scrollbar-none">
+          <div className="flex gap-px bg-neutral-200 dark:bg-neutral-800 rounded-sm overflow-hidden w-max">
+            {NAV_GROUPS.flatMap((g) => g.items).map((item) => (
               <button
-                key={m}
-                onClick={() => setMarketFilter(m)}
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
                 className={cn(
-                  'px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wider transition-colors min-w-[48px]',
-                  marketFilter === m
+                  'px-3 py-2 text-[10px] font-sans uppercase tracking-wider transition-colors whitespace-nowrap',
+                  activeSection === item.id
                     ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
-                    : 'bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white',
+                    : 'bg-white dark:bg-neutral-950 text-neutral-500 dark:text-neutral-400',
                 )}
               >
-                {m}
+                <span className="text-[9px] opacity-50 mr-1">{item.tag}</span>
+                {item.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Content grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
-          {/* Left: L1 Liquidity */}
-          <div className="lg:col-span-5 space-y-4">
-            <L1Liquidity metrics={liquidityMetrics} />
-            <RotationMatrix flows={marketFlows} />
-          </div>
+        {/* Desktop: Sidebar + Content */}
+        <div className="mt-4 flex-1 min-h-0 flex gap-0">
 
-          {/* Right: L2 + L3 */}
-          <div className="lg:col-span-7 space-y-4">
-            <L2Markets flows={marketFlows} />
-            <L3Sectors sectors={sectors} marketFilter={marketFilter} />
-          </div>
+          {/* Sidebar */}
+          <nav className="hidden lg:block w-52 shrink-0 border-r border-neutral-200 dark:border-neutral-800 overflow-y-auto scrollbar-none pr-3 py-1">
+            {NAV_GROUPS.map((group, gi) => (
+              <div key={group.title} className={cn(gi > 0 && 'mt-5')}>
+                <div className="text-[9px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em] mb-2 px-2">
+                  {group.title}
+                </div>
+                <div className="space-y-0.5">
+                  {group.items.map((item) => {
+                    const isActive = activeSection === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => handleNavClick(item.id)}
+                        className={cn(
+                          'w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-left transition-all duration-150',
+                          isActive
+                            ? 'bg-neutral-100 dark:bg-neutral-900/50 border-l-2 border-[#14B8A6] dark:border-[#5EEAD4] -ml-px'
+                            : 'border-l-2 border-transparent hover:bg-neutral-50 dark:hover:bg-neutral-900/20 -ml-px',
+                        )}
+                      >
+                        <span className={cn(
+                          'text-[9px] font-mono tabular-nums w-4 shrink-0',
+                          isActive
+                            ? 'text-[#14B8A6] dark:text-[#5EEAD4]'
+                            : 'text-neutral-400 dark:text-neutral-600',
+                        )}>
+                          {item.tag}
+                        </span>
+                        <span className={cn(
+                          'text-[11px] font-sans truncate',
+                          isActive
+                            ? 'text-neutral-900 dark:text-white font-medium'
+                            : 'text-neutral-500 dark:text-neutral-400',
+                        )}>
+                          {item.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Sidebar summary */}
+            <div className="mt-6 px-2 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+              <span className="text-[9px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block mb-2">
+                Bias
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] dark:bg-[#4ADE80]" />
+                <span className="text-xs font-mono font-semibold text-[#22C55E] dark:text-[#4ADE80]">
+                  RISK ON
+                </span>
+              </div>
+              <p className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 mt-1.5 leading-relaxed">
+                M2 expanding, DXY weakening. Capital entering crypto.
+              </p>
+            </div>
+          </nav>
+
+          {/* Content */}
+          <main className="flex-1 min-w-0 overflow-y-auto scrollbar-none lg:pl-5 py-1 pb-4">
+            <ContentPanel
+              activeSection={activeSection}
+              marketFilter={marketFilter}
+              setMarketFilter={setMarketFilter}
+            />
+          </main>
         </div>
+
+        {/* Footer */}
+        <footer className="shrink-0 py-3 border-t border-neutral-200 dark:border-neutral-800">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+              Capital Flow Intelligence · L1–L4
+            </span>
+            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+              Data for educational purposes only
+            </span>
+          </div>
+        </footer>
       </div>
     </div>
   );

@@ -1386,7 +1386,7 @@ export default function TestPage() {
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
                 className={cn(
-                  'px-3 py-2 text-[10px] font-mono uppercase tracking-wider transition-colors whitespace-nowrap',
+                  'px-3 py-2 text-[10px] font-sans uppercase tracking-wider transition-colors whitespace-nowrap',
                   activeSection === item.id
                     ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
                     : 'bg-white dark:bg-neutral-950 text-neutral-500 dark:text-neutral-400',
@@ -1409,7 +1409,7 @@ export default function TestPage() {
             {NAV_GROUPS.map((group, gi) => (
               <div key={group.title} className={cn(gi > 0 && 'mt-5')}>
                 {/* Group header */}
-                <div className="text-[9px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em] mb-2 px-2">
+                <div className="text-[9px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em] mb-2 px-2">
                   {group.title}
                 </div>
 
@@ -1439,7 +1439,7 @@ export default function TestPage() {
                           </span>
                         )}
                         <span className={cn(
-                          'text-[11px] font-mono truncate',
+                          'text-[11px] font-sans truncate',
                           isActive
                             ? 'text-neutral-900 dark:text-white font-medium'
                             : 'text-neutral-500 dark:text-neutral-400',
@@ -1457,7 +1457,7 @@ export default function TestPage() {
             <div className="mt-6 px-2 pt-4 border-t border-neutral-200 dark:border-neutral-800">
               {selectedAsset ? (
                 <div className="space-y-1">
-                  <span className="text-[9px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block">
+                  <span className="text-[9px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block">
                     Selected
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -1472,7 +1472,7 @@ export default function TestPage() {
                   </span>
                 </div>
               ) : (
-                <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+                <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
                   No asset selected
                 </span>
               )}
