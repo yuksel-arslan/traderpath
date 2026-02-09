@@ -264,6 +264,9 @@ importers:
       framer-motion:
         specifier: ^10.16.16
         version: 10.18.0(react-dom@18.3.1)(react@18.3.1)
+      geist:
+        specifier: ^1.7.0
+        version: 1.7.0(next@14.0.4)
       html2canvas:
         specifier: ^1.4.1
         version: 1.4.1
@@ -6736,6 +6739,14 @@ packages:
       json-bigint: 1.0.0
     transitivePeerDependencies:
       - supports-color
+    dev: false
+
+  /geist@1.7.0(next@14.0.4):
+    resolution: {integrity: sha512-ZaoiZwkSf0DwwB1ncdLKp+ggAldqxl5L1+SXaNIBGkPAqcu+xjVJLxlf3/S8vLt9UHx1xu5fz3lbzKCj5iOVdQ==}
+    peerDependencies:
+      next: '>=13.2.0'
+    dependencies:
+      next: 14.0.4(@babel/core@7.28.6)(react-dom@18.3.1)(react@18.3.1)
     dev: false
 
   /generator-function@2.0.1:

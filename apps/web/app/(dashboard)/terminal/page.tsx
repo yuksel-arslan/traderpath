@@ -2,7 +2,7 @@
 
 // =============================================================================
 // TraderPath Hyper-Minimalist Financial Intelligence Terminal
-// L1-L7 Layered Decision Engine
+// Interactive Sidebar + Content Panel — 2026 Design
 // =============================================================================
 
 import {
@@ -111,6 +111,43 @@ interface TradePlan {
 
 type SortKey = 'rank' | 'symbol' | 'price' | 'change24h' | 'volume' | 'aiScore' | 'trend';
 type SortDir = 'asc' | 'desc';
+
+// ---------------------------------------------------------------------------
+// Navigation
+// ---------------------------------------------------------------------------
+
+type SectionId = 'l1' | 'l2' | 'l3' | 'l4' | 'l5' | 'l7' | 'forecast';
+
+interface NavItem {
+  id: SectionId;
+  label: string;
+  tag?: string;
+}
+
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    title: 'Capital Flow',
+    items: [
+      { id: 'l1', label: 'Global Liquidity', tag: 'L1' },
+      { id: 'l2', label: 'Market Flow', tag: 'L2' },
+      { id: 'l3', label: 'Sector Activity', tag: 'L3' },
+      { id: 'l4', label: 'Verdict Engine', tag: 'L4' },
+    ],
+  },
+  {
+    title: 'Asset Analysis',
+    items: [
+      { id: 'l5', label: 'Asset Screener', tag: 'L5' },
+      { id: 'l7', label: 'Trade Visualizer', tag: 'L7' },
+      { id: 'forecast', label: 'Forecast Path' },
+    ],
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Mock Data Generators (will be replaced with real API calls)
@@ -369,7 +406,7 @@ function L1MacroGrid({ metrics }: { metrics: MacroMetric[] }) {
         {metrics.map((m) => (
           <div
             key={m.label}
-            className="bg-white dark:bg-black p-2.5 flex flex-col gap-1"
+            className="bg-white dark:bg-neutral-950 p-2.5 flex flex-col gap-1"
           >
             <div className="flex items-center gap-1">
               <SignalDot signal={m.signal} />
@@ -383,6 +420,16 @@ function L1MacroGrid({ metrics }: { metrics: MacroMetric[] }) {
             {m.delta !== undefined && <Delta value={m.delta} />}
           </div>
         ))}
+      </div>
+
+      {/* Signal summary */}
+      <div className="mt-3 border border-neutral-200 dark:border-neutral-800 rounded-sm bg-neutral-50/50 dark:bg-neutral-900/30 p-3">
+        <span className="text-[10px] font-mono text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest block mb-1.5">
+          Interpretation
+        </span>
+        <p className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
+          M2 money supply expanding (+2.3%) with Fed balance sheet contraction slowing. DXY weakening supports risk assets. Low VIX (14.2) indicates complacency — favorable for momentum strategies. Yield curve positive (+0.32) — no recession signal.
+        </p>
       </div>
     </section>
   );
@@ -400,7 +447,7 @@ function L2MarketFlow({ flows }: { flows: MarketFlow[] }) {
         {flows.map((f) => (
           <div
             key={f.market}
-            className="bg-white dark:bg-black p-3 flex flex-col gap-1.5"
+            className="bg-white dark:bg-neutral-950 p-3 flex flex-col gap-1.5"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-neutral-900 dark:text-white">
@@ -431,6 +478,16 @@ function L2MarketFlow({ flows }: { flows: MarketFlow[] }) {
           </div>
         ))}
       </div>
+
+      {/* Rotation insight */}
+      <div className="mt-3 border border-neutral-200 dark:border-neutral-800 rounded-sm bg-neutral-50/50 dark:bg-neutral-900/30 p-3">
+        <span className="text-[10px] font-mono text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest block mb-1.5">
+          Rotation Signal
+        </span>
+        <p className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
+          Capital rotating from Bonds (EXIT) → Crypto (EARLY). Stocks in MID phase with moderate inflow. Metals showing deceleration — approaching LATE phase. Strongest velocity in Crypto (+2.1).
+        </p>
+      </div>
     </section>
   );
 }
@@ -449,18 +506,18 @@ function L3Sectors({ sectors }: { sectors: SectorData[] }) {
             <tr className="bg-neutral-50 dark:bg-neutral-900/50">
               <th className="text-left p-2 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Sector</th>
               <th className="text-right p-2 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Flow 7D</th>
-              <th className="text-right p-2 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden sm:table-cell">Dom.</th>
+              <th className="text-right p-2 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Dom.</th>
               <th className="text-center p-2 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Trend</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
             {sectors.map((s) => (
-              <tr key={s.name} className="bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition-colors">
+              <tr key={s.name} className="bg-white dark:bg-neutral-950 hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition-colors">
                 <td className="p-2 font-medium text-neutral-900 dark:text-white">{s.name}</td>
                 <td className="p-2 text-right">
                   <Delta value={s.flow} />
                 </td>
-                <td className="p-2 text-right font-mono text-neutral-500 dark:text-neutral-400 hidden sm:table-cell tabular-nums">
+                <td className="p-2 text-right font-mono text-neutral-500 dark:text-neutral-400 tabular-nums">
                   {s.dominance.toFixed(1)}%
                 </td>
                 <td className="p-2 text-center">
@@ -472,6 +529,23 @@ function L3Sectors({ sectors }: { sectors: SectorData[] }) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Top sectors */}
+      <div className="mt-3 flex items-center gap-3">
+        <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider shrink-0">
+          Leading
+        </span>
+        <div className="flex flex-wrap gap-1">
+          {sectors.filter((s) => s.trending === 'up').map((s) => (
+            <span
+              key={s.name}
+              className="px-1.5 py-0.5 text-[10px] font-mono border border-[#22C55E]/20 dark:border-[#4ADE80]/20 text-[#22C55E] dark:text-[#4ADE80] rounded"
+            >
+              {s.name} +{s.flow.toFixed(1)}%
+            </span>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -491,8 +565,7 @@ function OpportunityCard({ opportunity, type }: { opportunity: VerdictOpportunit
     : 'bg-[#EF4444] dark:bg-[#F87171]';
 
   return (
-    <div className="bg-white dark:bg-black p-3 flex flex-col gap-2">
-      {/* Header: Action + Market */}
+    <div className="bg-white dark:bg-neutral-950 p-3 flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <span className={cn('text-xl font-mono font-bold tracking-tight', actionColor)}>
@@ -505,7 +578,6 @@ function OpportunityCard({ opportunity, type }: { opportunity: VerdictOpportunit
         <PhaseBadge phase={opportunity.phase} />
       </div>
 
-      {/* Confidence */}
       <div>
         <div className="flex items-center justify-between mb-1">
           <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
@@ -523,12 +595,10 @@ function OpportunityCard({ opportunity, type }: { opportunity: VerdictOpportunit
         </div>
       </div>
 
-      {/* Reason */}
       <p className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
         {opportunity.reason}
       </p>
 
-      {/* Suggested Assets */}
       {opportunity.suggestedAssets.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {opportunity.suggestedAssets.map((s) => (
@@ -562,7 +632,6 @@ function L4VerdictEngine({ verdict }: { verdict: VerdictData }) {
     <section>
       <SectionLabel layer="L4" label="Verdict Engine" />
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
-
         {/* Regime bar */}
         <div className="bg-neutral-50 dark:bg-neutral-900/50 px-3 py-2 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center gap-2">
@@ -579,7 +648,7 @@ function L4VerdictEngine({ verdict }: { verdict: VerdictData }) {
         </div>
 
         {/* Decision Gate checklist */}
-        <div className="bg-white dark:bg-black px-3 py-2 border-b border-neutral-200 dark:border-neutral-800">
+        <div className="bg-white dark:bg-neutral-950 px-3 py-2 border-b border-neutral-200 dark:border-neutral-800">
           <div className="space-y-1.5">
             {verdict.gates.map((gate, i) => (
               <div key={i} className="flex items-start gap-2">
@@ -611,14 +680,14 @@ function L4VerdictEngine({ verdict }: { verdict: VerdictData }) {
           {verdict.buy ? (
             <OpportunityCard opportunity={verdict.buy} type="buy" />
           ) : (
-            <div className="bg-white dark:bg-black p-3 flex items-center justify-center">
+            <div className="bg-white dark:bg-neutral-950 p-3 flex items-center justify-center">
               <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">No BUY signal</span>
             </div>
           )}
           {verdict.sell ? (
             <OpportunityCard opportunity={verdict.sell} type="sell" />
           ) : (
-            <div className="bg-white dark:bg-black p-3 flex items-center justify-center">
+            <div className="bg-white dark:bg-neutral-950 p-3 flex items-center justify-center">
               <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">No SELL signal</span>
             </div>
           )}
@@ -626,7 +695,7 @@ function L4VerdictEngine({ verdict }: { verdict: VerdictData }) {
 
         {/* Summary line */}
         {allPassed && verdict.buy && (
-          <div className="bg-white dark:bg-black px-3 py-2 border-t border-neutral-200 dark:border-neutral-800">
+          <div className="bg-white dark:bg-neutral-950 px-3 py-2 border-t border-neutral-200 dark:border-neutral-800">
             <p className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 leading-relaxed">
               All gates passed. Primary opportunity in {verdict.buy.market} ({verdict.buy.phase} phase).
               {verdict.sell ? ` Consider reducing ${verdict.sell.market} exposure.` : ''}
@@ -742,7 +811,7 @@ function L5Screener({
             placeholder="Search symbol or name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 text-xs font-mono bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600 focus:outline-none focus:border-neutral-400 dark:focus:border-neutral-600 transition-colors"
+            className="w-full pl-8 pr-3 py-2 text-xs font-mono bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 dark:placeholder:text-neutral-600 focus:outline-none focus:border-neutral-400 dark:focus:border-neutral-600 transition-colors"
           />
         </div>
         {/* Market filter */}
@@ -755,7 +824,7 @@ function L5Screener({
                 'px-2.5 py-2 text-[10px] font-mono uppercase tracking-wider transition-colors min-w-[48px]',
                 marketFilter === m
                   ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
-                  : 'bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white',
+                  : 'bg-white dark:bg-neutral-950 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white',
               )}
             >
               {m}
@@ -787,7 +856,7 @@ function L5Screener({
                   key={asset.symbol}
                   onClick={() => onSelect(asset)}
                   className={cn(
-                    'bg-white dark:bg-black cursor-pointer transition-colors',
+                    'bg-white dark:bg-neutral-950 cursor-pointer transition-colors',
                     selectedSymbol === asset.symbol
                       ? 'bg-neutral-100 dark:bg-neutral-900'
                       : 'hover:bg-neutral-50 dark:hover:bg-neutral-900/30',
@@ -844,8 +913,6 @@ function L5Screener({
   );
 }
 
-// L6SellVerdict removed — SELL data now integrated into L4 Verdict Engine
-
 // ---------------------------------------------------------------------------
 // L7: Trade Visualizer (Lightweight Charts)
 // ---------------------------------------------------------------------------
@@ -881,7 +948,7 @@ function L7TradeVisualizer({
         width: chartContainerRef.current.clientWidth,
         height: chartContainerRef.current.clientHeight,
         layout: {
-          background: { type: ColorType.Solid, color: isDark ? '#000000' : '#FFFFFF' },
+          background: { type: ColorType.Solid, color: isDark ? '#0a0a0a' : '#FFFFFF' },
           textColor: isDark ? '#737373' : '#A3A3A3',
           fontFamily: "'Inter', 'Geist Sans', monospace",
           fontSize: 10,
@@ -948,7 +1015,6 @@ function L7TradeVisualizer({
 
       // Add trade plan lines
       if (tradePlan) {
-        // Entry
         series.createPriceLine({
           price: tradePlan.entry,
           color: '#3B82F6',
@@ -957,7 +1023,6 @@ function L7TradeVisualizer({
           axisLabelVisible: true,
           title: 'ENTRY',
         });
-        // Stop Loss
         series.createPriceLine({
           price: tradePlan.sl,
           color: '#EF4444',
@@ -966,7 +1031,6 @@ function L7TradeVisualizer({
           axisLabelVisible: true,
           title: 'SL',
         });
-        // TP1
         series.createPriceLine({
           price: tradePlan.tp1,
           color: '#22C55E',
@@ -975,7 +1039,6 @@ function L7TradeVisualizer({
           axisLabelVisible: true,
           title: 'TP1',
         });
-        // TP2
         series.createPriceLine({
           price: tradePlan.tp2,
           color: '#84CC16',
@@ -1018,7 +1081,7 @@ function L7TradeVisualizer({
     return (
       <section>
         <SectionLabel layer="L7" label="Trade Visualizer" />
-        <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-black h-[300px] sm:h-[400px] flex items-center justify-center">
+        <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 h-[300px] sm:h-[400px] flex items-center justify-center">
           <div className="text-center">
             <Eye className="w-5 h-5 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
             <p className="text-xs font-mono text-neutral-400 dark:text-neutral-500">
@@ -1048,7 +1111,7 @@ function L7TradeVisualizer({
       </div>
 
       {/* Chart */}
-      <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden bg-white dark:bg-black">
+      <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden bg-white dark:bg-neutral-950">
         <div
           ref={chartContainerRef}
           className="w-full h-[300px] sm:h-[400px]"
@@ -1065,7 +1128,7 @@ function L7TradeVisualizer({
             { label: 'TP2', value: tradePlan.tp2, color: 'text-[#84CC16] dark:text-[#A3E635]' },
             { label: 'R:R', value: tradePlan.rr, color: 'text-neutral-900 dark:text-white' },
           ].map((item) => (
-            <div key={item.label} className="bg-white dark:bg-black p-2 text-center">
+            <div key={item.label} className="bg-white dark:bg-neutral-950 p-2 text-center">
               <div className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-0.5">
                 {item.label}
               </div>
@@ -1076,6 +1139,94 @@ function L7TradeVisualizer({
           ))}
         </div>
       )}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Forecast Path (probabilistic projection)
+// ---------------------------------------------------------------------------
+
+function ForecastPath({ selectedAsset }: { selectedAsset: ScreenerAsset | null }) {
+  if (!selectedAsset) {
+    return (
+      <section>
+        <SectionLabel layer="—" label="Forecast Path" />
+        <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 h-[180px] flex items-center justify-center">
+          <div className="text-center">
+            <Eye className="w-5 h-5 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
+            <p className="text-xs font-mono text-neutral-400 dark:text-neutral-500">
+              Select an asset from the screener
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const isLong = selectedAsset.direction === 'LONG';
+  const score = selectedAsset.aiScore;
+  const pctMove = (score / 100) * 8;
+
+  return (
+    <section>
+      <SectionLabel layer="—" label="Forecast Path" />
+      <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+            Price Path Projection (48h) — {selectedAsset.symbol}
+          </span>
+          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+            AI Score: {score}
+          </span>
+        </div>
+
+        {/* SVG Probabilistic bands */}
+        <svg viewBox="0 0 400 80" className="w-full h-16 sm:h-20">
+          {/* P90 band */}
+          <path
+            d={isLong
+              ? 'M0,65 C100,62 200,45 300,25 L400,20 L400,70 L300,68 C200,72 100,72 0,70 Z'
+              : 'M0,15 C100,18 200,35 300,55 L400,60 L400,10 L300,12 C200,8 100,8 0,10 Z'
+            }
+            className="fill-[#22C55E]/5 dark:fill-[#4ADE80]/5"
+          />
+          {/* P50 band */}
+          <path
+            d={isLong
+              ? 'M0,60 C100,56 200,42 300,30 L400,28 L400,62 L300,58 C200,65 100,67 0,65 Z'
+              : 'M0,20 C100,24 200,38 300,50 L400,52 L400,18 L300,22 C200,15 100,13 0,15 Z'
+            }
+            className="fill-[#22C55E]/10 dark:fill-[#4ADE80]/10"
+          />
+          {/* P50 line (median) */}
+          <path
+            d={isLong
+              ? 'M0,62 C100,58 200,48 300,38 L400,34'
+              : 'M0,18 C100,22 200,32 300,42 L400,46'
+            }
+            fill="none"
+            className="stroke-[#22C55E] dark:stroke-[#4ADE80]"
+            strokeWidth="1.5"
+            strokeDasharray="4,2"
+          />
+          {/* Current price line */}
+          <line x1="0" y1="40" x2="400" y2="40" className="stroke-neutral-300 dark:stroke-neutral-700" strokeWidth="0.5" strokeDasharray="2,2" />
+          {/* Labels */}
+          <text x="385" y={isLong ? 18 : 58} className="fill-[#22C55E]/40 dark:fill-[#4ADE80]/40 text-[8px] font-mono" textAnchor="end">P90</text>
+          <text x="385" y={isLong ? 32 : 50} className="fill-[#22C55E]/60 dark:fill-[#4ADE80]/60 text-[8px] font-mono" textAnchor="end">P50</text>
+          <text x="385" y="43" className="fill-neutral-400 text-[8px] font-mono" textAnchor="end">NOW</text>
+        </svg>
+
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+            Expected: {isLong ? '+' : '-'}{pctMove.toFixed(1)}%
+          </span>
+          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+            P50 target: {formatPrice(selectedAsset.price * (1 + (isLong ? pctMove : -pctMove) / 100))}
+          </span>
+        </div>
+      </div>
     </section>
   );
 }
@@ -1095,7 +1246,6 @@ function TerminalHeader() {
   return (
     <header className="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-800">
       <div className="flex items-center gap-2">
-        {/* Minimalist TraderPath mark */}
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
           <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
@@ -1140,74 +1290,59 @@ function TerminalHeader() {
 }
 
 // ---------------------------------------------------------------------------
-// Forecast Path (probabilistic projection on chart)
+// Content Panel — Renders active section
 // ---------------------------------------------------------------------------
 
-function ForecastPath({ selectedAsset }: { selectedAsset: ScreenerAsset | null }) {
-  if (!selectedAsset) return null;
-
-  const isLong = selectedAsset.direction === 'LONG';
-  const score = selectedAsset.aiScore;
-  const pctMove = (score / 100) * 8; // max 8% projected move
-
-  return (
-    <div className="mt-2 border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-black p-3">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
-          Price Path Projection (48h)
-        </span>
-        <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
-          AI Score: {score}
-        </span>
-      </div>
-
-      {/* SVG Probabilistic bands */}
-      <svg viewBox="0 0 400 80" className="w-full h-16 sm:h-20">
-        {/* P90 band */}
-        <path
-          d={isLong
-            ? 'M0,65 C100,62 200,45 300,25 L400,20 L400,70 L300,68 C200,72 100,72 0,70 Z'
-            : 'M0,15 C100,18 200,35 300,55 L400,60 L400,10 L300,12 C200,8 100,8 0,10 Z'
-          }
-          className="fill-[#22C55E]/5 dark:fill-[#4ADE80]/5"
+function ContentPanel({
+  activeSection,
+  macroMetrics,
+  marketFlows,
+  sectors,
+  verdict,
+  screenerData,
+  selectedAsset,
+  tradePlan,
+  onAssetSelect,
+}: {
+  activeSection: SectionId;
+  macroMetrics: MacroMetric[];
+  marketFlows: MarketFlow[];
+  sectors: SectorData[];
+  verdict: VerdictData;
+  screenerData: ScreenerAsset[];
+  selectedAsset: ScreenerAsset | null;
+  tradePlan: TradePlan | null;
+  onAssetSelect: (asset: ScreenerAsset) => void;
+}) {
+  switch (activeSection) {
+    case 'l1':
+      return <L1MacroGrid metrics={macroMetrics} />;
+    case 'l2':
+      return <L2MarketFlow flows={marketFlows} />;
+    case 'l3':
+      return <L3Sectors sectors={sectors} />;
+    case 'l4':
+      return <L4VerdictEngine verdict={verdict} />;
+    case 'l5':
+      return (
+        <L5Screener
+          assets={screenerData}
+          selectedSymbol={selectedAsset?.symbol ?? null}
+          onSelect={onAssetSelect}
         />
-        {/* P50 band */}
-        <path
-          d={isLong
-            ? 'M0,60 C100,56 200,42 300,30 L400,28 L400,62 L300,58 C200,65 100,67 0,65 Z'
-            : 'M0,20 C100,24 200,38 300,50 L400,52 L400,18 L300,22 C200,15 100,13 0,15 Z'
-          }
-          className="fill-[#22C55E]/10 dark:fill-[#4ADE80]/10"
+      );
+    case 'l7':
+      return (
+        <L7TradeVisualizer
+          selectedAsset={selectedAsset}
+          tradePlan={tradePlan}
         />
-        {/* P50 line (median) */}
-        <path
-          d={isLong
-            ? 'M0,62 C100,58 200,48 300,38 L400,34'
-            : 'M0,18 C100,22 200,32 300,42 L400,46'
-          }
-          fill="none"
-          className="stroke-[#22C55E] dark:stroke-[#4ADE80]"
-          strokeWidth="1.5"
-          strokeDasharray="4,2"
-        />
-        {/* Current price line */}
-        <line x1="0" y1="40" x2="400" y2="40" className="stroke-neutral-300 dark:stroke-neutral-700" strokeWidth="0.5" strokeDasharray="2,2" />
-        {/* Labels */}
-        <text x="385" y={isLong ? 18 : 58} className="fill-[#22C55E]/40 dark:fill-[#4ADE80]/40 text-[8px] font-mono" textAnchor="end">P90</text>
-        <text x="385" y={isLong ? 32 : 50} className="fill-[#22C55E]/60 dark:fill-[#4ADE80]/60 text-[8px] font-mono" textAnchor="end">P50</text>
-        <text x="385" y="43" className="fill-neutral-400 text-[8px] font-mono" textAnchor="end">NOW</text>
-      </svg>
-
-      <div className="flex items-center justify-between mt-1">
-        <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
-          Expected: {isLong ? '+' : '-'}{pctMove.toFixed(1)}%
-        </span>
-        <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
-          P50 target: {formatPrice(selectedAsset.price * (1 + (isLong ? pctMove : -pctMove) / 100))}
-        </span>
-      </div>
-    </div>
-  );
+      );
+    case 'forecast':
+      return <ForecastPath selectedAsset={selectedAsset} />;
+    default:
+      return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1223,67 +1358,141 @@ export default function TestPage() {
   const [verdict] = useState(generateVerdict);
   const [selectedAsset, setSelectedAsset] = useState<ScreenerAsset | null>(null);
   const [tradePlan, setTradePlan] = useState<TradePlan | null>(null);
-  const [showChart, setShowChart] = useState(false);
+
+  // Navigation
+  const [activeSection, setActiveSection] = useState<SectionId>('l1');
 
   const handleAssetSelect = useCallback((asset: ScreenerAsset) => {
     setSelectedAsset(asset);
     setTradePlan(generateTradePlan(asset));
-    setShowChart(true);
+    // Auto-switch to Trade Visualizer when an asset is selected from screener
+    setActiveSection('l7');
   }, []);
 
-  const handleBackToMacro = useCallback(() => {
-    setShowChart(false);
+  const handleNavClick = useCallback((id: SectionId) => {
+    setActiveSection(id);
   }, []);
 
   return (
-    <div className="h-screen flex flex-col bg-white dark:bg-black text-neutral-900 dark:text-white overflow-hidden">
-      <div className="max-w-6xl mx-auto w-full px-3 sm:px-4 flex flex-col h-full">
+    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 flex flex-col h-full">
         <TerminalHeader />
 
-        {/* Desktop: two equal-height columns / Mobile: stacked */}
-        <div className="mt-4 flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
-
-          {/* Left column: Macro context OR Trade Visualizer */}
-          <div className="lg:col-span-5 overflow-y-auto scrollbar-none pb-4 space-y-4">
-            {showChart && selectedAsset ? (
-              <>
-                {/* Back button */}
-                <button
-                  onClick={handleBackToMacro}
-                  className="flex items-center gap-1.5 text-[10px] font-mono text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors uppercase tracking-wider"
-                >
-                  <ChevronUp className="w-3 h-3 -rotate-90" />
-                  Back to Macro
-                </button>
-
-                {/* Trade Visualizer in the left column */}
-                <L7TradeVisualizer
-                  selectedAsset={selectedAsset}
-                  tradePlan={tradePlan}
-                />
-                <ForecastPath selectedAsset={selectedAsset} />
-
-                {/* Compact verdict reminder */}
-                <L4VerdictEngine verdict={verdict} />
-              </>
-            ) : (
-              <>
-                <L1MacroGrid metrics={macroMetrics} />
-                <L2MarketFlow flows={marketFlows} />
-                <L3Sectors sectors={sectors} />
-                <L4VerdictEngine verdict={verdict} />
-              </>
-            )}
+        {/* Mobile: Horizontal scroll tab bar */}
+        <div className="lg:hidden mt-3 -mx-3 px-3 overflow-x-auto scrollbar-none">
+          <div className="flex gap-px bg-neutral-200 dark:bg-neutral-800 rounded-sm overflow-hidden w-max">
+            {NAV_GROUPS.flatMap((g) => g.items).map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleNavClick(item.id)}
+                className={cn(
+                  'px-3 py-2 text-[10px] font-mono uppercase tracking-wider transition-colors whitespace-nowrap',
+                  activeSection === item.id
+                    ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
+                    : 'bg-white dark:bg-neutral-950 text-neutral-500 dark:text-neutral-400',
+                )}
+              >
+                {item.tag && (
+                  <span className="text-[9px] opacity-50 mr-1">{item.tag}</span>
+                )}
+                {item.label}
+              </button>
+            ))}
           </div>
+        </div>
 
-          {/* Right column: Screener (always visible) */}
-          <div className="lg:col-span-7 overflow-y-auto scrollbar-none pb-4 space-y-4">
-            <L5Screener
-              assets={screenerData}
-              selectedSymbol={selectedAsset?.symbol ?? null}
-              onSelect={handleAssetSelect}
+        {/* Desktop: Sidebar + Content Panel */}
+        <div className="mt-4 flex-1 min-h-0 flex gap-0">
+
+          {/* Sidebar Navigation */}
+          <nav className="hidden lg:block w-52 shrink-0 border-r border-neutral-200 dark:border-neutral-800 overflow-y-auto scrollbar-none pr-3 py-1">
+            {NAV_GROUPS.map((group, gi) => (
+              <div key={group.title} className={cn(gi > 0 && 'mt-5')}>
+                {/* Group header */}
+                <div className="text-[9px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em] mb-2 px-2">
+                  {group.title}
+                </div>
+
+                {/* Items */}
+                <div className="space-y-0.5">
+                  {group.items.map((item) => {
+                    const isActive = activeSection === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => handleNavClick(item.id)}
+                        className={cn(
+                          'w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-left transition-all duration-150',
+                          isActive
+                            ? 'bg-neutral-100 dark:bg-neutral-900/50 border-l-2 border-[#14B8A6] dark:border-[#5EEAD4] -ml-px'
+                            : 'border-l-2 border-transparent hover:bg-neutral-50 dark:hover:bg-neutral-900/20 -ml-px',
+                        )}
+                      >
+                        {item.tag && (
+                          <span className={cn(
+                            'text-[9px] font-mono tabular-nums w-4 shrink-0',
+                            isActive
+                              ? 'text-[#14B8A6] dark:text-[#5EEAD4]'
+                              : 'text-neutral-400 dark:text-neutral-600',
+                          )}>
+                            {item.tag}
+                          </span>
+                        )}
+                        <span className={cn(
+                          'text-[11px] font-mono truncate',
+                          isActive
+                            ? 'text-neutral-900 dark:text-white font-medium'
+                            : 'text-neutral-500 dark:text-neutral-400',
+                        )}>
+                          {item.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Sidebar footer info */}
+            <div className="mt-6 px-2 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+              {selectedAsset ? (
+                <div className="space-y-1">
+                  <span className="text-[9px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block">
+                    Selected
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-mono font-semibold text-neutral-900 dark:text-white">
+                      {selectedAsset.symbol}
+                    </span>
+                    <DirectionTag direction={selectedAsset.direction} />
+                    <VerdictBadgeSmall verdict={selectedAsset.verdict} />
+                  </div>
+                  <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 tabular-nums">
+                    {formatPrice(selectedAsset.price)}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+                  No asset selected
+                </span>
+              )}
+            </div>
+          </nav>
+
+          {/* Content Panel */}
+          <main className="flex-1 min-w-0 overflow-y-auto scrollbar-none lg:pl-5 py-1 pb-4">
+            <ContentPanel
+              activeSection={activeSection}
+              macroMetrics={macroMetrics}
+              marketFlows={marketFlows}
+              sectors={sectors}
+              verdict={verdict}
+              screenerData={screenerData}
+              selectedAsset={selectedAsset}
+              tradePlan={tradePlan}
+              onAssetSelect={handleAssetSelect}
             />
-          </div>
+          </main>
         </div>
 
         {/* Footer */}
