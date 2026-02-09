@@ -46,7 +46,7 @@ const SEVEN_STEPS = [
     icon: Activity,
     color: 'blue',
     description: 'Macro-regime classification via composite scoring of volatility surfaces (VIX term structure), cross-asset correlation matrices, and funding rate divergences.',
-    metrics: ['VIX Term Structure', 'Funding Rate Spread', 'BTC Dominance Delta', 'Fear & Greed Composite'],
+    metrics: ['VIX Level & Term Structure', 'Funding Rate Analysis', 'BTC Dominance Delta', 'Fear & Greed Composite'],
   },
   {
     step: 2,
@@ -54,23 +54,23 @@ const SEVEN_STEPS = [
     icon: Search,
     color: 'purple',
     description: 'Multi-timeframe technical decomposition using 40+ indicators with adaptive weighting based on current volatility regime.',
-    metrics: ['RSI / Stochastic Oscillator', 'MACD Histogram Divergence', 'Bollinger Band Width', 'ADX Trend Strength'],
+    metrics: ['RSI / Stochastic Oscillator', 'MACD Histogram & Divergence', 'Bollinger Band Width', 'ADX Trend Strength'],
   },
   {
     step: 3,
     name: 'Safety Check',
     icon: Shield,
     color: 'red',
-    description: 'Microstructure analysis combining order book imbalance detection, wash-trading filters, and liquidity depth assessment.',
-    metrics: ['Bid-Ask Imbalance Ratio', 'Order Book Depth (40 levels)', 'Spoofing Detection Score', 'Liquidity Score'],
+    description: 'Microstructure analysis combining order book imbalance detection, wash-trading / spoofing / layering filters, and liquidity depth assessment.',
+    metrics: ['Bid-Ask Imbalance Ratio', 'Order Book Depth (100 levels)', 'Manipulation Detection (Spoofing, Layering, Wash)', 'Liquidity Score'],
   },
   {
     step: 4,
     name: 'Timing Analysis',
     icon: Clock,
     color: 'amber',
-    description: 'Entry optimization through confluence of support/resistance clustering, economic calendar event proximity, and intraday volume profile.',
-    metrics: ['S/R Cluster Proximity', 'Economic Event Window', 'Volume Profile (VPOC)', 'Momentum Confluence'],
+    description: 'Entry optimization through confluence of support/resistance clustering, economic calendar event proximity, volume-weighted price analysis, and momentum confluence scoring.',
+    metrics: ['S/R Cluster Proximity', 'Economic Event Window', 'Volume Profile (VPOC)', 'Momentum Confluence Score'],
   },
   {
     step: 5,
@@ -85,8 +85,8 @@ const SEVEN_STEPS = [
     name: 'Trap Check',
     icon: Eye,
     color: 'orange',
-    description: 'Counter-trend signal detection by analyzing liquidation heatmaps, whale position clustering, and smart money flow divergence.',
-    metrics: ['Liquidation Density Map', 'Whale Wallet Monitoring', 'Open Interest Delta', 'Smart Money Index'],
+    description: 'Counter-trend signal detection by analyzing estimated liquidation zones, large trade clustering, open interest changes, and order flow imbalance.',
+    metrics: ['Liquidation Zone Estimation', 'Large Trade Detection', 'Open Interest Delta', 'Order Flow Imbalance'],
   },
   {
     step: 7,
@@ -102,31 +102,31 @@ const MLIS_LAYERS = [
   {
     layer: 1,
     name: 'Technical Layer',
-    description: 'Convolutional feature extraction from raw OHLCV sequences across multiple lookback windows.',
-    signal: 'Pattern recognition strength',
+    description: 'Multi-timeframe trend decomposition using EMA (20/50/200), MACD histogram, ADX trend strength, and golden/death cross detection across multiple lookback windows.',
+    signal: 'Trend alignment score',
   },
   {
     layer: 2,
     name: 'Momentum Layer',
-    description: 'Velocity and acceleration decomposition of trend indicators with regime-adaptive thresholds.',
-    signal: 'Trend persistence probability',
+    description: 'Oscillator-based momentum assessment combining RSI, Stochastic RSI, CCI, and Williams %R with threshold-based signal classification.',
+    signal: 'Momentum direction & strength',
   },
   {
     layer: 3,
     name: 'Volatility Layer',
-    description: 'GARCH-family variance modeling with regime-switching detection for risk surface estimation.',
+    description: 'ATR-based volatility assessment with Bollinger Band width analysis for regime detection (low-vol compression vs high-vol expansion).',
     signal: 'Volatility regime classification',
   },
   {
     layer: 4,
     name: 'Volume Layer',
-    description: 'On-balance volume divergence analysis with institutional flow estimation from tick-level data.',
+    description: 'Volume flow analysis using On-Balance Volume (OBV), Chaikin Money Flow (CMF), and volume trend confirmation across multiple periods.',
     signal: 'Accumulation / Distribution score',
   },
   {
     layer: 5,
     name: 'Verdict Layer',
-    description: 'Ensemble aggregation with calibrated confidence output (Platt scaling) and recommendation mapping.',
+    description: 'Weighted confidence scoring that aggregates all four layers with adaptive weighting, producing calibrated recommendations with confidence thresholds.',
     signal: 'STRONG_BUY / BUY / HOLD / SELL',
   },
 ];
@@ -407,19 +407,20 @@ export default function MethodologyPublicPage() {
               <Brain className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold">3. MLIS Pro &mdash; Machine Learning Inference System</h2>
-              <p className="text-sm text-muted-foreground">5-layer neural confirmation engine with calibrated confidence outputs</p>
+              <h2 className="text-2xl font-bold">3. MLIS Pro &mdash; Multi-Layer Indicator System</h2>
+              <p className="text-sm text-muted-foreground">5-layer quantitative confirmation engine with weighted confidence scoring</p>
             </div>
           </div>
 
           <div className="bg-card border rounded-2xl p-6 mb-6">
             <p className="text-muted-foreground mb-4">
               MLIS Pro serves as an independent confirmation layer that cross-validates the 7-Step
-              engine output. It processes raw market data through five specialized neural inference
-              layers, each extracting orthogonal features. The final Verdict Layer uses
-              calibrated probability estimation (Platt scaling) to produce confidence-adjusted
-              recommendations. When MLIS Pro contradicts the 7-Step verdict, the system automatically
-              downgrades the conviction level, significantly reducing false positive rates.
+              engine output. It processes raw market data through five specialized indicator layers,
+              each analyzing orthogonal market dimensions (trend, momentum, volatility, volume).
+              The final Verdict Layer uses weighted confidence scoring with threshold-based
+              calibration to produce confidence-adjusted recommendations. When MLIS Pro contradicts
+              the 7-Step verdict, the system automatically downgrades the conviction level,
+              reducing false positive rates.
             </p>
 
             <div className="space-y-3">
@@ -488,16 +489,17 @@ export default function MethodologyPublicPage() {
 
           <div className="bg-card border rounded-2xl p-6">
             <p className="text-muted-foreground mb-6">
-              Beyond quantitative signals, our AI Expert Panel employs four specialized agents, each
-              trained on domain-specific reasoning, to provide qualitative context. Their independent
-              assessments are then synthesized by the VOLTRAN aggregation module into a unified narrative.
+              Beyond quantitative signals, our AI Expert Panel employs four specialized commentary agents,
+              each powered by Gemini AI with domain-specific prompting, to provide qualitative context.
+              Each agent receives the full indicator dataset and produces an independent interpretation.
+              Their assessments are then synthesized by the VOLTRAN aggregation module into a unified narrative.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
-                { name: 'ARIA', domain: 'Technical Analysis', color: 'blue', desc: 'Interprets indicator confluence, candlestick patterns, and chart formations with contextual market commentary.' },
-                { name: 'NEXUS', domain: 'Risk Assessment', color: 'amber', desc: 'Evaluates position-level and portfolio-level risk metrics including correlation risk, concentration risk, and tail-event probability.' },
-                { name: 'ORACLE', domain: 'On-Chain & Flow', color: 'purple', desc: 'Analyzes on-chain whale movements, exchange flow netflows, and stablecoin supply dynamics for crypto assets.' },
-                { name: 'SENTINEL', domain: 'Security & Integrity', color: 'red', desc: 'Monitors for smart contract vulnerabilities, regulatory risks, exchange solvency indicators, and market manipulation signals.' },
+                { name: 'ARIA', domain: 'Technical Analysis', color: 'blue', desc: 'Interprets indicator confluence, candlestick patterns, and chart formations using 40+ indicator outputs as context.' },
+                { name: 'NEXUS', domain: 'Risk Assessment', color: 'amber', desc: 'Evaluates trade plan risk metrics including R:R ratio, stop distance, position sizing, and market regime alignment.' },
+                { name: 'ORACLE', domain: 'On-Chain & Flow', color: 'purple', desc: 'Analyzes large trade activity (>$50k) from public exchange data and volume flow patterns for crypto assets.' },
+                { name: 'SENTINEL', domain: 'Security & Integrity', color: 'red', desc: 'Checks smart contract security via GoPlus API (crypto) and detects order book manipulation patterns (spoofing, layering, wash trading).' },
               ].map(expert => (
                 <div key={expert.name} className={`p-5 bg-${expert.color}-50 dark:bg-${expert.color}-500/10 rounded-xl border border-${expert.color}-200 dark:border-${expert.color}-500/20`}>
                   <div className="flex items-center gap-2 mb-2">
