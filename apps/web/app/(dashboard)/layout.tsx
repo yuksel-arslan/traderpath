@@ -25,6 +25,10 @@ import {
   Inbox,
   ShieldAlert,
   Sparkles,
+  Monitor,
+  Waves,
+  SlidersHorizontal,
+  BarChart3,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -38,28 +42,23 @@ const PriceTicker = dynamic(
   { ssr: false, loading: () => <div className="w-full h-10 bg-card/50 border-b border-border/50" /> }
 );
 
-// Direct navigation items (no dropdown) - Top-Down Capital Flow
+// Primary navigation - Top-Down Methodology Flow (L1→L7)
 const directNav = [
-  { name: 'Automated', href: '/analyze', icon: Sparkles },
-  { name: 'Tailored', href: '/analyze/tailored', icon: TrendingUp },
+  { name: 'Terminal', href: '/terminal', icon: Monitor },
+  { name: 'Flow', href: '/flow', icon: Waves },
+  { name: 'Screener', href: '/screener', icon: SlidersHorizontal },
+  { name: 'Analyze', href: '/analyze', icon: BarChart3 },
   { name: 'Signals', href: '/signals', icon: Activity },
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Trades', href: '/trades', icon: TrendingUp },
 ];
 
 // Dropdown navigation groups
 const dropdownNav = [
   {
-    name: 'AI Chat',
-    icon: Brain,
-    items: [
-      { name: 'Concierge', href: '/concierge', icon: Bot },
-      { name: 'AI Experts', href: '/ai-expert', icon: Brain },
-    ],
-  },
-  {
-    name: 'Tools',
+    name: 'More',
     icon: Settings,
     items: [
+      { name: 'Concierge', href: '/concierge', icon: Bot },
       { name: 'Reports', href: '/reports', icon: FileText },
       { name: 'Smart Alerts', href: '/alerts/smart', icon: ShieldAlert },
       { name: 'Scheduled', href: '/scheduled', icon: Calendar },
@@ -69,9 +68,7 @@ const dropdownNav = [
 ];
 
 // End navigation items (after dropdowns)
-const endNav = [
-  { name: 'Trader Program', href: '/rewards', icon: Gift },
-];
+const endNav: { name: string; href: string; icon: typeof Gift }[] = [];
 
 // User menu items (Profile, Settings, Admin, Logout)
 const userMenuNav = [
@@ -305,8 +302,8 @@ export default function DashboardLayout({
         <div className="w-full px-1 sm:px-3 lg:px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <TraderPathLogo size="sm" showText={true} showTagline={false} href="/dashboard" className="flex sm:hidden" />
-            <TraderPathLogo size="md" showText={true} showTagline={true} href="/dashboard" className="hidden sm:flex" />
+            <TraderPathLogo size="sm" showText={true} showTagline={false} href="/terminal" className="flex sm:hidden" />
+            <TraderPathLogo size="md" showText={true} showTagline={true} href="/terminal" className="hidden sm:flex" />
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-1">

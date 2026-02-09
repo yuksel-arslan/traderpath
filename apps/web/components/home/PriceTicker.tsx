@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
 
 const TICKER_SYMBOLS = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX'];
 
@@ -62,49 +61,35 @@ export function PriceTicker() {
 
   if (isLoading || livePrices.length === 0) {
     return (
-      <div
-        className="w-full overflow-hidden py-2 border-b"
-        style={{ backgroundColor: 'rgba(4,16,32,0.85)' }}
-      >
-        <p className="text-center text-xs text-slate-400">Loading prices...</p>
+      <div className="w-full overflow-hidden py-1.5 border-b border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-black">
+        <div className="flex items-center justify-center gap-4 px-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-3 w-24 bg-black/5 dark:bg-white/5 rounded animate-pulse" />
+          ))}
+        </div>
       </div>
     );
   }
 
-  // Duplicate the list so the loop is seamless
-  const items = [...livePrices, ...livePrices];
-
   return (
     <div
-      className="w-full overflow-hidden py-2 border-b border-white/10"
-      style={{ backgroundColor: 'rgba(4,16,32,0.9)' }}
+      className="w-full overflow-hidden py-1.5 border-b border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-black"
       aria-label="Live cryptocurrency prices"
     >
-      <motion.div
-        className="flex gap-6 sm:gap-8 whitespace-nowrap"
-        animate={{ x: ['0%', '-50%'] }}
-        transition={{
-          x: {
-            repeat: Infinity,
-            repeatType: 'loop',
-            duration: 30,
-            ease: 'linear',
-          },
-        }}
-      >
-        {items.map((coin, index) => (
+      <div className="flex items-center gap-4 sm:gap-6 overflow-x-auto px-4 scrollbar-none">
+        {livePrices.map((coin) => (
           <div
-            key={`${coin.symbol}-${index}`}
-            className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-sm shrink-0"
+            key={coin.symbol}
+            className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono shrink-0 tabular-nums"
           >
-            <span className="font-semibold text-white">{coin.symbol}</span>
+            <span className="font-semibold text-black dark:text-white">{coin.symbol}</span>
             <span className="text-slate-400">${coin.price}</span>
-            <span className={coin.up ? 'text-[#00f5c4]' : 'text-red-400'}>
+            <span className={coin.up ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400'}>
               {coin.change}
             </span>
           </div>
         ))}
-      </motion.div>
+      </div>
     </div>
   );
 }

@@ -3,27 +3,28 @@
 import Link from 'next/link';
 import {
   ArrowRight,
-  Zap,
-  HelpCircle,
   ChevronDown,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { Footer } from '../../components/common/Footer';
+import { cn } from '../../lib/utils';
 
-// New mobile-first components
+// Components
 import { PriceTicker } from '../../components/home/PriceTicker';
 import { Navbar } from '../../components/layout/Navbar';
 import { Hero } from '../../components/home/Hero';
 import { FlowAccordion } from '../../components/home/FlowAccordion';
 
-// Lazy load the performance chart component
+// Lazy load chart
 const LandingPerformanceChart = dynamic(
   () => import('../../components/landing/LandingPerformanceChart'),
-  { ssr: false, loading: () => <div className="h-48 animate-pulse bg-muted/30 rounded-lg" /> }
+  { ssr: false, loading: () => <div className="h-48 animate-pulse bg-black/5 dark:bg-white/5" /> }
 );
 
-// Platform metrics component - shows real data instead of fake testimonials
+// ---------------------------------------------------------------------------
+// Stats – real data from API
+// ---------------------------------------------------------------------------
+
 function StatsBoxes() {
   const [metrics, setMetrics] = useState<{
     totalAnalyses: number;
@@ -33,7 +34,6 @@ function StatsBoxes() {
     daysSinceStart: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -43,7 +43,6 @@ function StatsBoxes() {
           'https://api.traderpath.io',
           'https://traderpath-api-production.up.railway.app'
         ].filter(Boolean);
-
         let data = null;
         for (const baseUrl of apiUrls) {
           try {
@@ -56,18 +55,12 @@ function StatsBoxes() {
               data = await res.json();
               if (data.success) break;
             }
-          } catch {
-            continue;
-          }
+          } catch { continue; }
         }
-
         if (data?.success) {
           const platformSince = data.data.platform.platformSince;
           const startDate = platformSince ? new Date(platformSince) : new Date();
-          const today = new Date();
-          const diffTime = Math.abs(today.getTime() - startDate.getTime());
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+          const diffDays = Math.ceil(Math.abs(Date.now() - startDate.getTime()) / 86400000);
           setMetrics({
             totalAnalyses: data.data.platform.totalAnalyses || 0,
             accuracy: data.data.accuracy.overall || 0,
@@ -75,11 +68,9 @@ function StatsBoxes() {
             closedCount: data.data.accuracy.closedCount || 0,
             daysSinceStart: diffDays || 1,
           });
-        } else {
-          setError(true);
         }
       } catch {
-        setError(true);
+        // silent
       } finally {
         setLoading(false);
       }
@@ -89,240 +80,224 @@ function StatsBoxes() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-black/[0.06] dark:bg-white/[0.06]">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="p-4 bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl animate-pulse">
-            <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded w-1/2 mx-auto mb-2"></div>
-            <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4 mx-auto"></div>
+          <div key={i} className="bg-white dark:bg-black p-4">
+            <div className="h-6 w-16 bg-black/5 dark:bg-white/5 rounded animate-pulse mb-1" />
+            <div className="h-3 w-24 bg-black/5 dark:bg-white/5 rounded animate-pulse" />
           </div>
         ))}
       </div>
     );
   }
 
-  if (error || !metrics) {
-    return null;
-  }
+  if (!metrics) return null;
 
-  const analysesPerDay = metrics.daysSinceStart > 0
-    ? (metrics.totalAnalyses / metrics.daysSinceStart).toFixed(1)
-    : '0';
+  const stats = [
+    { label: 'Total Analyses', value: metrics.totalAnalyses.toLocaleString(), color: '' },
+    { label: 'Platform Accuracy', value: metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—', color: 'text-emerald-500 dark:text-[#00f5c4]' },
+    { label: 'Total P/L', value: metrics.closedCount > 0 ? `${metrics.totalPnL >= 0 ? '+' : ''}${metrics.totalPnL}%` : '—', color: metrics.totalPnL >= 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400' },
+    { label: 'Days Elapsed', value: `${metrics.daysSinceStart}`, color: '' },
+  ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-      <div className="p-4 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl text-center">
-        <div className="text-2xl md:text-3xl font-bold text-teal-600 dark:text-[#4dd0e1] mb-1">
-          {metrics.totalAnalyses.toLocaleString()}
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-black/[0.06] dark:bg-white/[0.06]">
+      {stats.map((s) => (
+        <div key={s.label} className="bg-white dark:bg-black p-4">
+          <div className={cn('text-lg sm:text-xl font-mono font-bold tabular-nums', s.color || 'text-black dark:text-white')}>
+            {s.value}
+          </div>
+          <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">{s.label}</div>
         </div>
-        <p className="text-xs text-slate-500">Total Analyses</p>
-      </div>
-
-      <div className="p-4 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl text-center">
-        <div className="text-2xl md:text-3xl font-bold text-emerald-600 dark:text-[#00f5c4] mb-1">
-          {metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—'}
-        </div>
-        <p className="text-xs text-slate-500">Platform Accuracy</p>
-      </div>
-
-      <div className="p-4 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl text-center">
-        <div className={`text-2xl md:text-3xl font-bold mb-1 ${metrics.totalPnL >= 0 ? 'text-emerald-600 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400'}`}>
-          {metrics.closedCount > 0 ? `${metrics.totalPnL >= 0 ? '+' : ''}${metrics.totalPnL}%` : '—'}
-        </div>
-        <p className="text-xs text-slate-500">Total P/L</p>
-        {metrics.closedCount > 0 && (
-          <p className="text-[10px] text-slate-500 dark:text-slate-600 mt-0.5">{metrics.closedCount} closed trades</p>
-        )}
-      </div>
-
-      <div className="p-4 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl text-center">
-        <div className="text-2xl md:text-3xl font-bold text-blue-500 dark:text-blue-400 mb-1">
-          {metrics.daysSinceStart}
-        </div>
-        <p className="text-xs text-slate-500">Days Elapsed</p>
-        <p className="text-[10px] text-slate-500 dark:text-slate-600 mt-0.5">{analysesPerDay} analyses/day</p>
-      </div>
+      ))}
     </div>
   );
 }
 
+// ---------------------------------------------------------------------------
+// FAQ
+// ---------------------------------------------------------------------------
+
 const FAQS = [
   {
-    question: 'What is Capital Flow and why does it matter?',
-    answer: 'Capital Flow tracks where institutional money is moving across global markets. The principle is simple: "Where money flows, potential exists." By monitoring Fed Balance Sheet, M2 Money Supply, DXY, and VIX, we identify which markets are receiving capital inflows—giving you a significant edge before making any trade.',
+    q: 'What is Capital Flow and why does it matter?',
+    a: 'Capital Flow tracks where institutional money is moving across global markets. The principle: "Where money flows, potential exists." By monitoring Fed Balance Sheet, M2 Money Supply, DXY, and VIX, we identify which markets are receiving capital inflows.',
   },
   {
-    question: 'How does the 4-Layer System work?',
-    answer: 'Our top-down approach works in 4 layers: Layer 1 (Global Liquidity) checks if conditions favor risk assets. Layer 2 (Market Flow) identifies which market has strongest inflow (Crypto, Stocks, Bonds, Metals). Layer 3 (Sector Activity) pinpoints hot sectors. Layer 4 (Asset Analysis) provides detailed 7-Step analysis with MLIS Pro AI confirmation and entry/exit levels.',
+    q: 'How does the 7-Layer System work?',
+    a: 'Top-down approach: L1 Global Liquidity checks macro conditions. L2 Market Flow identifies strongest inflow market. L3 Sector Activity pinpoints hot sectors. L4 Verdict Engine runs 7-step analysis with ML confirmation. L5 Screener filters all assets. L6 Risk Assessment validates against counter-flow. L7 Trade Visualizer provides interactive chart with price levels.',
   },
   {
-    question: 'What are the market phases (EARLY, MID, LATE, EXIT)?',
-    answer: 'EARLY (0-30 days): Capital just started flowing in—optimal entry time. MID (30-60 days): Trend maturing, enter with caution. LATE (60-90 days): Trend exhausting, avoid new positions. EXIT (90+ days or reversal): Capital leaving, do not enter. We display the current phase for each market.',
+    q: 'What are market phases (EARLY, MID, LATE, EXIT)?',
+    a: 'EARLY (0-30d): Capital just started flowing—optimal entry. MID (30-60d): Trend maturing, caution. LATE (60-90d): Trend exhausting, avoid. EXIT (90+d): Capital leaving, do not enter.',
   },
   {
-    question: 'What\'s the difference between BUY and SELL recommendations?',
-    answer: 'BUY recommendations highlight markets/sectors with strong capital inflow—ideal for long positions. SELL recommendations identify markets with outflow or relative weakness—useful for short positions or avoiding certain assets. Both include confidence scores and specific sectors to focus on.',
+    q: 'Which markets are supported?',
+    a: 'Crypto (Binance), Stocks (Yahoo Finance), Bonds (Treasury ETFs), Metals (Gold, Silver), and BIST (Borsa Istanbul). Each shows flow direction, velocity, phase, and rotation signals.',
   },
   {
-    question: 'Which markets does TraderPath analyze?',
-    answer: 'We track 4 major markets: Crypto (full 7-Step analysis with AI confirmation via Binance), Stocks (SPY, QQQ, major equities via Yahoo Finance), Bonds (TLT, IEF, yield curve), and Precious Metals (Gold, Silver). Each market shows flow direction, velocity, phase, and rotation signals.',
+    q: 'How does the credit system work?',
+    a: 'L1-L2 are free. L3 and L4 each cost 25 credits/day. Full asset analysis costs 100 credits/day (up to 10 analyses). Earn free credits through daily login, quizzes, and referrals.',
   },
   {
-    question: 'Do I need to connect my exchange or wallet?',
-    answer: 'No! TraderPath is purely an analysis tool. We never ask for your trading keys, wallet addresses, or exchange credentials. Your funds stay completely safe in your own accounts.',
-  },
-  {
-    question: 'How does the credit system work?',
-    answer: 'Layer 1-2 (Global Liquidity, Market Flow) are FREE for all users. Layer 3 (Sector Activity) and Layer 4 (AI Recommendations) each cost 25 credits/day. Full asset analysis costs 100 credits/day for up to 10 analyses (7-Step with MLIS Pro confirmation). Earn free credits through daily login, quizzes, and referrals.',
-  },
-  {
-    question: 'How accurate is the analysis?',
-    answer: 'Our accuracy is calculated from verified trade outcomes (TP hits vs SL hits) and displayed transparently in Platform Metrics. Capital Flow helps you trade WITH institutional money flow, not against it—significantly improving your odds.',
+    q: 'Do I need to connect my exchange?',
+    a: 'No. TraderPath is purely an analysis tool. We never ask for trading keys, wallet addresses, or exchange credentials.',
   },
 ];
 
-// FAQ Accordion Component
-function FAQItem({ question, answer }: { question: string; answer: string }) {
-  const [isOpen, setIsOpen] = useState(false);
+function FAQItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="border border-slate-200 dark:border-white/10 rounded-lg overflow-hidden">
+    <div className="border-b border-black/[0.06] dark:border-white/[0.06]">
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full p-4 text-left flex items-center justify-between hover:bg-slate-50 dark:hover:bg-white/[0.03] transition"
-        aria-expanded={isOpen}
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between py-3 px-1 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
+        aria-expanded={open}
       >
-        <span className="font-semibold flex items-center gap-2 text-slate-900 dark:text-white text-sm sm:text-base">
-          <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600 dark:text-[#4dd0e1] shrink-0" />
-          {question}
+        <span className="text-xs sm:text-sm font-mono font-semibold text-black dark:text-white pr-4">
+          {q}
         </span>
-        <ChevronDown className={`w-4 h-4 sm:w-5 sm:h-5 text-slate-400 dark:text-slate-500 transition-transform shrink-0 ml-2 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={cn('w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform', open && 'rotate-180')} />
       </button>
-      {isOpen && (
-        <div className="px-4 pb-4 text-sm text-slate-600 dark:text-slate-400">
-          {answer}
+      {open && (
+        <div className="px-1 pb-3 text-xs font-mono text-slate-500 leading-relaxed">
+          {a}
         </div>
       )}
     </div>
   );
 }
 
+// ---------------------------------------------------------------------------
+// Footer (minimal inline version matching style)
+// ---------------------------------------------------------------------------
+
+function MinimalFooter() {
+  return (
+    <footer className="border-t border-black/[0.06] dark:border-white/[0.06]">
+      <div className="max-w-[1200px] mx-auto px-4 py-8">
+        {/* Disclaimer */}
+        <div className="mb-6 p-4 border border-black/[0.06] dark:border-white/[0.06]">
+          <div className="text-[9px] font-mono uppercase tracking-wider text-slate-400 mb-1">DISCLAIMER</div>
+          <p className="text-[10px] font-mono text-slate-400 leading-relaxed">
+            This platform is for informational and educational purposes only and does not constitute financial advice.
+            All investments carry risk including loss of principal. Past performance does not guarantee future results.
+            Conduct your own research and consult a licensed advisor before investing.
+          </p>
+        </div>
+
+        {/* Links + copyright */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4 text-[10px] font-mono text-slate-400">
+            <Link href="/privacy" className="hover:text-black dark:hover:text-white transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-black dark:hover:text-white transition-colors">Terms</Link>
+            <Link href="/disclaimer" className="hover:text-black dark:hover:text-white transition-colors">Disclaimer</Link>
+            <Link href="/about" className="hover:text-black dark:hover:text-white transition-colors">About</Link>
+          </div>
+          <div className="text-[10px] font-mono text-slate-400">
+            &copy; {new Date().getFullYear()} TRADERPATH
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main Page
+// ---------------------------------------------------------------------------
+
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white dark:bg-[#041020] text-slate-900 dark:text-slate-200">
-      {/* Live Price Ticker - framer-motion infinite scroll */}
+    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
+      {/* Price Ticker */}
       <PriceTicker />
 
-      {/* Navbar with hamburger menu */}
+      {/* Navbar */}
       <Navbar />
 
-      {/* Hero Section - mobile-first */}
+      {/* Hero */}
       <Hero />
 
-      {/* Flow Accordion - vertical step-by-step on mobile */}
+      {/* Methodology (FlowAccordion) */}
       <FlowAccordion />
 
-      {/* Performance Chart & Stats */}
-      <section className="py-8 md:py-12 bg-white dark:bg-[#041020]">
-        <div className="container mx-auto px-4 max-w-4xl space-y-6">
+      {/* Performance */}
+      <section id="performance" className="py-12 md:py-16 border-t border-black/[0.06] dark:border-white/[0.06]">
+        <div className="max-w-[1000px] mx-auto px-4">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2">PERFORMANCE</div>
+          <h2 className="text-xl sm:text-2xl font-mono font-bold tracking-tight text-black dark:text-white mb-6">
+            Real Data. Real Results.
+          </h2>
           <LandingPerformanceChart />
-          <StatsBoxes />
+          <div className="mt-6">
+            <StatsBoxes />
+          </div>
         </div>
       </section>
 
       {/* Pricing CTA */}
-      <section
-        id="pricing"
-        className="py-16 sm:py-20 bg-teal-50/50 dark:bg-[#4dd0e1]/[0.03]"
-      >
-        <div className="container mx-auto px-4 text-center max-w-2xl">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-            Credit-Based Pricing
+      <section id="pricing" className="py-12 md:py-16 border-t border-black/[0.06] dark:border-white/[0.06]">
+        <div className="max-w-[600px] mx-auto px-4 text-center">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2">PRICING</div>
+          <h2 className="text-xl sm:text-2xl font-mono font-bold tracking-tight text-black dark:text-white mb-3">
+            Credit-Based. No Subscriptions.
           </h2>
-          <p className="text-slate-600 dark:text-slate-400 mb-8 text-sm sm:text-base">
-            Pay only for what you use. No subscriptions, no hidden fees.
+          <p className="text-xs font-mono text-slate-500 mb-6">
+            Pay only for what you use. L1-L2 free. L3-L7 premium.
           </p>
           <Link
             href="/pricing"
-            className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-lg font-semibold transition-all hover:scale-105 hover:shadow-lg hover:shadow-teal-500/20 dark:hover:shadow-[#4dd0e1]/20 text-sm sm:text-base bg-gradient-to-r from-teal-500 to-emerald-500 dark:from-[#4dd0e1] dark:to-[#00f5c4] text-white dark:text-[#041020]"
-            aria-label="View pricing plans"
+            className="inline-flex items-center gap-2 px-6 py-3 text-xs font-mono font-semibold bg-black dark:bg-white text-white dark:text-black hover:opacity-80 transition-opacity"
           >
-            View Pricing Plans
-            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            VIEW PRICING
+            <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
       </section>
 
-      {/* FAQ Section */}
-      <section id="faq" className="py-16 sm:py-20 bg-white dark:bg-[#041020]">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-10 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 gradient-text-logo-animate">
-              Frequently Asked Questions
-            </h2>
-            <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
-              Everything you need to know about TraderPath
-            </p>
-          </div>
-          <div className="max-w-3xl mx-auto space-y-3">
-            {FAQS.map((faq, index) => (
-              <FAQItem key={index} question={faq.question} answer={faq.answer} />
+      {/* FAQ */}
+      <section id="faq" className="py-12 md:py-16 border-t border-black/[0.06] dark:border-white/[0.06]">
+        <div className="max-w-[700px] mx-auto px-4">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2">FAQ</div>
+          <h2 className="text-xl sm:text-2xl font-mono font-bold tracking-tight text-black dark:text-white mb-6">
+            Frequently Asked Questions
+          </h2>
+          <div>
+            {FAQS.map((faq, i) => (
+              <FAQItem key={i} q={faq.q} a={faq.a} />
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Trusted By */}
-      <section className="py-12 sm:py-16 bg-teal-50/50 dark:bg-[#4dd0e1]/[0.03]">
-        <div className="container mx-auto px-4">
-          <p className="text-center text-slate-500 text-xs mb-6 sm:mb-8 tracking-widest uppercase">
-            Trusted By Traders From
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 md:gap-16 opacity-40 dark:opacity-50">
-            {['Binance', 'Coinbase', 'Kraken', 'KuCoin', 'Bybit'].map((name) => (
-              <div key={name} className="text-lg sm:text-2xl font-bold text-slate-400 dark:text-slate-500">
-                {name}
-              </div>
-            ))}
-          </div>
-          <p className="text-center text-[10px] text-slate-500 dark:text-slate-600 mt-4 sm:mt-6">
-            *Users from these platforms trust TraderPath for their trading analysis
-          </p>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="py-16 sm:py-20 relative overflow-hidden bg-white dark:bg-[#041020]">
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-3xl mx-auto text-center p-6 sm:p-8 md:p-12 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.03] shadow-2xl">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-amber-600 dark:text-amber-400 text-xs sm:text-sm mb-6 border border-amber-300 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10">
-              <Zap className="w-4 h-4" />
-              Limited Time: 25 Free Credits
-            </div>
-            <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4 gradient-text-logo-animate">
-              Ready to Trade Smarter?
-            </h2>
-            <p className="text-base sm:text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-8">
-              Join 12,000+ traders who already use TraderPath to make informed decisions.
-              Start with 25 free credits today.
-            </p>
-            <div className="px-4 sm:px-0">
-              <Link
-                href="/register"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg font-semibold text-base sm:text-lg transition-all hover:scale-105 hover:shadow-lg hover:shadow-teal-500/20 dark:hover:shadow-[#4dd0e1]/20 bg-gradient-to-r from-teal-500 to-emerald-500 dark:from-[#4dd0e1] dark:to-[#00f5c4] text-white dark:text-[#041020]"
-                aria-label="Start free analysis - sign up"
-              >
-                Start Free Analysis
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-500 mt-6">
-              No credit card required &bull; 7-day money-back guarantee
-            </p>
+      <section className="py-16 md:py-24 border-t border-black/[0.06] dark:border-white/[0.06]">
+        <div className="max-w-[600px] mx-auto px-4 text-center">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 mb-4 text-[10px] font-mono text-amber-500 border border-amber-500/20 bg-amber-500/5">
+            25 FREE CREDITS ON SIGNUP
           </div>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-mono font-bold tracking-tight text-black dark:text-white mb-4">
+            Ready to Trade Smarter?
+          </h2>
+          <p className="text-xs sm:text-sm font-mono text-slate-500 mb-8">
+            Access the 7-layer decision engine. Follow institutional capital flows.
+          </p>
+          <Link
+            href="/register"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 text-sm font-mono font-semibold bg-black dark:bg-white text-white dark:text-black hover:opacity-80 transition-opacity"
+          >
+            START FREE ANALYSIS
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+          <p className="text-[10px] font-mono text-slate-400 mt-4">
+            No credit card required
+          </p>
         </div>
       </section>
 
       {/* Footer */}
-      <Footer />
+      <MinimalFooter />
     </div>
   );
 }
