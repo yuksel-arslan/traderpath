@@ -89,7 +89,7 @@ export default function YukselLogo({
             </svg>
           ) : variant === 'software' ? (
             <span
-              className="font-mono font-bold"
+              className="font-sans font-bold"
               style={{
                 fontSize: size * 0.28,
                 color: '#40E0D0',

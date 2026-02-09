@@ -199,7 +199,7 @@ export function SetAlertModal({ isOpen, onClose, tradePlan }: SetAlertModalProps
                 </div>
                 <span className="font-medium">Entry Zone</span>
               </div>
-              <span className="text-sm font-mono text-muted-foreground">${tradePlan.entryPrice.toLocaleString()}</span>
+              <span className="text-sm font-sans text-muted-foreground">${tradePlan.entryPrice.toLocaleString()}</span>
             </label>
 
             {/* Stop Loss */}
@@ -216,7 +216,7 @@ export function SetAlertModal({ isOpen, onClose, tradePlan }: SetAlertModalProps
                 </div>
                 <span className="font-medium">Stop Loss</span>
               </div>
-              <span className="text-sm font-mono text-muted-foreground">${tradePlan.stopLoss.toLocaleString()}</span>
+              <span className="text-sm font-sans text-muted-foreground">${tradePlan.stopLoss.toLocaleString()}</span>
             </label>
 
             {/* Take Profits */}
@@ -234,7 +234,7 @@ export function SetAlertModal({ isOpen, onClose, tradePlan }: SetAlertModalProps
                   </div>
                   <span className="font-medium">Take Profit {index + 1}</span>
                 </div>
-                <span className="text-sm font-mono text-muted-foreground">${tp.toLocaleString()}</span>
+                <span className="text-sm font-sans text-muted-foreground">${tp.toLocaleString()}</span>
               </label>
             ))}
           </div>

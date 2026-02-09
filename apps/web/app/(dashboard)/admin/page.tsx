@@ -616,19 +616,19 @@ export default function AdminPage() {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Uptime</span>
-                  <span className="font-mono">{system?.server.uptimeFormatted || '-'}</span>
+                  <span className="font-sans">{system?.server.uptimeFormatted || '-'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Node Version</span>
-                  <span className="font-mono">{system?.server.nodeVersion || '-'}</span>
+                  <span className="font-sans">{system?.server.nodeVersion || '-'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Platform</span>
-                  <span className="font-mono">{system?.server.platform} ({system?.server.arch})</span>
+                  <span className="font-sans">{system?.server.platform} ({system?.server.arch})</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">PID</span>
-                  <span className="font-mono">{system?.process.pid || '-'}</span>
+                  <span className="font-sans">{system?.process.pid || '-'}</span>
                 </div>
               </div>
             </div>
@@ -643,7 +643,7 @@ export default function AdminPage() {
                 <div>
                   <div className="flex justify-between mb-1">
                     <span className="text-muted-foreground">CPU Usage</span>
-                    <span className="font-mono">{system?.system.cpuUsage || '-'}</span>
+                    <span className="font-sans">{system?.system.cpuUsage || '-'}</span>
                   </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div
@@ -655,7 +655,7 @@ export default function AdminPage() {
                 <div>
                   <div className="flex justify-between mb-1">
                     <span className="text-muted-foreground">Memory Usage</span>
-                    <span className="font-mono">{system?.system.memoryUsagePercent || '-'}</span>
+                    <span className="font-sans">{system?.system.memoryUsagePercent || '-'}</span>
                   </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div
@@ -666,11 +666,11 @@ export default function AdminPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Heap Used</span>
-                  <span className="font-mono">{system?.process.memoryUsage.heapUsed || '-'}</span>
+                  <span className="font-sans">{system?.process.memoryUsage.heapUsed || '-'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Load Average</span>
-                  <span className="font-mono">{system?.system.loadAverage?.join(' / ') || '-'}</span>
+                  <span className="font-sans">{system?.system.loadAverage?.join(' / ') || '-'}</span>
                 </div>
               </div>
             </div>
@@ -787,7 +787,7 @@ export default function AdminPage() {
                         Level {user.level}
                       </span>
                     </td>
-                    <td className="p-4 font-mono">{user.creditBalance}</td>
+                    <td className="p-4 font-sans">{user.creditBalance}</td>
                     <td className="p-4">{user.transactionCount}</td>
                     <td className="p-4">
                       <span className="flex items-center gap-1">
@@ -870,7 +870,7 @@ export default function AdminPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`font-mono ${item.amount < 0 ? 'text-red-500' : 'text-green-500'}`}>
+                    <p className={`font-sans ${item.amount < 0 ? 'text-red-500' : 'text-green-500'}`}>
                       {item.amount > 0 ? '+' : ''}{item.amount} credits
                     </p>
                     <p className="text-sm text-muted-foreground flex items-center gap-1 justify-end">
@@ -912,7 +912,7 @@ export default function AdminPage() {
               <p className="font-medium">{selectedUser.name || 'No name'}</p>
               <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Current balance: <span className="font-mono text-foreground">{selectedUser.creditBalance}</span> credits
+                Current balance: <span className="font-sans text-foreground">{selectedUser.creditBalance}</span> credits
               </p>
             </div>
 

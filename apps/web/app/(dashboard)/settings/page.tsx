@@ -885,7 +885,7 @@ export default function SettingsPage() {
                             type="text"
                             value={user.referralCode}
                             readOnly
-                            className="flex-1 px-4 py-2 bg-background border rounded-lg font-mono"
+                            className="flex-1 px-4 py-2 bg-background border rounded-lg font-sans"
                           />
                           <button
                             onClick={handleCopyReferral}
@@ -1935,7 +1935,7 @@ export default function SettingsPage() {
 
                           <div className="p-3 bg-muted rounded-lg">
                             <p className="text-xs text-muted-foreground mb-1">Manual entry key:</p>
-                            <code className="text-sm font-mono break-all">{twoFactorSetup.secret}</code>
+                            <code className="text-sm font-sans break-all">{twoFactorSetup.secret}</code>
                           </div>
 
                           <div>
@@ -1947,7 +1947,7 @@ export default function SettingsPage() {
                               value={verificationCode}
                               onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                               placeholder="000000"
-                              className="w-full px-4 py-2 bg-background border rounded-lg text-center text-2xl tracking-widest font-mono focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                              className="w-full px-4 py-2 bg-background border rounded-lg text-center text-2xl tracking-widest font-sans focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                               maxLength={6}
                             />
                           </div>
@@ -1993,7 +1993,7 @@ export default function SettingsPage() {
                         {backupCodes.map((code, index) => (
                           <div
                             key={index}
-                            className="p-2 bg-muted rounded font-mono text-sm text-center"
+                            className="p-2 bg-muted rounded font-sans text-sm text-center"
                           >
                             {code}
                           </div>

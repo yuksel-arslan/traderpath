@@ -203,7 +203,7 @@ export function LiveTrackingPanel({ className = '' }: LiveTrackingPanelProps) {
                   </span>
                 </div>
                 <div className="text-right">
-                  <p className="font-mono text-sm">${formatPrice(trade.currentPrice)}</p>
+                  <p className="font-sans text-sm">${formatPrice(trade.currentPrice)}</p>
                   <p className={`text-xs ${trade.unrealizedPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                     {formatPercent(trade.unrealizedPnL)} PnL
                   </p>

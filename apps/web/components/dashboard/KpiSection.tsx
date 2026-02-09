@@ -160,7 +160,7 @@ function ArcGauge({ bias, fedTrend, dxyValue, vixLevel }: {
         <span className="text-[11px] text-gray-500">
           Fed:{' '}
           <span className={cn(
-            'font-mono',
+            'font-sans',
             fedTrend === 'expanding' ? 'text-[#00f5c4]' :
             fedTrend === 'contracting' ? 'text-[#ff5f5f]' : 'text-gray-400'
           )}>
@@ -168,12 +168,12 @@ function ArcGauge({ bias, fedTrend, dxyValue, vixLevel }: {
           </span>
         </span>
         <span className="text-[11px] text-gray-500">
-          DXY: <span className="font-mono text-gray-300">{dxyValue.toFixed(1)}</span>
+          DXY: <span className="font-sans text-gray-300">{dxyValue.toFixed(1)}</span>
         </span>
         <span className="text-[11px] text-gray-500">
           VIX:{' '}
           <span className={cn(
-            'font-mono',
+            'font-sans',
             vixLevel === 'complacent' || vixLevel === 'neutral' ? 'text-[#00f5c4]' : 'text-[#ff5f5f]'
           )}>
             {typeof vixLevel === 'string' ? vixLevel.charAt(0).toUpperCase() + vixLevel.slice(1).replace('_', ' ') : 'N/A'}
@@ -221,7 +221,7 @@ function BiasBar({ markets }: { markets: { market: string; flow7d: number; phase
                 style={{ width: `${Math.max(pct, 4)}%`, backgroundColor: barColor }}
               />
             </div>
-            <span className="w-14 text-right text-xs font-bold font-mono tabular-nums" style={{ color: barColor }}>
+            <span className="w-14 text-right text-xs font-bold font-sans tabular-nums" style={{ color: barColor }}>
               {isPositive ? '+' : ''}{m.flow7d.toFixed(1)}%
             </span>
           </div>
@@ -260,7 +260,7 @@ function CreditsContent({ credits }: { credits: number }) {
     <div className="flex flex-col items-center">
       <div className="flex items-baseline gap-2 mb-1">
         <Gem className="w-5 h-5 text-amber-400" />
-        <span className="text-3xl font-black text-white font-mono tabular-nums">{credits.toLocaleString('en-US')}</span>
+        <span className="text-3xl font-black text-white font-sans tabular-nums">{credits.toLocaleString('en-US')}</span>
       </div>
       {credits < 10 && credits > 0 && (
         <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 mb-3">Running low</span>

@@ -309,7 +309,7 @@ function ListTile({ label, value, valueColor, sub }: {
     <div className="flex items-center justify-between py-3 border-b border-white/5 last:border-b-0">
       <span className="text-xs text-gray-400">{label}</span>
       <div className="text-right">
-        <span className={cn('text-sm font-bold font-mono tabular-nums', valueColor || 'text-white')}>
+        <span className={cn('text-sm font-bold font-sans tabular-nums', valueColor || 'text-white')}>
           {value}
         </span>
         {sub && <p className="text-[10px] text-gray-500">{sub}</p>}
@@ -365,7 +365,7 @@ function ActiveTradeCard({ trade, counterFlow }: { trade: RecentAnalysis; counte
           {trade.direction?.toLowerCase() || 'neutral'}
         </div>
         <span className={cn(
-          'font-bold text-sm font-mono tabular-nums',
+          'font-bold text-sm font-sans tabular-nums',
           !hasValidPnL ? 'text-gray-500' : isProfit ? 'text-[#00f5c4]' : 'text-[#ff5f5f]'
         )}>
           {hasValidPnL ? `${isProfit ? '+' : ''}${pnlValue!.toFixed(1)}%` : 'N/A'}
@@ -436,7 +436,7 @@ export function AccordionList(props: AccordionListProps) {
                   <div>
                     <span className="text-xs text-gray-400">Global Liquidity</span>
                     <p className={cn(
-                      'text-sm font-bold font-mono',
+                      'text-sm font-bold font-sans',
                       capitalFlow.liquidityBias === 'risk_on' ? 'text-[#00f5c4]' :
                       capitalFlow.liquidityBias === 'risk_off' ? 'text-[#ff5f5f]' : 'text-gray-400'
                     )}>
@@ -456,7 +456,7 @@ export function AccordionList(props: AccordionListProps) {
                   <div className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center text-[10px] font-bold text-emerald-400">2</div>
                   <div>
                     <span className="text-xs text-gray-400">Market Flow</span>
-                    <p className="text-sm font-bold text-white font-mono">
+                    <p className="text-sm font-bold text-white font-sans">
                       {(() => {
                         const valid = capitalFlow.markets.filter(m => m && m.market);
                         if (valid.length === 0) return 'N/A';
@@ -466,7 +466,7 @@ export function AccordionList(props: AccordionListProps) {
                     </p>
                   </div>
                 </div>
-                <span className="text-[11px] text-gray-500 font-mono">
+                <span className="text-[11px] text-gray-500 font-sans">
                   {capitalFlow.markets.filter(m => (m.flow7d ?? 0) > 0).length}/{capitalFlow.markets.length} inflow
                 </span>
               </div>
@@ -479,7 +479,7 @@ export function AccordionList(props: AccordionListProps) {
                   <div className="w-6 h-6 rounded-lg bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-400">3</div>
                   <div>
                     <span className="text-xs text-gray-400">Sector</span>
-                    <p className="text-sm font-bold text-white font-mono">
+                    <p className="text-sm font-bold text-white font-sans">
                       {(() => {
                         const rec = capitalFlow.recommendation;
                         const market = capitalFlow.markets.find(m => m.market === rec?.primaryMarket);
@@ -500,7 +500,7 @@ export function AccordionList(props: AccordionListProps) {
                   <div>
                     <span className="text-xs text-gray-400">Recommendation</span>
                     <p className={cn(
-                      'text-sm font-bold font-mono',
+                      'text-sm font-bold font-sans',
                       capitalFlow.recommendation?.action === 'analyze' ? 'text-[#00f5c4]' :
                       capitalFlow.recommendation?.action === 'wait' ? 'text-amber-400' : 'text-[#ff5f5f]'
                     )}>
@@ -508,7 +508,7 @@ export function AccordionList(props: AccordionListProps) {
                     </p>
                   </div>
                 </div>
-                <span className="text-[11px] text-gray-500 font-mono">{capitalFlow.recommendation?.confidence || 0}%</span>
+                <span className="text-[11px] text-gray-500 font-sans">{capitalFlow.recommendation?.confidence || 0}%</span>
               </div>
             </Link>
           </div>
@@ -556,7 +556,7 @@ export function AccordionList(props: AccordionListProps) {
                   <div className="flex items-center gap-3">
                     {market && (
                       <span className={cn(
-                        'text-xs font-bold font-mono tabular-nums',
+                        'text-xs font-bold font-sans tabular-nums',
                         (market.flow7d ?? 0) >= 0 ? 'text-[#00f5c4]' : 'text-[#ff5f5f]'
                       )}>
                         {(market.flow7d ?? 0) >= 0 ? '+' : ''}{(market.flow7d ?? 0).toFixed(1)}%
@@ -594,7 +594,7 @@ export function AccordionList(props: AccordionListProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold font-mono tabular-nums text-[#ff5f5f]">
+                    <span className="text-xs font-bold font-sans tabular-nums text-[#ff5f5f]">
                       {(m.flow7d ?? 0).toFixed(1)}%
                     </span>
                     <ArrowRight className="w-4 h-4 text-gray-500 group-hover:text-[#ff5f5f] transition" />
@@ -623,7 +623,7 @@ export function AccordionList(props: AccordionListProps) {
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-bold tracking-tight text-white">Platform P/L</span>
               <span className={cn(
-                'px-2 py-0.5 rounded-lg text-xs font-bold font-mono',
+                'px-2 py-0.5 rounded-lg text-xs font-bold font-sans',
                 (performanceData?.summary?.totalRealizedPnL || 0) >= 0
                   ? 'bg-[#00f5c4]/10 text-[#00f5c4]'
                   : 'bg-[#ff5f5f]/10 text-[#ff5f5f]'
@@ -693,7 +693,7 @@ export function AccordionList(props: AccordionListProps) {
                   ))}
                 </div>
                 <span className={cn(
-                  'text-xs font-bold font-mono',
+                  'text-xs font-bold font-sans',
                   periodPnL >= 0 ? 'text-[#00f5c4]' : 'text-[#ff5f5f]'
                 )}>
                   {hasChartData ? `${periodPnL >= 0 ? '+' : ''}${periodPnL.toFixed(1)}%` : '--'}
@@ -748,7 +748,7 @@ export function AccordionList(props: AccordionListProps) {
                 { val: userStats.verifiedAnalyses - userStats.correctAnalyses, label: 'SL Hit', color: 'text-[#ff5f5f]', border: 'border-[#ff5f5f]/20' },
               ].map(item => (
                 <div key={item.label} className={cn('p-2 rounded-xl border bg-white/[0.02] text-center', item.border)}>
-                  <div className={cn('text-sm font-bold font-mono', item.color)}>{item.val}</div>
+                  <div className={cn('text-sm font-bold font-sans', item.color)}>{item.val}</div>
                   <div className="text-[9px] text-gray-500 uppercase tracking-wider">{item.label}</div>
                 </div>
               ))}
@@ -793,7 +793,7 @@ export function AccordionList(props: AccordionListProps) {
                     </div>
                     <span className="text-xs text-gray-400">AI Concierge</span>
                   </div>
-                  <span className="text-sm font-bold font-mono text-white">{formatNumber(aiStats.user.conciergeMessages)} msgs</span>
+                  <span className="text-sm font-bold font-sans text-white">{formatNumber(aiStats.user.conciergeMessages)} msgs</span>
                 </div>
 
                 {/* Expert */}
@@ -805,7 +805,7 @@ export function AccordionList(props: AccordionListProps) {
                     <span className="text-xs text-gray-400">AI Expert</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-sm font-bold font-mono text-white">{formatNumber(aiStats.user.expertQuestions)}</span>
+                    <span className="text-sm font-bold font-sans text-white">{formatNumber(aiStats.user.expertQuestions)}</span>
                     <p className="text-[10px] text-gray-500">{Math.max(0, (userStats?.totalAnalyses || 0) * 3 - aiStats.user.expertQuestions)} free left</p>
                   </div>
                 </div>
@@ -823,9 +823,9 @@ export function AccordionList(props: AccordionListProps) {
                     <span className="text-xs text-gray-400">Signals</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-bold font-mono text-white">{signalStats.totalSignals}</span>
+                    <span className="text-sm font-bold font-sans text-white">{signalStats.totalSignals}</span>
                     <span className={cn(
-                      'text-xs font-bold font-mono',
+                      'text-xs font-bold font-sans',
                       signalStats.winRate >= 70 ? 'text-[#00f5c4]' :
                       signalStats.winRate >= 50 ? 'text-amber-400' : 'text-[#ff5f5f]'
                     )}>
@@ -839,7 +839,7 @@ export function AccordionList(props: AccordionListProps) {
                     <span className="text-xs text-gray-400">Best Performer</span>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-white">{signalStats.bestPerformer.symbol}</span>
-                      <span className="text-xs font-bold font-mono text-[#00f5c4]">+{signalStats.bestPerformer.pnl.toFixed(1)}%</span>
+                      <span className="text-xs font-bold font-sans text-[#00f5c4]">+{signalStats.bestPerformer.pnl.toFixed(1)}%</span>
                     </div>
                   </div>
                 )}
@@ -863,7 +863,7 @@ export function AccordionList(props: AccordionListProps) {
                     </div>
                     {signal.pnlPercent !== null ? (
                       <span className={cn(
-                        'text-xs font-bold font-mono',
+                        'text-xs font-bold font-sans',
                         signal.pnlPercent >= 0 ? 'text-[#00f5c4]' : 'text-[#ff5f5f]'
                       )}>
                         {signal.pnlPercent >= 0 ? '+' : ''}{signal.pnlPercent.toFixed(1)}%

@@ -307,7 +307,7 @@ const NAV_GROUPS: NavGroup[] = [
 function Tag({ children, accent }: { children: React.ReactNode; accent?: boolean }) {
   return (
     <span className={cn(
-      'px-1.5 py-0.5 text-[10px] font-mono border rounded',
+      'px-1.5 py-0.5 text-[10px] font-sans border rounded',
       accent
         ? 'border-[#14B8A6]/30 dark:border-[#5EEAD4]/20 text-[#14B8A6] dark:text-[#5EEAD4] bg-[#14B8A6]/5 dark:bg-[#5EEAD4]/5'
         : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300'
@@ -341,15 +341,15 @@ function ContentHeader({ tag, title, subtitle }: { tag: string; title: string; s
   return (
     <div className="mb-5">
       <div className="flex items-center gap-2.5 mb-1">
-        <span className="text-[10px] font-mono text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest">
+        <span className="text-[10px] font-sans text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest">
           {tag}
         </span>
-        <span className="text-sm font-mono font-medium text-neutral-900 dark:text-neutral-100">
+        <span className="text-sm font-sans font-medium text-neutral-900 dark:text-neutral-100">
           {title}
         </span>
       </div>
       {subtitle && (
-        <p className="text-[11px] font-mono text-neutral-400 dark:text-neutral-500 leading-relaxed">
+        <p className="text-[11px] font-sans text-neutral-400 dark:text-neutral-500 leading-relaxed">
           {subtitle}
         </p>
       )}
@@ -371,10 +371,10 @@ function OverviewContent() {
       />
 
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-neutral-50/50 dark:bg-neutral-900/30 p-3">
-        <span className="text-[10px] font-mono text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest block mb-1.5">
+        <span className="text-[10px] font-sans text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest block mb-1.5">
           Principle
         </span>
-        <p className="text-[11px] font-mono text-neutral-600 dark:text-neutral-300 leading-relaxed">
+        <p className="text-[11px] font-sans text-neutral-600 dark:text-neutral-300 leading-relaxed">
           &ldquo;Where money flows, potential exists.&rdquo; — Our top-down approach first classifies the global liquidity regime, then traces capital rotation across markets, sectors, and individual assets before generating any trade signal.
         </p>
       </div>
@@ -383,17 +383,17 @@ function OverviewContent() {
         {LAYERS.map((l) => (
           <div key={l.id} className="bg-white dark:bg-neutral-950 p-3.5 flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-mono font-bold bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded text-[10px] font-sans font-bold bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800">
                 {l.id}
               </span>
-              <span className="text-xs font-mono font-medium text-neutral-900 dark:text-white">
+              <span className="text-xs font-sans font-medium text-neutral-900 dark:text-white">
                 {l.name}
               </span>
             </div>
-            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
               {l.sub}
             </span>
-            <p className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
+            <p className="text-[11px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed">
               {l.desc}
             </p>
             <div className="flex flex-wrap gap-1 mt-auto pt-1">
@@ -408,7 +408,7 @@ function OverviewContent() {
       <div className="flex items-center justify-center gap-2 py-2">
         {['L1', 'L2', 'L3', 'L4'].map((l, i) => (
           <div key={l} className="flex items-center gap-2">
-            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">{l}</span>
+            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">{l}</span>
             {i < 3 && <span className="text-neutral-300 dark:text-neutral-700">→</span>}
           </div>
         ))}
@@ -430,13 +430,13 @@ function LayerContent({ layerIndex }: { layerIndex: number }) {
       />
 
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 p-4">
-        <p className="text-[11px] font-mono text-neutral-600 dark:text-neutral-300 leading-relaxed">
+        <p className="text-[11px] font-sans text-neutral-600 dark:text-neutral-300 leading-relaxed">
           {l.desc}
         </p>
       </div>
 
       <div>
-        <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block mb-2">
+        <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block mb-2">
           Data Inputs
         </span>
         <div className="flex flex-wrap gap-1.5">
@@ -449,7 +449,7 @@ function LayerContent({ layerIndex }: { layerIndex: number }) {
       {layerIndex === 0 && (
         <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
           <div className="bg-neutral-50 dark:bg-neutral-900/50 px-3 py-2">
-            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Regime Classification Output</span>
+            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Regime Classification Output</span>
           </div>
           <div className="grid grid-cols-3 gap-px bg-neutral-200 dark:bg-neutral-800">
             {[
@@ -458,8 +458,8 @@ function LayerContent({ layerIndex }: { layerIndex: number }) {
               { regime: 'RISK OFF', color: 'text-[#EF4444] dark:text-[#F87171]', desc: 'Tightening liquidity. Favor safe havens.' },
             ].map((r) => (
               <div key={r.regime} className="bg-white dark:bg-neutral-950 p-3">
-                <span className={cn('text-xs font-mono font-bold block mb-1', r.color)}>{r.regime}</span>
-                <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400">{r.desc}</p>
+                <span className={cn('text-xs font-sans font-bold block mb-1', r.color)}>{r.regime}</span>
+                <p className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400">{r.desc}</p>
               </div>
             ))}
           </div>
@@ -469,7 +469,7 @@ function LayerContent({ layerIndex }: { layerIndex: number }) {
       {layerIndex === 1 && (
         <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
           <div className="bg-neutral-50 dark:bg-neutral-900/50 px-3 py-2">
-            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Tracked Asset Classes</span>
+            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Tracked Asset Classes</span>
           </div>
           <div className="grid grid-cols-4 gap-px bg-neutral-200 dark:bg-neutral-800">
             {[
@@ -480,8 +480,8 @@ function LayerContent({ layerIndex }: { layerIndex: number }) {
             ].map((m) => (
               <div key={m.market} className="bg-white dark:bg-neutral-950 p-3 text-center">
                 <span className="text-lg block mb-1">{m.icon}</span>
-                <span className="text-[11px] font-mono font-medium text-neutral-900 dark:text-white block">{m.market}</span>
-                <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">{m.source}</span>
+                <span className="text-[11px] font-sans font-medium text-neutral-900 dark:text-white block">{m.market}</span>
+                <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">{m.source}</span>
               </div>
             ))}
           </div>
@@ -490,8 +490,8 @@ function LayerContent({ layerIndex }: { layerIndex: number }) {
 
       {layerIndex === 2 && (
         <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-neutral-50/50 dark:bg-neutral-900/30 p-3">
-          <span className="text-[10px] font-mono text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest block mb-1.5">Sector Analysis</span>
-          <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
+          <span className="text-[10px] font-sans text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest block mb-1.5">Sector Analysis</span>
+          <p className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed">
             Within each market, sector-level TVL flows, trading volume distribution, and dominance shifts pinpoint which vertical attracts disproportionate capital. Sectors with {">"} 10% weekly flow anomaly trigger CRITICAL alerts.
           </p>
         </div>
@@ -499,8 +499,8 @@ function LayerContent({ layerIndex }: { layerIndex: number }) {
 
       {layerIndex === 3 && (
         <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-neutral-50/50 dark:bg-neutral-900/30 p-3">
-          <span className="text-[10px] font-mono text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest block mb-1.5">Dual-Engine Suite</span>
-          <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
+          <span className="text-[10px] font-sans text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest block mb-1.5">Dual-Engine Suite</span>
+          <p className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed">
             Layer 4 deploys both 7-Step Classic and MLIS Pro simultaneously. When both engines agree on direction, confidence is elevated. On contradiction, the verdict is automatically downgraded to WAIT or AVOID.
           </p>
         </div>
@@ -523,14 +523,14 @@ function PhasesContent() {
           <div key={p.phase} className="bg-white dark:bg-neutral-950 p-3.5 flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <span className={cn('w-2 h-2 rounded-full', PhaseDot(p.phase))} />
-              <span className={cn('text-xs font-mono font-bold', PhaseColor(p.phase))}>
+              <span className={cn('text-xs font-sans font-bold', PhaseColor(p.phase))}>
                 {p.phase}
               </span>
-              <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 tabular-nums ml-auto">
+              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 tabular-nums ml-auto">
                 {p.days}
               </span>
             </div>
-            <p className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
+            <p className="text-[11px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed">
               {p.desc}
             </p>
           </div>
@@ -538,36 +538,36 @@ function PhasesContent() {
       </div>
 
       <div>
-        <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block mb-2">
+        <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block mb-2">
           Rotation Signals
         </span>
         <div className="grid grid-cols-3 gap-px bg-neutral-200 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
           <div className="bg-white dark:bg-neutral-950 p-3 flex items-center gap-2.5">
-            <span className="text-sm font-mono text-[#22C55E] dark:text-[#4ADE80]">↗</span>
+            <span className="text-sm font-sans text-[#22C55E] dark:text-[#4ADE80]">↗</span>
             <div>
-              <span className="text-[11px] font-mono font-medium text-neutral-900 dark:text-white block">Entering</span>
-              <p className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">Capital flowing in</p>
+              <span className="text-[11px] font-sans font-medium text-neutral-900 dark:text-white block">Entering</span>
+              <p className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">Capital flowing in</p>
             </div>
           </div>
           <div className="bg-white dark:bg-neutral-950 p-3 flex items-center gap-2.5">
-            <span className="text-sm font-mono text-neutral-400 dark:text-neutral-500">—</span>
+            <span className="text-sm font-sans text-neutral-400 dark:text-neutral-500">—</span>
             <div>
-              <span className="text-[11px] font-mono font-medium text-neutral-900 dark:text-white block">Stable</span>
-              <p className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">Holding steady</p>
+              <span className="text-[11px] font-sans font-medium text-neutral-900 dark:text-white block">Stable</span>
+              <p className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">Holding steady</p>
             </div>
           </div>
           <div className="bg-white dark:bg-neutral-950 p-3 flex items-center gap-2.5">
-            <span className="text-sm font-mono text-[#EF4444] dark:text-[#F87171]">↘</span>
+            <span className="text-sm font-sans text-[#EF4444] dark:text-[#F87171]">↘</span>
             <div>
-              <span className="text-[11px] font-mono font-medium text-neutral-900 dark:text-white block">Exiting</span>
-              <p className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">Capital flowing out</p>
+              <span className="text-[11px] font-sans font-medium text-neutral-900 dark:text-white block">Exiting</span>
+              <p className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">Capital flowing out</p>
             </div>
           </div>
         </div>
       </div>
 
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-neutral-50/50 dark:bg-neutral-900/30 p-3">
-        <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
+        <p className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed">
           <span className="text-[#F59E0B] dark:text-[#FBBF24] uppercase tracking-wider mr-1.5">Note</span>
           Historical phase durations are averaged per asset class to estimate remaining time in current phase. When the current phase exceeds 1.5× average duration, an EXIT transition warning is triggered.
         </p>
@@ -592,12 +592,12 @@ function SevenStepContent() {
             className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 p-3.5 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors"
           >
             <div className="flex items-center gap-2.5 mb-2">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-mono font-bold bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 tabular-nums">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-sans font-bold bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 tabular-nums">
                 {s.step}
               </span>
-              <span className="text-[11px] font-mono font-medium text-neutral-900 dark:text-white">{s.name}</span>
+              <span className="text-[11px] font-sans font-medium text-neutral-900 dark:text-white">{s.name}</span>
             </div>
-            <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed mb-2.5">
+            <p className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed mb-2.5">
               {s.description}
             </p>
             <div className="flex flex-wrap gap-1">
@@ -611,7 +611,7 @@ function SevenStepContent() {
 
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
         <div className="bg-neutral-50 dark:bg-neutral-900/50 px-3 py-2">
-          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Verdict Outputs</span>
+          <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Verdict Outputs</span>
         </div>
         <div className="grid grid-cols-4 gap-px bg-neutral-200 dark:bg-neutral-800">
           {[
@@ -621,8 +621,8 @@ function SevenStepContent() {
             { verdict: 'AVOID', color: 'text-[#EF4444] dark:text-[#F87171]', desc: 'High risk detected' },
           ].map((v) => (
             <div key={v.verdict} className="bg-white dark:bg-neutral-950 p-2.5 text-center">
-              <span className={cn('text-xs font-mono font-bold block mb-0.5', v.color)}>{v.verdict}</span>
-              <span className="text-[9px] font-mono text-neutral-400 dark:text-neutral-500">{v.desc}</span>
+              <span className={cn('text-xs font-sans font-bold block mb-0.5', v.color)}>{v.verdict}</span>
+              <span className="text-[9px] font-sans text-neutral-400 dark:text-neutral-500">{v.desc}</span>
             </div>
           ))}
         </div>
@@ -648,14 +648,14 @@ function MLISContent() {
           >
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2.5">
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-mono font-bold bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 tabular-nums">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-sans font-bold bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 tabular-nums">
                   {l.layer}
                 </span>
-                <span className="text-[11px] font-mono font-medium text-neutral-900 dark:text-white">{l.name}</span>
+                <span className="text-[11px] font-sans font-medium text-neutral-900 dark:text-white">{l.name}</span>
               </div>
-              <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">{l.signal}</span>
+              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">{l.signal}</span>
             </div>
-            <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
+            <p className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed">
               {l.description}
             </p>
           </div>
@@ -664,7 +664,7 @@ function MLISContent() {
 
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
         <div className="bg-neutral-50 dark:bg-neutral-900/50 px-3 py-2">
-          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">MLIS Recommendation Outputs</span>
+          <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">MLIS Recommendation Outputs</span>
         </div>
         <div className="grid grid-cols-4 gap-px bg-neutral-200 dark:bg-neutral-800">
           {[
@@ -674,7 +674,7 @@ function MLISContent() {
             { rec: 'SELL', color: 'text-[#EF4444] dark:text-[#F87171]' },
           ].map((r) => (
             <div key={r.rec} className="bg-white dark:bg-neutral-950 p-2.5 text-center">
-              <span className={cn('text-[10px] font-mono font-bold', r.color)}>{r.rec}</span>
+              <span className={cn('text-[10px] font-sans font-bold', r.color)}>{r.rec}</span>
             </div>
           ))}
         </div>
@@ -717,8 +717,8 @@ function DualEngineContent() {
             key={s.status}
             className={cn('border rounded-sm bg-white dark:bg-neutral-950 p-3.5', s.borderColor)}
           >
-            <span className={cn('text-xs font-mono font-bold block mb-1.5', s.color)}>{s.status}</span>
-            <p className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
+            <span className={cn('text-xs font-sans font-bold block mb-1.5', s.color)}>{s.status}</span>
+            <p className="text-[11px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed">
               {s.desc}
             </p>
           </div>
@@ -726,7 +726,7 @@ function DualEngineContent() {
       </div>
 
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-neutral-50/50 dark:bg-neutral-900/30 p-3">
-        <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
+        <p className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed">
           <span className="text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-wider mr-1.5">Architecture</span>
           7-Step Classic provides the primary trade signal. MLIS Pro operates as a secondary validation layer. The two engines use orthogonal feature sets to avoid correlated errors.
         </p>
@@ -751,10 +751,10 @@ function ExpertsContent() {
             className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 p-3.5 hover:border-neutral-300 dark:hover:border-neutral-700 transition-colors"
           >
             <div className="flex items-center gap-2.5 mb-1.5">
-              <span className="text-xs font-mono font-bold text-neutral-900 dark:text-white">{e.name}</span>
-              <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">{e.domain}</span>
+              <span className="text-xs font-sans font-bold text-neutral-900 dark:text-white">{e.name}</span>
+              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">{e.domain}</span>
             </div>
-            <p className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
+            <p className="text-[11px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed">
               {e.desc}
             </p>
           </div>
@@ -762,8 +762,8 @@ function ExpertsContent() {
       </div>
 
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-neutral-50/50 dark:bg-neutral-900/30 p-3">
-        <span className="text-[10px] font-mono text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest block mb-1.5">VOLTRAN Synthesis</span>
-        <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
+        <span className="text-[10px] font-sans text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest block mb-1.5">VOLTRAN Synthesis</span>
+        <p className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed">
           VOLTRAN aggregates the four expert opinions into a weighted consensus. Disagreements between experts are highlighted as risk factors. Each expert&apos;s individual assessment is preserved in the analysis output for full auditability.
         </p>
       </div>
@@ -784,23 +784,23 @@ function DataSourcesContent() {
         <table className="w-full">
           <thead>
             <tr className="bg-neutral-50 dark:bg-neutral-900/50">
-              <th className="text-left p-2.5 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Provider</th>
-              <th className="text-left p-2.5 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden sm:table-cell">Domain</th>
-              <th className="text-left p-2.5 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden md:table-cell">Coverage</th>
-              <th className="text-right p-2.5 font-mono text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Refresh</th>
+              <th className="text-left p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Provider</th>
+              <th className="text-left p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden sm:table-cell">Domain</th>
+              <th className="text-left p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden md:table-cell">Coverage</th>
+              <th className="text-right p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Refresh</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
             {DATA_SOURCES.map((d) => (
               <tr key={d.provider} className="bg-white dark:bg-neutral-950 hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition-colors">
                 <td className="p-2.5">
-                  <span className="text-[11px] font-mono font-medium text-neutral-900 dark:text-white">{d.provider}</span>
+                  <span className="text-[11px] font-sans font-medium text-neutral-900 dark:text-white">{d.provider}</span>
                 </td>
                 <td className="p-2.5 hidden sm:table-cell">
-                  <span className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400">{d.domain}</span>
+                  <span className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400">{d.domain}</span>
                 </td>
                 <td className="p-2.5 hidden md:table-cell">
-                  <span className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400">{d.coverage}</span>
+                  <span className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400">{d.coverage}</span>
                 </td>
                 <td className="p-2.5 text-right">
                   <Tag>{d.refresh}</Tag>
@@ -833,10 +833,10 @@ function DataIntegrityContent() {
         ].map((item) => (
           <div key={item.title} className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 p-3.5">
             <div className="flex items-start gap-2 mb-1">
-              <span className="text-xs font-mono text-[#22C55E] dark:text-[#4ADE80] shrink-0 mt-0.5">✓</span>
-              <span className="text-[11px] font-mono font-medium text-neutral-900 dark:text-white">{item.title}</span>
+              <span className="text-xs font-sans text-[#22C55E] dark:text-[#4ADE80] shrink-0 mt-0.5">✓</span>
+              <span className="text-[11px] font-sans font-medium text-neutral-900 dark:text-white">{item.title}</span>
             </div>
-            <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed pl-5">
+            <p className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed pl-5">
               {item.desc}
             </p>
           </div>
@@ -856,10 +856,10 @@ function PerformanceContent() {
       />
 
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 p-3.5">
-        <p className="text-[11px] font-mono text-neutral-600 dark:text-neutral-300 leading-relaxed mb-2">
+        <p className="text-[11px] font-sans text-neutral-600 dark:text-neutral-300 leading-relaxed mb-2">
           Outcomes are recorded only when a definitive TP or SL hit is confirmed — pending trades are excluded from all performance calculations.
         </p>
-        <p className="text-[10px] font-mono text-[#F59E0B] dark:text-[#FBBF24]">
+        <p className="text-[10px] font-sans text-[#F59E0B] dark:text-[#FBBF24]">
           <span className="uppercase tracking-wider mr-1.5">Survivorship bias notice:</span>
           Metrics include all analyses, not just profitable ones. WAIT and AVOID verdicts are excluded as they do not generate trade plans.
         </p>
@@ -880,7 +880,7 @@ function ScopeContent() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-neutral-200 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
         <div className="bg-white dark:bg-neutral-950 p-3.5">
-          <span className="text-[11px] font-mono font-medium text-[#22C55E] dark:text-[#4ADE80] block mb-2.5">TraderPath IS</span>
+          <span className="text-[11px] font-sans font-medium text-[#22C55E] dark:text-[#4ADE80] block mb-2.5">TraderPath IS</span>
           <div className="space-y-2">
             {[
               'An analytical research and intelligence platform',
@@ -890,14 +890,14 @@ function ScopeContent() {
               'A technology product, not a financial service',
             ].map((item) => (
               <div key={item} className="flex items-start gap-2">
-                <span className="text-xs font-mono text-[#22C55E] dark:text-[#4ADE80] shrink-0 mt-0.5">✓</span>
-                <span className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400">{item}</span>
+                <span className="text-xs font-sans text-[#22C55E] dark:text-[#4ADE80] shrink-0 mt-0.5">✓</span>
+                <span className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400">{item}</span>
               </div>
             ))}
           </div>
         </div>
         <div className="bg-white dark:bg-neutral-950 p-3.5">
-          <span className="text-[11px] font-mono font-medium text-[#EF4444] dark:text-[#F87171] block mb-2.5">TraderPath is NOT</span>
+          <span className="text-[11px] font-sans font-medium text-[#EF4444] dark:text-[#F87171] block mb-2.5">TraderPath is NOT</span>
           <div className="space-y-2">
             {[
               'A broker-dealer or trading platform',
@@ -907,8 +907,8 @@ function ScopeContent() {
               'A guarantee of future performance or returns',
             ].map((item) => (
               <div key={item} className="flex items-start gap-2">
-                <span className="text-xs font-mono text-[#EF4444] dark:text-[#F87171] shrink-0 mt-0.5">✗</span>
-                <span className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400">{item}</span>
+                <span className="text-xs font-sans text-[#EF4444] dark:text-[#F87171] shrink-0 mt-0.5">✗</span>
+                <span className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400">{item}</span>
               </div>
             ))}
           </div>
@@ -917,10 +917,10 @@ function ScopeContent() {
 
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 p-3.5">
         <div className="flex items-start gap-2">
-          <span className="text-xs font-mono text-[#F59E0B] dark:text-[#FBBF24] shrink-0 mt-0.5">⚠</span>
+          <span className="text-xs font-sans text-[#F59E0B] dark:text-[#FBBF24] shrink-0 mt-0.5">⚠</span>
           <div>
-            <span className="text-[10px] font-mono text-[#F59E0B] dark:text-[#FBBF24] uppercase tracking-wider block mb-1">Important Disclaimer</span>
-            <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
+            <span className="text-[10px] font-sans text-[#F59E0B] dark:text-[#FBBF24] uppercase tracking-wider block mb-1">Important Disclaimer</span>
+            <p className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed">
               This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. All investments carry risk, including the potential loss of principal. Past performance does not guarantee future results. Conduct your own research and consult with a licensed financial advisor before making any investment decisions.{' '}
               <Link href="/disclaimer" className="underline hover:text-neutral-900 dark:hover:text-white transition-colors">
                 Read full Risk Disclosure Statement
@@ -943,28 +943,28 @@ function MarketsContent() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-neutral-200 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
         <div className="bg-white dark:bg-neutral-950 p-3.5">
-          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block mb-3">AI Recommendations</span>
+          <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block mb-3">AI Recommendations</span>
           <div className="space-y-3">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-mono font-bold text-[#22C55E] dark:text-[#4ADE80]">BUY</span>
+                <span className="text-sm font-sans font-bold text-[#22C55E] dark:text-[#4ADE80]">BUY</span>
                 <Tag>EARLY / MID Phase</Tag>
               </div>
-              <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400">Capital entering + strong flow velocity</p>
+              <p className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400">Capital entering + strong flow velocity</p>
             </div>
             <div className="h-px bg-neutral-100 dark:bg-neutral-800" />
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-mono font-bold text-[#EF4444] dark:text-[#F87171]">SELL</span>
+                <span className="text-sm font-sans font-bold text-[#EF4444] dark:text-[#F87171]">SELL</span>
                 <Tag>LATE / EXIT Phase</Tag>
               </div>
-              <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400">Capital exiting + slowing momentum</p>
+              <p className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400">Capital exiting + slowing momentum</p>
             </div>
           </div>
         </div>
 
         <div className="bg-white dark:bg-neutral-950 p-3.5">
-          <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block mb-3">Supported Markets</span>
+          <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block mb-3">Supported Markets</span>
           <div className="space-y-1.5">
             {[
               { market: 'Crypto', source: 'Binance' },
@@ -973,8 +973,8 @@ function MarketsContent() {
               { market: 'Bonds', source: 'Yahoo Finance' },
             ].map((m) => (
               <div key={m.market} className="flex items-center justify-between py-1.5 border-b border-neutral-100 dark:border-neutral-800/50 last:border-0">
-                <span className="text-[11px] font-mono font-medium text-neutral-900 dark:text-white">{m.market}</span>
-                <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">{m.source}</span>
+                <span className="text-[11px] font-sans font-medium text-neutral-900 dark:text-white">{m.market}</span>
+                <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">{m.source}</span>
               </div>
             ))}
           </div>
@@ -984,7 +984,7 @@ function MarketsContent() {
       <div className="text-center pt-2">
         <Link
           href="/analyze"
-          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-mono font-medium border border-neutral-200 dark:border-neutral-800 rounded-sm text-neutral-900 dark:text-white hover:border-[#14B8A6] dark:hover:border-[#5EEAD4] hover:text-[#14B8A6] dark:hover:text-[#5EEAD4] transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 text-xs font-sans font-medium border border-neutral-200 dark:border-neutral-800 rounded-sm text-neutral-900 dark:text-white hover:border-[#14B8A6] dark:hover:border-[#5EEAD4] hover:text-[#14B8A6] dark:hover:text-[#5EEAD4] transition-colors"
         >
           Start Analysis →
         </Link>
@@ -1051,17 +1051,17 @@ export default function MethodologyPage() {
             <div className="w-1.5 h-1.5 bg-[#14B8A6] rounded-full" />
             <div className="w-1.5 h-1.5 bg-[#EF5A6F] rounded-full" />
           </div>
-          <span className="text-sm font-mono font-bold text-neutral-900 dark:text-white tracking-tight">
+          <span className="text-sm font-sans font-bold text-neutral-900 dark:text-white tracking-tight">
             Methodology
           </span>
-          <span className="hidden sm:inline text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
+          <span className="hidden sm:inline text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
             — Where money flows, potential exists
           </span>
         </div>
         <Link
           href="/how-it-works"
           target="_blank"
-          className="px-2 py-1 text-[10px] font-mono border border-neutral-200 dark:border-neutral-800 rounded text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:border-neutral-400 dark:hover:border-neutral-600 transition-colors uppercase tracking-wider"
+          className="px-2 py-1 text-[10px] font-sans border border-neutral-200 dark:border-neutral-800 rounded text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:border-neutral-400 dark:hover:border-neutral-600 transition-colors uppercase tracking-wider"
         >
           Full Paper ↗
         </Link>
@@ -1075,7 +1075,7 @@ export default function MethodologyPage() {
               key={item.id}
               onClick={() => setActiveSection(item.id)}
               className={cn(
-                'shrink-0 px-2.5 py-1.5 text-[10px] font-mono rounded transition-colors whitespace-nowrap',
+                'shrink-0 px-2.5 py-1.5 text-[10px] font-sans rounded transition-colors whitespace-nowrap',
                 activeSection === item.id
                   ? 'bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900'
                   : 'text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-900'
@@ -1098,7 +1098,7 @@ export default function MethodologyPage() {
           <div className="py-3 space-y-4">
             {NAV_GROUPS.map((group) => (
               <div key={group.title}>
-                <span className="block px-4 mb-1.5 text-[9px] font-mono text-neutral-400 dark:text-neutral-600 uppercase tracking-[0.15em]">
+                <span className="block px-4 mb-1.5 text-[9px] font-sans text-neutral-400 dark:text-neutral-600 uppercase tracking-[0.15em]">
                   {group.title}
                 </span>
                 <div className="space-y-px">
@@ -1117,7 +1117,7 @@ export default function MethodologyPage() {
                       >
                         {item.tag && (
                           <span className={cn(
-                            'inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded text-[9px] font-mono font-bold tabular-nums',
+                            'inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded text-[9px] font-sans font-bold tabular-nums',
                             isActive
                               ? 'bg-[#14B8A6]/10 dark:bg-[#5EEAD4]/10 text-[#14B8A6] dark:text-[#5EEAD4]'
                               : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500'
@@ -1126,7 +1126,7 @@ export default function MethodologyPage() {
                           </span>
                         )}
                         <span className={cn(
-                          'text-[11px] font-mono truncate',
+                          'text-[11px] font-sans truncate',
                           isActive
                             ? 'text-neutral-900 dark:text-white font-medium'
                             : 'text-neutral-500 dark:text-neutral-400'

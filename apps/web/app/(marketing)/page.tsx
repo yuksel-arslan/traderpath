@@ -105,7 +105,7 @@ function StatsBoxes() {
     <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-black/[0.04] dark:bg-white/[0.04]">
       {stats.map((s) => (
         <div key={s.label} className="bg-white dark:bg-black p-5">
-          <div className={cn('text-xl sm:text-2xl font-mono font-bold tabular-nums', s.color || 'text-black dark:text-white')}>
+          <div className={cn('text-xl sm:text-2xl font-sans font-bold tabular-nums', s.color || 'text-black dark:text-white')}>
             {s.value}
           </div>
           <div className="text-[11px] text-slate-400 uppercase tracking-wide mt-0.5">{s.label}</div>
@@ -192,7 +192,7 @@ function MinimalFooter() {
 
         {/* Disclaimer */}
         <div className="mb-6 p-4 border border-black/[0.06] dark:border-white/[0.06] rounded-sm">
-          <div className="text-[9px] font-mono uppercase tracking-wider text-slate-400 mb-1">DISCLAIMER</div>
+          <div className="text-[9px] font-sans uppercase tracking-wider text-slate-400 mb-1">DISCLAIMER</div>
           <p className="text-[11px] text-slate-400 leading-relaxed">
             This platform is for informational and educational purposes only and does not constitute financial advice.
             All investments carry risk including loss of principal. Past performance does not guarantee future results.
@@ -231,7 +231,7 @@ export default function LandingPage() {
       {/* Performance */}
       <section id="performance" className="py-14 md:py-20 border-t border-black/[0.06] dark:border-white/[0.06]">
         <div className="max-w-[1000px] mx-auto px-4">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2">PERFORMANCE</div>
+          <div className="text-[10px] font-sans uppercase tracking-wider text-slate-400 mb-2">PERFORMANCE</div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-black dark:text-white mb-2">
             Real Data. Real Results.
           </h2>
@@ -248,7 +248,7 @@ export default function LandingPage() {
       {/* Pricing CTA */}
       <section id="pricing" className="py-14 md:py-20 border-t border-black/[0.06] dark:border-white/[0.06]">
         <div className="max-w-[600px] mx-auto px-4 text-center">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2">PRICING</div>
+          <div className="text-[10px] font-sans uppercase tracking-wider text-slate-400 mb-2">PRICING</div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-black dark:text-white mb-3">
             Credit-Based. No Subscriptions.
           </h2>
@@ -268,7 +268,7 @@ export default function LandingPage() {
       {/* FAQ */}
       <section id="faq" className="py-14 md:py-20 border-t border-black/[0.06] dark:border-white/[0.06]">
         <div className="max-w-[700px] mx-auto px-4">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2">FAQ</div>
+          <div className="text-[10px] font-sans uppercase tracking-wider text-slate-400 mb-2">FAQ</div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-black dark:text-white mb-8">
             Frequently Asked Questions
           </h2>
@@ -288,7 +288,7 @@ export default function LandingPage() {
             <TraderPathLogo size="lg" showText={false} animated />
           </div>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 mb-5 text-[10px] font-mono text-amber-500 border border-amber-500/20 bg-amber-500/5 rounded-full">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 mb-5 text-[10px] font-sans text-amber-500 border border-amber-500/20 bg-amber-500/5 rounded-full">
             25 FREE CREDITS ON SIGNUP
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-black dark:text-white mb-4">

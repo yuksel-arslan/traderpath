@@ -624,12 +624,12 @@ export function TradePlanChart({
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Entry Point</div>
           <div className="flex justify-between text-sm">
             <span className="text-yellow-400 font-bold">▶ AVG</span>
-            <span className="font-mono font-bold text-yellow-400">${formatPrice(avgEntry)}</span>
+            <span className="font-sans font-bold text-yellow-400">${formatPrice(avgEntry)}</span>
           </div>
           {entries?.filter(e => e != null).map((entry, i) => (
             <div key={i} className="flex justify-between text-xs text-muted-foreground">
               <span className="text-cyan-500">E{i + 1}</span>
-              <span className="font-mono">${formatPrice(entry.price ?? 0)}</span>
+              <span className="font-sans">${formatPrice(entry.price ?? 0)}</span>
             </div>
           ))}
         </div>
@@ -639,7 +639,7 @@ export function TradePlanChart({
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Stop Loss</div>
           <div className="flex justify-between text-sm">
             <span className="text-red-500">SL</span>
-            <span className="font-mono">${formatPrice(slPrice)}</span>
+            <span className="font-sans">${formatPrice(slPrice)}</span>
           </div>
           <div className="text-xs text-red-400">-{(stopLoss?.percentage ?? 0).toFixed(1)}% risk</div>
         </div>
@@ -652,7 +652,7 @@ export function TradePlanChart({
               <div key={i} className="text-sm">
                 <div className="flex justify-between">
                   <span className="text-green-500">TP{i + 1}</span>
-                  <span className="font-mono">${formatPrice(tp.price ?? 0)}</span>
+                  <span className="font-sans">${formatPrice(tp.price ?? 0)}</span>
                 </div>
                 <div className="text-xs text-green-400">{(tp.riskReward ?? 0).toFixed(1)}R</div>
               </div>

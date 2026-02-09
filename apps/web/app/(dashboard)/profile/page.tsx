@@ -247,7 +247,7 @@ export default function ProfilePage() {
           </div>
           <div className="mt-3 p-3 bg-background/60 rounded-lg">
             <p className="text-xs text-muted-foreground mb-0.5">Your Referral Code</p>
-            <p className="font-mono font-bold">{tierInfo.referralCode}</p>
+            <p className="font-sans font-bold">{tierInfo.referralCode}</p>
           </div>
         </div>
       )}

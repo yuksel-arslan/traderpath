@@ -159,7 +159,7 @@ export function TrapCheck({ data, symbol }: TrapCheckProps) {
           </p>
           <div className="flex flex-wrap gap-2">
             {data.traps.liquidityGrab.zones.map((zone, i) => (
-              <span key={i} className="px-3 py-1 bg-orange-500/20 rounded text-sm font-mono">
+              <span key={i} className="px-3 py-1 bg-orange-500/20 rounded text-sm font-sans">
                 ${zone.toLocaleString()}
               </span>
             ))}
@@ -176,7 +176,7 @@ export function TrapCheck({ data, symbol }: TrapCheckProps) {
           </p>
           <div className="flex flex-wrap gap-2">
             {data.traps.stopHuntZones.map((zone, i) => (
-              <span key={i} className="px-3 py-1 bg-red-500/20 rounded text-sm font-mono">
+              <span key={i} className="px-3 py-1 bg-red-500/20 rounded text-sm font-sans">
                 ${zone.toLocaleString()}
               </span>
             ))}

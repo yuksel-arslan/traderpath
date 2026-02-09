@@ -114,7 +114,7 @@ function IndicatorCard({ indicator }: { indicator: IndicatorDetail }) {
 
       <div className="mt-2 flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Value:</span>
-        <span className="font-mono font-medium">
+        <span className="font-sans font-medium">
           {typeof indicator.value === 'number'
             ? indicator.value.toFixed(2)
             : indicator.value ?? 'N/A'}
