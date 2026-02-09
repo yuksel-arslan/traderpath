@@ -2,127 +2,99 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Menu, X } from 'lucide-react';
-import { TraderPathLogo } from '../common/TraderPathLogo';
-import { ThemeToggle } from '../common/ThemeToggle';
-import { LanguageSelector } from '../common/LanguageSelector';
+import { Menu, X, Sun, Moon } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 const NAV_LINKS = [
-  { label: 'Features', href: '#features' },
+  { label: 'Methodology', href: '#methodology' },
+  { label: 'Performance', href: '#performance' },
   { label: 'Pricing', href: '#pricing' },
   { label: 'FAQ', href: '#faq' },
 ];
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
+  const { theme, setTheme } = useTheme();
   const closeMenu = () => setMobileMenuOpen(false);
 
   return (
-    <header
-      className="sticky top-0 z-50 border-b border-white/10 bg-[#041020]/95 backdrop-blur supports-[backdrop-filter]:bg-[#041020]/80"
-    >
-      <div className="w-full px-4 lg:px-6 py-3 flex items-center justify-between">
-        {/* Logo - always visible */}
-        <TraderPathLogo
-          size="sm"
-          showText
-          showTagline={false}
-          href="/"
-          className="flex-shrink-0 sm:hidden"
-        />
-        <TraderPathLogo
-          size="md"
-          showText
-          showTagline
-          href="/"
-          className="flex-shrink-0 hidden sm:flex"
-        />
+    <header className="sticky top-0 z-50 border-b border-black/[0.06] dark:border-white/[0.06] bg-white/95 dark:bg-black/95 backdrop-blur">
+      <div className="max-w-[1200px] mx-auto px-4 py-3 flex items-center justify-between">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-1.5">
+          <span className="text-sm font-mono font-bold tracking-tight text-black dark:text-white">
+            TRADERPATH
+          </span>
+          <span className="text-[9px] font-mono text-slate-400 hidden sm:inline">v2.0</span>
+        </Link>
 
-        {/* Desktop nav links */}
+        {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6" aria-label="Main navigation">
           {NAV_LINKS.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="text-sm text-slate-300 hover:text-[#4dd0e1] transition-colors"
+              className="text-[11px] font-mono uppercase tracking-wider text-slate-400 hover:text-black dark:hover:text-white transition-colors"
             >
               {link.label}
             </a>
           ))}
         </nav>
 
-        {/* Right side */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Desktop-only controls */}
-          <div className="hidden sm:flex items-center gap-1">
-            <LanguageSelector compact />
-            <ThemeToggle />
-          </div>
+        {/* Right */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="p-1.5 text-slate-400 hover:text-black dark:hover:text-white transition-colors"
+            aria-label="Toggle theme"
+          >
+            <Sun className="w-3.5 h-3.5 hidden dark:block" />
+            <Moon className="w-3.5 h-3.5 dark:hidden" />
+          </button>
 
           <Link
             href="/login"
-            className="hidden sm:block px-4 py-2 text-sm text-slate-300 hover:text-white transition-colors"
+            className="hidden sm:block px-3 py-1.5 text-[11px] font-mono text-slate-500 hover:text-black dark:hover:text-white transition-colors"
           >
-            Sign In
+            SIGN IN
           </Link>
 
           <Link
             href="/register"
-            className="px-3 sm:px-4 py-2 text-sm font-semibold rounded-lg transition-all"
-            style={{
-              background: 'linear-gradient(135deg, #4dd0e1, #00f5c4)',
-              color: '#041020',
-            }}
+            className="px-3 py-1.5 text-[11px] font-mono font-semibold bg-black dark:bg-white text-white dark:text-black hover:opacity-80 transition-opacity"
           >
-            Get Started
+            GET STARTED
           </Link>
 
-          {/* Hamburger - mobile only */}
+          {/* Mobile menu toggle */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-slate-300 hover:text-white transition-colors"
+            className="md:hidden p-1.5 text-slate-400 hover:text-black dark:hover:text-white"
             aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={mobileMenuOpen}
           >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu panel */}
+      {/* Mobile panel */}
       {mobileMenuOpen && (
-        <nav
-          className="md:hidden border-t border-white/10 bg-[#041020]/95 backdrop-blur"
-          aria-label="Mobile navigation"
-        >
-          <div className="px-4 py-4 flex flex-col gap-4">
+        <nav className="md:hidden border-t border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-black" aria-label="Mobile navigation">
+          <div className="px-4 py-3 flex flex-col gap-3">
             {NAV_LINKS.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
                 onClick={closeMenu}
-                className="text-sm text-slate-300 hover:text-[#4dd0e1] transition-colors py-1"
+                className="text-[11px] font-mono uppercase tracking-wider text-slate-400 hover:text-black dark:hover:text-white py-1"
               >
                 {link.label}
               </a>
             ))}
-
-            <hr className="border-white/10" />
-
-            <div className="flex items-center justify-between">
-              <Link
-                href="/login"
-                onClick={closeMenu}
-                className="text-sm text-slate-300 hover:text-white transition-colors"
-              >
-                Sign In
-              </Link>
-              <div className="flex items-center gap-2">
-                <LanguageSelector />
-                <ThemeToggle />
-              </div>
-            </div>
+            <hr className="border-black/[0.06] dark:border-white/[0.06]" />
+            <Link href="/login" onClick={closeMenu} className="text-[11px] font-mono text-slate-400 hover:text-black dark:hover:text-white py-1">
+              SIGN IN
+            </Link>
           </div>
         </nav>
       )}

@@ -1123,55 +1123,72 @@ export default function TestPage() {
   const [verdict] = useState(generateVerdict);
   const [selectedAsset, setSelectedAsset] = useState<ScreenerAsset | null>(null);
   const [tradePlan, setTradePlan] = useState<TradePlan | null>(null);
-
-  // Auto-select first asset
-  useEffect(() => {
-    if (screenerData.length > 0 && !selectedAsset) {
-      const top = screenerData[0];
-      setSelectedAsset(top);
-      setTradePlan(generateTradePlan(top));
-    }
-  }, [screenerData, selectedAsset]);
+  const [showChart, setShowChart] = useState(false);
 
   const handleAssetSelect = useCallback((asset: ScreenerAsset) => {
     setSelectedAsset(asset);
     setTradePlan(generateTradePlan(asset));
+    setShowChart(true);
+  }, []);
+
+  const handleBackToMacro = useCallback(() => {
+    setShowChart(false);
   }, []);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-black text-neutral-900 dark:text-white">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 pb-8">
+    <div className="h-screen flex flex-col bg-white dark:bg-black text-neutral-900 dark:text-white overflow-hidden">
+      <div className="max-w-6xl mx-auto w-full px-3 sm:px-4 flex flex-col h-full">
         <TerminalHeader />
 
-        {/* L1-L3: Macro Intelligence (left column on desktop) */}
-        {/* L4-L7: Decision + Execution (right column on desktop) */}
-        <div className="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
-          {/* Left column: Macro context */}
-          <div className="lg:col-span-5 space-y-4">
-            <L1MacroGrid metrics={macroMetrics} />
-            <L2MarketFlow flows={marketFlows} />
-            <L3Sectors sectors={sectors} />
-            <L4Verdict verdict={verdict} />
-            <L6SellVerdict />
+        {/* Desktop: two equal-height columns / Mobile: stacked */}
+        <div className="mt-4 flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
+
+          {/* Left column: Macro context OR Trade Visualizer */}
+          <div className="lg:col-span-5 overflow-y-auto scrollbar-none pb-4 space-y-4">
+            {showChart && selectedAsset ? (
+              <>
+                {/* Back button */}
+                <button
+                  onClick={handleBackToMacro}
+                  className="flex items-center gap-1.5 text-[10px] font-mono text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors uppercase tracking-wider"
+                >
+                  <ChevronUp className="w-3 h-3 -rotate-90" />
+                  Back to Macro
+                </button>
+
+                {/* Trade Visualizer in the left column */}
+                <L7TradeVisualizer
+                  selectedAsset={selectedAsset}
+                  tradePlan={tradePlan}
+                />
+                <ForecastPath selectedAsset={selectedAsset} />
+
+                {/* Compact verdict reminder */}
+                <L4Verdict verdict={verdict} />
+              </>
+            ) : (
+              <>
+                <L1MacroGrid metrics={macroMetrics} />
+                <L2MarketFlow flows={marketFlows} />
+                <L3Sectors sectors={sectors} />
+                <L4Verdict verdict={verdict} />
+                <L6SellVerdict />
+              </>
+            )}
           </div>
 
-          {/* Right column: Screener + Chart */}
-          <div className="lg:col-span-7 space-y-4">
+          {/* Right column: Screener (always visible) */}
+          <div className="lg:col-span-7 overflow-y-auto scrollbar-none pb-4 space-y-4">
             <L5Screener
               assets={screenerData}
               selectedSymbol={selectedAsset?.symbol ?? null}
               onSelect={handleAssetSelect}
             />
-            <L7TradeVisualizer
-              selectedAsset={selectedAsset}
-              tradePlan={tradePlan}
-            />
-            <ForecastPath selectedAsset={selectedAsset} />
           </div>
         </div>
 
         {/* Footer */}
-        <footer className="mt-8 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+        <footer className="shrink-0 py-3 border-t border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
               TraderPath Financial Intelligence Terminal

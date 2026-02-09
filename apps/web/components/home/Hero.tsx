@@ -1,75 +1,50 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Globe } from 'lucide-react';
-import { TraderPathLogo } from '../common/TraderPathLogo';
+import { ArrowRight } from 'lucide-react';
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden py-16 sm:py-24 md:py-32">
-      {/* Background gradient orbs */}
-      <div
-        className="absolute top-10 left-1/4 w-48 sm:w-80 h-48 sm:h-80 rounded-full blur-3xl pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(77,208,225,0.15) 0%, transparent 70%)' }}
-      />
-      <div
-        className="absolute bottom-10 right-1/4 w-48 sm:w-80 h-48 sm:h-80 rounded-full blur-3xl pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(0,245,196,0.12) 0%, transparent 70%)' }}
-      />
-
-      <div className="container mx-auto px-4 relative z-10 text-center">
+    <section className="py-16 sm:py-24 md:py-32">
+      <div className="max-w-[1200px] mx-auto px-4 text-center">
         {/* Badge */}
-        <div
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-6 border"
-          style={{
-            borderColor: 'rgba(77,208,225,0.4)',
-            background: 'rgba(77,208,225,0.08)',
-          }}
-        >
-          <Globe className="w-4 h-4" style={{ color: '#4dd0e1' }} />
-          <span style={{ color: '#4dd0e1' }}>Global Capital Flow Intelligence</span>
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 mb-6 text-[10px] font-mono uppercase tracking-wider text-slate-400 border border-black/[0.06] dark:border-white/[0.06]">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-[#00f5c4] animate-pulse" />
+          Global Capital Flow Intelligence
         </div>
 
-        {/* Floating logo */}
-        <div className="flex justify-center mb-6 sm:mb-8">
-          <div className="float">
-            <TraderPathLogo size="lg" showText={false} className="flex sm:hidden" />
-            <TraderPathLogo size="xl" showText={false} className="hidden sm:flex" />
-          </div>
-        </div>
-
-        {/* Heading - centered on mobile */}
-        <h1
-          className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 leading-tight gradient-text-logo-animate"
-        >
-          Follow the Money Flow
+        {/* Heading */}
+        <h1 className="text-3xl sm:text-4xl md:text-6xl font-mono font-bold tracking-tight text-black dark:text-white mb-4 sm:mb-6 leading-[1.1]">
+          Follow the Money.
+          <br />
+          <span className="text-slate-300 dark:text-slate-600">Trade with Precision.</span>
         </h1>
 
-        {/* Description - max 3 lines on mobile */}
-        <p className="text-base sm:text-lg md:text-xl text-slate-400 mb-8 max-w-2xl mx-auto line-clamp-3 sm:line-clamp-none">
-          Track global capital flows across Crypto, Stocks, Bonds & Metals.
-          Our AI identifies where money is moving and delivers actionable trade signals.
+        {/* Description */}
+        <p className="text-sm sm:text-base text-slate-500 max-w-xl mx-auto mb-8 font-mono leading-relaxed">
+          Track institutional capital flows across Crypto, Stocks, Bonds & Metals.
+          7-layer analysis engine identifies where money is moving.
         </p>
 
-        {/* CTA button - full-width on mobile, 52px height */}
-        <div className="px-4 sm:px-0">
+        {/* CTA */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             href="/register"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 rounded-lg font-semibold text-base transition-all hover:scale-105 hover:shadow-lg hover:shadow-[#4dd0e1]/20"
-            style={{
-              height: '52px',
-              background: 'linear-gradient(135deg, #4dd0e1, #00f5c4)',
-              color: '#041020',
-            }}
-            aria-label="Start free analysis - sign up"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-xs font-mono font-semibold bg-black dark:bg-white text-white dark:text-black hover:opacity-80 transition-opacity"
           >
-            Start Free Analysis
-            <ArrowRight className="w-5 h-5" />
+            START FREE ANALYSIS
+            <ArrowRight className="w-3.5 h-3.5" />
           </Link>
+          <a
+            href="#methodology"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-xs font-mono text-slate-500 border border-black/[0.06] dark:border-white/[0.06] hover:text-black dark:hover:text-white transition-colors"
+          >
+            VIEW METHODOLOGY
+          </a>
         </div>
 
-        <p className="text-xs sm:text-sm text-slate-500 mt-4">
-          Get 25 free credits on signup. No credit card required.
+        <p className="text-[10px] font-mono text-slate-400 mt-4">
+          25 free credits on signup &middot; No credit card required
         </p>
       </div>
     </section>
