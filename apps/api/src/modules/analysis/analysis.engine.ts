@@ -30,6 +30,9 @@ import { economicCalendarService, EconomicEvent } from './services/economic-cale
 // NEW: MLIS (Multi-Layer Intelligence System) import
 import { MLISService, MLISConfig, MLISResult, getMLISService, analyzeMLIS } from './services/mlis.service';
 
+// NEW: Smart Money Index import
+import { calculateSmartMoneyIndex, SmartMoneyIndexResult } from './services/smart-money-index.service';
+
 // NEW: Multi-Asset Data Provider import
 import {
   fetchCandles as fetchMultiAssetCandles,
@@ -1968,6 +1971,14 @@ interface SafetyCheckResult {
   smartMoney: {
     positioning: 'long' | 'short' | 'neutral';
     confidence: number;
+    /** Smart Money Index value (cumulative) */
+    smiValue?: number;
+    /** SMI trend: accumulating | distributing | neutral */
+    smiTrend?: 'accumulating' | 'distributing' | 'neutral';
+    /** SMI divergence from price */
+    smiDivergence?: 'bullish_divergence' | 'bearish_divergence' | 'none';
+    /** Percentage of volume in smart sessions */
+    smartSessionRatio?: number;
   };
   contractSecurity?: {
     isVerified: boolean;
@@ -4396,10 +4407,30 @@ export const analysisEngine = {
     if (netFlowUsd > 100000) whaleBias = 'accumulation';
     else if (netFlowUsd < -100000) whaleBias = 'distribution';
 
-    // Smart money positioning
+    // Smart Money Index (SMI) — real formula adapted for crypto
+    // Uses session-weighted volume-price analysis to detect institutional activity
+    const smiCandles = candlesPrimary.map(c => ({
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+      volume: c.volume,
+      timestamp: c.timestamp ?? 0,
+    }));
+    const smiResult = calculateSmartMoneyIndex(smiCandles);
+
+    // Determine positioning from SMI trend + order book confirmation
     let smartMoneyPositioning: 'long' | 'short' | 'neutral' = 'neutral';
-    if (orderBookImbalance > 0.2) smartMoneyPositioning = 'long';
-    else if (orderBookImbalance < -0.2) smartMoneyPositioning = 'short';
+    if (smiResult.smiTrend === 'accumulating' && smiResult.confidence >= 50) {
+      smartMoneyPositioning = 'long';
+    } else if (smiResult.smiTrend === 'distributing' && smiResult.confidence >= 50) {
+      smartMoneyPositioning = 'short';
+    } else if (orderBookImbalance > 0.2) {
+      // Fallback to order book when SMI is neutral or low confidence
+      smartMoneyPositioning = 'long';
+    } else if (orderBookImbalance < -0.2) {
+      smartMoneyPositioning = 'short';
+    }
 
     // Overall risk level
     const warnings: string[] = [];
@@ -4587,7 +4618,11 @@ export const analysisEngine = {
       ],
       smartMoney: {
         positioning: smartMoneyPositioning,
-        confidence: Math.round(Math.abs(orderBookImbalance) * 100),
+        confidence: smiResult.confidence > 30 ? smiResult.confidence : Math.round(Math.abs(orderBookImbalance) * 100),
+        smiValue: smiResult.smiValue,
+        smiTrend: smiResult.smiTrend,
+        smiDivergence: smiResult.divergence,
+        smartSessionRatio: smiResult.smartSessionRatio,
       },
       contractSecurity,
       riskLevel,
