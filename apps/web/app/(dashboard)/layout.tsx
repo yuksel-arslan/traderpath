@@ -29,6 +29,7 @@ import {
   Waves,
   SlidersHorizontal,
   BarChart3,
+  FlaskConical,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -60,6 +61,7 @@ const dropdownNav = [
     items: [
       { name: 'Concierge', href: '/concierge', icon: Bot },
       { name: 'Reports', href: '/reports', icon: FileText },
+      { name: 'Backtest', href: '/methodology', icon: FlaskConical },
       { name: 'Smart Alerts', href: '/alerts/smart', icon: ShieldAlert },
       { name: 'Scheduled', href: '/scheduled', icon: Calendar },
       { name: 'Notifications', href: '/notifications', icon: Inbox },

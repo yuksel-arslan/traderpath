@@ -267,7 +267,7 @@ export function AssetScanner({ data, symbol }: AssetScannerProps) {
             <p className="text-sm font-medium mb-2 text-green-500">Support Levels</p>
             <div className="space-y-1">
               {data.levels.support?.slice(0, 3).map((level, i) => (
-                <p key={i} className="text-sm font-mono">${level?.toLocaleString()}</p>
+                <p key={i} className="text-sm font-sans">${level?.toLocaleString()}</p>
               ))}
             </div>
           </div>
@@ -276,7 +276,7 @@ export function AssetScanner({ data, symbol }: AssetScannerProps) {
             <p className="text-sm font-medium mb-2 text-red-500">Resistance Levels</p>
             <div className="space-y-1">
               {data.levels.resistance?.slice(0, 3).map((level, i) => (
-                <p key={i} className="text-sm font-mono">${level?.toLocaleString()}</p>
+                <p key={i} className="text-sm font-sans">${level?.toLocaleString()}</p>
               ))}
             </div>
           </div>

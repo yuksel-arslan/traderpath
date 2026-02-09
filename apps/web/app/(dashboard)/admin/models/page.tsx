@@ -591,8 +591,8 @@ export default function AdminModelsPage() {
           </div>
           {modelStatus?.status === 'trained' && modelStatus.metrics && (
             <div className="text-right">
-              <p className="text-sm">Val Loss: <span className="font-mono">{modelStatus.metrics.validationLoss.toFixed(4)}</span></p>
-              <p className="text-sm">MAPE: <span className="font-mono">{modelStatus.metrics.mape.toFixed(2)}%</span></p>
+              <p className="text-sm">Val Loss: <span className="font-sans">{modelStatus.metrics.validationLoss.toFixed(4)}</span></p>
+              <p className="text-sm">MAPE: <span className="font-sans">{modelStatus.metrics.mape.toFixed(2)}%</span></p>
             </div>
           )}
         </div>
@@ -727,11 +727,11 @@ export default function AdminModelsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-background rounded-lg">
                   <p className="text-sm text-muted-foreground">Train Loss</p>
-                  <p className="text-xl font-mono">{trainingProgress.loss.toFixed(4)}</p>
+                  <p className="text-xl font-sans">{trainingProgress.loss.toFixed(4)}</p>
                 </div>
                 <div className="p-3 bg-background rounded-lg">
                   <p className="text-sm text-muted-foreground">Val Loss</p>
-                  <p className="text-xl font-mono">{trainingProgress.valLoss.toFixed(4)}</p>
+                  <p className="text-xl font-sans">{trainingProgress.valLoss.toFixed(4)}</p>
                 </div>
               </div>
             </div>
@@ -740,19 +740,19 @@ export default function AdminModelsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-background rounded-lg">
                   <p className="text-sm text-muted-foreground">Validation Loss</p>
-                  <p className="text-xl font-mono">{modelStatus.metrics.validationLoss.toFixed(4)}</p>
+                  <p className="text-xl font-sans">{modelStatus.metrics.validationLoss.toFixed(4)}</p>
                 </div>
                 <div className="p-3 bg-background rounded-lg">
                   <p className="text-sm text-muted-foreground">MAPE</p>
-                  <p className="text-xl font-mono">{modelStatus.metrics.mape.toFixed(2)}%</p>
+                  <p className="text-xl font-sans">{modelStatus.metrics.mape.toFixed(2)}%</p>
                 </div>
                 <div className="p-3 bg-background rounded-lg">
                   <p className="text-sm text-muted-foreground">Training Samples</p>
-                  <p className="text-xl font-mono">{modelStatus.metrics.trainingSamples.toLocaleString()}</p>
+                  <p className="text-xl font-sans">{modelStatus.metrics.trainingSamples.toLocaleString()}</p>
                 </div>
                 <div className="p-3 bg-background rounded-lg">
                   <p className="text-sm text-muted-foreground">Epochs</p>
-                  <p className="text-xl font-mono">{modelStatus.metrics.epochs}</p>
+                  <p className="text-xl font-sans">{modelStatus.metrics.epochs}</p>
                 </div>
               </div>
               <div className="p-3 bg-background rounded-lg">
@@ -783,7 +783,7 @@ export default function AdminModelsPage() {
             <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             Training Logs
           </h3>
-          <div className="bg-black/90 rounded-lg p-3 sm:p-4 max-h-48 sm:max-h-64 overflow-y-auto font-mono text-xs sm:text-sm text-green-400">
+          <div className="bg-black/90 rounded-lg p-3 sm:p-4 max-h-48 sm:max-h-64 overflow-y-auto font-sans text-xs sm:text-sm text-green-400">
             {trainingLogs.map((log, i) => (
               <div key={i} className="py-0.5 break-all">{log}</div>
             ))}

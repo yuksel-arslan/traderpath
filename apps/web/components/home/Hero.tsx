@@ -33,7 +33,7 @@ export function Hero() {
         </div>
 
         {/* Badge */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 mb-6 text-[10px] font-mono uppercase tracking-wider text-slate-400 border border-black/[0.06] dark:border-white/[0.06] rounded-full">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 mb-6 text-[10px] font-sans uppercase tracking-wider text-slate-400 border border-black/[0.06] dark:border-white/[0.06] rounded-full">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-[#00f5c4] animate-pulse" />
           Global Capital Flow Intelligence
         </div>
@@ -67,7 +67,7 @@ export function Hero() {
           </a>
         </div>
 
-        <p className="text-[10px] font-mono text-slate-400 mt-5">
+        <p className="text-[10px] font-sans text-slate-400 mt-5">
           25 free credits on signup &middot; No credit card required
         </p>
       </div>

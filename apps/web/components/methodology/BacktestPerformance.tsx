@@ -306,21 +306,21 @@ export default function BacktestPerformance() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs">
                       <span className="text-slate-600 dark:text-slate-400">Sharpe Ratio</span>
-                      <span className="font-mono font-medium text-slate-900 dark:text-white">{current.sharpeRatio.toFixed(2)}</span>
+                      <span className="font-sans font-medium text-slate-900 dark:text-white">{current.sharpeRatio.toFixed(2)}</span>
                     </div>
                     <MetricBar value={current.sharpeRatio} max={3} color="bg-gradient-to-r from-teal-500 to-emerald-400" />
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs">
                       <span className="text-slate-600 dark:text-slate-400">Profit Factor</span>
-                      <span className="font-mono font-medium text-slate-900 dark:text-white">{current.profitFactor.toFixed(2)}</span>
+                      <span className="font-sans font-medium text-slate-900 dark:text-white">{current.profitFactor.toFixed(2)}</span>
                     </div>
                     <MetricBar value={current.profitFactor} max={5} color="bg-gradient-to-r from-blue-500 to-indigo-400" />
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs">
                       <span className="text-slate-600 dark:text-slate-400">Max Drawdown</span>
-                      <span className="font-mono font-medium text-red-500">{current.maxDrawdown.toFixed(1)}%</span>
+                      <span className="font-sans font-medium text-red-500">{current.maxDrawdown.toFixed(1)}%</span>
                     </div>
                     <MetricBar value={current.maxDrawdown} max={30} color="bg-gradient-to-r from-red-500 to-orange-400" />
                   </div>

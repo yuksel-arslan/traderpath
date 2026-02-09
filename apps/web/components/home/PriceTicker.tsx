@@ -80,7 +80,7 @@ export function PriceTicker() {
         {livePrices.map((coin) => (
           <div
             key={coin.symbol}
-            className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-mono shrink-0 tabular-nums"
+            className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-sans shrink-0 tabular-nums"
           >
             <span className="font-semibold text-black dark:text-white">{coin.symbol}</span>
             <span className="text-slate-400">${coin.price}</span>

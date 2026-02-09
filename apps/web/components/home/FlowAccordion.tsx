@@ -185,13 +185,13 @@ export function FlowAccordion() {
           'mb-8 md:mb-12 transition-all duration-700',
           isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4',
         )}>
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2">
+          <div className="text-[10px] font-sans uppercase tracking-wider text-slate-400 mb-2">
             METHODOLOGY
           </div>
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-mono font-bold tracking-tight text-black dark:text-white mb-2">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-sans font-bold tracking-tight text-black dark:text-white mb-2">
             7-Layer Decision Engine
           </h2>
-          <p className="text-xs sm:text-sm font-mono text-slate-500 max-w-lg">
+          <p className="text-xs sm:text-sm font-sans text-slate-500 max-w-lg">
             Top-down capital flow analysis. Each layer narrows the decision
             from global macro to individual trade plan.
           </p>
@@ -219,7 +219,7 @@ export function FlowAccordion() {
                 >
                   {/* Layer number */}
                   <span className={cn(
-                    'w-6 h-6 flex items-center justify-center text-[10px] font-mono font-bold shrink-0',
+                    'w-6 h-6 flex items-center justify-center text-[10px] font-sans font-bold shrink-0',
                     isOpen
                       ? 'bg-black dark:bg-white text-white dark:text-black'
                       : 'bg-black/5 dark:bg-white/5 text-slate-400',
@@ -229,17 +229,17 @@ export function FlowAccordion() {
 
                   {/* Title & subtitle */}
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-mono font-semibold text-black dark:text-white">
+                    <div className="text-xs font-sans font-semibold text-black dark:text-white">
                       {layer.title}
                     </div>
-                    <div className="text-[10px] font-mono text-slate-400 truncate">
+                    <div className="text-[10px] font-sans text-slate-400 truncate">
                       {layer.subtitle}
                     </div>
                   </div>
 
                   {/* Locked badge */}
                   {isLocked && (
-                    <span className="text-[9px] font-mono text-amber-500 font-bold hidden sm:inline">
+                    <span className="text-[9px] font-sans text-amber-500 font-bold hidden sm:inline">
                       PREMIUM
                     </span>
                   )}
@@ -259,7 +259,7 @@ export function FlowAccordion() {
                         {layer.metrics.map((m) => (
                           <span
                             key={m}
-                            className="px-2 py-0.5 text-[10px] font-mono bg-black/[0.03] dark:bg-white/[0.03] text-slate-500"
+                            className="px-2 py-0.5 text-[10px] font-sans bg-black/[0.03] dark:bg-white/[0.03] text-slate-500"
                           >
                             {m}
                           </span>
@@ -275,14 +275,14 @@ export function FlowAccordion() {
                             { label: 'DXY', value: flowData?.liquidity.dxyStatus || 'Weak' },
                             { label: 'VIX', value: flowData?.liquidity.vixLevel || '14' },
                           ].map((item) => (
-                            <div key={item.label} className="flex items-center justify-between text-[10px] font-mono">
+                            <div key={item.label} className="flex items-center justify-between text-[10px] font-sans">
                               <span className="text-slate-400">{item.label}</span>
                               <span className="text-emerald-500 dark:text-[#00f5c4] font-bold">{item.value}</span>
                             </div>
                           ))}
                           <div className="col-span-2 text-center mt-1">
                             <span className={cn(
-                              'inline-block px-2 py-0.5 text-[10px] font-mono font-bold',
+                              'inline-block px-2 py-0.5 text-[10px] font-sans font-bold',
                               flowData?.liquidity.bias === 'risk_on'
                                 ? 'bg-emerald-500/10 text-emerald-500 dark:text-[#00f5c4]'
                                 : flowData?.liquidity.bias === 'risk_off'
@@ -301,7 +301,7 @@ export function FlowAccordion() {
                             <div
                               key={m.name}
                               className={cn(
-                                'flex items-center justify-between px-2 py-1.5 text-[10px] font-mono',
+                                'flex items-center justify-between px-2 py-1.5 text-[10px] font-sans',
                                 m.isSelected
                                   ? 'bg-black/5 dark:bg-white/5 font-bold'
                                   : '',
@@ -326,7 +326,7 @@ export function FlowAccordion() {
                       {/* Link to page */}
                       <Link
                         href={isLocked ? '/register' : layer.page}
-                        className="inline-flex items-center gap-1 text-[10px] font-mono text-slate-400 hover:text-black dark:hover:text-white transition-colors"
+                        className="inline-flex items-center gap-1 text-[10px] font-sans text-slate-400 hover:text-black dark:hover:text-white transition-colors"
                       >
                         {isLocked ? 'SIGN UP TO UNLOCK' : 'EXPLORE IN TERMINAL'}
                         <ArrowRight className="w-3 h-3" />
@@ -343,12 +343,12 @@ export function FlowAccordion() {
         <div className="mt-8 text-center">
           <Link
             href="/register"
-            className="inline-flex items-center gap-2 px-6 py-3 text-xs font-mono font-semibold bg-black dark:bg-white text-white dark:text-black hover:opacity-80 transition-opacity"
+            className="inline-flex items-center gap-2 px-6 py-3 text-xs font-sans font-semibold bg-black dark:bg-white text-white dark:text-black hover:opacity-80 transition-opacity"
           >
             ACCESS FULL TERMINAL
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
-          <p className="text-[10px] font-mono text-slate-400 mt-2">
+          <p className="text-[10px] font-sans text-slate-400 mt-2">
             L1-L2 free &middot; L3-L7 premium
           </p>
         </div>

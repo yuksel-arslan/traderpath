@@ -628,7 +628,7 @@ export default function BilgeAdminPage() {
                     <p className="text-xs text-muted-foreground mb-2">{pattern.description}</p>
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">
-                        Matched: <span className="font-mono">{pattern.matchCount}</span> times
+                        Matched: <span className="font-sans">{pattern.matchCount}</span> times
                       </span>
                       {pattern.lastMatched && (
                         <span className="text-muted-foreground">
@@ -813,7 +813,7 @@ export default function BilgeAdminPage() {
                 <span className={`px-2 py-0.5 text-xs rounded ${getSeverityColor(pattern.severity)}`}>
                   {pattern.severity.toUpperCase()}
                 </span>
-                <span className="text-sm font-mono">{pattern.matchCount} matches</span>
+                <span className="text-sm font-sans">{pattern.matchCount} matches</span>
               </div>
               <h3 className="font-semibold mb-1">{pattern.name}</h3>
               <p className="text-sm text-muted-foreground mb-3">{pattern.description}</p>
@@ -1020,7 +1020,7 @@ export default function BilgeAdminPage() {
                         {issue.severity}
                       </span>
                     </div>
-                    <span className="font-mono text-muted-foreground">{issue.count} occurrences</span>
+                    <span className="font-sans text-muted-foreground">{issue.count} occurrences</span>
                   </div>
                 ))}
                 {weeklyReport.topIssues.length === 0 && (
@@ -1077,13 +1077,13 @@ export default function BilgeAdminPage() {
 
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Message</p>
-                <p className="font-mono text-sm bg-background p-3 rounded-lg">{selectedError.message}</p>
+                <p className="font-sans text-sm bg-background p-3 rounded-lg">{selectedError.message}</p>
               </div>
 
               {selectedError.stack && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Stack Trace</p>
-                  <pre className="font-mono text-xs bg-background p-3 rounded-lg overflow-x-auto max-h-[200px]">
+                  <pre className="font-sans text-xs bg-background p-3 rounded-lg overflow-x-auto max-h-[200px]">
                     {selectedError.stack}
                   </pre>
                 </div>
@@ -1092,19 +1092,19 @@ export default function BilgeAdminPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Endpoint</p>
-                  <p className="font-mono text-sm">{selectedError.method} {selectedError.endpoint || 'N/A'}</p>
+                  <p className="font-sans text-sm">{selectedError.method} {selectedError.endpoint || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Occurrences</p>
-                  <p className="font-mono text-sm">{selectedError.occurrenceCount}</p>
+                  <p className="font-sans text-sm">{selectedError.occurrenceCount}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">First Seen</p>
-                  <p className="font-mono text-sm">{new Date(selectedError.firstSeen).toLocaleString()}</p>
+                  <p className="font-sans text-sm">{new Date(selectedError.firstSeen).toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Last Seen</p>
-                  <p className="font-mono text-sm">{new Date(selectedError.lastSeen).toLocaleString()}</p>
+                  <p className="font-sans text-sm">{new Date(selectedError.lastSeen).toLocaleString()}</p>
                 </div>
               </div>
 

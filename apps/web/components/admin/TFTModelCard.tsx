@@ -179,28 +179,28 @@ export function TFTModelCard({ model, onActivate, onArchive, onDelete, isLoading
             <TrendingUp className="w-3.5 h-3.5" />
             Validation Loss
           </div>
-          <p className="font-mono font-semibold">{model.validationLoss.toFixed(4)}</p>
+          <p className="font-sans font-semibold">{model.validationLoss.toFixed(4)}</p>
         </div>
         <div className="p-3 bg-background/50 rounded-lg">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
             <Cpu className="w-3.5 h-3.5" />
             MAPE
           </div>
-          <p className="font-mono font-semibold">{model.mape.toFixed(2)}%</p>
+          <p className="font-sans font-semibold">{model.mape.toFixed(2)}%</p>
         </div>
         <div className="p-3 bg-background/50 rounded-lg">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
             <Database className="w-3.5 h-3.5" />
             Samples
           </div>
-          <p className="font-mono font-semibold">{model.trainingSamples.toLocaleString()}</p>
+          <p className="font-sans font-semibold">{model.trainingSamples.toLocaleString()}</p>
         </div>
         <div className="p-3 bg-background/50 rounded-lg">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
             <Clock className="w-3.5 h-3.5" />
             Training Time
           </div>
-          <p className="font-mono font-semibold">{formatTime(model.trainingTime)}</p>
+          <p className="font-sans font-semibold">{formatTime(model.trainingTime)}</p>
         </div>
       </div>
 

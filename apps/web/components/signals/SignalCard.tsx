@@ -386,25 +386,25 @@ export default function SignalCard({ signal, onClick }: SignalCardProps) {
           <div className="space-y-1 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-slate-600 dark:text-slate-400">Entry:</span>
-              <span className="font-mono font-medium text-slate-900 dark:text-white">
+              <span className="font-sans font-medium text-slate-900 dark:text-white">
                 ${formatPriceShort(signal.entryPrice)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-red-600 dark:text-red-400">SL:</span>
-              <span className="font-mono font-medium text-red-600 dark:text-red-400">
+              <span className="font-sans font-medium text-red-600 dark:text-red-400">
                 ${formatPriceShort(signal.stopLoss)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-green-600 dark:text-green-400">TP1:</span>
-              <span className="font-mono font-medium text-green-600 dark:text-green-400">
+              <span className="font-sans font-medium text-green-600 dark:text-green-400">
                 ${formatPriceShort(signal.takeProfit1)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-green-600 dark:text-green-400">TP2:</span>
-              <span className="font-mono font-medium text-green-600 dark:text-green-400">
+              <span className="font-sans font-medium text-green-600 dark:text-green-400">
                 ${formatPriceShort(signal.takeProfit2)}
               </span>
             </div>

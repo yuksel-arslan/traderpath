@@ -427,7 +427,7 @@ export default function FinancePage() {
                     min="0"
                     value={editingCosts.creditCostCapitalFlowL3L4 ?? 5}
                     onChange={(e) => setEditingCosts({ ...editingCosts, creditCostCapitalFlowL3L4: parseInt(e.target.value) || 0 })}
-                    className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
+                    className="w-20 px-3 py-2 border rounded-lg text-center font-sans bg-background"
                   />
                   <span className="text-sm text-muted-foreground">cr/use</span>
                 </div>
@@ -450,7 +450,7 @@ export default function FinancePage() {
                     min="0"
                     value={editingCosts.creditCostFullAnalysis ?? 10}
                     onChange={(e) => setEditingCosts({ ...editingCosts, creditCostFullAnalysis: parseInt(e.target.value) || 0 })}
-                    className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
+                    className="w-20 px-3 py-2 border rounded-lg text-center font-sans bg-background"
                   />
                   <span className="text-sm text-muted-foreground">cr/analysis</span>
                 </div>
@@ -473,7 +473,7 @@ export default function FinancePage() {
                     min="0"
                     value={editingCosts.creditCostAiExpert ?? 5}
                     onChange={(e) => setEditingCosts({ ...editingCosts, creditCostAiExpert: parseInt(e.target.value) || 0 })}
-                    className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
+                    className="w-20 px-3 py-2 border rounded-lg text-center font-sans bg-background"
                   />
                   <span className="text-sm text-muted-foreground">cr/chat</span>
                 </div>
@@ -496,7 +496,7 @@ export default function FinancePage() {
                     min="0"
                     value={editingCosts.creditCostAiConcierge ?? 5}
                     onChange={(e) => setEditingCosts({ ...editingCosts, creditCostAiConcierge: parseInt(e.target.value) || 0 })}
-                    className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
+                    className="w-20 px-3 py-2 border rounded-lg text-center font-sans bg-background"
                   />
                   <span className="text-sm text-muted-foreground">cr/chat</span>
                 </div>
@@ -510,22 +510,22 @@ export default function FinancePage() {
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-purple-500" />
                     <span className="text-muted-foreground">L3+L4:</span>
-                    <span className="font-mono font-medium">{editingCosts.creditCostCapitalFlowL3L4 ?? 5} cr</span>
+                    <span className="font-sans font-medium">{editingCosts.creditCostCapitalFlowL3L4 ?? 5} cr</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-violet-500" />
                     <span className="text-muted-foreground">Analysis:</span>
-                    <span className="font-mono font-medium">{editingCosts.creditCostFullAnalysis ?? 10} cr</span>
+                    <span className="font-sans font-medium">{editingCosts.creditCostFullAnalysis ?? 10} cr</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-amber-500" />
                     <span className="text-muted-foreground">AI Expert:</span>
-                    <span className="font-mono font-medium">{editingCosts.creditCostAiExpert ?? 5} cr</span>
+                    <span className="font-sans font-medium">{editingCosts.creditCostAiExpert ?? 5} cr</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-emerald-500" />
                     <span className="text-muted-foreground">Concierge:</span>
-                    <span className="font-mono font-medium">{editingCosts.creditCostAiConcierge ?? 5} cr</span>
+                    <span className="font-sans font-medium">{editingCosts.creditCostAiConcierge ?? 5} cr</span>
                   </div>
                 </div>
               </div>
@@ -666,7 +666,7 @@ export default function FinancePage() {
                         min="0"
                         value={editingCosts[key] ?? ''}
                         onChange={(e) => setEditingCosts({ ...editingCosts, [key]: parseInt(e.target.value) || 0 })}
-                        className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
+                        className="w-20 px-3 py-2 border rounded-lg text-center font-sans bg-background"
                         disabled={comingSoon}
                       />
                     </div>
@@ -700,7 +700,7 @@ export default function FinancePage() {
                         min="0"
                         value={editingCosts[key] ?? ''}
                         onChange={(e) => setEditingCosts({ ...editingCosts, [key]: parseInt(e.target.value) || 0 })}
-                        className="w-20 px-3 py-2 border rounded-lg text-center font-mono bg-background"
+                        className="w-20 px-3 py-2 border rounded-lg text-center font-sans bg-background"
                       />
                     </div>
                   ))}
@@ -731,7 +731,7 @@ export default function FinancePage() {
                         min="0"
                         value={editingCosts[key] ?? ''}
                         onChange={(e) => setEditingCosts({ ...editingCosts, [key]: parseInt(e.target.value) || 0 })}
-                        className="w-full px-2 py-1 border rounded text-center font-mono text-sm bg-background"
+                        className="w-full px-2 py-1 border rounded text-center font-sans text-sm bg-background"
                       />
                     </div>
                   ))}
@@ -764,7 +764,7 @@ export default function FinancePage() {
                         min="0"
                         value={editingCosts[key] ?? ''}
                         onChange={(e) => setEditingCosts({ ...editingCosts, [key]: parseInt(e.target.value) || 0 })}
-                        className="w-full px-2 py-1 border border-violet-200 dark:border-violet-700 rounded text-center font-mono text-sm bg-background"
+                        className="w-full px-2 py-1 border border-violet-200 dark:border-violet-700 rounded text-center font-sans text-sm bg-background"
                       />
                     </div>
                   ))}
@@ -1024,8 +1024,8 @@ export default function FinancePage() {
                           {pkg.credits}
                           {pkg.bonusCredits > 0 && <span className="text-green-500 ml-1">+{pkg.bonusCredits}</span>}
                         </td>
-                        <td className="p-4 font-mono">${parseFloat(pkg.priceUsd).toFixed(2)}</td>
-                        <td className="p-4 font-mono text-muted-foreground">${parseFloat(pkg.pricePerCredit).toFixed(4)}</td>
+                        <td className="p-4 font-sans">${parseFloat(pkg.priceUsd).toFixed(2)}</td>
+                        <td className="p-4 font-sans text-muted-foreground">${parseFloat(pkg.pricePerCredit).toFixed(4)}</td>
                         <td className="p-4">
                           <button
                             onClick={() => handleTogglePackage(pkg)}

@@ -187,7 +187,7 @@ function NumberInput({
             step={step}
             value={value}
             onChange={(e) => onChange(Number(e.target.value))}
-            className="w-20 px-2 py-1.5 text-right font-mono text-sm border border-slate-700 rounded-lg bg-slate-800/50 text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
+            className="w-20 px-2 py-1.5 text-right font-sans text-sm border border-slate-700 rounded-lg bg-slate-800/50 text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
           />
           {suffix && <span className="text-sm text-slate-500">{suffix}</span>}
         </div>
@@ -542,7 +542,7 @@ export default function SimulationPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-slate-300">Full Day Cost</span>
                     <div className="text-right">
-                      <span className="font-mono text-lg text-violet-400">{summary.totalDailyCredits} cr</span>
+                      <span className="font-sans text-lg text-violet-400">{summary.totalDailyCredits} cr</span>
                       <span className="text-slate-500 ml-2">(${summary.dailyPassUsd.toFixed(2)})</span>
                     </div>
                   </div>
@@ -633,11 +633,11 @@ export default function SimulationPage() {
                 <div className="pt-3 border-t border-white/10 space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-400">Fixed Base</span>
-                    <span className="font-mono text-slate-300">${summary.monthlyFixedBase}/mo</span>
+                    <span className="font-sans text-slate-300">${summary.monthlyFixedBase}/mo</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Variable</span>
-                    <span className="font-mono text-amber-400">${summary.variableCostPerDAU.toFixed(3)}/DAU/day</span>
+                    <span className="font-sans text-amber-400">${summary.variableCostPerDAU.toFixed(3)}/DAU/day</span>
                   </div>
                   <div className="flex justify-between text-xs text-slate-500">
                     <span>At {summary.finalDAU} DAU</span>
@@ -728,11 +728,11 @@ export default function SimulationPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-500">Capital Flow (L3+L4)</span>
-                    <span className="font-mono text-violet-300">${summary.capitalFlowTotal.toFixed(0)}</span>
+                    <span className="font-sans text-violet-300">${summary.capitalFlowTotal.toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Asset Analysis</span>
-                    <span className="font-mono text-teal-300">${summary.analysisTotal.toFixed(0)}</span>
+                    <span className="font-sans text-teal-300">${summary.analysisTotal.toFixed(0)}</span>
                   </div>
                 </div>
               </div>
@@ -745,11 +745,11 @@ export default function SimulationPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-500">Basic ({summary.finalBasicSubs} subs)</span>
-                    <span className="font-mono text-cyan-300">${(summary.finalBasicSubs * config.signalBasicPrice * weeks / 4).toFixed(0)}</span>
+                    <span className="font-sans text-cyan-300">${(summary.finalBasicSubs * config.signalBasicPrice * weeks / 4).toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">Pro ({summary.finalProSubs} subs)</span>
-                    <span className="font-mono text-teal-300">${(summary.finalProSubs * config.signalProPrice * weeks / 4).toFixed(0)}</span>
+                    <span className="font-sans text-teal-300">${(summary.finalProSubs * config.signalProPrice * weeks / 4).toFixed(0)}</span>
                   </div>
                 </div>
               </div>
@@ -981,13 +981,13 @@ export default function SimulationPage() {
                         <td className="p-2 font-medium text-white">{w.week}</td>
                         <td className="p-2 text-right text-slate-300">{w.totalUsers}</td>
                         <td className="p-2 text-right text-pink-400">{w.avgDailyActiveUsers}</td>
-                        <td className="p-2 text-right font-mono text-green-400">${w.totalRevenue}</td>
-                        <td className="p-2 text-right font-mono text-slate-400">${w.fixedCost}</td>
-                        <td className="p-2 text-right font-mono text-amber-400">${w.variableCost}</td>
-                        <td className="p-2 text-right font-mono text-violet-400">${w.aiCost}</td>
-                        <td className="p-2 text-right font-mono text-red-400">${w.totalCost}</td>
-                        <td className={`p-2 text-right font-mono ${w.profit >= 0 ? 'text-blue-400' : 'text-red-400'}`}>${w.profit}</td>
-                        <td className={`p-2 text-right font-mono ${w.cumProfit >= 0 ? 'text-amber-400' : 'text-red-400'}`}>${w.cumProfit}</td>
+                        <td className="p-2 text-right font-sans text-green-400">${w.totalRevenue}</td>
+                        <td className="p-2 text-right font-sans text-slate-400">${w.fixedCost}</td>
+                        <td className="p-2 text-right font-sans text-amber-400">${w.variableCost}</td>
+                        <td className="p-2 text-right font-sans text-violet-400">${w.aiCost}</td>
+                        <td className="p-2 text-right font-sans text-red-400">${w.totalCost}</td>
+                        <td className={`p-2 text-right font-sans ${w.profit >= 0 ? 'text-blue-400' : 'text-red-400'}`}>${w.profit}</td>
+                        <td className={`p-2 text-right font-sans ${w.cumProfit >= 0 ? 'text-amber-400' : 'text-red-400'}`}>${w.cumProfit}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -159,7 +159,7 @@ export default function TwoFactorPage() {
                   value={backupCode}
                   onChange={(e) => setBackupCode(e.target.value.toUpperCase())}
                   placeholder="XXXX-XXXX"
-                  className="w-full px-4 py-3 bg-background border rounded-lg text-center text-xl tracking-widest font-mono focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 bg-background border rounded-lg text-center text-xl tracking-widest font-sans focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   maxLength={9}
                 />
               </div>
@@ -196,7 +196,7 @@ export default function TwoFactorPage() {
                     value={digit}
                     onChange={(e) => handleCodeChange(index, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(index, e)}
-                    className="w-12 h-14 bg-background border rounded-lg text-center text-2xl font-mono focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                    className="w-12 h-14 bg-background border rounded-lg text-center text-2xl font-sans focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                     maxLength={1}
                     disabled={isLoading}
                   />

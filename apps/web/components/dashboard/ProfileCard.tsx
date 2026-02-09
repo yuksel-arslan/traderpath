@@ -134,11 +134,11 @@ export function ProfileCard() {
       {/* Progress Bar - 12px height, turkuaz fill */}
       <div className="mb-4">
         <div className="flex items-center justify-between text-xs mb-1.5">
-          <span className="text-gray-400 font-mono tabular-nums">
+          <span className="text-gray-400 font-sans tabular-nums">
             {data.analysisPoints.toLocaleString()} AP
           </span>
           {data.nextTier ? (
-            <span className="text-gray-500 font-mono tabular-nums">
+            <span className="text-gray-500 font-sans tabular-nums">
               {data.nextTier.apRequired.toLocaleString()} AP
             </span>
           ) : (
@@ -156,7 +156,7 @@ export function ProfileCard() {
           />
         </div>
         {data.nextTier && (
-          <p className="text-[10px] text-gray-500 mt-1.5 font-mono">
+          <p className="text-[10px] text-gray-500 mt-1.5 font-sans">
             {data.nextTier.apRemaining.toLocaleString()} AP to {data.nextTier.name}
           </p>
         )}
@@ -171,7 +171,7 @@ export function ProfileCard() {
         ].map(stat => (
           <div key={stat.label} className="text-center p-2 rounded-xl bg-white/[0.02]">
             <stat.icon className={cn('w-3.5 h-3.5 mx-auto mb-0.5', stat.color)} />
-            <p className="text-sm font-bold font-mono text-white">{stat.value}</p>
+            <p className="text-sm font-bold font-sans text-white">{stat.value}</p>
             <p className="text-[10px] text-gray-500">{stat.label}</p>
           </div>
         ))}
