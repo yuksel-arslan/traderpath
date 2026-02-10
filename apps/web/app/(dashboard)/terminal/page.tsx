@@ -1243,16 +1243,13 @@ function TerminalHeader() {
   }, []);
 
   return (
-    <header className="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-800">
+    <header className="flex items-center justify-between py-3">
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
           <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
         </div>
-        <span className="text-sm font-sans font-bold text-neutral-900 dark:text-white tracking-tight">
-          TraderPath
-        </span>
-        <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+        <span className="text-sm font-sans font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
           Terminal
         </span>
       </div>
