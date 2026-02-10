@@ -699,9 +699,9 @@ export default function ScreenerPage() {
     : '0';
 
   return (
-    <div className="h-screen flex flex-col bg-white dark:bg-black text-black dark:text-white overflow-hidden">
+    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-black dark:text-white overflow-hidden">
       {/* Header */}
-      <div className="border-b border-black/[0.06] dark:border-white/[0.06] shrink-0">
+      <div className="shrink-0">
         <div className="max-w-[1400px] mx-auto px-3 py-3 flex items-center justify-between gap-3">
           <div>
             <h1 className="text-sm font-sans font-semibold tracking-tight">SCREENER</h1>
@@ -719,7 +719,7 @@ export default function ScreenerPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="border-b border-black/[0.06] dark:border-white/[0.06] shrink-0">
+      <div className="shrink-0">
         <div className="max-w-[1400px] mx-auto px-3 py-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           {/* Search */}
           <div className="relative flex-1 max-w-xs">
@@ -916,17 +916,6 @@ export default function ScreenerPage() {
         </main>
       </div>
 
-      {/* Footer summary */}
-      <div className="border-t border-black/[0.06] dark:border-white/[0.06] shrink-0">
-        <div className="max-w-[1400px] mx-auto px-3 py-2 flex items-center justify-between text-[10px] font-sans text-slate-400">
-          <span>
-            {filtered.length} of {MOCK_ASSETS.length} assets &middot; Sorted by {sortKey} {sortDir}
-          </span>
-          <span className="hidden sm:inline">
-            GO: {goCount} &middot; COND: {filtered.filter((a) => a.verdict === 'COND').length} &middot; WAIT: {filtered.filter((a) => a.verdict === 'WAIT').length} &middot; AVOID: {filtered.filter((a) => a.verdict === 'AVOID').length}
-          </span>
-        </div>
-      </div>
     </div>
   );
 }

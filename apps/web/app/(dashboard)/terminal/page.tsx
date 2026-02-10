@@ -616,7 +616,7 @@ function L4VerdictEngine({ verdict }: { verdict: VerdictData }) {
       <SectionLabel layer="L4" label="Verdict Engine" />
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
         {/* Regime bar */}
-        <div className="bg-neutral-50 dark:bg-neutral-900/50 px-3 py-2 flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
+        <div className="px-3 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className={cn('text-xs font-sans font-bold tracking-wider', regime.color)}>
               {regime.label}
@@ -631,7 +631,7 @@ function L4VerdictEngine({ verdict }: { verdict: VerdictData }) {
         </div>
 
         {/* Decision Gate checklist */}
-        <div className="bg-white dark:bg-neutral-950 px-3 py-2 border-b border-neutral-200 dark:border-neutral-800">
+        <div className="px-3 py-2">
           <div className="space-y-1.5">
             {verdict.gates.map((gate, i) => (
               <div key={i} className="flex items-start gap-2">
@@ -678,7 +678,7 @@ function L4VerdictEngine({ verdict }: { verdict: VerdictData }) {
 
         {/* Summary line */}
         {allPassed && verdict.buy && (
-          <div className="bg-white dark:bg-neutral-950 px-3 py-2 border-t border-neutral-200 dark:border-neutral-800">
+          <div className="px-3 py-2">
             <p className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 leading-relaxed">
               All gates passed. Primary opportunity in {verdict.buy.market} ({verdict.buy.phase} phase).
               {verdict.sell ? ` Consider reducing ${verdict.sell.market} exposure.` : ''}
@@ -1243,16 +1243,13 @@ function TerminalHeader() {
   }, []);
 
   return (
-    <header className="flex items-center justify-between py-3 border-b border-neutral-200 dark:border-neutral-800">
+    <header className="flex items-center justify-between py-3">
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
           <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
         </div>
-        <span className="text-sm font-sans font-bold text-neutral-900 dark:text-white tracking-tight">
-          TraderPath
-        </span>
-        <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+        <span className="text-sm font-sans font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
           Terminal
         </span>
       </div>
@@ -1492,17 +1489,6 @@ export default function TestPage() {
           </main>
         </div>
 
-        {/* Footer */}
-        <footer className="shrink-0 py-3 border-t border-neutral-200 dark:border-neutral-800">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
-              TraderPath Financial Intelligence Terminal
-            </span>
-            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
-              Data for educational purposes only
-            </span>
-          </div>
-        </footer>
       </div>
     </div>
   );
