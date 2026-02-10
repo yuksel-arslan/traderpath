@@ -32,17 +32,24 @@
     }
 
     .wrap{ width:min(880px,100%); }
-    
+
     .top{
-      display:flex; align-items:center; justify-content:flex-start;
+      display:flex; align-items:center; gap: 12px;
       margin-bottom: 24px;
     }
-    
-    /* Logo Alanı */
+
+    /* Logo */
     .logo-img {
-      height: 32px;
+      height: 36px;
       width: auto;
       display: block;
+    }
+
+    .brand-name{
+      font-size: 18px; 
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text);
     }
 
     .card{
@@ -160,9 +167,8 @@
 <body>
   <div class="wrap">
     <div class="top">
-      <!-- Logonuzun yolu /logo.svg ise bu şekilde çalışır -->
-      <img src="/logo.svg" alt="TraderPath Logo" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-      <div class="brand-name" style="display:none; font-size: 11px; font-weight: 800; letter-spacing: .32em; text-transform: uppercase; color: var(--teal);">TraderPath</div>
+      <img src="/logo.svg" alt="TraderPath" class="logo-img">
+      <span class="brand-name">TraderPath</span>
     </div>
 
     <section class="card">
