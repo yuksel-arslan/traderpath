@@ -40,6 +40,20 @@ const publicAuthPaths = ['/forgot-password', '/reset-password', '/verify-email',
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // ─── Maintenance Mode Gate ─────────────────────────────────────
+  // Set NEXT_PUBLIC_MAINTENANCE_MODE=true in Vercel / .env to enable.
+  // Only the /maintenance page itself (and static assets) are allowed through.
+  const maintenanceMode = process.env['NEXT_PUBLIC_MAINTENANCE_MODE'] === 'true';
+  if (maintenanceMode && pathname !== '/maintenance') {
+    const maintenanceUrl = new URL('/maintenance', request.url);
+    return NextResponse.redirect(maintenanceUrl);
+  }
+  // If maintenance mode is OFF but someone navigates to /maintenance, redirect home
+  if (!maintenanceMode && pathname === '/maintenance') {
+    const homeUrl = new URL('/', request.url);
+    return NextResponse.redirect(homeUrl);
+  }
+
   // Check for our auth session cookie
   const sessionCookie = request.cookies.get('auth-session');
   const authTokenCookie = request.cookies.get('auth-token');
