@@ -460,98 +460,87 @@ function AssetTable({
   onSelect: (a: Asset) => void;
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs font-sans">
-        <thead>
-          <tr className="border-b border-black/[0.06] dark:border-white/[0.06]">
-            <th className="text-left px-3 py-2">
-              <SortHeader label="Asset" sortKey="symbol" currentSort={sortKey} currentDir={sortDir} onSort={onSort} />
-            </th>
-            <th className="text-right px-3 py-2">
-              <SortHeader label="Price" sortKey="price" currentSort={sortKey} currentDir={sortDir} onSort={onSort} className="justify-end" />
-            </th>
-            <th className="text-right px-3 py-2">
-              <SortHeader label="24h" sortKey="change24h" currentSort={sortKey} currentDir={sortDir} onSort={onSort} className="justify-end" />
-            </th>
-            <th className="text-right px-3 py-2 hidden sm:table-cell">
-              <SortHeader label="Volume" sortKey="volume" currentSort={sortKey} currentDir={sortDir} onSort={onSort} className="justify-end" />
-            </th>
-            <th className="text-center px-3 py-2">
-              <SortHeader label="Score" sortKey="score" currentSort={sortKey} currentDir={sortDir} onSort={onSort} className="justify-center" />
-            </th>
-            <th className="text-center px-3 py-2">
-              <SortHeader label="Verdict" sortKey="verdict" currentSort={sortKey} currentDir={sortDir} onSort={onSort} className="justify-center" />
-            </th>
-            <th className="text-center px-3 py-2 hidden md:table-cell">
-              <span className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500">Dir</span>
-            </th>
-            <th className="text-center px-3 py-2 hidden md:table-cell">
-              <SortHeader label="Phase" sortKey="phase" currentSort={sortKey} currentDir={sortDir} onSort={onSort} className="justify-center" />
-            </th>
-            <th className="text-center px-3 py-2 hidden lg:table-cell">
-              <span className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-500">Flow</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.map((asset) => (
-            <tr
-              key={asset.symbol}
-              onClick={() => onSelect(asset)}
-              className={cn(
-                'border-b border-black/[0.03] dark:border-white/[0.03] hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors cursor-pointer',
-                selectedSymbol === asset.symbol && 'bg-[#14B8A6]/5 dark:bg-[#5EEAD4]/5 border-l-2 border-l-[#14B8A6] dark:border-l-[#5EEAD4]',
-              )}
-            >
-              <td className="px-3 py-2.5">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-[8px] font-bold">
-                    {asset.symbol.slice(0, 2)}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-xs">{asset.symbol}</div>
-                    <div className="text-[10px] text-slate-400 hidden sm:block">{asset.name}</div>
-                  </div>
-                  <span className="text-[9px] px-1 py-0.5 bg-black/5 dark:bg-white/5 rounded text-slate-500 hidden md:inline">
-                    {asset.market}
-                  </span>
-                </div>
-              </td>
-              <td className="text-right px-3 py-2.5 tabular-nums font-semibold">${fmtPrice(asset.price)}</td>
-              <td className={cn('text-right px-3 py-2.5 tabular-nums font-semibold', asset.change24h > 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : asset.change24h < 0 ? 'text-red-500 dark:text-red-400' : 'text-slate-400')}>
+    <div>
+      {/* Sort row */}
+      <div className="flex items-center gap-4 px-1 mb-2 text-xs font-sans">
+        <SortHeader label="Asset" sortKey="symbol" currentSort={sortKey} currentDir={sortDir} onSort={onSort} />
+        <SortHeader label="Price" sortKey="price" currentSort={sortKey} currentDir={sortDir} onSort={onSort} />
+        <SortHeader label="24h" sortKey="change24h" currentSort={sortKey} currentDir={sortDir} onSort={onSort} />
+        <span className="hidden sm:inline"><SortHeader label="Volume" sortKey="volume" currentSort={sortKey} currentDir={sortDir} onSort={onSort} /></span>
+        <SortHeader label="Score" sortKey="score" currentSort={sortKey} currentDir={sortDir} onSort={onSort} />
+        <SortHeader label="Verdict" sortKey="verdict" currentSort={sortKey} currentDir={sortDir} onSort={onSort} />
+        <span className="hidden md:inline"><SortHeader label="Phase" sortKey="phase" currentSort={sortKey} currentDir={sortDir} onSort={onSort} /></span>
+      </div>
+
+      {/* Card list */}
+      <div className="space-y-1.5">
+        {filtered.map((asset) => (
+          <button
+            key={asset.symbol}
+            onClick={() => onSelect(asset)}
+            className={cn(
+              'w-full text-left rounded-xl px-3 py-2.5 flex items-center gap-3 transition-all duration-150 text-xs font-sans',
+              selectedSymbol === asset.symbol
+                ? 'bg-[#14B8A6]/5 dark:bg-[#5EEAD4]/5 ring-1 ring-[#14B8A6]/30 dark:ring-[#5EEAD4]/20'
+                : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.03]',
+            )}
+          >
+            {/* Asset icon + name */}
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="w-6 h-6 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-[8px] font-bold shrink-0">
+                {asset.symbol.slice(0, 2)}
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold text-xs">{asset.symbol}</div>
+                <div className="text-[10px] text-slate-400 hidden sm:block truncate">{asset.name}</div>
+              </div>
+              <span className="text-[9px] px-1 py-0.5 bg-black/5 dark:bg-white/5 rounded text-slate-500 hidden md:inline shrink-0">
+                {asset.market}
+              </span>
+            </div>
+
+            {/* Price + 24h */}
+            <div className="text-right shrink-0">
+              <div className="tabular-nums font-semibold">${fmtPrice(asset.price)}</div>
+              <div className={cn('text-[10px] tabular-nums font-semibold', asset.change24h > 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : asset.change24h < 0 ? 'text-red-500 dark:text-red-400' : 'text-slate-400')}>
                 {asset.change24h > 0 ? '+' : ''}{asset.change24h.toFixed(2)}%
-              </td>
-              <td className="text-right px-3 py-2.5 tabular-nums text-slate-500 hidden sm:table-cell">${fmtVol(asset.volume)}</td>
-              <td className="text-center px-3 py-2.5">
-                <span className={cn('inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tabular-nums', asset.score >= 7 ? 'bg-emerald-500/10 dark:bg-[#00f5c4]/10 text-emerald-600 dark:text-[#00f5c4]' : asset.score >= 5 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-red-500/10 text-red-500 dark:text-red-400')}>
-                  {asset.score.toFixed(1)}
-                </span>
-              </td>
-              <td className="text-center px-3 py-2.5">
-                <span className={cn('inline-block px-1.5 py-0.5 rounded text-[10px] font-bold uppercase', verdictBg(asset.verdict), verdictColor(asset.verdict))}>
-                  {asset.verdict}
-                </span>
-              </td>
-              <td className="text-center px-3 py-2.5 hidden md:table-cell">
-                <div className="flex items-center justify-center"><DirIcon dir={asset.direction} /></div>
-              </td>
-              <td className={cn('text-center px-3 py-2.5 text-[10px] font-bold hidden md:table-cell', phaseColor(asset.phase))}>
-                {asset.phase}
-              </td>
-              <td className="px-3 py-2.5 hidden lg:table-cell">
-                <FlowBar value={asset.flowScore} />
-              </td>
-            </tr>
-          ))}
-          {filtered.length === 0 && (
-            <tr>
-              <td colSpan={9} className="text-center py-12 text-slate-400 text-xs">
-                No assets match your filters.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+              </div>
+            </div>
+
+            {/* Volume */}
+            <span className="tabular-nums text-slate-500 hidden sm:block w-16 text-right shrink-0">${fmtVol(asset.volume)}</span>
+
+            {/* Score */}
+            <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-bold tabular-nums shrink-0', asset.score >= 7 ? 'bg-emerald-500/10 dark:bg-[#00f5c4]/10 text-emerald-600 dark:text-[#00f5c4]' : asset.score >= 5 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-red-500/10 text-red-500 dark:text-red-400')}>
+              {asset.score.toFixed(1)}
+            </span>
+
+            {/* Verdict + Dir */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-bold uppercase', verdictBg(asset.verdict), verdictColor(asset.verdict))}>
+                {asset.verdict}
+              </span>
+              <div className="hidden md:block"><DirIcon dir={asset.direction} /></div>
+            </div>
+
+            {/* Phase */}
+            <span className={cn('text-[10px] font-bold hidden md:block shrink-0', phaseColor(asset.phase))}>
+              {asset.phase}
+            </span>
+
+            {/* Flow */}
+            <div className="hidden lg:block w-16 shrink-0">
+              <FlowBar value={asset.flowScore} />
+            </div>
+          </button>
+        ))}
+
+        {filtered.length === 0 && (
+          <div className="text-center py-12 text-slate-400 text-xs">
+            No assets match your filters.
+          </div>
+        )}
+      </div>
     </div>
   );
 }

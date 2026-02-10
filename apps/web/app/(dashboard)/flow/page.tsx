@@ -293,7 +293,7 @@ function L1Liquidity({ metrics }: { metrics: LiquidityMetric[] }) {
             </button>
             {expanded === m.id && (
               <div className="px-3 pb-3 pt-0">
-                <div className="border-t border-neutral-100 dark:border-neutral-800/50 pt-2">
+                <div className="pt-1">
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
                     {m.description}
                   </p>
@@ -371,47 +371,45 @@ function L3Sectors({ sectors: sectorData, marketFilter }: { sectors: SectorDetai
   return (
     <section>
       <SectionLabel layer="L3" label="Sector Activity" count={filtered.length} />
-      <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs min-w-[500px]">
-            <thead>
-              <tr className="bg-neutral-50 dark:bg-neutral-900/50">
-                <th className="text-left p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Sector</th>
-                <th className="text-left p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Market</th>
-                <th className="text-right p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">7D Flow</th>
-                <th className="text-right p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden sm:table-cell">30D Flow</th>
-                <th className="text-right p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden sm:table-cell">Dom.</th>
-                <th className="text-center p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Trend</th>
-                <th className="text-left p-2.5 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden md:table-cell">Top Assets</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
-              {filtered.map((s) => (
-                <tr key={s.name} className="bg-white dark:bg-black hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition-colors">
-                  <td className="p-2.5 font-medium text-neutral-900 dark:text-white">{s.name}</td>
-                  <td className="p-2.5 text-neutral-400 dark:text-neutral-500 font-sans text-[10px]">{s.market}</td>
-                  <td className="p-2.5 text-right"><Delta value={s.flow7d} /></td>
-                  <td className="p-2.5 text-right hidden sm:table-cell"><Delta value={s.flow30d} /></td>
-                  <td className="p-2.5 text-right font-sans text-neutral-500 dark:text-neutral-400 hidden sm:table-cell tabular-nums">{s.dominance}%</td>
-                  <td className="p-2.5 text-center">
-                    {s.trending === 'up' && <ArrowUpRight className="w-3.5 h-3.5 text-[#22C55E] dark:text-[#4ADE80] mx-auto" />}
-                    {s.trending === 'down' && <ArrowDownRight className="w-3.5 h-3.5 text-[#EF4444] dark:text-[#F87171] mx-auto" />}
-                    {s.trending === 'flat' && <Minus className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 mx-auto" />}
-                  </td>
-                  <td className="p-2.5 hidden md:table-cell">
-                    <div className="flex gap-1">
-                      {s.topAssets.map((a) => (
-                        <span key={a} className="px-1 py-0.5 text-[10px] font-sans bg-neutral-100 dark:bg-neutral-800 rounded text-neutral-600 dark:text-neutral-400">
-                          {a}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
+      <div className="space-y-1.5">
+        {filtered.map((s) => (
+          <div key={s.name} className="rounded-xl px-3 py-2.5 flex items-center gap-3 text-xs hover:bg-neutral-50 dark:hover:bg-white/[0.03] transition-colors">
+            {/* Sector + Market */}
+            <div className="min-w-0 flex-1">
+              <div className="font-medium text-neutral-900 dark:text-white">{s.name}</div>
+              <div className="text-[10px] text-neutral-400 dark:text-neutral-500 font-sans">{s.market}</div>
+            </div>
+
+            {/* Flows */}
+            <div className="text-right shrink-0">
+              <div className="text-[10px] text-neutral-400 dark:text-neutral-500 font-sans">7D</div>
+              <Delta value={s.flow7d} />
+            </div>
+            <div className="text-right shrink-0 hidden sm:block">
+              <div className="text-[10px] text-neutral-400 dark:text-neutral-500 font-sans">30D</div>
+              <Delta value={s.flow30d} />
+            </div>
+
+            {/* Dominance */}
+            <span className="font-sans text-neutral-500 dark:text-neutral-400 tabular-nums hidden sm:block shrink-0 w-10 text-right">{s.dominance}%</span>
+
+            {/* Trend */}
+            <div className="shrink-0">
+              {s.trending === 'up' && <ArrowUpRight className="w-3.5 h-3.5 text-[#22C55E] dark:text-[#4ADE80]" />}
+              {s.trending === 'down' && <ArrowDownRight className="w-3.5 h-3.5 text-[#EF4444] dark:text-[#F87171]" />}
+              {s.trending === 'flat' && <Minus className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />}
+            </div>
+
+            {/* Top Assets */}
+            <div className="flex gap-1 hidden md:flex shrink-0">
+              {s.topAssets.map((a) => (
+                <span key={a} className="px-1 py-0.5 text-[10px] font-sans bg-neutral-100 dark:bg-neutral-800 rounded text-neutral-600 dark:text-neutral-400">
+                  {a}
+                </span>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -425,7 +423,7 @@ function RotationMatrix({ flows }: { flows: MarketFlowDetail[] }) {
   return (
     <section>
       <SectionLabel layer="L2" label="Rotation Matrix" />
-      <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-black p-4">
+      <div className="rounded-xl bg-neutral-50 dark:bg-white/[0.02] p-4">
         <div className="grid grid-cols-4 gap-4">
           {flows.map((f) => {
             const isActive = f.rotationSignal === 'entering';
