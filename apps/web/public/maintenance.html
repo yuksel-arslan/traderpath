@@ -14,8 +14,6 @@
       --muted:#8B8B8B;
       --muted2:#4A4A4A;
       --teal:#40E0D0;
-      --teal10: rgba(64,224,208,.10);
-      --teal25: rgba(64,224,208,.25);
       --border: rgba(255,255,255,.08);
     }
 
@@ -34,23 +32,23 @@
     .wrap{ width:min(880px,100%); }
     
     .top{
-      display:flex; align-items:center; gap: 12px;
+      display:flex; align-items:center; gap: 14px;
       margin-bottom: 24px;
     }
     
-    /* Logo */
     .logo-img {
-      height: 36px;
+      height: 38px;
       width: auto;
       display: block;
     }
 
-    /* Gradient text for brand name */
+    /* LOGO COLORS DYNAMIC GRADIENT (Teal to Red/Pink) */
     .brand-name {
-      font-size: 18px;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-      background: linear-gradient(90deg, #40E0D0 0%, #0A0A0A 100%);
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      /* Logonuzdaki Teal ve Kırmızı/Pembe tonlarının tam geçişi /
+      background: linear-gradient(90deg, #40E0D0 0%, #FF5A5A 50%, #FF2E2E 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -126,8 +124,8 @@
     }
 
     .chip{
-      border: 1px solid var(--teal25);
-      background: var(--teal10);
+      border: 1px solid rgba(64,224,208,0.25);
+      background: rgba(64,224,208,0.1);
       color: var(--teal);
       border-radius: 10px;
       padding: 10px 12px;
