@@ -198,7 +198,7 @@ function verdictColor(v: Verdict): string {
   switch (v) {
     case 'GO': return 'text-emerald-500 dark:text-[#00f5c4]';
     case 'COND': return 'text-amber-500 dark:text-amber-400';
-    case 'WAIT': return 'text-slate-500 dark:text-slate-400';
+    case 'WAIT': return 'text-neutral-500 dark:text-neutral-400';
     case 'AVOID': return 'text-red-500 dark:text-red-400';
   }
 }
@@ -207,7 +207,7 @@ function verdictBg(v: Verdict): string {
   switch (v) {
     case 'GO': return 'bg-emerald-500/10 dark:bg-[#00f5c4]/10';
     case 'COND': return 'bg-amber-500/10';
-    case 'WAIT': return 'bg-slate-500/10';
+    case 'WAIT': return 'bg-neutral-500/10';
     case 'AVOID': return 'bg-red-500/10';
   }
 }
@@ -218,7 +218,7 @@ function phaseColor(p: string): string {
     case 'MID': return 'text-amber-500 dark:text-amber-400';
     case 'LATE': return 'text-orange-500';
     case 'EXIT': return 'text-red-500 dark:text-red-400';
-    default: return 'text-slate-500';
+    default: return 'text-neutral-500';
   }
 }
 
@@ -242,14 +242,14 @@ function signalColor(s: 'bullish' | 'bearish' | 'neutral'): string {
   switch (s) {
     case 'bullish': return 'text-emerald-500 dark:text-[#00f5c4]';
     case 'bearish': return 'text-red-500 dark:text-red-400';
-    case 'neutral': return 'text-slate-500 dark:text-slate-400';
+    case 'neutral': return 'text-neutral-500 dark:text-neutral-400';
   }
 }
 
 function DirIcon({ dir }: { dir: string }) {
   if (dir === 'long') return <ArrowUpRight className="w-3 h-3 text-emerald-500 dark:text-[#00f5c4]" />;
   if (dir === 'short') return <ArrowDownRight className="w-3 h-3 text-red-500 dark:text-red-400" />;
-  return <Minus className="w-3 h-3 text-slate-400" />;
+  return <Minus className="w-3 h-3 text-neutral-400" />;
 }
 
 // ---------------------------------------------------------------------------
@@ -296,7 +296,7 @@ function SortHeader({
         'flex items-center gap-0.5 text-[10px] uppercase tracking-wider font-medium transition-colors',
         active
           ? 'text-black dark:text-white'
-          : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300',
+          : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300',
         className,
       )}
     >
@@ -344,14 +344,14 @@ function StepPanel({ asset, stepId }: { asset: Asset; stepId: string }) {
       </div>
 
       {/* Summary */}
-      <p className="text-xs text-slate-500 dark:text-slate-400">{data.summary}</p>
+      <p className="text-xs text-neutral-500 dark:text-neutral-400">{data.summary}</p>
 
       {/* Details */}
       <div className="space-y-1.5">
         {data.details.map((d, i) => (
           <div key={i} className="flex items-center gap-2 text-[11px] font-sans">
-            <span className="text-slate-300 dark:text-slate-600">&middot;</span>
-            <span className="text-slate-600 dark:text-slate-300">{d}</span>
+            <span className="text-neutral-300 dark:text-neutral-600">&middot;</span>
+            <span className="text-neutral-600 dark:text-neutral-300">{d}</span>
           </div>
         ))}
       </div>
@@ -359,7 +359,7 @@ function StepPanel({ asset, stepId }: { asset: Asset; stepId: string }) {
       {/* Score bar */}
       <div className="pt-2">
         <div className="flex items-center justify-between text-[10px] font-sans mb-1">
-          <span className="text-slate-400">Score</span>
+          <span className="text-neutral-400">Score</span>
           <span className={statusColor(data.status)}>{data.score.toFixed(1)}/10</span>
         </div>
         <div className="w-full h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
@@ -405,7 +405,7 @@ function MLISPanel({ asset, layerId }: { asset: Asset; layerId: string }) {
 
       {/* Confidence */}
       <div className="flex items-center gap-3">
-        <div className="text-[10px] font-sans text-slate-400">Confidence</div>
+        <div className="text-[10px] font-sans text-neutral-400">Confidence</div>
         <div className="flex-1 h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full bg-violet-500 dark:bg-violet-400 transition-all"
@@ -417,10 +417,10 @@ function MLISPanel({ asset, layerId }: { asset: Asset; layerId: string }) {
 
       {/* Score */}
       <div className="flex items-center gap-3">
-        <div className="text-[10px] font-sans text-slate-400">Score</div>
+        <div className="text-[10px] font-sans text-neutral-400">Score</div>
         <div className="flex-1 h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
           <div
-            className={cn('h-full rounded-full transition-all', data.signal === 'bullish' ? 'bg-emerald-500 dark:bg-[#00f5c4]' : data.signal === 'bearish' ? 'bg-red-500' : 'bg-slate-400')}
+            className={cn('h-full rounded-full transition-all', data.signal === 'bullish' ? 'bg-emerald-500 dark:bg-[#00f5c4]' : data.signal === 'bearish' ? 'bg-red-500' : 'bg-neutral-400')}
             style={{ width: `${data.score}%` }}
           />
         </div>
@@ -431,8 +431,8 @@ function MLISPanel({ asset, layerId }: { asset: Asset; layerId: string }) {
       <div className="space-y-1.5 pt-1">
         {data.details.map((d, i) => (
           <div key={i} className="flex items-center gap-2 text-[11px] font-sans">
-            <span className="text-slate-300 dark:text-slate-600">&middot;</span>
-            <span className="text-slate-600 dark:text-slate-300">{d}</span>
+            <span className="text-neutral-300 dark:text-neutral-600">&middot;</span>
+            <span className="text-neutral-600 dark:text-neutral-300">{d}</span>
           </div>
         ))}
       </div>
@@ -492,9 +492,9 @@ function AssetTable({
               </div>
               <div className="min-w-0">
                 <div className="font-semibold text-xs">{asset.symbol}</div>
-                <div className="text-[10px] text-slate-400 hidden sm:block truncate">{asset.name}</div>
+                <div className="text-[10px] text-neutral-400 hidden sm:block truncate">{asset.name}</div>
               </div>
-              <span className="text-[9px] px-1 py-0.5 bg-black/5 dark:bg-white/5 rounded text-slate-500 hidden md:inline shrink-0">
+              <span className="text-[9px] px-1 py-0.5 bg-black/5 dark:bg-white/5 rounded text-neutral-500 hidden md:inline shrink-0">
                 {asset.market}
               </span>
             </div>
@@ -502,13 +502,13 @@ function AssetTable({
             {/* Price + 24h */}
             <div className="text-right shrink-0">
               <div className="tabular-nums font-semibold">${fmtPrice(asset.price)}</div>
-              <div className={cn('text-[10px] tabular-nums font-semibold', asset.change24h > 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : asset.change24h < 0 ? 'text-red-500 dark:text-red-400' : 'text-slate-400')}>
+              <div className={cn('text-[10px] tabular-nums font-semibold', asset.change24h > 0 ? 'text-emerald-500 dark:text-[#00f5c4]' : asset.change24h < 0 ? 'text-red-500 dark:text-red-400' : 'text-neutral-400')}>
                 {asset.change24h > 0 ? '+' : ''}{asset.change24h.toFixed(2)}%
               </div>
             </div>
 
             {/* Volume */}
-            <span className="tabular-nums text-slate-500 hidden sm:block w-16 text-right shrink-0">${fmtVol(asset.volume)}</span>
+            <span className="tabular-nums text-neutral-500 hidden sm:block w-16 text-right shrink-0">${fmtVol(asset.volume)}</span>
 
             {/* Score */}
             <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-bold tabular-nums shrink-0', asset.score >= 7 ? 'bg-emerald-500/10 dark:bg-[#00f5c4]/10 text-emerald-600 dark:text-[#00f5c4]' : asset.score >= 5 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-red-500/10 text-red-500 dark:text-red-400')}>
@@ -536,7 +536,7 @@ function AssetTable({
         ))}
 
         {filtered.length === 0 && (
-          <div className="text-center py-12 text-slate-400 text-xs">
+          <div className="text-center py-12 text-neutral-400 text-xs">
             No assets match your filters.
           </div>
         )}
@@ -585,7 +585,7 @@ function ContentPanel({
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center space-y-2">
-          <p className="text-xs text-slate-400">Select an asset from the table to view analysis.</p>
+          <p className="text-xs text-neutral-400">Select an asset from the table to view analysis.</p>
           <button
             onClick={() => {/* Switch to table handled by parent */}}
             className="text-[10px] font-sans text-[#14B8A6] dark:text-[#5EEAD4] hover:underline"
@@ -604,12 +604,12 @@ function ContentPanel({
         {/* Asset context bar */}
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
           <span className="text-xs font-sans font-semibold">{selectedAsset.symbol}</span>
-          <span className="text-[10px] text-slate-400">{selectedAsset.name}</span>
-          <ChevronRight className="w-3 h-3 text-slate-300" />
+          <span className="text-[10px] text-neutral-400">{selectedAsset.name}</span>
+          <ChevronRight className="w-3 h-3 text-neutral-300" />
           <span className={cn('text-[10px] font-sans font-bold', verdictColor(selectedAsset.verdict))}>
             {selectedAsset.verdict}
           </span>
-          <span className="text-[10px] font-sans tabular-nums text-slate-500">{selectedAsset.score.toFixed(1)}/10</span>
+          <span className="text-[10px] font-sans tabular-nums text-neutral-500">{selectedAsset.score.toFixed(1)}/10</span>
         </div>
         <StepPanel asset={selectedAsset} stepId={activeSection} />
       </div>
@@ -623,8 +623,8 @@ function ContentPanel({
         {/* Asset context bar */}
         <div className="flex items-center gap-2 mb-4 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
           <span className="text-xs font-sans font-semibold">{selectedAsset.symbol}</span>
-          <span className="text-[10px] text-slate-400">{selectedAsset.name}</span>
-          <ChevronRight className="w-3 h-3 text-slate-300" />
+          <span className="text-[10px] text-neutral-400">{selectedAsset.name}</span>
+          <ChevronRight className="w-3 h-3 text-neutral-300" />
           <span className="text-[10px] font-sans text-violet-500 dark:text-violet-400 font-semibold">MLIS Pro</span>
         </div>
         <MLISPanel asset={selectedAsset} layerId={activeSection} />
@@ -717,9 +717,9 @@ export default function ScreenerPage() {
           </div>
 
           <div className="hidden sm:flex items-center gap-4 text-[10px] font-sans">
-            <span className="text-slate-400">GO: <span className="text-emerald-500 dark:text-[#00f5c4] font-semibold">{goCount}</span></span>
-            <span className="text-slate-400">AVG: <span className="text-black dark:text-white font-semibold">{avgScore}</span></span>
-            <span className="text-slate-400">TOTAL: <span className="text-black dark:text-white font-semibold">{filtered.length}</span></span>
+            <span className="text-neutral-400">GO: <span className="text-emerald-500 dark:text-[#00f5c4] font-semibold">{goCount}</span></span>
+            <span className="text-neutral-400">AVG: <span className="text-black dark:text-white font-semibold">{avgScore}</span></span>
+            <span className="text-neutral-400">TOTAL: <span className="text-black dark:text-white font-semibold">{filtered.length}</span></span>
           </div>
         </div>
       </div>
@@ -729,17 +729,17 @@ export default function ScreenerPage() {
         <div className="max-w-[1400px] mx-auto px-3 py-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           {/* Search */}
           <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search symbol or name..."
-              className="w-full pl-7 pr-7 py-1.5 text-xs font-sans bg-transparent border border-black/[0.06] dark:border-white/[0.06] rounded focus:outline-none focus:border-black/20 dark:focus:border-white/20 placeholder:text-slate-400"
+              className="w-full pl-7 pr-7 py-1.5 text-xs font-sans bg-transparent border border-black/[0.06] dark:border-white/[0.06] rounded focus:outline-none focus:border-black/20 dark:focus:border-white/20 placeholder:text-neutral-400"
             />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2">
-                <X className="w-3 h-3 text-slate-400 hover:text-black dark:hover:text-white" />
+                <X className="w-3 h-3 text-neutral-400 hover:text-black dark:hover:text-white" />
               </button>
             )}
           </div>
@@ -754,7 +754,7 @@ export default function ScreenerPage() {
                   'px-2.5 py-1 text-[10px] font-sans uppercase tracking-wider transition-colors whitespace-nowrap',
                   market === m
                     ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
-                    : 'text-slate-400 hover:text-black dark:hover:text-white',
+                    : 'text-neutral-400 hover:text-black dark:hover:text-white',
                 )}
               >
                 {m}
@@ -769,7 +769,7 @@ export default function ScreenerPage() {
               'flex items-center gap-1 px-2.5 py-1 text-[10px] font-sans uppercase tracking-wider transition-colors',
               showFilters
                 ? 'text-black dark:text-white'
-                : 'text-slate-400 hover:text-black dark:hover:text-white',
+                : 'text-neutral-400 hover:text-black dark:hover:text-white',
             )}
           >
             <Filter className="w-3 h-3" />
@@ -780,7 +780,7 @@ export default function ScreenerPage() {
         {/* Expanded filters */}
         {showFilters && (
           <div className="max-w-[1400px] mx-auto px-3 pb-2 flex items-center gap-3">
-            <span className="text-[10px] text-slate-400 font-sans">VERDICT:</span>
+            <span className="text-[10px] text-neutral-400 font-sans">VERDICT:</span>
             <div className="flex items-center gap-px">
               {VERDICTS.map((v) => (
                 <button
@@ -792,7 +792,7 @@ export default function ScreenerPage() {
                       ? v === 'ALL'
                         ? 'bg-black dark:bg-white text-white dark:text-black font-semibold'
                         : cn(verdictBg(v as Verdict), verdictColor(v as Verdict), 'font-semibold')
-                      : 'text-slate-400 hover:text-black dark:hover:text-white',
+                      : 'text-neutral-400 hover:text-black dark:hover:text-white',
                   )}
                 >
                   {v}
@@ -833,7 +833,7 @@ export default function ScreenerPage() {
           {NAV_GROUPS.map((group, gi) => (
             <div key={group.title} className={cn(gi > 0 && 'mt-5')}>
               {/* Group header */}
-              <div className="text-[9px] font-sans text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em] mb-2 px-2">
+              <div className="text-[9px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.15em] mb-2 px-2">
                 {group.title}
               </div>
 
@@ -862,7 +862,7 @@ export default function ScreenerPage() {
                             ? isMLIS
                               ? 'text-violet-500 dark:text-violet-400'
                               : 'text-[#14B8A6] dark:text-[#5EEAD4]'
-                            : 'text-slate-400 dark:text-slate-600',
+                            : 'text-neutral-400 dark:text-neutral-600',
                         )}>
                           {item.tag}
                         </span>
@@ -871,7 +871,7 @@ export default function ScreenerPage() {
                         'text-[11px] font-sans truncate',
                         isActive
                           ? 'text-black dark:text-white font-medium'
-                          : 'text-slate-500 dark:text-slate-400',
+                          : 'text-neutral-500 dark:text-neutral-400',
                       )}>
                         {item.label}
                       </span>
@@ -886,7 +886,7 @@ export default function ScreenerPage() {
           <div className="mt-6 px-2 pt-4 border-t border-black/[0.06] dark:border-white/[0.06]">
             {selectedAsset ? (
               <div className="space-y-1">
-                <span className="text-[9px] font-sans text-slate-400 dark:text-slate-500 uppercase tracking-widest block">
+                <span className="text-[9px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block">
                   Selected
                 </span>
                 <div className="flex items-center gap-1.5">
@@ -896,12 +896,12 @@ export default function ScreenerPage() {
                     {selectedAsset.verdict}
                   </span>
                 </div>
-                <span className="text-[10px] font-sans text-slate-400 dark:text-slate-500 tabular-nums">
+                <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 tabular-nums">
                   ${fmtPrice(selectedAsset.price)}
                 </span>
               </div>
             ) : (
-              <span className="text-[10px] font-sans text-slate-400 dark:text-slate-500">
+              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
                 No asset selected
               </span>
             )}
