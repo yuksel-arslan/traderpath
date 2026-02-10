@@ -133,7 +133,7 @@ type VerdictFilter = 'all' | 'go' | 'conditional_go' | 'wait' | 'avoid';
 type OutcomeFilter = 'all' | 'live' | 'tp' | 'sl';
 
 const OUTCOME_FILTERS: { value: OutcomeFilter; label: string; color: string }[] = [
-  { value: 'all', label: 'All', color: 'text-slate-600 dark:text-slate-300' },
+  { value: 'all', label: 'All', color: 'text-neutral-600 dark:text-neutral-300' },
   { value: 'live', label: 'LIVE', color: 'text-blue-500' },
   { value: 'tp', label: 'TP HIT', color: 'text-teal-500' },
   { value: 'sl', label: 'SL HIT', color: 'text-red-500' },
@@ -444,63 +444,53 @@ Could you share your risk assessment and recommendations based on this analysis?
   };
 
   return (
-    <div className="w-full px-4 md:px-8 lg:px-12 py-6 space-y-6">
-      {/* ===== 2026 Style Header with Glassmorphism (Teal/Red Corporate Colors) ===== */}
-      <div className="relative overflow-hidden rounded-2xl border border-teal-500/20 dark:border-white/10 bg-gradient-to-br from-teal-50 via-white to-orange-50 dark:from-teal-900/30 dark:via-slate-900 dark:to-orange-900/20">
-        {/* Animated Gradient Orbs - Teal/Red */}
-        <div className="absolute -top-20 -right-20 w-64 h-64 bg-teal-500/20 dark:bg-teal-500/30 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-red-400/15 dark:bg-red-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
-
-        {/* Grain Texture Overlay */}
-        <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.03]" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-        }} />
-
-        <div className="relative z-10 p-6">
-          {/* Header Row */}
+    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 flex flex-col h-full">
+        {/* Header */}
+        <div className="shrink-0 pt-4 pb-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              {/* Icon with Glow Effect - Teal */}
-              <div className="relative">
-                <div className="absolute inset-0 bg-teal-500/40 dark:bg-teal-500/50 rounded-xl blur-lg" />
-                <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center shadow-lg">
-                  <FileText className="w-6 h-6 text-white" />
-                </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
+                <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-teal-600 via-red-500 to-teal-600 bg-[length:200%_auto] bg-clip-text text-transparent animate-text-shimmer tracking-tight">My Reports</h1>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Saved analysis reports & live tracking</p>
-              </div>
+              <span className="text-sm font-sans font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
+                REPORTS
+              </span>
+              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
+                Analysis history · Live tracking
+              </span>
             </div>
-
             <button
               onClick={() => fetchReports()}
               disabled={isLoading}
-              className="group flex items-center gap-2 px-4 py-2 bg-teal-500/10 hover:bg-teal-500/20 dark:bg-white/10 dark:hover:bg-white/20 backdrop-blur-sm text-teal-700 dark:text-white text-sm font-medium rounded-xl border border-teal-500/20 dark:border-white/10 transition-all duration-300 hover:border-teal-500/40 dark:hover:border-white/20 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors text-neutral-500 disabled:opacity-50"
             >
-              <RefreshCw className={cn("w-4 h-4 transition-transform group-hover:rotate-180 duration-500", isLoading && "animate-spin")} />
+              <RefreshCw className={cn("w-3.5 h-3.5", isLoading && "animate-spin")} />
               Refresh
             </button>
           </div>
         </div>
-      </div>
 
-      {/* ===== 2026 Style Filters with Glassmorphism (Light/Dark Mode) ===== */}
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center p-4 rounded-xl bg-slate-100 dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-white/10">
+        {/* Content */}
+        <main className="flex-1 min-h-0 overflow-y-auto">
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center mb-4">
         {/* Symbol Search */}
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 dark:text-slate-400" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
           <input
             type="text"
             placeholder="Search symbol..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2.5 text-sm bg-white dark:bg-slate-900/50 border border-slate-300 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500/50 outline-none transition-all"
+            className="w-full pl-8 pr-2.5 py-1.5 text-xs font-sans bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#14B8A6]/50"
           />
         </div>
 
-        {/* Date Filter - Pill Style */}
-        <div className="flex bg-white dark:bg-slate-900/50 rounded-xl p-1 border border-slate-200 dark:border-white/10">
+        {/* Date Filter */}
+        <div className="flex bg-white dark:bg-neutral-950 rounded-lg p-0.5 border border-neutral-200 dark:border-neutral-800">
           {[
             { value: 'all', label: 'All' },
             { value: 'today', label: 'Today' },
@@ -511,10 +501,10 @@ Could you share your risk assessment and recommendations based on this analysis?
               key={f.value}
               onClick={() => setDateFilter(f.value as DateFilter)}
               className={cn(
-                "px-4 py-2 text-xs font-medium rounded-lg transition-all duration-300",
+                "px-2.5 py-1 text-[11px] font-sans rounded-md transition-colors",
                 dateFilter === f.value
-                  ? "bg-gradient-to-r from-teal-500 to-red-400 text-white shadow-lg shadow-teal-500/25"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5"
+                  ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
               )}
             >
               {f.label}
@@ -522,15 +512,15 @@ Could you share your risk assessment and recommendations based on this analysis?
           ))}
         </div>
 
-        {/* Trade Type Filter - Pill Style */}
+        {/* Trade Type Filter */}
         {/* Trade Type Filter Dropdown */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 dark:text-slate-400">Type:</span>
+          <span className="text-xs text-neutral-500 dark:text-neutral-400">Type:</span>
           <div className="relative">
             <select
               value={tradeTypeFilter}
               onChange={(e) => setTradeTypeFilter(e.target.value as TradeType | 'all')}
-              className="appearance-none bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-slate-200 dark:border-white/10 focus:ring-2 focus:ring-teal-500 cursor-pointer"
+              className="appearance-none bg-white dark:bg-neutral-950 text-neutral-700 dark:text-neutral-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 focus:ring-2 focus:ring-teal-500 cursor-pointer"
             >
               <option value="all">All</option>
               {(Object.keys(TRADE_TYPE_CONFIG) as TradeType[]).map((type) => (
@@ -539,18 +529,18 @@ Could you share your risk assessment and recommendations based on this analysis?
                 </option>
               ))}
             </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
           </div>
         </div>
 
         {/* Verdict Filter Dropdown */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 dark:text-slate-400">Verdict:</span>
+          <span className="text-xs text-neutral-500 dark:text-neutral-400">Verdict:</span>
           <div className="relative">
             <select
               value={verdictFilter}
               onChange={(e) => setVerdictFilter(e.target.value as VerdictFilter)}
-              className="appearance-none bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-slate-200 dark:border-white/10 focus:ring-2 focus:ring-teal-500 cursor-pointer"
+              className="appearance-none bg-white dark:bg-neutral-950 text-neutral-700 dark:text-neutral-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 focus:ring-2 focus:ring-teal-500 cursor-pointer"
             >
               <option value="all">All</option>
               <option value="go">GO</option>
@@ -558,18 +548,18 @@ Could you share your risk assessment and recommendations based on this analysis?
               <option value="wait">WAIT</option>
               <option value="avoid">AVOID</option>
             </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
           </div>
         </div>
 
         {/* Outcome Filter Dropdown */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 dark:text-slate-400">Status:</span>
+          <span className="text-xs text-neutral-500 dark:text-neutral-400">Status:</span>
           <div className="relative">
             <select
               value={outcomeFilter}
               onChange={(e) => setOutcomeFilter(e.target.value as OutcomeFilter)}
-              className="appearance-none bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-slate-200 dark:border-white/10 focus:ring-2 focus:ring-teal-500 cursor-pointer"
+              className="appearance-none bg-white dark:bg-neutral-950 text-neutral-700 dark:text-neutral-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 focus:ring-2 focus:ring-teal-500 cursor-pointer"
             >
               {OUTCOME_FILTERS.map((f) => (
                 <option key={f.value} value={f.value}>
@@ -577,18 +567,18 @@ Could you share your risk assessment and recommendations based on this analysis?
                 </option>
               ))}
             </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
           </div>
         </div>
 
         {/* Sort Dropdown */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 dark:text-slate-400">Sort:</span>
+          <span className="text-xs text-neutral-500 dark:text-neutral-400">Sort:</span>
           <div className="relative">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="appearance-none bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-slate-200 dark:border-white/10 focus:ring-2 focus:ring-teal-500 cursor-pointer"
+              className="appearance-none bg-white dark:bg-neutral-950 text-neutral-700 dark:text-neutral-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 focus:ring-2 focus:ring-teal-500 cursor-pointer"
             >
               {SORT_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -596,17 +586,17 @@ Could you share your risk assessment and recommendations based on this analysis?
                 </option>
               ))}
             </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
           </div>
         </div>
 
         {/* Results Count Badge */}
-        <div className="ml-auto hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
-          <span className="text-xs text-slate-500 dark:text-slate-400">Showing</span>
-          <span className="text-sm font-bold text-slate-900 dark:text-white">
+        <div className="ml-auto hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800">
+          <span className="text-xs text-neutral-500 dark:text-neutral-400">Showing</span>
+          <span className="text-sm font-bold text-neutral-900 dark:text-white">
             {hasActiveFilters ? `${filteredReports.length}/${reports.length}` : filteredReports.length}
           </span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">reports</span>
+          <span className="text-xs text-neutral-500 dark:text-neutral-400">reports</span>
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
@@ -620,7 +610,7 @@ Could you share your risk assessment and recommendations based on this analysis?
 
       {/* Reports List */}
       {error ? (
-        <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-red-50 dark:bg-red-900/20 p-8 text-center">
+        <div className="relative overflow-hidden rounded-xl border border-red-500/20 bg-red-50 dark:bg-red-900/20 p-8 text-center">
           <div className="relative z-10">
             <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
               <XCircle className="w-6 h-6 text-red-500" />
@@ -642,25 +632,25 @@ Could you share your risk assessment and recommendations based on this analysis?
             <div className="absolute inset-0 bg-teal-500/30 rounded-full blur-xl animate-pulse" />
             <RefreshCw className="relative w-10 h-10 animate-spin text-teal-500" />
           </div>
-          <p className="text-slate-600 dark:text-slate-400 text-sm">Loading your reports...</p>
+          <p className="text-neutral-500 dark:text-neutral-400 text-sm">Loading your reports...</p>
         </div>
       ) : filteredReports.length === 0 ? (
-        <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 p-12">
+        <div className="relative overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800 bg-gradient-to-br from-neutral-50 to-white dark:from-neutral-900 dark:to-neutral-800 p-12">
           {/* Background Effects - Teal/Red */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-red-400/10 rounded-full blur-3xl" />
 
           <div className="relative z-10 text-center">
             <div className="relative inline-block mb-6">
-              <div className="absolute inset-0 bg-teal-500/20 rounded-2xl blur-xl" />
-              <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-teal-500/20 to-red-400/20 border border-teal-500/20 dark:border-white/10 flex items-center justify-center">
+              <div className="absolute inset-0 bg-teal-500/20 rounded-xl blur-xl" />
+              <div className="relative w-20 h-20 rounded-xl bg-gradient-to-br from-teal-500/20 to-red-400/20 border border-teal-500/20 dark:border-white/10 flex items-center justify-center">
                 <FileText className="w-10 h-10 text-teal-500" />
               </div>
             </div>
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">
+            <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-3">
               {hasActiveFilters ? 'No Matching Reports' : 'No Reports Yet'}
             </h3>
-            <p className="text-slate-600 dark:text-slate-400 mb-6 max-w-md mx-auto">
+            <p className="text-neutral-500 dark:text-neutral-400 mb-6 max-w-md mx-auto">
               {hasActiveFilters
                 ? 'No reports match your current filters. Try adjusting your search criteria.'
                 : 'Create your first analysis report to start tracking your trades and building your performance history.'}
@@ -733,7 +723,7 @@ Could you share your risk assessment and recommendations based on this analysis?
             <div
               key={report.id}
               className={cn(
-                "border rounded-2xl p-4 hover:shadow-lg transition-all duration-150 relative overflow-hidden bg-white dark:bg-white/[0.02] backdrop-blur-sm",
+                "border rounded-xl p-4 hover:shadow-lg transition-all duration-150 relative overflow-hidden bg-white dark:bg-white/[0.02] backdrop-blur-sm",
                 report.outcome === 'correct' && "border-teal-500/30",
                 report.outcome === 'incorrect' && "border-red-500/30",
                 isActive && "border-white/10 dark:border-white/[0.06]"
@@ -819,7 +809,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                           <span className={cn(
                             "px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1",
                             config.color === 'teal' && "bg-teal-500/10 text-teal-600 dark:text-teal-400",
-                            config.color === 'slate' && "bg-slate-500/10 text-slate-600 dark:text-slate-400",
+                            config.color === 'slate' && "bg-neutral-500/10 text-neutral-500 dark:text-neutral-400",
                             config.color === 'amber' && "bg-amber-500/10 text-amber-600 dark:text-amber-400",
                             config.color === 'blue' && "bg-blue-500/10 text-blue-600 dark:text-blue-400"
                           )}>
@@ -875,14 +865,14 @@ Could you share your risk assessment and recommendations based on this analysis?
                 </div>
 
                 {/* Score + Price + P/L + Distance Display */}
-                <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-slate-100 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-transparent flex-wrap justify-center sm:justify-start">
+                <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-neutral-100 dark:bg-neutral-900/50 rounded-lg border border-neutral-200 dark:border-neutral-800 flex-wrap justify-center sm:justify-start">
                   {/* Score as percentage - Teal/Red */}
                   <div className={cn(
                     "text-center px-2 py-1 rounded-lg min-w-[50px]",
                     report.score >= 7 ? "bg-teal-100 dark:bg-teal-500/20" :
                     report.score >= 5 ? "bg-amber-100 dark:bg-amber-500/20" : "bg-red-100 dark:bg-red-500/20"
                   )}>
-                    <div className="text-[10px] text-slate-500 dark:text-muted-foreground">Score</div>
+                    <div className="text-[10px] text-neutral-500 dark:text-muted-foreground">Score</div>
                     <div className={cn(
                       "font-bold text-sm",
                       report.score >= 7 ? "text-teal-600 dark:text-teal-400" :
@@ -894,7 +884,7 @@ Could you share your risk assessment and recommendations based on this analysis?
 
                   {report.currentPrice && (
                     <>
-                      <div className="text-slate-300 dark:text-muted-foreground/30">|</div>
+                      <div className="text-neutral-300 dark:text-muted-foreground/30">|</div>
 
                       {/* P/L Percentage - Teal/Red */}
                       <div className={cn(
@@ -903,7 +893,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                           ? "bg-teal-100 dark:bg-teal-500/20"
                           : "bg-red-100 dark:bg-red-500/20"
                       )}>
-                        <div className="text-[10px] text-slate-500 dark:text-muted-foreground">P/L</div>
+                        <div className="text-[10px] text-neutral-500 dark:text-muted-foreground">P/L</div>
                         <div className={cn(
                           "font-bold text-sm",
                           (report.unrealizedPnL || 0) >= 0 ? "text-teal-600 dark:text-teal-400" : "text-red-600 dark:text-red-400"
@@ -917,7 +907,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                         report.outcome === 'correct' ? (
                           // TP Hit - show 100% in teal
                           <div className="text-center px-2 py-1 rounded-lg min-w-[60px] bg-teal-100 dark:bg-teal-500/20">
-                            <div className="text-[10px] text-slate-500 dark:text-muted-foreground flex items-center justify-center gap-1">
+                            <div className="text-[10px] text-neutral-500 dark:text-muted-foreground flex items-center justify-center gap-1">
                               <Target className="w-3 h-3" />
                               TP
                             </div>
@@ -947,16 +937,16 @@ Could you share your risk assessment and recommendations based on this analysis?
                             <div className={cn(
                               "text-center px-2 py-1 rounded-lg min-w-[60px]",
                               progress >= 80 ? "bg-teal-100 dark:bg-teal-500/20" :
-                              progress >= 50 ? "bg-amber-100 dark:bg-amber-500/20" : "bg-slate-100 dark:bg-slate-500/20"
+                              progress >= 50 ? "bg-amber-100 dark:bg-amber-500/20" : "bg-neutral-100 dark:bg-neutral-500/20"
                             )}>
-                              <div className="text-[10px] text-slate-500 dark:text-muted-foreground flex items-center justify-center gap-1">
+                              <div className="text-[10px] text-neutral-500 dark:text-muted-foreground flex items-center justify-center gap-1">
                                 <Target className="w-3 h-3" />
                                 TP
                               </div>
                               <div className={cn(
                                 "font-bold text-sm",
                                 progress >= 80 ? "text-teal-600 dark:text-teal-400" :
-                                progress >= 50 ? "text-amber-600 dark:text-amber-400" : "text-slate-600 dark:text-slate-400"
+                                progress >= 50 ? "text-amber-600 dark:text-amber-400" : "text-neutral-500 dark:text-neutral-400"
                               )}>
                                 {progress.toFixed(0)}%
                               </div>
@@ -1024,22 +1014,24 @@ Could you share your risk assessment and recommendations based on this analysis?
           <button
             onClick={() => setPagination(p => ({ ...p, offset: Math.max(0, p.offset - p.limit) }))}
             disabled={pagination.offset === 0}
-            className="px-3 py-1.5 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition disabled:opacity-50"
+            className="px-3 py-1.5 text-sm bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-900 transition disabled:opacity-50"
           >
             Previous
           </button>
-          <span className="px-3 py-1.5 text-sm text-gray-500 dark:text-slate-400">
+          <span className="px-3 py-1.5 text-sm text-gray-500 dark:text-neutral-400">
             {Math.floor(pagination.offset / pagination.limit) + 1} / {Math.ceil(pagination.total / pagination.limit)}
           </span>
           <button
             onClick={() => setPagination(p => ({ ...p, offset: p.offset + p.limit }))}
             disabled={pagination.offset + pagination.limit >= pagination.total}
-            className="px-3 py-1.5 text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition disabled:opacity-50"
+            className="px-3 py-1.5 text-sm bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-900 transition disabled:opacity-50"
           >
             Next
           </button>
         </div>
       )}
+        </main>
+      </div>
     </div>
   );
 }

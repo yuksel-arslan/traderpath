@@ -162,100 +162,60 @@ export default function SignalsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 dark:from-slate-950 dark:via-blue-950/20 dark:to-slate-950">
-      {/* Decorative gradient orbs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-teal-500/10 to-blue-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-to-br from-orange-500/10 to-pink-500/10 rounded-full blur-3xl" />
-      </div>
-
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 flex flex-col h-full">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-teal-600 via-blue-600 to-purple-600 dark:from-teal-400 dark:via-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-                Trading Signals
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">
-                AI-powered signals from Capital Flow analysis
-              </p>
+        <div className="shrink-0 pt-4 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
+                <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
+              </div>
+              <span className="text-sm font-sans font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
+                SIGNALS
+              </span>
+              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
+                AI-powered · Capital Flow
+              </span>
             </div>
-
             <button
               onClick={handleRefresh}
-              className="px-4 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-all flex items-center gap-2"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors text-neutral-500"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className="w-3.5 h-3.5" />
               Refresh
             </button>
           </div>
+        </div>
 
-          {/* Stats Cards */}
+        {/* Content */}
+        <main className="flex-1 min-h-0 overflow-y-auto">
+
+          {/* Stats Row */}
           {stats && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Total Signals</p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{stats.total}</p>
-                  </div>
-                  <BarChart3 className="w-8 h-8 text-blue-500" />
-                </div>
-              </div>
-
-              <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Win Rate</p>
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">{stats.winRate}%</p>
-                  </div>
-                  <Target className="w-8 h-8 text-green-500" />
-                </div>
-              </div>
-
-              <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">TP Hits</p>
-                    <p className="text-2xl font-bold text-teal-600 dark:text-teal-400 mt-1">
-                      {stats.outcomes.tp1Hit + stats.outcomes.tp2Hit}
-                    </p>
-                  </div>
-                  <Flame className="w-8 h-8 text-teal-500" />
-                </div>
-              </div>
-
-              <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Published</p>
-                    <p className="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">{stats.published}</p>
-                  </div>
-                  <Activity className="w-8 h-8 text-purple-500" />
-                </div>
-              </div>
+            <div className="flex items-center gap-4 mb-4 text-[11px] font-sans">
+              <span className="text-neutral-400">Total: <span className="text-neutral-900 dark:text-white font-semibold">{stats.total}</span></span>
+              <span className="text-neutral-400">Win: <span className="text-[#22C55E] dark:text-[#4ADE80] font-semibold">{stats.winRate}%</span></span>
+              <span className="text-neutral-400">TP: <span className="text-[#14B8A6] font-semibold">{stats.outcomes.tp1Hit + stats.outcomes.tp2Hit}</span></span>
+              <span className="text-neutral-400">Published: <span className="text-neutral-900 dark:text-white font-semibold">{stats.published}</span></span>
             </div>
           )}
 
           {/* Filters */}
-          <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Filter className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Filters</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="mb-4 space-y-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Filter className="w-3.5 h-3.5 text-neutral-400" />
               {/* Market Filter */}
               <div>
-                <label className="text-sm text-slate-600 dark:text-slate-400 mb-2 block">Market</label>
+                <label className="text-[10px] text-neutral-400 dark:text-neutral-500 mb-1 block font-sans">Market</label>
                 <select
                   value={selectedMarket}
                   onChange={(e) => {
                     setSelectedMarket(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="w-full px-2.5 py-1.5 text-xs font-sans bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#14B8A6]/50"
                 >
                   <option value="">All Markets</option>
                   {MARKET_OPTIONS.map((m) => (
@@ -268,14 +228,14 @@ export default function SignalsPage() {
 
               {/* Status Filter */}
               <div>
-                <label className="text-sm text-slate-600 dark:text-slate-400 mb-2 block">Status</label>
+                <label className="text-[10px] text-neutral-400 dark:text-neutral-500 mb-1 block font-sans">Status</label>
                 <select
                   value={selectedStatus}
                   onChange={(e) => {
                     setSelectedStatus(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="w-full px-2.5 py-1.5 text-xs font-sans bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#14B8A6]/50"
                 >
                   <option value="">All Status</option>
                   <option value="published">Published</option>
@@ -287,14 +247,14 @@ export default function SignalsPage() {
 
               {/* Direction Filter */}
               <div>
-                <label className="text-sm text-slate-600 dark:text-slate-400 mb-2 block">Direction</label>
+                <label className="text-[10px] text-neutral-400 dark:text-neutral-500 mb-1 block font-sans">Direction</label>
                 <select
                   value={selectedDirection}
                   onChange={(e) => {
                     setSelectedDirection(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="w-full px-2.5 py-1.5 text-xs font-sans bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#14B8A6]/50"
                 >
                   <option value="">All Directions</option>
                   <option value="long">LONG</option>
@@ -304,7 +264,7 @@ export default function SignalsPage() {
 
               {/* Min Quality Score Slider */}
               <div>
-                <label className="text-sm text-slate-600 dark:text-slate-400 mb-2 block">
+                <label className="text-[10px] text-neutral-400 dark:text-neutral-500 mb-1 block font-sans">
                   Min Quality Score: <span className="font-semibold text-slate-900 dark:text-white">{minQualityScore}</span>
                 </label>
                 <div className="flex items-center gap-3">
@@ -318,10 +278,10 @@ export default function SignalsPage() {
                       setMinQualityScore(Number(e.target.value));
                       setPage(1);
                     }}
-                    className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full appearance-none cursor-pointer accent-teal-500"
+                    className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full appearance-none cursor-pointer accent-[#14B8A6]"
                   />
                 </div>
-                <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                <div className="flex justify-between text-[10px] text-neutral-400 mt-1">
                   <span>0</span>
                   <span>40</span>
                   <span>70</span>
@@ -331,48 +291,40 @@ export default function SignalsPage() {
 
               {/* Search */}
               <div>
-                <label className="text-sm text-slate-600 dark:text-slate-400 mb-2 block">Search</label>
+                <label className="text-[10px] text-neutral-400 dark:text-neutral-500 mb-1 block font-sans">Search</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search symbol..."
-                    className="w-full pl-10 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    className="w-full pl-8 pr-2.5 py-1.5 text-xs font-sans bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#14B8A6]/50"
                   />
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Signals List */}
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-teal-500" />
-          </div>
-        ) : error ? (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
-            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-3" />
-            <p className="text-red-600 dark:text-red-400">{error}</p>
-            <button
-              onClick={handleRefresh}
-              className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-            >
-              Try Again
-            </button>
-          </div>
-        ) : filteredSignals.length === 0 ? (
-          <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl p-12 text-center">
-            <Activity className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-600 dark:text-slate-400">No signals found</p>
-            <p className="text-sm text-slate-500 dark:text-slate-500 mt-2">
-              Try adjusting your filters or check back later
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
+          {/* Signals List */}
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-16">
+              <AlertTriangle className="w-8 h-8 text-[#EF5A6F] mx-auto mb-3" />
+              <p className="text-sm text-neutral-500">{error}</p>
+              <button onClick={handleRefresh} className="mt-3 text-xs text-[#14B8A6] hover:underline">Try Again</button>
+            </div>
+          ) : filteredSignals.length === 0 ? (
+            <div className="text-center py-16">
+              <Activity className="w-8 h-8 text-neutral-300 dark:text-neutral-600 mx-auto mb-3" />
+              <p className="text-sm text-neutral-500">No signals found</p>
+              <p className="text-[10px] text-neutral-400 mt-1">Try adjusting your filters or check back later</p>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
             {filteredSignals.map((signal) => (
               <SignalCard
                 key={signal.id}
@@ -383,30 +335,29 @@ export default function SignalsPage() {
           </div>
         )}
 
-        {/* Pagination */}
-        {total > limit && (
-          <div className="mt-8 flex items-center justify-center gap-2">
-            <button
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-4 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-
-            <span className="px-4 py-2 text-sm text-slate-600 dark:text-slate-400">
-              Page {page} of {Math.ceil(total / limit)}
-            </span>
-
-            <button
-              onClick={() => setPage(p => p + 1)}
-              disabled={page >= Math.ceil(total / limit)}
-              className="px-4 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
-          </div>
-        )}
+          {/* Pagination */}
+          {total > limit && (
+            <div className="mt-6 flex items-center justify-center gap-2 pb-4">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1.5 text-xs font-sans rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-neutral-500"
+              >
+                Previous
+              </button>
+              <span className="text-[10px] font-sans text-neutral-400">
+                {page} / {Math.ceil(total / limit)}
+              </span>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={page >= Math.ceil(total / limit)}
+                className="px-3 py-1.5 text-xs font-sans rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-neutral-500"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </main>
       </div>
     </div>
   );

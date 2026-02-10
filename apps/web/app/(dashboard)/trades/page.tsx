@@ -744,11 +744,17 @@ export default function TradesPage() {
       {/* Header */}
       <div className="shrink-0">
         <div className="max-w-[1400px] mx-auto px-3 py-3 flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-sm font-sans font-semibold tracking-tight">TRADES</h1>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-sans">
-              Active Position Monitor &middot; {activeTrades.length} open
-            </p>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
+              <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
+            </div>
+            <span className="text-sm font-sans font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
+              TRADES
+            </span>
+            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
+              Active Position Monitor · {activeTrades.length} open
+            </span>
           </div>
 
           <div className="flex items-center gap-3">

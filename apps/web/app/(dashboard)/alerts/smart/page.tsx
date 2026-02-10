@@ -161,32 +161,44 @@ export default function SmartAlertsPage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Smart Alerts</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            L1-L4 hierarchy change notifications from Capital Flow
-          </p>
+    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 flex flex-col h-full">
+        {/* Header */}
+        <div className="shrink-0 pt-4 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
+                <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
+              </div>
+              <span className="text-sm font-sans font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
+                SMART ALERTS
+              </span>
+              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
+                L1–L4 · Capital Flow
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setLoading(true); fetchAlerts(); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors text-neutral-500"
+              >
+                <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
+                Refresh
+              </button>
+              <Link
+                href="/alerts/smart/settings"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors text-neutral-500"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                Settings
+              </Link>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { setLoading(true); fetchAlerts(); }}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-accent transition-colors text-sm"
-          >
-            <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
-            Refresh
-          </button>
-          <Link
-            href="/alerts/smart/settings"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-accent transition-colors text-sm"
-          >
-            <Settings className="w-4 h-4" />
-            Settings
-          </Link>
-        </div>
-      </div>
+
+        {/* Content */}
+        <main className="flex-1 min-h-0 overflow-y-auto space-y-4 pb-4">
 
       {/* Stats bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -398,6 +410,8 @@ export default function SmartAlertsPage() {
           })}
         </div>
       )}
+        </main>
+      </div>
     </div>
   );
 }
