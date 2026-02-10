@@ -494,51 +494,49 @@ export default function AutomatedAnalysisPage() {
   const currentStepIdx = getStepIndex(pipelineStep);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#041020]">
-
-      {/* ================================================ */}
-      {/* HERO - AUTOMATED ANALYSIS                        */}
-      {/* ================================================ */}
-      <div className="border-b border-slate-200 dark:border-white/5 bg-white dark:bg-[#071023]">
-        <div className="max-w-5xl mx-auto px-4 py-6 sm:py-10">
-          <div className="text-center">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-xl shadow-teal-500/20 mx-auto mb-4">
-              <Sparkles className="w-7 h-7 text-white" />
+    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 flex flex-col h-full">
+        {/* Header */}
+        <div className="shrink-0 pt-4 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
+                <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
+              </div>
+              <span className="text-sm font-sans font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
+                AUTOMATED ANALYSIS
+              </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">
-              Automated Analysis
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-lg mx-auto mb-6">
-              One click. Full pipeline. Capital Flow scans global markets, AI picks the best asset, and a complete 7-Step + ML analysis runs automatically.
-            </p>
-
             {pipelineStep === 'idle' && !pipelineRunning && (
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={runAutomatedPipeline}
-                  className="flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-teal-500 to-emerald-600 text-white text-base font-bold rounded-xl hover:from-teal-600 hover:to-emerald-700 hover:shadow-lg hover:shadow-teal-500/25 transition-all active:scale-[0.98]"
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-sans font-semibold rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-black hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
                 >
-                  <Play className="w-5 h-5" />
-                  Run Automated Analysis
+                  <Play className="w-3.5 h-3.5" />
+                  Run Analysis
                 </button>
                 <Link
                   href="/analyze/tailored"
-                  className="flex items-center gap-2 px-6 py-3 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-medium rounded-xl hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-sans rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors text-neutral-500"
                 >
-                  <Target className="w-4 h-4" />
-                  Tailored Analysis
+                  <Target className="w-3.5 h-3.5" />
+                  Tailored
                 </Link>
               </div>
             )}
           </div>
         </div>
-      </div>
+
+        {/* Content */}
+        <main className="flex-1 min-h-0 overflow-y-auto">
 
       {/* ================================================ */}
       {/* PIPELINE VISUAL PROGRESSION                      */}
       {/* ================================================ */}
       {(pipelineStep !== 'idle' || pipelineRunning) && (
-        <div ref={pipelineRef} className="max-w-5xl mx-auto px-4 py-8">
+        <div ref={pipelineRef} className="w-full py-8">
           {/* Step Progress Bar */}
           <div className="flex items-center justify-between mb-8 px-2">
             {PIPELINE_STEPS.map((step, idx) => {
@@ -564,7 +562,7 @@ export default function AutomatedAnalysisPage() {
                     </div>
                     <span className={cn(
                       'text-[10px] sm:text-xs font-medium mt-1.5 text-center',
-                      isActive || isComplete ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-500'
+                      isActive || isComplete ? 'text-neutral-900 dark:text-white' : 'text-slate-400 dark:text-slate-500'
                     )}>
                       {step.label}
                     </span>
@@ -594,7 +592,7 @@ export default function AutomatedAnalysisPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Globe className="w-5 h-5 text-teal-500" />
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Capital Flow Analysis</h3>
+                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Capital Flow Analysis</h3>
                     {capitalFlow && <Check className="w-4 h-4 text-teal-500" />}
                   </div>
                 </div>
@@ -627,7 +625,7 @@ export default function AutomatedAnalysisPage() {
                     {/* L3: Recommendation Market */}
                     <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
                       <p className="text-[10px] font-medium text-slate-400 mb-1">L3: Sector Focus</p>
-                      <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                      <span className="text-xs font-semibold text-neutral-900 dark:text-white">
                         {capitalFlow.recommendation?.primaryMarket?.toUpperCase() || 'N/A'}
                       </span>
                     </div>
@@ -659,7 +657,7 @@ export default function AutomatedAnalysisPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Brain className="w-5 h-5 text-amber-500" />
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">AI Asset Selection</h3>
+                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white">AI Asset Selection</h3>
                     {aiRecommendation && <Check className="w-4 h-4 text-amber-500" />}
                   </div>
                 </div>
@@ -698,7 +696,7 @@ export default function AutomatedAnalysisPage() {
                           )}>
                             <div className="flex items-center gap-2 mb-1.5">
                               <CoinIcon symbol={asset.symbol} size={24} />
-                              <span className="text-sm font-bold text-slate-900 dark:text-white">{asset.symbol}</span>
+                              <span className="text-sm font-bold text-neutral-900 dark:text-white">{asset.symbol}</span>
                               <span className={cn(
                                 'px-1.5 py-0.5 rounded text-[9px] font-bold ml-auto',
                                 isBuy ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400'
@@ -723,7 +721,7 @@ export default function AutomatedAnalysisPage() {
                 <div className="flex items-center gap-3 py-4">
                   <Loader2 className="w-5 h-5 animate-spin text-violet-500" />
                   <span className="text-sm text-slate-500">
-                    Launching 7-Step + ML Confirmation analysis on <span className="font-bold text-slate-900 dark:text-white">{selectedAsset.symbol}</span>...
+                    Launching 7-Step + ML Confirmation analysis on <span className="font-bold text-neutral-900 dark:text-white">{selectedAsset.symbol}</span>...
                   </span>
                 </div>
               </div>
@@ -786,29 +784,29 @@ export default function AutomatedAnalysisPage() {
       {/* IDLE STATE - FEATURE OVERVIEW + QUICK LINKS      */}
       {/* ================================================ */}
       {pipelineStep === 'idle' && (
-        <div className="max-w-5xl mx-auto px-4 py-8">
+        <div className="w-full py-8">
           {/* How it works */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#071023]">
+            <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950">
               <div className="w-9 h-9 rounded-lg bg-teal-500/10 flex items-center justify-center mb-3">
                 <Globe className="w-5 h-5 text-teal-500" />
               </div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Capital Flow Scan</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Scans global liquidity, 5 market flows, sector activity, and AI recommendations.</p>
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-1">Capital Flow Scan</h3>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">Scans global liquidity, 5 market flows, sector activity, and AI recommendations.</p>
             </div>
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#071023]">
+            <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950">
               <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center mb-3">
                 <Brain className="w-5 h-5 text-amber-500" />
               </div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">AI Picks Best Asset</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">AI selects the highest-confidence asset aligned with Capital Flow direction.</p>
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-1">AI Picks Best Asset</h3>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">AI selects the highest-confidence asset aligned with Capital Flow direction.</p>
             </div>
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#071023]">
+            <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950">
               <div className="w-9 h-9 rounded-lg bg-violet-500/10 flex items-center justify-center mb-3">
                 <Zap className="w-5 h-5 text-violet-500" />
               </div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Full Analysis + Report</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">7-Step analysis with ML confirmation, trade plan, and downloadable report.</p>
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-1">Full Analysis + Report</h3>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">7-Step analysis with ML confirmation, trade plan, and downloadable report.</p>
             </div>
           </div>
 
@@ -816,7 +814,7 @@ export default function AutomatedAnalysisPage() {
           {dailyPassStatus && (
             <div className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-[#071023] border border-slate-200 dark:border-slate-700 mb-6">
               <Shield className="w-5 h-5 text-slate-400" />
-              <span className="text-sm text-slate-600 dark:text-slate-400">Daily Pass:</span>
+              <span className="text-sm text-neutral-500 dark:text-neutral-400">Daily Pass:</span>
               {dailyPassStatus.hasPass ? (
                 <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
                   Active - {dailyPassStatus.maxUsage - dailyPassStatus.usageCount}/{dailyPassStatus.maxUsage} analyses left
@@ -834,7 +832,7 @@ export default function AutomatedAnalysisPage() {
       {/* ================================================ */}
       {/* RECENT ANALYSES                                  */}
       {/* ================================================ */}
-      <div className="max-w-5xl mx-auto px-4 pb-8">
+      <div className="w-full pb-8">
         <RecentAnalysesMobile
           analyses={analyses}
           loading={analysesLoading}
@@ -866,6 +864,8 @@ export default function AutomatedAnalysisPage() {
           }}
         />
       )}
+        </main>
+      </div>
     </div>
   );
 }

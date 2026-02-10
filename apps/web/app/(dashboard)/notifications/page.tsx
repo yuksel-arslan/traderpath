@@ -201,56 +201,52 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="relative min-h-screen">
-      {/* Background orbs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-1/4 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-1/4 w-80 h-80 bg-orange-500/5 rounded-full blur-3xl" />
-      </div>
-
-      <div className="relative max-w-5xl mx-auto px-4 py-6 sm:py-8">
+    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 flex flex-col h-full">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Notification Center</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {totalUnread > 0 ? `${totalUnread} unread` : 'All caught up'}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {totalUnread > 0 && (
+        <div className="shrink-0 pt-4 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
+                <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
+              </div>
+              <span className="text-sm font-sans font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
+                NOTIFICATIONS
+              </span>
+              {totalUnread > 0 && (
+                <span className="text-[10px] font-sans text-neutral-400">{totalUnread} unread</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {totalUnread > 0 && (
+                <button
+                  onClick={() => markAllReadMutation.mutate()}
+                  disabled={markAllReadMutation.isPending}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors text-neutral-500 disabled:opacity-50"
+                >
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  Mark All
+                </button>
+              )}
               <button
-                onClick={() => markAllReadMutation.mutate()}
-                disabled={markAllReadMutation.isPending}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-card border border-border hover:bg-accent transition-colors disabled:opacity-50"
+                onClick={() => clearReadMutation.mutate()}
+                disabled={clearReadMutation.isPending}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors text-neutral-500 disabled:opacity-50"
               >
-                <CheckCheck className="w-4 h-4" />
-                Mark All Read
+                <Trash2 className="w-3.5 h-3.5" />
+                Clear
               </button>
-            )}
-            <button
-              onClick={() => clearReadMutation.mutate()}
-              disabled={clearReadMutation.isPending}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-card border border-border hover:bg-accent transition-colors disabled:opacity-50"
-            >
-              <Trash2 className="w-4 h-4" />
-              Clear Read
-            </button>
-            <Link
-              href="/settings"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-card border border-border hover:bg-accent transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Settings</span>
-            </Link>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6">
+        {/* Content */}
+        <main className="flex-1 min-h-0 overflow-y-auto">
+        <div className="flex flex-col lg:flex-row gap-4 pb-4">
           {/* Sidebar Filters */}
-          <aside className="lg:w-56 shrink-0">
-            <div className="bg-card/50 backdrop-blur border border-border/50 rounded-xl p-2 lg:sticky lg:top-24">
+          <aside className="lg:w-48 shrink-0">
+            <div className="rounded-xl p-1.5 lg:sticky lg:top-4">
               <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible">
                 {FILTER_OPTIONS.map((opt) => {
                   const count =
@@ -329,7 +325,7 @@ export default function NotificationsPage() {
                       <div
                         key={n.id}
                         className={cn(
-                          'group relative bg-card/50 backdrop-blur border rounded-xl p-4 transition-all hover:bg-card/80',
+                          'group relative rounded-xl p-3 transition-all hover:bg-neutral-50 dark:hover:bg-neutral-900/50',
                           n.read ? 'border-border/50' : 'border-[#5EEDC3]/40'
                         )}
                       >
@@ -436,6 +432,7 @@ export default function NotificationsPage() {
             )}
           </main>
         </div>
+        </main>
       </div>
     </div>
   );

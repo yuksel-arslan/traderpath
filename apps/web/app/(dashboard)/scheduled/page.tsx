@@ -91,14 +91,12 @@ interface Limits {
 function StatusBadge({ isActive }: { isActive: boolean }) {
   return (
     <span className={cn(
-      'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold',
-      isActive
-        ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-        : 'bg-slate-100 dark:bg-slate-500/20 text-slate-600 dark:text-slate-400'
+      'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-sans font-semibold',
+      isActive ? 'text-[#22C55E]' : 'text-neutral-400'
     )}>
       <span className={cn(
         'w-1.5 h-1.5 rounded-full',
-        isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'
+        isActive ? 'bg-[#22C55E]' : 'bg-neutral-400'
       )} />
       {isActive ? 'ACTIVE' : 'PAUSED'}
     </span>
@@ -151,12 +149,12 @@ function DeliveryIcon({ type, active }: { type: 'email' | 'telegram' | 'discord'
 
   return (
     <div className={cn(
-      'p-2 rounded-xl transition-all',
+      'p-1.5 rounded-lg transition-colors',
       active
-        ? `bg-gradient-to-br from-${type === 'email' ? 'blue' : type === 'telegram' ? 'sky' : 'indigo'}-500/10 to-${type === 'email' ? 'blue' : type === 'telegram' ? 'sky' : 'indigo'}-500/5`
-        : 'bg-slate-100 dark:bg-slate-800 opacity-40'
+        ? 'text-neutral-900 dark:text-white'
+        : 'text-neutral-300 dark:text-neutral-600'
     )}>
-      <Icon className={cn('w-4 h-4', active ? colors[type] : 'text-slate-400')} />
+      <Icon className="w-3.5 h-3.5" />
     </div>
   );
 }
@@ -336,200 +334,99 @@ export default function ScheduledReportsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full blur-xl opacity-30 animate-pulse" />
-            <RefreshCw className="w-10 h-10 animate-spin text-teal-500 relative" />
-          </div>
-          <p className="text-slate-600 dark:text-slate-400 font-medium">Loading schedules...</p>
+      <div className="h-screen flex items-center justify-center bg-white dark:bg-neutral-950">
+        <div className="flex items-center gap-2">
+          <RefreshCw className="w-4 h-4 animate-spin text-neutral-400" />
+          <span className="text-xs font-sans text-neutral-400">Loading schedules...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      {/* Background Effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-br from-teal-500/20 to-emerald-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-10 w-[500px] h-[500px] bg-gradient-to-br from-orange-500/15 to-amber-500/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-blue-500/10 to-indigo-500/5 rounded-full blur-3xl" />
-      </div>
-
-      <div className="relative max-w-6xl mx-auto p-4 md:p-6 lg:p-8">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-2xl blur-lg opacity-40" />
-              <div className="relative w-14 h-14 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-2xl flex items-center justify-center">
-                <Calendar className="w-7 h-7 text-white" />
+    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 flex flex-col h-full">
+        {/* Header */}
+        <div className="shrink-0 pt-4 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
+                <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
               </div>
+              <span className="text-sm font-sans font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
+                SCHEDULED
+              </span>
+              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
+                Automated analysis · Recurring
+              </span>
             </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900 dark:from-white dark:via-slate-300 dark:to-white bg-clip-text text-transparent">
-                Scheduled Reports
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">
-                Automate your analysis workflow with scheduled reports
-              </p>
-            </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans rounded-lg bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:opacity-90 transition-opacity"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Schedule
+            </button>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          {/* Active Schedules */}
-          <div className="group relative backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl p-6 hover:border-teal-500/50 transition-all hover:shadow-lg hover:shadow-teal-500/10">
-            <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-teal-500/10 to-emerald-500/10">
-                  <CheckCircle2 className="w-5 h-5 text-teal-500" />
-                </div>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Active Schedules</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold bg-gradient-to-r from-teal-600 to-emerald-600 dark:from-teal-400 dark:to-emerald-400 bg-clip-text text-transparent">
-                  {reports.filter(r => r.isActive).length}
-                </span>
-                <span className="text-slate-500 dark:text-slate-400 font-medium">/ {limits?.max || 3}</span>
-              </div>
-              <div className="mt-3 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full transition-all"
-                  style={{ width: `${(reports.filter(r => r.isActive).length / (limits?.max || 3)) * 100}%` }}
-                />
-              </div>
-            </div>
-          </div>
+        {/* Content */}
+        <main className="flex-1 min-h-0 overflow-y-auto">
 
-          {/* Cost per Analysis */}
-          <div className="group relative backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl p-6 hover:border-amber-500/50 transition-all hover:shadow-lg hover:shadow-amber-500/10">
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10">
-                  <Zap className="w-5 h-5 text-amber-500" />
-                </div>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Cost per Analysis</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 dark:from-amber-400 dark:to-orange-400 bg-clip-text text-transparent">
-                  {limits?.costPerAnalysis || 25}
-                </span>
-                <span className="text-slate-500 dark:text-slate-400 font-medium">credits</span>
-              </div>
-              <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-                Charged automatically when analysis runs
-              </p>
-            </div>
-          </div>
-
-          {/* Remaining Slots */}
-          <div className="group relative backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl p-6 hover:border-blue-500/50 transition-all hover:shadow-lg hover:shadow-blue-500/10">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10">
-                  <Activity className="w-5 h-5 text-blue-500" />
-                </div>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Available Slots</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">
-                  {limits?.remaining || 0}
-                </span>
-                <span className="text-slate-500 dark:text-slate-400 font-medium">remaining</span>
-              </div>
-              <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-                Upgrade to add more schedules
-              </p>
-            </div>
-          </div>
+        {/* Stats Row */}
+        <div className="flex items-center gap-4 mb-4 text-[11px] font-sans">
+          <span className="text-neutral-400">Active: <span className="text-neutral-900 dark:text-white font-semibold">{reports.filter(r => r.isActive).length}</span> / {limits?.max || 3}</span>
+          <span className="text-neutral-400">Cost: <span className="text-[#14B8A6] font-semibold">{limits?.costPerAnalysis || 25} credits</span></span>
+          <span className="text-neutral-400">Remaining: <span className="text-neutral-900 dark:text-white font-semibold">{limits?.remaining ?? 0}</span></span>
         </div>
 
-        {/* Create Button */}
-        {(limits?.remaining || 0) > 0 && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="group w-full mb-8 p-5 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-teal-500 dark:hover:border-teal-500 transition-all bg-gradient-to-r from-transparent via-teal-500/5 to-transparent hover:from-teal-500/10 hover:via-teal-500/5 hover:to-teal-500/10"
-          >
-            <div className="flex items-center justify-center gap-3 text-slate-500 dark:text-slate-400 group-hover:text-teal-500 transition-colors">
-              <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 group-hover:bg-teal-500/10 transition-colors">
-                <Plus className="w-5 h-5" />
-              </div>
-              <span className="font-semibold">Add New Scheduled Report</span>
-              <ChevronRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-            </div>
-          </button>
-        )}
+          {/* (Stats replaced by inline row above) */}
 
         {/* Reports List */}
         {reports.length === 0 ? (
-          <div className="relative backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-700/50 rounded-2xl p-12 text-center">
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-500/5 to-slate-500/5 rounded-2xl" />
-            <div className="relative">
-              <div className="relative mx-auto w-20 h-20 mb-6">
-                <div className="absolute inset-0 bg-gradient-to-br from-teal-500 to-emerald-500 rounded-2xl blur-xl opacity-30" />
-                <div className="relative w-20 h-20 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-2xl flex items-center justify-center">
-                  <Calendar className="w-10 h-10 text-slate-400 dark:text-slate-500" />
-                </div>
-              </div>
-              <h3 className="text-xl font-bold text-slate-700 dark:text-slate-300 mb-2">
-                No Scheduled Reports Yet
-              </h3>
-              <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-md mx-auto">
-                Set up automated analyses for your favorite coins and receive insights delivered to your inbox, Telegram, or Discord.
-              </p>
-              {(limits?.remaining || 0) > 0 && (
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-semibold hover:opacity-90 transition-opacity shadow-lg shadow-teal-500/25"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Create Your First Schedule
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+          <div className="text-center py-16">
+            <Calendar className="w-8 h-8 text-neutral-300 dark:text-neutral-600 mx-auto mb-3" />
+            <p className="text-sm text-neutral-500">No scheduled reports yet</p>
+            <p className="text-[10px] text-neutral-400 mt-1">Set up automated analyses for your favorite coins</p>
+            {(limits?.remaining || 0) > 0 && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="mt-4 text-xs text-[#14B8A6] hover:underline"
+              >
+                Create Your First Schedule
+              </button>
+            )}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-1.5">
             {reports.map((report) => (
               <div
                 key={report.id}
                 className={cn(
-                  "group relative backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border rounded-2xl p-6 transition-all",
+                  "group border rounded-xl px-4 py-3 transition-colors",
                   report.isActive
-                    ? "border-slate-200/50 dark:border-slate-700/50 hover:border-teal-500/50 hover:shadow-lg hover:shadow-teal-500/10"
-                    : "border-slate-200/30 dark:border-slate-700/30 opacity-70"
+                    ? "border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900/50"
+                    : "border-neutral-200/50 dark:border-neutral-800/50 opacity-60"
                 )}
               >
                 <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
                   {/* Coin Info */}
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="relative">
-                      <div className={cn(
-                        "absolute inset-0 rounded-full blur-md transition-opacity",
-                        report.isActive ? "bg-teal-500/30 opacity-100" : "opacity-0"
-                      )} />
-                      <CoinIcon symbol={report.symbol} size={48} />
-                    </div>
+                  <div className="flex items-center gap-3 flex-1">
+                    <CoinIcon symbol={report.symbol} size={32} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-bold text-lg text-slate-900 dark:text-white">
+                        <span className="text-sm font-sans font-bold text-neutral-900 dark:text-white">
                           {report.symbol}/USDT
-                        </h3>
+                        </span>
                         <TimeframeBadge interval={report.interval?.toLowerCase() || '4h'} />
                         <FrequencyBadge frequency={report.frequency} />
                       </div>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
-                        <Clock className="w-3.5 h-3.5" />
+                      <p className="text-[11px] text-neutral-400 mt-0.5 flex items-center gap-1.5">
+                        <Clock className="w-3 h-3" />
                         {report.scheduleHour.toString().padStart(2, '0')}:00 UTC
                         {report.frequency === 'WEEKLY' && report.scheduleDayOfWeek !== null && (
-                          <span className="text-slate-400 dark:text-slate-500">
+                          <span className="text-neutral-400 dark:text-neutral-500">
                             on {DAYS_OF_WEEK[report.scheduleDayOfWeek].label}
                           </span>
                         )}
@@ -545,54 +442,48 @@ export default function ScheduledReportsPage() {
                   </div>
 
                   {/* Status & Timing */}
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="flex items-center gap-2 justify-end mb-1">
-                        <StatusBadge isActive={report.isActive} />
-                      </div>
-                      <div className="text-sm">
-                        <span className={cn(
-                          "font-semibold",
-                          report.isActive ? "text-teal-600 dark:text-teal-400" : "text-slate-500"
-                        )}>
-                          {report.isActive ? formatNextRun(report.nextRunAt) : 'Paused'}
-                        </span>
-                        <span className="text-slate-400 dark:text-slate-500 mx-1">•</span>
-                        <span className="text-slate-500 dark:text-slate-400">
-                          Last: {formatLastRun(report.lastRunAt)}
-                        </span>
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <StatusBadge isActive={report.isActive} />
+                    <div className="text-[11px] text-neutral-400">
+                      <span className={cn(
+                        "font-semibold",
+                        report.isActive ? "text-[#14B8A6]" : "text-neutral-500"
+                      )}>
+                        {report.isActive ? formatNextRun(report.nextRunAt) : 'Paused'}
+                      </span>
+                      <span className="mx-1">·</span>
+                      <span>Last: {formatLastRun(report.lastRunAt)}</span>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleToggle(report.id)}
                       disabled={actionLoading === report.id}
                       className={cn(
-                        "p-2.5 rounded-xl transition-all",
+                        "p-1.5 rounded-lg transition-colors",
                         report.isActive
-                          ? "bg-gradient-to-br from-teal-500/10 to-emerald-500/10 text-teal-600 dark:text-teal-400 hover:from-teal-500/20 hover:to-emerald-500/20"
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700"
+                          ? "text-[#14B8A6] hover:bg-[#14B8A6]/10"
+                          : "text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-900"
                       )}
                       title={report.isActive ? 'Pause' : 'Resume'}
                     >
                       {actionLoading === report.id ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                       ) : report.isActive ? (
-                        <Pause className="w-4 h-4" />
+                        <Pause className="w-3.5 h-3.5" />
                       ) : (
-                        <Play className="w-4 h-4" />
+                        <Play className="w-3.5 h-3.5" />
                       )}
                     </button>
                     <button
                       onClick={() => handleDelete(report.id)}
                       disabled={actionLoading === report.id}
-                      className="p-2.5 rounded-xl bg-gradient-to-br from-red-500/10 to-orange-500/10 text-red-500 hover:from-red-500/20 hover:to-orange-500/20 transition-all"
+                      className="p-1.5 rounded-lg text-neutral-400 hover:text-[#EF5A6F] hover:bg-[#EF5A6F]/10 transition-colors"
                       title="Delete"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -601,62 +492,38 @@ export default function ScheduledReportsPage() {
           </div>
         )}
 
-        {/* Info Box */}
-        <div className="mt-8 backdrop-blur-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200/50 dark:border-amber-500/30 rounded-2xl p-6">
-          <div className="flex items-start gap-4">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex-shrink-0">
-              <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div>
-              <h4 className="font-bold text-amber-900 dark:text-amber-300 mb-2">How Scheduled Reports Work</h4>
-              <ul className="space-y-2 text-sm text-amber-800 dark:text-amber-400">
-                <li className="flex items-start gap-2">
-                  <Target className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <span>Analyses run automatically at your chosen time (UTC timezone)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Zap className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <span>Each analysis costs <strong>{limits?.costPerAnalysis || 25} credits</strong> - charged when the report runs</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <TrendingUp className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <span>Results are delivered via your selected channels (Email, Telegram, Discord)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Bell className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <span>If you run low on credits, you&apos;ll receive a notification before the analysis is skipped</span>
-                </li>
-              </ul>
+        {/* Info */}
+        <div className="mt-6 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-4 h-4 text-neutral-400 mt-0.5 flex-shrink-0" />
+            <div className="text-[11px] text-neutral-400 space-y-1">
+              <p>Analyses run automatically at your chosen time (UTC). Each costs <span className="text-neutral-900 dark:text-white font-semibold">{limits?.costPerAnalysis || 25} credits</span>.</p>
+              <p>Results delivered via Email, Telegram, or Discord. Low credits = notification before skip.</p>
             </div>
           </div>
         </div>
+
+        </main>
       </div>
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="relative bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-700">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="relative bg-white dark:bg-neutral-950 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-neutral-200 dark:border-neutral-800">
             {/* Modal Header */}
-            <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 p-6 rounded-t-2xl">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-teal-500/10 to-emerald-500/10">
-                  <Calendar className="w-5 h-5 text-teal-500" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                    Create Scheduled Report
-                  </h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Set up automated analysis for a coin
-                  </p>
-                </div>
-              </div>
+            <div className="sticky top-0 bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800 px-5 py-4 rounded-t-xl">
+              <h2 className="text-sm font-sans font-bold text-neutral-900 dark:text-white">
+                New Scheduled Report
+              </h2>
+              <p className="text-[11px] text-neutral-400 mt-0.5">
+                Set up automated analysis for a coin
+              </p>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="px-5 py-4 space-y-4">
               {/* Symbol Selection */}
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-[10px] text-neutral-400 dark:text-neutral-500 mb-1 font-sans">
                   Symbol
                 </label>
                 <input
@@ -664,7 +531,7 @@ export default function ScheduledReportsPage() {
                   value={newReport.symbol}
                   onChange={(e) => setNewReport({ ...newReport, symbol: e.target.value.toUpperCase() })}
                   placeholder="e.g., BTC, ETH, SOL"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all"
+                  className="w-full px-2.5 py-1.5 text-xs font-sans bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#14B8A6]/50"
                 />
                 <div className="flex flex-wrap gap-2 mt-3">
                   {POPULAR_COINS.map((coin) => (
@@ -675,8 +542,8 @@ export default function ScheduledReportsPage() {
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
                         newReport.symbol === coin
-                          ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/25"
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                          ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900"
+                          : "bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800"
                       )}
                     >
                       {coin}
@@ -687,7 +554,7 @@ export default function ScheduledReportsPage() {
 
               {/* Interval Selection */}
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-[10px] text-neutral-400 dark:text-neutral-500 mb-1 font-sans">
                   Timeframe
                 </label>
                 <div className="grid grid-cols-4 gap-2">
@@ -697,10 +564,10 @@ export default function ScheduledReportsPage() {
                       type="button"
                       onClick={() => setNewReport({ ...newReport, interval: opt.value })}
                       className={cn(
-                        "px-3 py-3 rounded-xl text-center transition-all",
+                        "px-3 py-2 rounded-lg text-center transition-colors",
                         newReport.interval === opt.value
-                          ? `bg-gradient-to-r ${opt.color} text-white shadow-lg`
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                          ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900"
+                          : "bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800"
                       )}
                     >
                       <span className="block text-sm font-bold">{opt.label}</span>
@@ -712,7 +579,7 @@ export default function ScheduledReportsPage() {
 
               {/* Frequency */}
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-[10px] text-neutral-400 dark:text-neutral-500 mb-1 font-sans">
                   Frequency
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -725,10 +592,10 @@ export default function ScheduledReportsPage() {
                         type="button"
                         onClick={() => setNewReport({ ...newReport, frequency: freq })}
                         className={cn(
-                          "px-4 py-3 rounded-xl transition-all flex flex-col items-center gap-1",
+                          "px-3 py-2 rounded-lg transition-colors flex flex-col items-center gap-1",
                           newReport.frequency === freq
-                            ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/25"
-                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                            ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900"
+                            : "bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800"
                         )}
                       >
                         <Icon className="w-4 h-4" />
@@ -742,7 +609,7 @@ export default function ScheduledReportsPage() {
               {/* Day of Week (for weekly) */}
               {newReport.frequency === 'WEEKLY' && (
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  <label className="block text-[10px] text-neutral-400 dark:text-neutral-500 mb-1 font-sans">
                     Day of Week
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -754,8 +621,8 @@ export default function ScheduledReportsPage() {
                         className={cn(
                           "px-3 py-2 rounded-lg text-sm font-medium transition-all",
                           newReport.scheduleDayOfWeek === day.value
-                            ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/25"
-                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                            ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900"
+                            : "bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800"
                         )}
                       >
                         {day.short}
@@ -767,13 +634,13 @@ export default function ScheduledReportsPage() {
 
               {/* Hour */}
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-[10px] text-neutral-400 dark:text-neutral-500 mb-1 font-sans">
                   Time (UTC)
                 </label>
                 <select
                   value={newReport.scheduleHour}
                   onChange={(e) => setNewReport({ ...newReport, scheduleHour: parseInt(e.target.value) })}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all"
+                  className="w-full px-2.5 py-1.5 text-xs font-sans bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#14B8A6]/50"
                 >
                   {Array.from({ length: 24 }, (_, i) => (
                     <option key={i} value={i}>{i.toString().padStart(2, '0')}:00 UTC</option>
@@ -783,7 +650,7 @@ export default function ScheduledReportsPage() {
 
               {/* Delivery Options */}
               <div>
-                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-[10px] text-neutral-400 dark:text-neutral-500 mb-1 font-sans">
                   Deliver To
                 </label>
                 <div className="space-y-2">
@@ -795,20 +662,20 @@ export default function ScheduledReportsPage() {
                     <label
                       key={key}
                       className={cn(
-                        "flex items-center gap-3 p-4 rounded-xl cursor-pointer transition-all border",
+                        "flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors border",
                         newReport[key as keyof typeof newReport]
-                          ? `bg-${color}-50 dark:bg-${color}-500/10 border-${color}-200 dark:border-${color}-500/30`
-                          : "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
+                          ? "border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900"
+                          : "border-neutral-200/50 dark:border-neutral-800/50 hover:border-neutral-200 dark:hover:border-neutral-800"
                       )}
                     >
                       <input
                         type="checkbox"
                         checked={newReport[key as keyof typeof newReport] as boolean}
                         onChange={(e) => setNewReport({ ...newReport, [key]: e.target.checked })}
-                        className="w-4 h-4 rounded border-slate-300 text-teal-500 focus:ring-teal-500"
+                        className="w-3.5 h-3.5 rounded border-neutral-300 text-[#14B8A6] focus:ring-[#14B8A6]"
                       />
-                      <Icon className={cn('w-5 h-5', `text-${color}-500`)} />
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
+                      <Icon className="w-3.5 h-3.5 text-neutral-400" />
+                      <span className="text-xs font-sans text-neutral-600 dark:text-neutral-300">{label}</span>
                     </label>
                   ))}
                 </div>
@@ -816,26 +683,23 @@ export default function ScheduledReportsPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 p-6 rounded-b-2xl">
-              <div className="flex gap-3">
+            <div className="sticky bottom-0 bg-white dark:bg-neutral-950 border-t border-neutral-200 dark:border-neutral-800 px-5 py-4 rounded-b-xl">
+              <div className="flex gap-2">
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="flex-1 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  className="flex-1 px-3 py-1.5 text-xs font-sans rounded-lg border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCreate}
                   disabled={actionLoading === 'create' || !newReport.symbol}
-                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-lg shadow-teal-500/25"
+                  className="flex-1 px-3 py-1.5 text-xs font-sans rounded-lg bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:opacity-90 transition-opacity disabled:opacity-40"
                 >
                   {actionLoading === 'create' ? (
-                    <RefreshCw className="w-5 h-5 animate-spin mx-auto" />
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin mx-auto" />
                   ) : (
-                    <span className="flex items-center justify-center gap-2">
-                      <Sparkles className="w-4 h-4" />
-                      Create Schedule
-                    </span>
+                    'Create Schedule'
                   )}
                 </button>
               </div>

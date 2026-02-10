@@ -703,11 +703,17 @@ export default function ScreenerPage() {
       {/* Header */}
       <div className="shrink-0">
         <div className="max-w-[1400px] mx-auto px-3 py-3 flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-sm font-sans font-semibold tracking-tight">SCREENER</h1>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-sans">
-              L5 &middot; Full Asset Table &middot; {filtered.length} assets
-            </p>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
+              <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
+            </div>
+            <span className="text-sm font-sans font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
+              SCREENER
+            </span>
+            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
+              Full Asset Table · {filtered.length} assets
+            </span>
           </div>
 
           <div className="hidden sm:flex items-center gap-4 text-[10px] font-sans">

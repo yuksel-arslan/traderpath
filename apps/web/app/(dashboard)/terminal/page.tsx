@@ -1250,7 +1250,7 @@ function TerminalHeader() {
           <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
         </div>
         <span className="text-sm font-sans font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
-          Terminal
+          TERMINAL
         </span>
       </div>
 

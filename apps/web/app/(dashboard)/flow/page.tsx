@@ -604,11 +604,15 @@ export default function FlowPage() {
         {/* Header */}
         <div className="shrink-0 pt-4 pb-3">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
-              L1 · L2 · L3 · L4
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
+              <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
+            </div>
+            <span className="text-sm font-sans font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
+              FLOW
             </span>
-            <span className="text-sm font-medium text-neutral-900 dark:text-white">
-              Capital Flow Intelligence
+            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
+              L1 · L2 · L3 · L4 · Capital Flow Intelligence
             </span>
           </div>
         </div>
