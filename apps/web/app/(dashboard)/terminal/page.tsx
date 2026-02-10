@@ -499,35 +499,19 @@ function L3Sectors({ sectors }: { sectors: SectorData[] }) {
   return (
     <section>
       <SectionLabel layer="L3" label="Sector Activity" count={sectors.length} />
-      <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="bg-neutral-50 dark:bg-neutral-900/50">
-              <th className="text-left p-2 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Sector</th>
-              <th className="text-right p-2 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Flow 7D</th>
-              <th className="text-right p-2 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Dom.</th>
-              <th className="text-center p-2 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Trend</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
-            {sectors.map((s) => (
-              <tr key={s.name} className="bg-white dark:bg-neutral-950 hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition-colors">
-                <td className="p-2 font-medium text-neutral-900 dark:text-white">{s.name}</td>
-                <td className="p-2 text-right">
-                  <Delta value={s.flow} />
-                </td>
-                <td className="p-2 text-right font-sans text-neutral-500 dark:text-neutral-400 tabular-nums">
-                  {s.dominance.toFixed(1)}%
-                </td>
-                <td className="p-2 text-center">
-                  {s.trending === 'up' && <ArrowUpRight className="w-3.5 h-3.5 text-[#22C55E] dark:text-[#4ADE80] mx-auto" />}
-                  {s.trending === 'down' && <ArrowDownRight className="w-3.5 h-3.5 text-[#EF4444] dark:text-[#F87171] mx-auto" />}
-                  {s.trending === 'flat' && <Minus className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 mx-auto" />}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="space-y-1.5">
+        {sectors.map((s) => (
+          <div key={s.name} className="rounded-xl px-3 py-2.5 flex items-center gap-3 text-xs hover:bg-neutral-50 dark:hover:bg-white/[0.03] transition-colors">
+            <div className="min-w-0 flex-1 font-medium text-neutral-900 dark:text-white">{s.name}</div>
+            <div className="shrink-0"><Delta value={s.flow} /></div>
+            <span className="font-sans text-neutral-500 dark:text-neutral-400 tabular-nums shrink-0 w-12 text-right">{s.dominance.toFixed(1)}%</span>
+            <div className="shrink-0">
+              {s.trending === 'up' && <ArrowUpRight className="w-3.5 h-3.5 text-[#22C55E] dark:text-[#4ADE80]" />}
+              {s.trending === 'down' && <ArrowDownRight className="w-3.5 h-3.5 text-[#EF4444] dark:text-[#F87171]" />}
+              {s.trending === 'flat' && <Minus className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Top sectors */}
