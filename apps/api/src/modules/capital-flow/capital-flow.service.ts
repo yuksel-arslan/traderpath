@@ -39,7 +39,15 @@ import {
 } from './types';
 
 // Providers
-import { getAllFredData } from './providers/fred.provider';
+import {
+  getAllFredData,
+  getFedBalanceSheet,
+  getM2MoneySupply,
+  getTreasuryYields,
+  getReverseRepo,
+  getTreasuryGeneralAccount,
+  getNetLiquidity as fetchNetLiquidity,
+} from './providers/fred.provider';
 import {
   getAllYahooData,
   getDxyData,
@@ -59,7 +67,18 @@ import { getCompleteCryptoFlowData } from './providers/binance.provider';
 const CACHE_KEYS = {
   CAPITAL_FLOW: 'capital-flow:summary',
   GLOBAL_LIQUIDITY: 'capital-flow:liquidity',
+  // Granular liquidity cache keys — split by update frequency
+  LIQUIDITY_M2: 'capital-flow:liquidity:m2',             // Monthly
+  LIQUIDITY_FED_BS: 'capital-flow:liquidity:fed-bs',      // Weekly (Thursday)
+  LIQUIDITY_TGA: 'capital-flow:liquidity:tga',            // Weekly (Thursday)
+  LIQUIDITY_YIELDS: 'capital-flow:liquidity:yields',      // Daily
+  LIQUIDITY_RRP: 'capital-flow:liquidity:rrp',            // Daily
+  LIQUIDITY_NET: 'capital-flow:liquidity:net',            // Derived (min of components)
+  // Market data
   MARKET_FLOW: (market: MarketType) => `capital-flow:market:${market}`,
+  // DeFi
+  DEFI_DATA: 'capital-flow:defi',                         // Daily
+  // Derived analytics
   INSIGHTS: 'capital-flow:insights',
   ROTATION_HISTORY: 'capital-flow:rotation-history',
   CORRELATIONS: 'capital-flow:correlations',
@@ -67,15 +86,21 @@ const CACHE_KEYS = {
 };
 
 // Cache TTL (in seconds)
+// Aligned to actual data publication schedules to minimize unnecessary API calls.
+// Rule: TTL ≈ publication_period / 2, so new data is picked up within half a cycle.
 const CACHE_TTL = {
-  SUMMARY: 300,      // 5 minutes
-  LIQUIDITY: 3600,   // 1 hour (FRED data is daily)
-  MARKET: 300,       // 5 minutes
-  ROTATION: 86400,   // 24 hours
-  INSIGHTS: 900,     // 15 minutes (AI insights)
-  CORRELATIONS: 1800, // 30 minutes
-  TRADE_OPPORTUNITIES: 600, // 10 minutes
+  SUMMARY: 300,               // 5 min — composite, must stay fresh
+  LIQUIDITY_SLOW: 604_800,    // 7 days — M2 updates monthly (4th Tuesday)
+  LIQUIDITY_WEEKLY: 259_200,  // 3 days — Fed BS & TGA update weekly (Thursday)
+  LIQUIDITY_DAILY: 21_600,    // 6 hours — Yields, RRP update daily after market close
+  MARKET: 300,                // 5 min — Yahoo/Binance real-time during market hours
+  DEFI: 43_200,               // 12 hours — DefiLlama updates daily (~00:00 UTC)
+  ROTATION: 86_400,           // 24 hours — historical rotation patterns
+  INSIGHTS: 1_800,            // 30 min — AI-generated insights (Gemini cost reduction)
+  CORRELATIONS: 1_800,        // 30 min — derived from market data
+  TRADE_OPPORTUNITIES: 600,   // 10 min — time-sensitive
 };
+
 
 /**
  * Get complete Capital Flow Summary
@@ -206,10 +231,45 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
 }
 
 /**
+ * Read a granular cache key, returning null on miss or error.
+ */
+async function readCache<T>(key: string): Promise<T | null> {
+  try {
+    const raw = await redis?.get(key);
+    return raw ? JSON.parse(raw) as T : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Write a granular cache key, silently ignoring errors.
+ */
+async function writeCache(key: string, ttl: number, data: unknown): Promise<void> {
+  try {
+    if (redis) {
+      await redis.setex(key, ttl, JSON.stringify(data));
+    }
+  } catch (err) {
+    console.warn(`[CapitalFlow] Cache write error for ${key}:`, err);
+  }
+}
+
+/**
  * Get Global Liquidity data
+ *
+ * Each FRED component is cached independently with a TTL matching
+ * its actual publication frequency:
+ *   M2          → 7 days   (published monthly, 4th Tuesday)
+ *   Fed BS      → 3 days   (published weekly, Thursday)
+ *   TGA         → 3 days   (published weekly, Thursday — WTREGEN)
+ *   Yields      → 6 hours  (published daily, ~18:00 ET)
+ *   RRP         → 6 hours  (published daily, ~15:15 ET)
+ *   Net Liq     → 6 hours  (derived from above)
+ *   DXY / VIX   → 5 min    (real-time market data via Yahoo)
  */
 export async function getGlobalLiquidity(): Promise<GlobalLiquidity> {
-  // Try cache
+  // Try the composite cache first (short TTL — 5 min)
   try {
     const cached = await redis?.get(CACHE_KEYS.GLOBAL_LIQUIDITY);
     if (cached) {
@@ -220,54 +280,144 @@ export async function getGlobalLiquidity(): Promise<GlobalLiquidity> {
   }
 
   try {
-    // Fetch from providers with timeout
-    const results = await Promise.allSettled([
-      getAllFredData(),
-      getDxyData(),
-      getVixData(),
+    // --- Read granular caches in parallel ---
+    const [
+      cachedM2, cachedFedBs, cachedTga, cachedYields, cachedRrp, cachedNetLiq,
+    ] = await Promise.all([
+      readCache<GlobalLiquidity['m2MoneySupply']>(CACHE_KEYS.LIQUIDITY_M2),
+      readCache<GlobalLiquidity['fedBalanceSheet']>(CACHE_KEYS.LIQUIDITY_FED_BS),
+      readCache<GlobalLiquidity['treasuryGeneralAccount']>(CACHE_KEYS.LIQUIDITY_TGA),
+      readCache<GlobalLiquidity['yieldCurve']>(CACHE_KEYS.LIQUIDITY_YIELDS),
+      readCache<GlobalLiquidity['reverseRepo']>(CACHE_KEYS.LIQUIDITY_RRP),
+      readCache<GlobalLiquidity['netLiquidity']>(CACHE_KEYS.LIQUIDITY_NET),
     ]);
 
-    // Extract results - use fallback if any failed
-    const fredData = results[0].status === 'fulfilled' ? results[0].value : null;
-    const dxyData = results[1].status === 'fulfilled' ? results[1].value : null;
-    const vixData = results[2].status === 'fulfilled' ? results[2].value : null;
+    // --- Decide which components need fetching ---
+    const needM2 = !cachedM2;
+    const needFedBs = !cachedFedBs;
+    const needTga = !cachedTga;
+    const needYields = !cachedYields;
+    const needRrp = !cachedRrp;
+    const needNetLiq = !cachedNetLiq;
+    const needAnyFred = needM2 || needFedBs || needTga || needYields || needRrp || needNetLiq;
 
-    // Log failures for debugging
-    if (results[0].status === 'rejected') {
-      console.error('[CapitalFlow] FRED data fetch failed:', results[0].reason);
+    // DXY & VIX are always fresh (5 min MARKET cache via their own provider)
+    // but we fetch them every time this composite is rebuilt
+    const fetchPromises: Promise<unknown>[] = [
+      getDxyData(),
+      getVixData(),
+    ];
+
+    // Only fetch individual FRED series whose cache has expired
+    if (needM2) fetchPromises.push(getM2MoneySupply());
+    if (needFedBs) fetchPromises.push(getFedBalanceSheet());
+    if (needTga) fetchPromises.push(getTreasuryGeneralAccount());
+    if (needYields) fetchPromises.push(getTreasuryYields());
+    if (needRrp) fetchPromises.push(getReverseRepo());
+    if (needNetLiq) fetchPromises.push(fetchNetLiquidity());
+
+    const results = await Promise.allSettled(fetchPromises);
+
+    // --- Extract DXY & VIX (always first two) ---
+    const dxyData = results[0].status === 'fulfilled' ? results[0].value as Awaited<ReturnType<typeof getDxyData>> : null;
+    const vixData = results[1].status === 'fulfilled' ? results[1].value as Awaited<ReturnType<typeof getVixData>> : null;
+
+    if (results[0].status === 'rejected') console.error('[CapitalFlow] DXY fetch failed:', results[0].reason);
+    if (results[1].status === 'rejected') console.error('[CapitalFlow] VIX fetch failed:', results[1].reason);
+
+    // --- Extract FRED results in the order they were pushed ---
+    let idx = 2;
+    let freshM2: Awaited<ReturnType<typeof getM2MoneySupply>> | null = null;
+    let freshFedBs: Awaited<ReturnType<typeof getFedBalanceSheet>> | null = null;
+    let freshTga: Awaited<ReturnType<typeof getTreasuryGeneralAccount>> | null = null;
+    let freshYields: Awaited<ReturnType<typeof getTreasuryYields>> | null = null;
+    let freshRrp: Awaited<ReturnType<typeof getReverseRepo>> | null = null;
+    let freshNetLiq: Awaited<ReturnType<typeof fetchNetLiquidity>> | null = null;
+
+    if (needM2) {
+      const r = results[idx++];
+      freshM2 = r.status === 'fulfilled' ? r.value as typeof freshM2 : null;
+      if (r.status === 'rejected') console.error('[CapitalFlow] M2 fetch failed:', r.reason);
     }
-    if (results[1].status === 'rejected') {
-      console.error('[CapitalFlow] DXY data fetch failed:', results[1].reason);
+    if (needFedBs) {
+      const r = results[idx++];
+      freshFedBs = r.status === 'fulfilled' ? r.value as typeof freshFedBs : null;
+      if (r.status === 'rejected') console.error('[CapitalFlow] FedBS fetch failed:', r.reason);
     }
-    if (results[2].status === 'rejected') {
-      console.error('[CapitalFlow] VIX data fetch failed:', results[2].reason);
+    if (needTga) {
+      const r = results[idx++];
+      freshTga = r.status === 'fulfilled' ? r.value as typeof freshTga : null;
+      if (r.status === 'rejected') console.error('[CapitalFlow] TGA fetch failed:', r.reason);
+    }
+    if (needYields) {
+      const r = results[idx++];
+      freshYields = r.status === 'fulfilled' ? r.value as typeof freshYields : null;
+      if (r.status === 'rejected') console.error('[CapitalFlow] Yields fetch failed:', r.reason);
+    }
+    if (needRrp) {
+      const r = results[idx++];
+      freshRrp = r.status === 'fulfilled' ? r.value as typeof freshRrp : null;
+      if (r.status === 'rejected') console.error('[CapitalFlow] RRP fetch failed:', r.reason);
+    }
+    if (needNetLiq) {
+      const r = results[idx++];
+      freshNetLiq = r.status === 'fulfilled' ? r.value as typeof freshNetLiq : null;
+      if (r.status === 'rejected') console.error('[CapitalFlow] NetLiq fetch failed:', r.reason);
     }
 
-    // If all failed, return fallback
-    if (!fredData && !dxyData && !vixData) {
-      console.warn('[CapitalFlow] All liquidity data fetches failed, using fallback');
-      return getFallbackGlobalLiquidity();
-    }
+    // --- Merge: prefer fresh data, fall back to cache, then static fallback ---
+    const m2 = freshM2
+      ? { value: freshM2.value, change30d: freshM2.change30d, yoyGrowth: freshM2.yoyGrowth }
+      : cachedM2 ?? { value: 21.0, change30d: 0, yoyGrowth: 3 };
+
+    const fedBs = freshFedBs
+      ? { value: freshFedBs.value, change30d: freshFedBs.change30d, trend: freshFedBs.trend }
+      : cachedFedBs ?? { value: 7.5, change30d: 0, trend: 'stable' as const };
+
+    const tga = freshTga
+      ? { value: freshTga.value, change7d: freshTga.change7d, change30d: freshTga.change30d, trend: freshTga.trend }
+      : cachedTga ?? { value: 0.7, change7d: 0, change30d: 0, trend: 'stable' as const };
+
+    const yields = freshYields
+      ? { spread10y2y: freshYields.spread10y2y, inverted: freshYields.inverted, interpretation: freshYields.interpretation }
+      : cachedYields ?? { spread10y2y: 0.15, inverted: false, interpretation: 'Flat curve' };
+
+    const rrp = freshRrp
+      ? { value: freshRrp.value, change7d: freshRrp.change7d, change30d: freshRrp.change30d, trend: freshRrp.trend }
+      : cachedRrp ?? { value: 0.5, change7d: 0, change30d: 0, trend: 'stable' as const };
+
+    const netLiq = freshNetLiq
+      ? { value: freshNetLiq.value, change7d: freshNetLiq.change7d, change30d: freshNetLiq.change30d, trend: freshNetLiq.trend, components: freshNetLiq.components, interpretation: freshNetLiq.interpretation }
+      : cachedNetLiq ?? { value: 6.3, change7d: 0, change30d: 0, trend: 'stable' as const, components: { fedBalanceSheet: 7.5, reverseRepo: 0.5, tga: 0.7 }, interpretation: 'Stable' };
+
+    // --- Write fresh data to granular caches (fire-and-forget) ---
+    const cacheWrites: Promise<void>[] = [];
+    if (freshM2) cacheWrites.push(writeCache(CACHE_KEYS.LIQUIDITY_M2, CACHE_TTL.LIQUIDITY_SLOW, m2));
+    if (freshFedBs) cacheWrites.push(writeCache(CACHE_KEYS.LIQUIDITY_FED_BS, CACHE_TTL.LIQUIDITY_WEEKLY, fedBs));
+    if (freshTga) cacheWrites.push(writeCache(CACHE_KEYS.LIQUIDITY_TGA, CACHE_TTL.LIQUIDITY_WEEKLY, tga));
+    if (freshYields) cacheWrites.push(writeCache(CACHE_KEYS.LIQUIDITY_YIELDS, CACHE_TTL.LIQUIDITY_DAILY, yields));
+    if (freshRrp) cacheWrites.push(writeCache(CACHE_KEYS.LIQUIDITY_RRP, CACHE_TTL.LIQUIDITY_DAILY, rrp));
+    if (freshNetLiq) cacheWrites.push(writeCache(CACHE_KEYS.LIQUIDITY_NET, CACHE_TTL.LIQUIDITY_DAILY, netLiq));
 
     const liquidity: GlobalLiquidity = {
-      fedBalanceSheet: fredData?.fedBalanceSheet ?? { value: 7.5, change30d: 0, trend: 'stable' },
-      m2MoneySupply: fredData?.m2MoneySupply ?? { value: 21.0, change30d: 0, yoyGrowth: 3 },
+      fedBalanceSheet: fedBs,
+      m2MoneySupply: m2,
       dxy: dxyData ?? { value: 104, change7d: 0, trend: 'stable' },
       vix: vixData ?? { value: 18, level: 'neutral' },
-      yieldCurve: fredData?.yieldCurve ?? { spread10y2y: 0.15, inverted: false, interpretation: 'Flat curve' },
-      reverseRepo: fredData?.reverseRepo ?? { value: 0.5, change7d: 0, change30d: 0, trend: 'stable' },
-      treasuryGeneralAccount: fredData?.treasuryGeneralAccount ?? { value: 0.7, change7d: 0, change30d: 0, trend: 'stable' },
-      netLiquidity: fredData?.netLiquidity ?? { value: 6.3, change7d: 0, change30d: 0, trend: 'stable', components: { fedBalanceSheet: 7.5, reverseRepo: 0.5, tga: 0.7 }, interpretation: 'Stable' },
+      yieldCurve: yields,
+      reverseRepo: rrp,
+      treasuryGeneralAccount: tga,
+      netLiquidity: netLiq,
       lastUpdated: new Date(),
     };
 
-    // Cache
-    if (redis) {
-      try {
-        await redis.setex(CACHE_KEYS.GLOBAL_LIQUIDITY, CACHE_TTL.LIQUIDITY, JSON.stringify(liquidity));
-      } catch (cacheWriteError) {
-        console.warn('[CapitalFlow] Cache write error for liquidity:', cacheWriteError);
-      }
+    // Write composite cache (short 5-min TTL) + granular caches
+    cacheWrites.push(writeCache(CACHE_KEYS.GLOBAL_LIQUIDITY, CACHE_TTL.SUMMARY, liquidity));
+    await Promise.all(cacheWrites);
+
+    const fetchedCount = [freshM2, freshFedBs, freshTga, freshYields, freshRrp, freshNetLiq].filter(Boolean).length;
+    if (needAnyFred && fetchedCount > 0) {
+      console.log(`[CapitalFlow] Liquidity refreshed: ${fetchedCount} FRED series fetched, ${6 - fetchedCount} from cache`);
     }
 
     return liquidity;

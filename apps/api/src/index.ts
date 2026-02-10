@@ -67,6 +67,7 @@ import notificationCenterRoutes from './modules/notifications/notification-cente
 import smartAlertRoutes from './modules/automation/smart-alerts.routes';
 import { startSmartAlertJob, stopSmartAlertJob } from './modules/automation/smart-alerts.service';
 import { morningBriefingRoutes, startMorningBriefingJob, stopMorningBriefingJob } from './modules/morning-briefing';
+import { startCapitalFlowRefreshJobs, stopCapitalFlowRefreshJobs } from './modules/capital-flow/capital-flow-refresh.job';
 
 // ===========================================
 // Server Configuration
@@ -608,14 +609,14 @@ async function startOutcomeTracker() {
     }
   }, 10 * 60 * 1000); // 10 minutes
 
-  // Check price alerts every 15 seconds
+  // Check price alerts every 30 seconds (reduced from 15s to lower API load)
   alertCheckerInterval = setInterval(async () => {
     if (alertCheckRunning) return;
     alertCheckRunning = true;
     try {
       await withTimeout(
         notificationService.checkAlerts(),
-        12_000, // 12 second timeout (must finish before next 15s tick)
+        25_000, // 25 second timeout (must finish before next 30s tick)
         'Alert checker'
       );
     } catch (error) {
@@ -623,9 +624,9 @@ async function startOutcomeTracker() {
     } finally {
       alertCheckRunning = false;
     }
-  }, 15 * 1000); // 15 seconds
+  }, 30 * 1000); // 30 seconds
 
-  logger.info('✓ Outcome tracker started (30s live, 5m expired, 10m caution, 15s alerts)');
+  logger.info('✓ Outcome tracker started (30s live, 5m expired, 10m caution, 30s alerts)');
 }
 
 const start = async () => {
@@ -718,6 +719,10 @@ const start = async () => {
       // Start payment reconciliation cron job (03:00 UTC daily)
       startReconciliationJob();
       logger.info('✓ Payment reconciliation cron started');
+
+      // Start Capital Flow smart refresh cron jobs (publication-aware scheduling)
+      startCapitalFlowRefreshJobs();
+      logger.info('✓ Capital Flow smart refresh cron started');
     }
 
     // Start server
@@ -798,6 +803,10 @@ const shutdown = async (signal: string) => {
     // Stop Morning Briefing cron
     stopMorningBriefingJob();
     logger.info('✓ Morning briefing cron stopped');
+
+    // Stop Capital Flow smart refresh cron
+    stopCapitalFlowRefreshJobs();
+    logger.info('✓ Capital Flow refresh cron stopped');
 
     // Stop accepting new connections
     await app.close();
