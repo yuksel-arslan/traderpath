@@ -1,4 +1,3 @@
-// apps/web/middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -6,27 +5,23 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const maintenanceMode = process.env['NEXT_PUBLIC_MAINTENANCE_MODE'] === 'true';
 
-  // 1. Bakım Modu Aktifse
   if (maintenanceMode) {
-    // Statik dosyalar ve bakım sayfasının kendisine izin ver
+    // Statik dosyalara ve API'ye dokunma
     if (
       pathname.startsWith('/_next') ||
       pathname.startsWith('/api') ||
-      pathname === '/maintenance' ||
-      pathname === '/favicon.ico'
+      pathname.startsWith('/static') ||
+      pathname === '/favicon.ico' ||
+      pathname === '/maintenance.html'
     ) {
       return NextResponse.next();
     }
-    // Diğer her şeyi /maintenance sayfasına yönlendir
-    return NextResponse.redirect(new URL('/maintenance', request.url));
+
+    // ÖNEMLİ: /maintenance.html dosyasını REWRITE ederek göster
+    // Bu sayede tarayıcıdaki URL ne olursa olsun bizim hazırladığımız HTML basılır.
+    return NextResponse.rewrite(new URL('/maintenance.html', request.url));
   }
 
-  // 2. Bakım Modu Kapalıysa ama kullanıcı /maintenance sayfasına girmeye çalışırsa ana sayfaya at
-  if (!maintenanceMode && pathname === '/maintenance') {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  // ... (Buradan aşağısı sizin mevcut Auth mantığınız)
   return NextResponse.next();
 }
 
