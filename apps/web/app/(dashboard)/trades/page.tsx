@@ -740,9 +740,9 @@ export default function TradesPage() {
   }, []);
 
   return (
-    <div className="h-screen flex flex-col bg-white dark:bg-black text-black dark:text-white overflow-hidden">
+    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-black dark:text-white overflow-hidden">
       {/* Header */}
-      <div className="border-b border-black/[0.06] dark:border-white/[0.06] shrink-0">
+      <div className="shrink-0">
         <div className="max-w-[1400px] mx-auto px-3 py-3 flex items-center justify-between gap-3">
           <div>
             <h1 className="text-sm font-sans font-semibold tracking-tight">TRADES</h1>
@@ -910,22 +910,6 @@ export default function TradesPage() {
         </main>
       </div>
 
-      {/* Footer summary */}
-      <div className="border-t border-black/[0.06] dark:border-white/[0.06] shrink-0">
-        <div className="max-w-[1400px] mx-auto px-3 py-2 flex items-center justify-between text-[10px] font-sans text-slate-400">
-          <span>
-            {activeTrades.length} active &middot; {MOCK_TRADES.filter((t) => t.status === 'TP_HIT').length} TP &middot; {MOCK_TRADES.filter((t) => t.status === 'SL_HIT').length} SL
-          </span>
-          <span className="hidden sm:flex items-center gap-2">
-            {warnings > 0 && (
-              <span className="flex items-center gap-1 text-amber-500">
-                <AlertTriangle className="w-3 h-3" />
-                {warnings} flow warning{warnings > 1 ? 's' : ''}
-              </span>
-            )}
-          </span>
-        </div>
-      </div>
     </div>
   );
 }

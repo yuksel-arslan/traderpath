@@ -602,7 +602,7 @@ export default function FlowPage() {
     <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white overflow-hidden">
       <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 flex flex-col h-full">
         {/* Header */}
-        <div className="shrink-0 pt-4 pb-3 border-b border-neutral-200 dark:border-neutral-800">
+        <div className="shrink-0 pt-4 pb-3">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
               L1 · L2 · L3 · L4
@@ -708,17 +708,6 @@ export default function FlowPage() {
           </main>
         </div>
 
-        {/* Footer */}
-        <footer className="shrink-0 py-3 border-t border-neutral-200 dark:border-neutral-800">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
-              Capital Flow Intelligence · L1–L4
-            </span>
-            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
-              Data for educational purposes only
-            </span>
-          </div>
-        </footer>
       </div>
     </div>
   );
