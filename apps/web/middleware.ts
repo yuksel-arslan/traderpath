@@ -42,16 +42,22 @@ export function middleware(request: NextRequest) {
 
   // ─── Maintenance Mode Gate ─────────────────────────────────────
   // Set NEXT_PUBLIC_MAINTENANCE_MODE=true in Vercel / .env to enable.
-  // Only the /maintenance page itself (and static assets) are allowed through.
+  // Maintenance page itself and static assets are allowed through.
   const maintenanceMode = process.env['NEXT_PUBLIC_MAINTENANCE_MODE'] === 'true';
-  if (maintenanceMode && pathname !== '/maintenance') {
-    const maintenanceUrl = new URL('/maintenance', request.url);
+  
+  if (maintenanceMode) {
+    // Allow maintenance.html and static assets
+    if (
+      pathname === '/maintenance.html' ||
+      pathname.startsWith('/_next') ||
+      pathname.startsWith('/static') ||
+      pathname === '/favicon.ico'
+    ) {
+      return NextResponse.next();
+    }
+    // Redirect everything else to maintenance page
+    const maintenanceUrl = new URL('/maintenance.html', request.url);
     return NextResponse.redirect(maintenanceUrl);
-  }
-  // If maintenance mode is OFF but someone navigates to /maintenance, redirect home
-  if (!maintenanceMode && pathname === '/maintenance') {
-    const homeUrl = new URL('/', request.url);
-    return NextResponse.redirect(homeUrl);
   }
 
   // Check for our auth session cookie
