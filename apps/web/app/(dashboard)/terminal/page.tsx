@@ -1049,21 +1049,40 @@ function L7TradeVisualizer({
       }
 
       // --- Forecast Path (P10 / P50 / P90 projection) ---
+      // Forecast starts from the ENTRY candle, not the last candle
       const isLong = selectedAsset.direction === 'LONG';
       const score = selectedAsset.aiScore;
       const pctMove = (score / 100) * 8; // max ~8% expected move
-      const lastCandle = candles[candles.length - 1];
-      const lastClose = lastCandle.close;
-      const lastTime = lastCandle.time as number;
-      const forecastHours = 48;
+      const entryPrice = tradePlan ? tradePlan.entry : selectedAsset.price;
+
+      // Find the candle closest to the entry price (entry point on chart)
+      let entryIdx = candles.length - 1;
+      if (tradePlan) {
+        let minDist = Infinity;
+        for (let i = 0; i < candles.length; i++) {
+          const dist = Math.abs(candles[i].close - entryPrice);
+          if (dist < minDist) {
+            minDist = dist;
+            entryIdx = i;
+          }
+        }
+      }
+
+      const entryCandle = candles[entryIdx];
+      const entryClose = entryCandle.close;
+      const entryTime = entryCandle.time as number;
+      const lastTime = candles[candles.length - 1].time as number;
+      // Forecast spans from entry candle to 48h after the last candle
+      const totalSeconds = (lastTime - entryTime) + 48 * 3600;
+      const forecastSteps = 60;
 
       const p50Data: { time: Time; value: number }[] = [];
       const p90Data: { time: Time; value: number }[] = [];
       const p10Data: { time: Time; value: number }[] = [];
 
-      for (let h = 0; h <= forecastHours; h++) {
-        const t = (lastTime + h * 3600) as Time;
-        const progress = h / forecastHours;
+      for (let s = 0; s <= forecastSteps; s++) {
+        const t = (entryTime + Math.round((s / forecastSteps) * totalSeconds)) as Time;
+        const progress = s / forecastSteps;
         // Smooth easing curve
         const ease = 1 - Math.pow(1 - progress, 2);
 
@@ -1072,9 +1091,9 @@ function L7TradeVisualizer({
         const p90Offset = p50Offset + bandWidth * (isLong ? 1 : -1);
         const p10Offset = p50Offset - bandWidth * (isLong ? 1 : -1);
 
-        p50Data.push({ time: t, value: lastClose * (1 + p50Offset) });
-        p90Data.push({ time: t, value: lastClose * (1 + p90Offset) });
-        p10Data.push({ time: t, value: lastClose * (1 + p10Offset) });
+        p50Data.push({ time: t, value: entryClose * (1 + p50Offset) });
+        p90Data.push({ time: t, value: entryClose * (1 + p90Offset) });
+        p10Data.push({ time: t, value: entryClose * (1 + p10Offset) });
       }
 
       // P90 upper band area (semi-transparent fill to baseline)
