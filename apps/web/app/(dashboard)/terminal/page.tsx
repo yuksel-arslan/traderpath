@@ -779,11 +779,13 @@ function L5Screener({
     return result;
   }, [assets, search, sortKey, sortDir, marketFilter]);
 
-  const SortHeader = ({ label, sKey, className }: { label: string; sKey: SortKey; className?: string }) => (
-    <th
+  const SortBtn = ({ label, sKey }: { label: string; sKey: SortKey }) => (
+    <button
       className={cn(
-        'p-2 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider cursor-pointer select-none hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors',
-        className,
+        'text-[10px] uppercase tracking-wider transition-colors font-sans',
+        sortKey === sKey
+          ? 'text-neutral-900 dark:text-white'
+          : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300',
       )}
       onClick={() => handleSort(sKey)}
     >
@@ -793,7 +795,7 @@ function L5Screener({
           sortDir === 'asc' ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />
         )}
       </span>
-    </th>
+    </button>
   );
 
   return (
@@ -832,81 +834,75 @@ function L5Screener({
         </div>
       </div>
 
-      {/* Table */}
-      <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs min-w-[640px]">
-            <thead>
-              <tr className="bg-neutral-50 dark:bg-neutral-900/50">
-                <SortHeader label="#" sKey="rank" className="text-center w-8" />
-                <SortHeader label="Asset" sKey="symbol" className="text-left" />
-                <SortHeader label="Price" sKey="price" className="text-right" />
-                <SortHeader label="24h" sKey="change24h" className="text-right" />
-                <SortHeader label="Volume" sKey="volume" className="text-right hidden md:table-cell" />
-                <SortHeader label="AI Score" sKey="aiScore" className="text-left" />
-                <SortHeader label="Trend" sKey="trend" className="text-center" />
-                <th className="p-2 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider text-center">Verdict</th>
-                <th className="p-2 font-sans text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider text-center">Dir</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
-              {filtered.map((asset) => (
-                <tr
-                  key={asset.symbol}
-                  onClick={() => onSelect(asset)}
-                  className={cn(
-                    'bg-white dark:bg-neutral-950 cursor-pointer transition-colors',
-                    selectedSymbol === asset.symbol
-                      ? 'bg-neutral-100 dark:bg-neutral-900'
-                      : 'hover:bg-neutral-50 dark:hover:bg-neutral-900/30',
-                  )}
-                >
-                  <td className="p-2 text-center font-sans text-neutral-400 dark:text-neutral-500 tabular-nums">
-                    {asset.rank}
-                  </td>
-                  <td className="p-2">
-                    <div className="flex flex-col">
-                      <span className="font-sans font-semibold text-neutral-900 dark:text-white">
-                        {asset.symbol}
-                      </span>
-                      <span className="text-[10px] text-neutral-400 dark:text-neutral-500 truncate max-w-[120px]">
-                        {asset.name}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="p-2 text-right font-sans font-medium text-neutral-900 dark:text-white tabular-nums">
-                    {formatPrice(asset.price)}
-                  </td>
-                  <td className="p-2 text-right">
-                    <Delta value={asset.change24h} />
-                  </td>
-                  <td className="p-2 text-right font-sans text-neutral-500 dark:text-neutral-400 hidden md:table-cell tabular-nums">
-                    {formatNumber(asset.volume)}
-                  </td>
-                  <td className="p-2 w-28">
-                    <ScoreBar score={asset.aiScore} />
-                  </td>
-                  <td className="p-2 text-center">
-                    <TrendIndicator trend={asset.trend} />
-                  </td>
-                  <td className="p-2 text-center">
-                    <VerdictBadgeSmall verdict={asset.verdict} />
-                  </td>
-                  <td className="p-2 text-center">
-                    <DirectionTag direction={asset.direction} />
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="p-8 text-center text-xs text-neutral-400 dark:text-neutral-500 font-sans">
-                    No assets match your criteria
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* Sort row */}
+      <div className="flex items-center gap-4 px-1 mb-2">
+        <SortBtn label="#" sKey="rank" />
+        <SortBtn label="Asset" sKey="symbol" />
+        <SortBtn label="Price" sKey="price" />
+        <SortBtn label="24h" sKey="change24h" />
+        <span className="hidden md:inline"><SortBtn label="Volume" sKey="volume" /></span>
+        <SortBtn label="Score" sKey="aiScore" />
+        <SortBtn label="Trend" sKey="trend" />
+      </div>
+
+      {/* Card list */}
+      <div className="space-y-1.5">
+        {filtered.map((asset) => (
+          <button
+            key={asset.symbol}
+            onClick={() => onSelect(asset)}
+            className={cn(
+              'w-full text-left rounded-xl px-3 py-2.5 flex items-center gap-3 transition-all duration-150',
+              selectedSymbol === asset.symbol
+                ? 'bg-neutral-100 dark:bg-white/[0.06] ring-1 ring-neutral-300 dark:ring-white/10'
+                : 'hover:bg-neutral-50 dark:hover:bg-white/[0.03]',
+            )}
+          >
+            {/* Rank */}
+            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 tabular-nums w-5 text-center shrink-0">
+              {asset.rank}
+            </span>
+
+            {/* Asset */}
+            <div className="min-w-0 flex-1">
+              <span className="font-sans font-semibold text-xs text-neutral-900 dark:text-white">{asset.symbol}</span>
+              <span className="text-[10px] text-neutral-400 dark:text-neutral-500 ml-1.5 truncate hidden sm:inline">{asset.name}</span>
+            </div>
+
+            {/* Price + 24h */}
+            <div className="text-right shrink-0">
+              <div className="font-sans font-medium text-xs text-neutral-900 dark:text-white tabular-nums">{formatPrice(asset.price)}</div>
+              <Delta value={asset.change24h} />
+            </div>
+
+            {/* Volume (md+) */}
+            <span className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400 tabular-nums hidden md:block w-16 text-right shrink-0">
+              {formatNumber(asset.volume)}
+            </span>
+
+            {/* Score */}
+            <div className="w-20 shrink-0 hidden sm:block">
+              <ScoreBar score={asset.aiScore} />
+            </div>
+
+            {/* Trend */}
+            <div className="shrink-0 hidden sm:block">
+              <TrendIndicator trend={asset.trend} />
+            </div>
+
+            {/* Verdict + Direction */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <VerdictBadgeSmall verdict={asset.verdict} />
+              <DirectionTag direction={asset.direction} />
+            </div>
+          </button>
+        ))}
+
+        {filtered.length === 0 && (
+          <div className="py-8 text-center text-xs text-neutral-400 dark:text-neutral-500 font-sans">
+            No assets match your criteria
+          </div>
+        )}
       </div>
     </section>
   );

@@ -290,7 +290,7 @@ function AccordionSection({
         'transition-all duration-300 ease-in-out overflow-hidden',
         open ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
       )}>
-        <div className="px-4 pb-4 pt-1 border-t border-white/5">{children}</div>
+        <div className="px-4 pb-4 pt-2">{children}</div>
       </div>
     </div>
   );
@@ -306,7 +306,7 @@ function ListTile({ label, value, valueColor, sub }: {
   sub?: string;
 }) {
   return (
-    <div className="flex items-center justify-between py-3 border-b border-white/5 last:border-b-0">
+    <div className="flex items-center justify-between py-2.5 rounded-lg px-2 hover:bg-white/[0.03] transition-colors">
       <span className="text-xs text-gray-400">{label}</span>
       <div className="text-right">
         <span className={cn('text-sm font-bold font-sans tabular-nums', valueColor || 'text-white')}>
@@ -430,7 +430,7 @@ export function AccordionList(props: AccordionListProps) {
           <div className="space-y-0">
             {/* L1 */}
             <Link href="/analyze" className="block">
-              <div className="flex items-center justify-between py-3 border-b border-white/5 hover:bg-white/[0.02] transition rounded-lg px-2 -mx-2">
+              <div className="flex items-center justify-between py-2.5 hover:bg-white/[0.03] transition-colors rounded-lg px-2 -mx-2">
                 <div className="flex items-center gap-3">
                   <div className="w-6 h-6 rounded-lg bg-blue-500/20 flex items-center justify-center text-[10px] font-bold text-blue-400">1</div>
                   <div>
@@ -451,7 +451,7 @@ export function AccordionList(props: AccordionListProps) {
 
             {/* L2 */}
             <Link href="/analyze" className="block">
-              <div className="flex items-center justify-between py-3 border-b border-white/5 hover:bg-white/[0.02] transition rounded-lg px-2 -mx-2">
+              <div className="flex items-center justify-between py-2.5 hover:bg-white/[0.03] transition-colors rounded-lg px-2 -mx-2">
                 <div className="flex items-center gap-3">
                   <div className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center text-[10px] font-bold text-emerald-400">2</div>
                   <div>
@@ -474,7 +474,7 @@ export function AccordionList(props: AccordionListProps) {
 
             {/* L3 */}
             <Link href="/analyze" className="block">
-              <div className="flex items-center justify-between py-3 border-b border-white/5 hover:bg-white/[0.02] transition rounded-lg px-2 -mx-2">
+              <div className="flex items-center justify-between py-2.5 hover:bg-white/[0.03] transition-colors rounded-lg px-2 -mx-2">
                 <div className="flex items-center gap-3">
                   <div className="w-6 h-6 rounded-lg bg-purple-500/20 flex items-center justify-center text-[10px] font-bold text-purple-400">3</div>
                   <div>
@@ -786,7 +786,7 @@ export function AccordionList(props: AccordionListProps) {
             {aiStats && (
               <>
                 {/* Concierge */}
-                <div className="flex items-center justify-between py-3 border-b border-white/5">
+                <div className="flex items-center justify-between py-2.5 rounded-lg px-2 hover:bg-white/[0.03] transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-[#4dd0e1]/10 flex items-center justify-center">
                       <Bot className="w-4 h-4 text-[#4dd0e1]" />
@@ -797,7 +797,7 @@ export function AccordionList(props: AccordionListProps) {
                 </div>
 
                 {/* Expert */}
-                <div className="flex items-center justify-between py-3 border-b border-white/5">
+                <div className="flex items-center justify-between py-2.5 rounded-lg px-2 hover:bg-white/[0.03] transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center">
                       <Brain className="w-4 h-4 text-purple-400" />
@@ -815,7 +815,7 @@ export function AccordionList(props: AccordionListProps) {
             {/* Signals */}
             {signalStats && (
               <>
-                <div className="flex items-center justify-between py-3 border-b border-white/5">
+                <div className="flex items-center justify-between py-2.5 rounded-lg px-2 hover:bg-white/[0.03] transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-[#4dd0e1]/10 flex items-center justify-center">
                       <Activity className="w-4 h-4 text-[#4dd0e1]" />
@@ -835,7 +835,7 @@ export function AccordionList(props: AccordionListProps) {
                 </div>
 
                 {signalStats.bestPerformer && (
-                  <div className="flex items-center justify-between py-3 border-b border-white/5">
+                  <div className="flex items-center justify-between py-2.5 rounded-lg px-2 hover:bg-white/[0.03] transition-colors">
                     <span className="text-xs text-gray-400">Best Performer</span>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-white">{signalStats.bestPerformer.symbol}</span>
@@ -848,7 +848,7 @@ export function AccordionList(props: AccordionListProps) {
                   <Link
                     key={signal.id}
                     href={`/signals/${signal.id}`}
-                    className="flex items-center justify-between py-3 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition rounded-lg px-2 -mx-2 min-h-[48px]"
+                    className="flex items-center justify-between py-2.5 hover:bg-white/[0.03] transition-colors rounded-lg px-2 -mx-2 min-h-[48px]"
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-white">{signal.symbol}</span>

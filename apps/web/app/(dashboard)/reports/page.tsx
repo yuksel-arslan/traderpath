@@ -733,11 +733,10 @@ Could you share your risk assessment and recommendations based on this analysis?
             <div
               key={report.id}
               className={cn(
-                "border-2 rounded-xl p-4 hover:shadow-lg transition relative overflow-hidden bg-white dark:bg-transparent",
-                // TP Hit = Teal, SL Hit = Coral/Red, Active = Teal
-                report.outcome === 'correct' && "border-teal-500/50",
-                report.outcome === 'incorrect' && "border-red-500/50",
-                isActive && "border-teal-500/30"
+                "border rounded-2xl p-4 hover:shadow-lg transition-all duration-150 relative overflow-hidden bg-white dark:bg-white/[0.02] backdrop-blur-sm",
+                report.outcome === 'correct' && "border-teal-500/30",
+                report.outcome === 'incorrect' && "border-red-500/30",
+                isActive && "border-white/10 dark:border-white/[0.06]"
               )}
               style={{
                 background: report.outcome === 'correct'

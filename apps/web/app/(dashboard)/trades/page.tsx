@@ -455,7 +455,7 @@ function OverviewPanel({
   selectedId: string | null;
 }) {
   return (
-    <div>
+    <div className="space-y-1.5 p-1">
       {trades.map((trade) => {
         const { label: flowLabel, color: flowColor } = flowSignalLabel(trade.flowSignal);
 
@@ -464,10 +464,10 @@ function OverviewPanel({
             key={trade.id}
             onClick={() => onSelect(trade.id)}
             className={cn(
-              'w-full px-3 py-3 flex items-center gap-3 transition-colors text-left border-b border-black/[0.03] dark:border-white/[0.03]',
+              'w-full px-3 py-3 flex items-center gap-3 transition-all duration-150 text-left rounded-xl',
               selectedId === trade.id
-                ? 'bg-[#14B8A6]/5 dark:bg-[#5EEAD4]/5'
-                : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]',
+                ? 'bg-[#14B8A6]/5 dark:bg-[#5EEAD4]/5 ring-1 ring-[#14B8A6]/30 dark:ring-[#5EEAD4]/20'
+                : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.03]',
             )}
           >
             <div className="flex flex-col items-center gap-0.5 w-8">
@@ -539,7 +539,7 @@ function TradeDetailPanel({ trade }: { trade: Trade }) {
   return (
     <div className="space-y-4">
       {/* Trade header context bar */}
-      <div className="flex items-center gap-2 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
+      <div className="flex items-center gap-2 pb-3">
         <span className="text-xs font-sans font-semibold">{trade.symbol}</span>
         <span className="text-[10px] text-slate-400 font-sans">{trade.market}</span>
         <span className={cn(
