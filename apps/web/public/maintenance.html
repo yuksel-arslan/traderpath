@@ -32,12 +32,12 @@
     }
 
     .wrap{ width:min(880px,100%); }
-
+    
     .top{
       display:flex; align-items:center; gap: 12px;
       margin-bottom: 24px;
     }
-
+    
     /* Logo */
     .logo-img {
       height: 36px;
@@ -45,11 +45,16 @@
       display: block;
     }
 
-    .brand-name{
-      font-size: 18px; 
+    /* Gradient text for brand name */
+    .brand-name {
+      font-size: 18px;
       font-weight: 600;
       letter-spacing: -0.02em;
-      color: var(--text);
+      background: linear-gradient(90deg, #40E0D0, #0A0A0A);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      color: transparent;
     }
 
     .card{
@@ -167,7 +172,7 @@
 <body>
   <div class="wrap">
     <div class="top">
-      <img src="/logo.svg" alt="TraderPath" class="logo-img">
+      <img src="/logo.svg" alt="TraderPath" class="logo-img" />
       <span class="brand-name">TraderPath</span>
     </div>
 
