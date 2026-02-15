@@ -61,7 +61,7 @@ export function PriceTicker() {
 
   if (isLoading || livePrices.length === 0) {
     return (
-      <div className="w-full overflow-hidden py-1.5 border-b border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-black">
+      <div className="w-full overflow-hidden py-1.5 border-b border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-[#0B1121]">
         <div className="flex items-center justify-center gap-4 px-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-3 w-24 bg-black/5 dark:bg-white/5 rounded animate-pulse" />
@@ -73,7 +73,7 @@ export function PriceTicker() {
 
   return (
     <div
-      className="w-full overflow-hidden py-1.5 border-b border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-black"
+      className="w-full overflow-hidden py-1.5 border-b border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-[#0B1121]"
       aria-label="Live cryptocurrency prices"
     >
       <div className="flex items-center gap-4 sm:gap-6 overflow-x-auto px-4 scrollbar-none">

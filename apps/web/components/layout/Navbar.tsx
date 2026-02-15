@@ -14,7 +14,7 @@ export function Navbar() {
   const closeMenu = () => setMobileMenuOpen(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-black/[0.06] dark:border-white/[0.06] bg-white/95 dark:bg-black/95 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-black/[0.06] dark:border-white/[0.06] bg-white/95 dark:bg-[#0B1121]/95 backdrop-blur">
       <div className="max-w-[1200px] mx-auto px-4 py-2.5 flex items-center justify-between">
         {/* Logo */}
         <TraderPathLogo size="sm" showText href="/" />
@@ -70,7 +70,7 @@ export function Navbar() {
 
       {/* Mobile panel */}
       {mobileMenuOpen && (
-        <nav className="md:hidden border-t border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-black" aria-label="Mobile navigation">
+        <nav className="md:hidden border-t border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-[#0B1121]" aria-label="Mobile navigation">
           <div className="px-4 py-3 flex flex-col gap-3">
             {NAV_LINKS.map((link) => (
               <a

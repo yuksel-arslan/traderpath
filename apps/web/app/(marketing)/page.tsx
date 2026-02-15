@@ -270,7 +270,7 @@ function PerformanceChart() {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen text-slate-200 relative" style={{ background: '#0B1121' }}>
+    <div className="dark min-h-screen text-slate-200 relative" style={{ background: '#0B1121' }}>
       {/* Ambient glow orbs */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full bg-teal-500/[0.07] blur-[120px]" />
