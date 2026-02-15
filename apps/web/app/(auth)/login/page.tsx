@@ -100,7 +100,7 @@ export default function LoginPage() {
       });
 
       // Handle Vercel function timeout (returns HTML 504, not JSON)
-      let data: Record<string, unknown> | undefined;
+      let data: Record<string, unknown>;
       try {
         data = await response.json();
       } catch {
@@ -114,20 +114,24 @@ export default function LoginPage() {
         return;
       }
 
+      const errorObj = data.error as Record<string, unknown> | undefined;
+      const dataObj = data.data as Record<string, unknown> | undefined;
+
       if (!response.ok || !data.success) {
         // Handle email not verified error specially
-        if (data.error?.code === 'EMAIL_NOT_VERIFIED') {
+        if (errorObj?.code === 'EMAIL_NOT_VERIFIED') {
           setEmailNotVerified(true);
-          setVerificationEmail(data.error?.email || email);
+          setVerificationEmail((errorObj?.email as string) || email);
           setError('');
         } else {
-          setError(data.error?.message || 'Invalid email or password');
+          setError((errorObj?.message as string) || 'Invalid email or password');
         }
       } else {
         // Check if this is first login
-        if (data.data?.isFirstLogin && data.data?.firstLoginBonus) {
-          setFirstLoginBonus(data.data.firstLoginBonus);
-          setWelcomeName(data.data.user?.name || '');
+        if (dataObj?.isFirstLogin && dataObj?.firstLoginBonus) {
+          setFirstLoginBonus(dataObj.firstLoginBonus as number);
+          const user = dataObj.user as Record<string, unknown> | undefined;
+          setWelcomeName((user?.name as string) || '');
           setShowWelcomeModal(true);
         } else {
           router.push('/dashboard');
