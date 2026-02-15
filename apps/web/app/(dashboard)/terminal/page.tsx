@@ -24,6 +24,9 @@ import {
   TrendingUp,
   TrendingDown,
   Eye,
+  Loader2,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import {
@@ -36,6 +39,7 @@ import {
   Time,
 } from 'lightweight-charts';
 import { cn, formatNumber, formatPrice, formatPriceValue } from '../../../lib/utils';
+import { authFetch } from '../../../lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -149,97 +153,206 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Mock Data Generators (will be replaced with real API calls)
+// API Data Mapping — Capital Flow + Top Coins
 // ---------------------------------------------------------------------------
 
-function generateMacroMetrics(): MacroMetric[] {
-  return [
-    { label: 'M2 Supply', value: '$21.8T', delta: 2.3, signal: 'bullish' },
-    { label: 'Fed BS', value: '$7.2T', delta: -1.1, signal: 'bearish' },
-    { label: 'DXY', value: '103.42', delta: -0.8, signal: 'bullish' },
-    { label: 'VIX', value: '14.2', delta: -3.2, signal: 'bullish' },
-    { label: 'US10Y', value: '4.28%', delta: 0.12, signal: 'neutral' },
-    { label: 'Yield Curve', value: '+0.32', delta: 0.15, signal: 'bullish' },
-  ];
+function mapMacroMetrics(gl: Record<string, any> | null | undefined): MacroMetric[] {
+  if (!gl) return [];
+  const metrics: MacroMetric[] = [];
+  if (gl.m2MoneySupply) {
+    const val = Number(gl.m2MoneySupply.value ?? 0);
+    const growth = Number(gl.m2MoneySupply.yoyGrowth ?? 0);
+    metrics.push({
+      label: 'M2 Supply',
+      value: val > 0 ? `$${(val / 1e12).toFixed(1)}T` : 'N/A',
+      delta: growth,
+      signal: growth > 0 ? 'bullish' : 'bearish',
+    });
+  }
+  if (gl.fedBalanceSheet) {
+    const val = Number(gl.fedBalanceSheet.value ?? 0);
+    const change = Number(gl.fedBalanceSheet.monthlyChange ?? 0);
+    metrics.push({
+      label: 'Fed BS',
+      value: val > 0 ? `$${(val / 1e12).toFixed(1)}T` : 'N/A',
+      delta: change,
+      signal: change > 0 ? 'bullish' : change < -2 ? 'bearish' : 'neutral',
+    });
+  }
+  if (gl.dxy) {
+    const val = Number(gl.dxy.value ?? 0);
+    const change = Number(gl.dxy.weeklyChange ?? 0);
+    metrics.push({
+      label: 'DXY',
+      value: val > 0 ? val.toFixed(2) : 'N/A',
+      delta: change,
+      signal: change < 0 ? 'bullish' : 'bearish', // DXY down = bullish for risk
+    });
+  }
+  if (gl.vix) {
+    const val = Number(gl.vix.value ?? 0);
+    const change = Number(gl.vix.weeklyChange ?? 0);
+    metrics.push({
+      label: 'VIX',
+      value: val > 0 ? val.toFixed(1) : 'N/A',
+      delta: change,
+      signal: val < 20 ? 'bullish' : val > 30 ? 'bearish' : 'neutral',
+    });
+  }
+  if (gl.yieldCurve) {
+    const us10y = Number(gl.yieldCurve.us10y ?? 0);
+    const spread = Number(gl.yieldCurve.spread10y2y ?? 0);
+    metrics.push({
+      label: 'US10Y',
+      value: us10y > 0 ? `${us10y.toFixed(2)}%` : 'N/A',
+      delta: Number(gl.yieldCurve.weeklyChange10y ?? 0),
+      signal: 'neutral',
+    });
+    metrics.push({
+      label: 'Yield Curve',
+      value: spread > 0 ? `+${spread.toFixed(2)}` : spread.toFixed(2),
+      delta: Number(gl.yieldCurve.weeklyChangeSpread ?? 0),
+      signal: spread > 0 ? 'bullish' : 'bearish',
+    });
+  }
+  return metrics;
 }
 
-function generateMarketFlows(): MarketFlow[] {
-  return [
-    { market: 'Crypto', flow7d: 5.2, flow30d: 12.8, velocity: 2.1, phase: 'EARLY' },
-    { market: 'Stocks', flow7d: 1.8, flow30d: 4.2, velocity: 0.6, phase: 'MID' },
-    { market: 'Metals', flow7d: -0.4, flow30d: 2.1, velocity: -1.2, phase: 'LATE' },
-    { market: 'Bonds', flow7d: -2.1, flow30d: -5.3, velocity: -0.8, phase: 'EXIT' },
-  ];
+function mapMarketFlows(markets: any[] | null | undefined): MarketFlow[] {
+  if (!Array.isArray(markets)) return [];
+  return markets.filter(m => m && m.market).map(m => ({
+    market: String(m.market || '').charAt(0).toUpperCase() + String(m.market || '').slice(1).toLowerCase(),
+    flow7d: Number(m.flow7d ?? 0),
+    flow30d: Number(m.flow30d ?? 0),
+    velocity: Number(m.flowVelocity ?? 0),
+    phase: String(m.phase ?? 'MID').toUpperCase() as 'EARLY' | 'MID' | 'LATE' | 'EXIT',
+  }));
 }
 
-function generateSectors(): SectorData[] {
-  return [
-    { name: 'DeFi', flow: 8.4, dominance: 22.3, trending: 'up' },
-    { name: 'Layer 2', flow: 6.1, dominance: 15.7, trending: 'up' },
-    { name: 'AI Tokens', flow: 4.8, dominance: 8.2, trending: 'up' },
-    { name: 'Meme', flow: -2.3, dominance: 5.1, trending: 'down' },
-    { name: 'Gaming', flow: 1.2, dominance: 3.4, trending: 'flat' },
-    { name: 'RWA', flow: 3.7, dominance: 4.8, trending: 'up' },
-  ];
+function mapSectors(markets: any[] | null | undefined): SectorData[] {
+  if (!Array.isArray(markets)) return [];
+  const sectors: SectorData[] = [];
+  for (const m of markets) {
+    if (!m || !Array.isArray(m.sectors)) continue;
+    for (const s of m.sectors) {
+      if (!s) continue;
+      const flow = Number(s.flow ?? s.weeklyFlow ?? 0);
+      sectors.push({
+        name: String(s.name ?? ''),
+        flow,
+        dominance: Number(s.dominance ?? 0),
+        trending: flow > 1 ? 'up' : flow < -1 ? 'down' : 'flat',
+      });
+    }
+  }
+  return sectors.sort((a, b) => b.flow - a.flow);
 }
 
-function generateScreenerData(): ScreenerAsset[] {
-  const assets: ScreenerAsset[] = [
-    { rank: 1, symbol: 'BTC', name: 'Bitcoin', price: 97842.50, change24h: 3.42, volume: 42800000000, aiScore: 92, trend: 'STRONG_UP', verdict: 'GO', direction: 'LONG', market: 'Crypto' },
-    { rank: 2, symbol: 'ETH', name: 'Ethereum', price: 3245.80, change24h: 2.18, volume: 18500000000, aiScore: 87, trend: 'UP', verdict: 'GO', direction: 'LONG', market: 'Crypto' },
-    { rank: 3, symbol: 'SOL', name: 'Solana', price: 198.42, change24h: 5.67, volume: 4200000000, aiScore: 84, trend: 'STRONG_UP', verdict: 'GO', direction: 'LONG', market: 'Crypto' },
-    { rank: 4, symbol: 'AAPL', name: 'Apple Inc.', price: 242.56, change24h: 0.82, volume: 52000000, aiScore: 78, trend: 'UP', verdict: 'COND', direction: 'LONG', market: 'Stocks' },
-    { rank: 5, symbol: 'NVDA', name: 'NVIDIA Corp.', price: 892.30, change24h: -1.24, volume: 38000000, aiScore: 81, trend: 'FLAT', verdict: 'WAIT', direction: 'NEUTRAL', market: 'Stocks' },
-    { rank: 6, symbol: 'GLD', name: 'Gold ETF', price: 214.82, change24h: -0.34, volume: 8200000, aiScore: 65, trend: 'DOWN', verdict: 'AVOID', direction: 'SHORT', market: 'Metals' },
-    { rank: 7, symbol: 'AVAX', name: 'Avalanche', price: 38.92, change24h: 4.12, volume: 980000000, aiScore: 79, trend: 'UP', verdict: 'COND', direction: 'LONG', market: 'Crypto' },
-    { rank: 8, symbol: 'LINK', name: 'Chainlink', price: 18.45, change24h: 6.84, volume: 720000000, aiScore: 83, trend: 'STRONG_UP', verdict: 'GO', direction: 'LONG', market: 'Crypto' },
-    { rank: 9, symbol: 'DOGE', name: 'Dogecoin', price: 0.1842, change24h: -2.18, volume: 1200000000, aiScore: 42, trend: 'DOWN', verdict: 'AVOID', direction: 'SHORT', market: 'Crypto' },
-    { rank: 10, symbol: 'SPY', name: 'S&P 500 ETF', price: 528.42, change24h: 0.42, volume: 68000000, aiScore: 74, trend: 'UP', verdict: 'COND', direction: 'LONG', market: 'Stocks' },
-    { rank: 11, symbol: 'SLV', name: 'Silver ETF', price: 28.34, change24h: -1.12, volume: 4200000, aiScore: 58, trend: 'FLAT', verdict: 'WAIT', direction: 'NEUTRAL', market: 'Metals' },
-    { rank: 12, symbol: 'TLT', name: 'Treasury Bond', price: 92.18, change24h: 0.24, volume: 12000000, aiScore: 52, trend: 'DOWN', verdict: 'AVOID', direction: 'SHORT', market: 'Bonds' },
-    { rank: 13, symbol: 'ARB', name: 'Arbitrum', price: 1.28, change24h: 7.42, volume: 480000000, aiScore: 76, trend: 'UP', verdict: 'COND', direction: 'LONG', market: 'Crypto' },
-    { rank: 14, symbol: 'AAVE', name: 'Aave', price: 312.50, change24h: 3.82, volume: 280000000, aiScore: 80, trend: 'UP', verdict: 'GO', direction: 'LONG', market: 'Crypto' },
-    { rank: 15, symbol: 'OP', name: 'Optimism', price: 2.84, change24h: 5.18, volume: 320000000, aiScore: 77, trend: 'UP', verdict: 'COND', direction: 'LONG', market: 'Crypto' },
-    { rank: 16, symbol: 'MSFT', name: 'Microsoft', price: 442.80, change24h: 1.08, volume: 24000000, aiScore: 82, trend: 'UP', verdict: 'COND', direction: 'LONG', market: 'Stocks' },
-    { rank: 17, symbol: 'QQQ', name: 'Nasdaq 100', price: 498.62, change24h: 0.62, volume: 42000000, aiScore: 76, trend: 'UP', verdict: 'COND', direction: 'LONG', market: 'Stocks' },
-    { rank: 18, symbol: 'INJ', name: 'Injective', price: 24.82, change24h: 8.24, volume: 210000000, aiScore: 75, trend: 'STRONG_UP', verdict: 'GO', direction: 'LONG', market: 'Crypto' },
-    { rank: 19, symbol: 'FET', name: 'Fetch.ai', price: 2.18, change24h: 4.56, volume: 180000000, aiScore: 72, trend: 'UP', verdict: 'COND', direction: 'LONG', market: 'Crypto' },
-    { rank: 20, symbol: 'MATIC', name: 'Polygon', price: 0.92, change24h: -0.82, volume: 420000000, aiScore: 61, trend: 'FLAT', verdict: 'WAIT', direction: 'NEUTRAL', market: 'Crypto' },
-  ];
-  return assets;
+function mapScreenerAssets(items: any[] | null | undefined): ScreenerAsset[] {
+  if (!Array.isArray(items)) return [];
+  return items.map((item, idx) => {
+    const symbol = String(item.symbol ?? '');
+    const verdict = String(item.verdict ?? 'WAIT').toUpperCase();
+    const dir = String(item.direction ?? 'NEUTRAL').toUpperCase();
+    const score = Number(item.totalScore ?? item.reliabilityScore ?? item.score ?? 0);
+    const change = Number(item.change24h ?? item.priceChange24h ?? 0);
+    let trend: ScreenerAsset['trend'] = 'FLAT';
+    if (change > 5) trend = 'STRONG_UP';
+    else if (change > 1) trend = 'UP';
+    else if (change < -5) trend = 'STRONG_DOWN';
+    else if (change < -1) trend = 'DOWN';
+    return {
+      rank: idx + 1,
+      symbol,
+      name: String(item.name ?? symbol),
+      price: Number(item.currentPrice ?? item.price ?? 0),
+      change24h: change,
+      volume: Number(item.volume ?? item.volume24h ?? 0),
+      aiScore: Math.round(score * 10),
+      trend,
+      verdict: (['GO', 'COND', 'WAIT', 'AVOID'].includes(verdict) ? verdict : 'WAIT') as ScreenerAsset['verdict'],
+      direction: (['LONG', 'SHORT', 'NEUTRAL'].includes(dir) ? dir : 'NEUTRAL') as ScreenerAsset['direction'],
+      market: String(item.market ?? item.assetClass ?? 'Crypto'),
+    };
+  });
 }
 
-function generateVerdict(): VerdictData {
-  return {
-    gates: [
-      { label: 'Liquidity Expanding', passed: true, detail: 'M2 +2.3%, Fed BS contracting but slowing' },
-      { label: 'USD Weakening', passed: true, detail: 'DXY 103.42 (-0.8%), supportive for risk assets' },
-      { label: 'Capital Destination', passed: true, detail: 'Crypto leads (+5.2% 7D), early phase entry' },
-      { label: 'Sector Confirmed', passed: true, detail: 'DeFi +8.4%, L2 +6.1% — strongest flows' },
-      { label: 'Phase Timing', passed: true, detail: 'EARLY phase (< 30 days), optimal entry window' },
-    ],
-    buy: {
+function mapVerdictData(data: Record<string, any> | null | undefined): VerdictData {
+  if (!data) return { gates: [], buy: null, sell: null, regime: 'NEUTRAL', timestamp: '--:--' };
+  const bias = String(data.liquidityBias ?? 'neutral').toLowerCase();
+  const rec = data.recommendation as Record<string, any> | undefined;
+  const sellRec = data.sellRecommendation as Record<string, any> | undefined;
+  const gl = data.globalLiquidity as Record<string, any> | undefined;
+
+  const gates: DecisionGate[] = [
+    {
+      label: 'Liquidity Expanding',
+      passed: bias === 'risk_on',
+      detail: data.insights?.ragLayer1 || `Liquidity bias: ${bias.replace('_', ' ')}`,
+    },
+    {
+      label: 'USD Weakening',
+      passed: Number(gl?.dxy?.weeklyChange ?? 0) < 0,
+      detail: `DXY ${Number(gl?.dxy?.value ?? 0).toFixed(2)} (${Number(gl?.dxy?.weeklyChange ?? 0).toFixed(1)}% weekly)`,
+    },
+    {
+      label: 'Capital Destination',
+      passed: !!rec?.primaryMarket,
+      detail: rec ? `${rec.primaryMarket} leads (${String(rec.phase ?? '').toUpperCase()} phase)` : 'No clear destination',
+    },
+    {
+      label: 'Sector Confirmed',
+      passed: Array.isArray(rec?.sectors) && rec.sectors.length > 0,
+      detail: data.insights?.ragLayer3 || 'Sector activity assessment',
+    },
+    {
+      label: 'Phase Timing',
+      passed: String(rec?.phase ?? '').toLowerCase() === 'early' || String(rec?.phase ?? '').toLowerCase() === 'mid',
+      detail: rec ? `${String(rec.phase ?? '').toUpperCase()} phase` : 'Unknown phase',
+    },
+  ];
+
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+
+  let buy: VerdictOpportunity | null = null;
+  if (rec && String(rec.direction ?? '').toLowerCase() === 'buy') {
+    buy = {
       action: 'BUY',
-      market: 'Crypto',
-      confidence: 78,
-      reason: 'Strong inflow, early phase, DeFi & L2 leading.',
-      phase: 'EARLY',
-      suggestedAssets: ['BTC', 'ETH', 'SOL', 'AAVE', 'LINK'],
-    },
-    sell: {
+      market: capitalize(String(rec.primaryMarket ?? '')),
+      confidence: Number(rec.confidence ?? 0),
+      reason: String(rec.reason ?? ''),
+      phase: String(rec.phase ?? 'MID').toUpperCase() as VerdictOpportunity['phase'],
+      suggestedAssets: Array.isArray(rec.suggestedAssets)
+        ? rec.suggestedAssets.map((a: any) => String(typeof a === 'string' ? a : a?.symbol ?? a))
+        : [],
+    };
+  }
+
+  let sell: VerdictOpportunity | null = null;
+  if (sellRec && String(sellRec.direction ?? '').toLowerCase() === 'sell') {
+    sell = {
       action: 'SELL',
-      market: 'Bonds',
-      confidence: 62,
-      reason: 'Capital outflow accelerating, yield curve steepening.',
-      phase: 'EXIT',
-      suggestedAssets: ['TLT'],
-    },
-    regime: 'RISK_ON',
+      market: capitalize(String(sellRec.primaryMarket ?? '')),
+      confidence: Number(sellRec.confidence ?? 0),
+      reason: String(sellRec.reason ?? ''),
+      phase: String(sellRec.phase ?? 'EXIT').toUpperCase() as VerdictOpportunity['phase'],
+      suggestedAssets: Array.isArray(sellRec.suggestedAssets)
+        ? sellRec.suggestedAssets.map((a: any) => String(typeof a === 'string' ? a : a?.symbol ?? a))
+        : [],
+    };
+  }
+
+  return {
+    gates,
+    buy,
+    sell,
+    regime: bias === 'risk_on' ? 'RISK_ON' : bias === 'risk_off' ? 'RISK_OFF' : 'NEUTRAL',
     timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
   };
 }
 
-function generateTradePlan(asset: ScreenerAsset): TradePlan {
+// Derives quick trade plan levels from asset price + direction (no API call)
+function calculateTradePlan(asset: ScreenerAsset): TradePlan {
   const isLong = asset.direction === 'LONG';
   const entry = asset.price;
   const slPct = 0.035;
@@ -397,7 +510,7 @@ function SectionLabel({ label, layer, count }: { label: string; layer: string; c
 // L1: Global Liquidity Macro Grid
 // ---------------------------------------------------------------------------
 
-function L1MacroGrid({ metrics }: { metrics: MacroMetric[] }) {
+function L1MacroGrid({ metrics, interpretation }: { metrics: MacroMetric[]; interpretation?: string }) {
   return (
     <section>
       <SectionLabel layer="L1" label="Global Liquidity" count={metrics.length} />
@@ -427,7 +540,7 @@ function L1MacroGrid({ metrics }: { metrics: MacroMetric[] }) {
           Interpretation
         </span>
         <p className="text-[11px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed">
-          M2 money supply expanding (+2.3%) with Fed balance sheet contraction slowing. DXY weakening supports risk assets. Low VIX (14.2) indicates complacency — favorable for momentum strategies. Yield curve positive (+0.32) — no recession signal.
+          {interpretation || (metrics.length > 0 ? 'Global liquidity data loaded. Select a metric for details.' : 'Loading interpretation...')}
         </p>
       </div>
     </section>
@@ -438,7 +551,7 @@ function L1MacroGrid({ metrics }: { metrics: MacroMetric[] }) {
 // L2: Market Flow
 // ---------------------------------------------------------------------------
 
-function L2MarketFlow({ flows }: { flows: MarketFlow[] }) {
+function L2MarketFlow({ flows, interpretation }: { flows: MarketFlow[]; interpretation?: string }) {
   return (
     <section>
       <SectionLabel layer="L2" label="Market Flow" count={flows.length} />
@@ -484,7 +597,7 @@ function L2MarketFlow({ flows }: { flows: MarketFlow[] }) {
           Rotation Signal
         </span>
         <p className="text-[11px] font-sans text-neutral-500 dark:text-neutral-400 leading-relaxed">
-          Capital rotating from Bonds (EXIT) → Crypto (EARLY). Stocks in MID phase with moderate inflow. Metals showing deceleration — approaching LATE phase. Strongest velocity in Crypto (+2.1).
+          {interpretation || (flows.length > 0 ? 'Market flow data loaded. Review capital rotation signals above.' : 'Loading rotation signal...')}
         </p>
       </div>
     </section>
@@ -918,7 +1031,7 @@ function L7TradeVisualizer({
 
     let chart: IChartApi | null = null;
 
-    const initChart = () => {
+    const initChart = async () => {
       if (!chartContainerRef.current) return;
 
       const isDark = resolvedTheme === 'dark';
@@ -964,21 +1077,35 @@ function L7TradeVisualizer({
 
       chartRef.current = chart;
 
-      // Generate mock candle data
-      const basePrice = selectedAsset.price;
-      const now = Math.floor(Date.now() / 1000);
-      const candles: CandlestickData<Time>[] = [];
+      // Fetch real candle data from API
+      let candles: CandlestickData<Time>[] = [];
+      try {
+        const res = await authFetch(`/api/analysis/chart/candles?symbol=${encodeURIComponent(selectedAsset.symbol)}&interval=1h&limit=100`);
+        if (res.ok) {
+          const json = await res.json();
+          const raw = json?.data ?? json ?? [];
+          if (Array.isArray(raw) && raw.length > 0) {
+            candles = raw.map((c: any) => ({
+              time: (typeof c.time === 'number' ? c.time : Math.floor(new Date(c.time ?? c.openTime ?? 0).getTime() / 1000)) as Time,
+              open: Number(c.open ?? c.o ?? 0),
+              high: Number(c.high ?? c.h ?? 0),
+              low: Number(c.low ?? c.l ?? 0),
+              close: Number(c.close ?? c.c ?? 0),
+            }));
+          }
+        }
+      } catch {
+        // fallback: empty candles, chart will be empty
+      }
 
-      for (let i = 100; i >= 0; i--) {
-        const time = (now - i * 3600) as Time;
-        const noise = (Math.random() - 0.5) * basePrice * 0.02;
-        const trendBias = ((100 - i) / 100) * basePrice * 0.05 * (selectedAsset.direction === 'LONG' ? 1 : -1);
-        const open = basePrice + noise + trendBias;
-        const close = open + (Math.random() - 0.45) * basePrice * 0.015;
-        const high = Math.max(open, close) + Math.random() * basePrice * 0.008;
-        const low = Math.min(open, close) - Math.random() * basePrice * 0.008;
-
-        candles.push({ time, open, high, low, close });
+      // If API returned no data, generate minimal placeholder from current price
+      if (candles.length === 0) {
+        const basePrice = selectedAsset.price || 100;
+        const now = Math.floor(Date.now() / 1000);
+        for (let i = 50; i >= 0; i--) {
+          const time = (now - i * 3600) as Time;
+          candles.push({ time, open: basePrice, high: basePrice * 1.001, low: basePrice * 0.999, close: basePrice });
+        }
       }
 
       const series = chart.addCandlestickSeries({
@@ -1129,9 +1256,19 @@ function L7TradeVisualizer({
       };
     };
 
-    const cleanupFn = initChart();
+    let cancelled = false;
+    let cleanupFn: (() => void) | undefined;
+
+    initChart().then((fn) => {
+      if (cancelled) {
+        fn?.();
+      } else {
+        cleanupFn = fn ?? undefined;
+      }
+    });
 
     return () => {
+      cancelled = true;
       cleanupFn?.();
       if (chart) {
         chart.remove();
@@ -1299,6 +1436,8 @@ function ContentPanel({
   selectedAsset,
   tradePlan,
   onAssetSelect,
+  l1Interpretation,
+  l2Interpretation,
 }: {
   activeSection: SectionId;
   macroMetrics: MacroMetric[];
@@ -1309,12 +1448,14 @@ function ContentPanel({
   selectedAsset: ScreenerAsset | null;
   tradePlan: TradePlan | null;
   onAssetSelect: (asset: ScreenerAsset) => void;
+  l1Interpretation?: string;
+  l2Interpretation?: string;
 }) {
   switch (activeSection) {
     case 'l1':
-      return <L1MacroGrid metrics={macroMetrics} />;
+      return <L1MacroGrid metrics={macroMetrics} interpretation={l1Interpretation} />;
     case 'l2':
-      return <L2MarketFlow flows={marketFlows} />;
+      return <L2MarketFlow flows={marketFlows} interpretation={l2Interpretation} />;
     case 'l3':
       return <L3Sectors sectors={sectors} />;
     case 'l4':
@@ -1344,28 +1485,114 @@ function ContentPanel({
 // ---------------------------------------------------------------------------
 
 export default function TestPage() {
-  // Data state
-  const [macroMetrics] = useState(generateMacroMetrics);
-  const [marketFlows] = useState(generateMarketFlows);
-  const [sectors] = useState(generateSectors);
-  const [screenerData] = useState(generateScreenerData);
-  const [verdict] = useState(generateVerdict);
+  // API data
+  const [cfData, setCfData] = useState<Record<string, any> | null>(null);
+  const [topCoinsRaw, setTopCoinsRaw] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Selection state
   const [selectedAsset, setSelectedAsset] = useState<ScreenerAsset | null>(null);
   const [tradePlan, setTradePlan] = useState<TradePlan | null>(null);
 
   // Navigation
   const [activeSection, setActiveSection] = useState<SectionId>('l1');
 
+  // Fetch Capital Flow + Top Coins on mount
+  useEffect(() => {
+    let cancelled = false;
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [cfRes, coinsRes] = await Promise.all([
+          authFetch('/api/capital-flow/summary'),
+          authFetch('/api/analysis/top-coins?limit=20&sortBy=reliabilityScore'),
+        ]);
+        if (cancelled) return;
+        const cfJson = cfRes.ok ? await cfRes.json() : null;
+        const coinsJson = coinsRes.ok ? await coinsRes.json() : null;
+        setCfData(cfJson?.data ?? cfJson ?? null);
+        const coins = coinsJson?.data?.coins ?? coinsJson?.data ?? coinsJson?.coins ?? [];
+        setTopCoinsRaw(Array.isArray(coins) ? coins : []);
+      } catch (err: any) {
+        if (!cancelled) setError(err?.message || 'Failed to load terminal data');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    fetchData();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Derive display data from API responses
+  const macroMetrics = useMemo(() => mapMacroMetrics(cfData?.globalLiquidity ?? cfData), [cfData]);
+  const marketFlows = useMemo(() => mapMarketFlows(cfData?.markets), [cfData]);
+  const sectors = useMemo(() => mapSectors(cfData?.markets), [cfData]);
+  const screenerData = useMemo(() => mapScreenerAssets(topCoinsRaw), [topCoinsRaw]);
+  const verdict = useMemo(() => mapVerdictData(cfData), [cfData]);
+  const l1Interpretation = cfData?.insights?.ragLayer1 as string | undefined;
+  const l2Interpretation = cfData?.insights?.ragLayer2 as string | undefined;
+
   const handleAssetSelect = useCallback((asset: ScreenerAsset) => {
     setSelectedAsset(asset);
-    setTradePlan(generateTradePlan(asset));
-    // Auto-switch to Trade Visualizer when an asset is selected from screener
+    setTradePlan(calculateTradePlan(asset));
     setActiveSection('l7');
   }, []);
 
   const handleNavClick = useCallback((id: SectionId) => {
     setActiveSection(id);
   }, []);
+
+  // Reload handler
+  const handleRetry = useCallback(() => {
+    setCfData(null);
+    setTopCoinsRaw([]);
+    setLoading(true);
+    setError(null);
+    Promise.all([
+      authFetch('/api/capital-flow/summary'),
+      authFetch('/api/analysis/top-coins?limit=20&sortBy=reliabilityScore'),
+    ]).then(async ([cfRes, coinsRes]) => {
+      const cfJson = cfRes.ok ? await cfRes.json() : null;
+      const coinsJson = coinsRes.ok ? await coinsRes.json() : null;
+      setCfData(cfJson?.data ?? cfJson ?? null);
+      const coins = coinsJson?.data?.coins ?? coinsJson?.data ?? coinsJson?.coins ?? [];
+      setTopCoinsRaw(Array.isArray(coins) ? coins : []);
+    }).catch((err: any) => {
+      setError(err?.message || 'Failed to load terminal data');
+    }).finally(() => {
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-white dark:bg-neutral-950">
+        <div className="text-center">
+          <Loader2 className="w-6 h-6 animate-spin text-[#14B8A6] mx-auto mb-3" />
+          <p className="text-xs font-sans text-neutral-500 dark:text-neutral-400">Loading terminal data…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-white dark:bg-neutral-950">
+        <div className="text-center">
+          <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto mb-3" />
+          <p className="text-xs font-sans text-neutral-500 dark:text-neutral-400 mb-3">{error}</p>
+          <button
+            onClick={handleRetry}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans bg-neutral-100 dark:bg-neutral-800 rounded-sm hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+          >
+            <RefreshCw className="w-3 h-3" /> Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white overflow-hidden">
@@ -1485,6 +1712,8 @@ export default function TestPage() {
               selectedAsset={selectedAsset}
               tradePlan={tradePlan}
               onAssetSelect={handleAssetSelect}
+              l1Interpretation={l1Interpretation}
+              l2Interpretation={l2Interpretation}
             />
           </main>
         </div>

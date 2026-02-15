@@ -68,21 +68,28 @@ export default function ContactPage() {
     e.preventDefault();
     setStatus('submitting');
 
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setStatus('success');
-
-    // Reset form after 3 seconds
-    setTimeout(() => {
-      setStatus('idle');
-      setFormData({
-        name: '',
-        email: '',
-        department: 'support',
-        subject: '',
-        message: '',
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
+      const res = await fetch(`${apiBase}/api/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
       });
-    }, 3000);
+
+      if (res.ok) {
+        setStatus('success');
+        setTimeout(() => {
+          setStatus('idle');
+          setFormData({ name: '', email: '', department: 'support', subject: '', message: '' });
+        }, 3000);
+      } else {
+        setStatus('error');
+        setTimeout(() => setStatus('idle'), 3000);
+      }
+    } catch {
+      setStatus('error');
+      setTimeout(() => setStatus('idle'), 3000);
+    }
   };
 
   return (

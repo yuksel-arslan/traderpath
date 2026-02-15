@@ -5,16 +5,18 @@
 // Sidebar + Content Panel — Hyper-Minimalist Financial Intelligence Terminal
 // =============================================================================
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
   ChevronRight,
-  TrendingUp,
-  TrendingDown,
+  Loader2,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import { cn, formatNumber } from '../../../lib/utils';
+import { authFetch } from '../../../lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -104,56 +106,181 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Mock Data
+// API Data Mapping Helpers
 // ---------------------------------------------------------------------------
 
-const liquidityMetrics: LiquidityMetric[] = [
-  { id: 'm2', label: 'M2 Money Supply', value: '$21.8T', change: 2.3, signal: 'bullish', sparkline: [18.2, 18.5, 19.1, 19.8, 20.2, 20.8, 21.1, 21.4, 21.8], description: 'Global M2 expanding — risk assets favored' },
-  { id: 'fed', label: 'Fed Balance Sheet', value: '$7.2T', change: -1.1, signal: 'bearish', sparkline: [8.9, 8.5, 8.2, 7.9, 7.8, 7.6, 7.4, 7.3, 7.2], description: 'Quantitative tightening continues — headwind for liquidity' },
-  { id: 'dxy', label: 'US Dollar Index', value: '103.42', change: -0.8, signal: 'bullish', sparkline: [106, 105.8, 105.2, 104.8, 104.5, 104.1, 103.8, 103.6, 103.4], description: 'Dollar weakening — tailwind for risk assets and commodities' },
-  { id: 'vix', label: 'VIX Volatility', value: '14.2', change: -3.2, signal: 'bullish', sparkline: [22, 20, 18.5, 17.2, 16.1, 15.4, 14.8, 14.5, 14.2], description: 'Low fear — market complacency favors continuation' },
-  { id: '10y', label: '10Y Treasury Yield', value: '4.28%', change: 0.12, signal: 'neutral', sparkline: [4.1, 4.15, 4.18, 4.22, 4.20, 4.24, 4.25, 4.27, 4.28], description: 'Yields stable — bond market indecisive' },
-  { id: 'yc', label: 'Yield Curve (10Y-2Y)', value: '+0.32%', change: 0.15, signal: 'bullish', sparkline: [-0.4, -0.3, -0.15, -0.05, 0.05, 0.12, 0.18, 0.25, 0.32], description: 'Curve normalizing — recession fears easing' },
-];
+function mapLiquidityMetrics(gl: any): LiquidityMetric[] {
+  if (!gl) return [];
+  const metrics: LiquidityMetric[] = [];
 
-const marketFlows: MarketFlowDetail[] = [
-  { market: 'Crypto', flow7d: 5.2, flow30d: 12.8, flow90d: 28.4, velocity: 2.1, acceleration: 0.8, phase: 'EARLY', daysInPhase: 18, rotationSignal: 'entering', marketCap: '$2.8T', dominance: 32.4 },
-  { market: 'Stocks', flow7d: 1.8, flow30d: 4.2, flow90d: 8.6, velocity: 0.6, acceleration: -0.2, phase: 'MID', daysInPhase: 45, rotationSignal: 'stable', marketCap: '$52.1T', dominance: 48.2 },
-  { market: 'Metals', flow7d: -0.4, flow30d: 2.1, flow90d: 5.2, velocity: -1.2, acceleration: -0.5, phase: 'LATE', daysInPhase: 72, rotationSignal: 'exiting', marketCap: '$4.2T', dominance: 8.6 },
-  { market: 'Bonds', flow7d: -2.1, flow30d: -5.3, flow90d: -12.4, velocity: -0.8, acceleration: 0.1, phase: 'EXIT', daysInPhase: 95, rotationSignal: 'exiting', marketCap: '$128T', dominance: 10.8 },
-];
+  if (gl.m2MoneySupply) {
+    const val = Number(gl.m2MoneySupply.value) || 0;
+    const change = Number(gl.m2MoneySupply.change30d) || 0;
+    metrics.push({
+      id: 'm2',
+      label: 'M2 Money Supply',
+      value: `$${val.toFixed(1)}T`,
+      change,
+      signal: change > 1 ? 'bullish' : change < -1 ? 'bearish' : 'neutral',
+      sparkline: [],
+      description: `M2 YoY growth: ${(Number(gl.m2MoneySupply.yoyGrowth) || 0).toFixed(1)}% — ${change > 0 ? 'expanding, risk assets favored' : 'contracting, headwind for risk'}`,
+    });
+  }
 
-const sectors: SectorDetail[] = [
-  { name: 'DeFi', market: 'Crypto', flow7d: 8.4, flow30d: 22.1, dominance: 22.3, trending: 'up', topAssets: ['AAVE', 'UNI', 'MKR'] },
-  { name: 'Layer 2', market: 'Crypto', flow7d: 6.1, flow30d: 18.4, dominance: 15.7, trending: 'up', topAssets: ['ARB', 'OP', 'MATIC'] },
-  { name: 'AI Tokens', market: 'Crypto', flow7d: 4.8, flow30d: 15.2, dominance: 8.2, trending: 'up', topAssets: ['FET', 'RNDR', 'TAO'] },
-  { name: 'RWA', market: 'Crypto', flow7d: 3.7, flow30d: 10.8, dominance: 4.8, trending: 'up', topAssets: ['ONDO', 'MKR', 'LINK'] },
-  { name: 'Tech', market: 'Stocks', flow7d: 2.4, flow30d: 6.8, dominance: 28.4, trending: 'up', topAssets: ['NVDA', 'MSFT', 'AAPL'] },
-  { name: 'Finance', market: 'Stocks', flow7d: 0.8, flow30d: 2.1, dominance: 14.2, trending: 'flat', topAssets: ['JPM', 'V', 'GS'] },
-  { name: 'Gaming', market: 'Crypto', flow7d: 1.2, flow30d: 3.4, dominance: 3.4, trending: 'flat', topAssets: ['IMX', 'GALA', 'AXS'] },
-  { name: 'Meme', market: 'Crypto', flow7d: -2.3, flow30d: -4.8, dominance: 5.1, trending: 'down', topAssets: ['DOGE', 'SHIB', 'PEPE'] },
-  { name: 'Gold', market: 'Metals', flow7d: -0.2, flow30d: 2.4, dominance: 72.1, trending: 'flat', topAssets: ['GLD', 'IAU', 'XAUUSD'] },
-  { name: 'Silver', market: 'Metals', flow7d: -1.1, flow30d: -0.8, dominance: 18.4, trending: 'down', topAssets: ['SLV', 'XAGUSD'] },
-];
+  if (gl.fedBalanceSheet) {
+    const val = Number(gl.fedBalanceSheet.value) || 0;
+    const change = Number(gl.fedBalanceSheet.change30d) || 0;
+    const trend = gl.fedBalanceSheet.trend || 'stable';
+    metrics.push({
+      id: 'fed',
+      label: 'Fed Balance Sheet',
+      value: `$${val.toFixed(1)}T`,
+      change,
+      signal: trend === 'expanding' ? 'bullish' : trend === 'contracting' ? 'bearish' : 'neutral',
+      sparkline: [],
+      description: `Fed balance sheet ${trend} — ${trend === 'expanding' ? 'liquidity injection' : trend === 'contracting' ? 'quantitative tightening' : 'stable'}`,
+    });
+  }
 
-const recommendations: Recommendation[] = [
-  {
-    direction: 'BUY',
-    market: 'Crypto',
-    phase: 'EARLY',
-    confidence: 78,
-    reason: 'Capital entering crypto at accelerating pace. M2 expanding, DXY weakening — optimal entry window.',
-    suggestedAssets: ['BTC', 'ETH', 'SOL', 'AAVE'],
-  },
-  {
-    direction: 'SELL',
-    market: 'Bonds',
-    phase: 'EXIT',
-    confidence: 65,
-    reason: 'Capital exiting bonds for 95 days. Velocity negative. Rotation toward risk assets confirmed.',
-    suggestedAssets: ['TLT', 'IEF', 'BND'],
-  },
-];
+  if (gl.dxy) {
+    const val = Number(gl.dxy.value) || 0;
+    const change = Number(gl.dxy.change7d) || 0;
+    const trend = gl.dxy.trend || 'stable';
+    metrics.push({
+      id: 'dxy',
+      label: 'US Dollar Index',
+      value: val.toFixed(2),
+      change,
+      signal: trend === 'weakening' ? 'bullish' : trend === 'strengthening' ? 'bearish' : 'neutral',
+      sparkline: [],
+      description: `Dollar ${trend} — ${trend === 'weakening' ? 'tailwind for risk assets' : trend === 'strengthening' ? 'headwind for risk assets' : 'neutral impact'}`,
+    });
+  }
+
+  if (gl.vix) {
+    const val = Number(gl.vix.value) || 0;
+    const level = gl.vix.level || 'neutral';
+    metrics.push({
+      id: 'vix',
+      label: 'VIX Volatility',
+      value: val.toFixed(1),
+      change: 0,
+      signal: level === 'complacent' || level === 'neutral' ? 'bullish' : 'bearish',
+      sparkline: [],
+      description: `VIX at ${val.toFixed(1)} (${level}) — ${val < 20 ? 'low fear, favors continuation' : val < 30 ? 'elevated fear' : 'extreme fear, risk-off'}`,
+    });
+  }
+
+  if (gl.yieldCurve) {
+    const spread = Number(gl.yieldCurve.spread10y2y) || 0;
+    const inverted = gl.yieldCurve.inverted;
+    metrics.push({
+      id: 'yc',
+      label: 'Yield Curve (10Y-2Y)',
+      value: `${spread >= 0 ? '+' : ''}${spread.toFixed(2)}%`,
+      change: spread,
+      signal: inverted ? 'bearish' : spread > 0.2 ? 'bullish' : 'neutral',
+      sparkline: [],
+      description: gl.yieldCurve.interpretation || (inverted ? 'Curve inverted — recession risk elevated' : 'Curve normalizing'),
+    });
+  }
+
+  if (gl.netLiquidity) {
+    const val = Number(gl.netLiquidity.value) || 0;
+    const change = Number(gl.netLiquidity.change30d) || 0;
+    const trend = gl.netLiquidity.trend || 'stable';
+    metrics.push({
+      id: 'nl',
+      label: 'Net Liquidity',
+      value: `$${val.toFixed(1)}T`,
+      change,
+      signal: trend === 'expanding' ? 'bullish' : trend === 'contracting' ? 'bearish' : 'neutral',
+      sparkline: [],
+      description: gl.netLiquidity.interpretation || `Net liquidity ${trend}`,
+    });
+  }
+
+  return metrics;
+}
+
+function mapMarketFlows(markets: any[]): MarketFlowDetail[] {
+  if (!Array.isArray(markets)) return [];
+  return markets.filter(m => m && m.market).map(m => ({
+    market: String(m.market || '').charAt(0).toUpperCase() + String(m.market || '').slice(1),
+    flow7d: Number(m.flow7d) || 0,
+    flow30d: Number(m.flow30d) || 0,
+    flow90d: 0,
+    velocity: Number(m.flowVelocity) || 0,
+    acceleration: 0,
+    phase: (String(m.phase || 'mid').toUpperCase()) as 'EARLY' | 'MID' | 'LATE' | 'EXIT',
+    daysInPhase: Number(m.daysInPhase) || 0,
+    rotationSignal: m.rotationSignal || null,
+    marketCap: m.currentValue ? `$${formatNumber(m.currentValue)}` : 'N/A',
+    dominance: 0,
+  }));
+}
+
+function mapSectors(markets: any[]): SectorDetail[] {
+  if (!Array.isArray(markets)) return [];
+  const allSectors: SectorDetail[] = [];
+  for (const m of markets) {
+    if (!m || !Array.isArray(m.sectors)) continue;
+    const marketName = String(m.market || '').charAt(0).toUpperCase() + String(m.market || '').slice(1);
+    for (const s of m.sectors) {
+      if (!s) continue;
+      allSectors.push({
+        name: String(s.name || 'Unknown'),
+        market: marketName,
+        flow7d: Number(s.flow7d) || 0,
+        flow30d: Number(s.flow30d) || 0,
+        dominance: Number(s.dominance) || 0,
+        trending: s.trending === 'up' ? 'up' : s.trending === 'down' ? 'down' : 'flat',
+        topAssets: Array.isArray(s.topAssets) ? s.topAssets : [],
+      });
+    }
+  }
+  return allSectors;
+}
+
+function mapRecommendations(rec: any, sellRec: any): Recommendation[] {
+  const recs: Recommendation[] = [];
+  if (rec && rec.primaryMarket) {
+    recs.push({
+      direction: (rec.direction || 'BUY') as 'BUY' | 'SELL',
+      market: String(rec.primaryMarket || '').charAt(0).toUpperCase() + String(rec.primaryMarket || '').slice(1),
+      phase: String(rec.phase || 'mid').toUpperCase(),
+      confidence: Number(rec.confidence) || 0,
+      reason: String(rec.reason || ''),
+      suggestedAssets: Array.isArray(rec.suggestedAssets)
+        ? rec.suggestedAssets.map((a: any) => typeof a === 'string' ? a : String(a?.symbol || ''))
+        : (Array.isArray(rec.sectors) ? rec.sectors.slice(0, 4) : []),
+    });
+  }
+  if (sellRec && sellRec.primaryMarket) {
+    recs.push({
+      direction: 'SELL',
+      market: String(sellRec.primaryMarket || '').charAt(0).toUpperCase() + String(sellRec.primaryMarket || '').slice(1),
+      phase: String(sellRec.phase || 'exit').toUpperCase(),
+      confidence: Number(sellRec.confidence) || 0,
+      reason: String(sellRec.reason || ''),
+      suggestedAssets: Array.isArray(sellRec.suggestedAssets)
+        ? sellRec.suggestedAssets.map((a: any) => typeof a === 'string' ? a : String(a?.symbol || ''))
+        : (Array.isArray(sellRec.sectors) ? sellRec.sectors.slice(0, 4) : []),
+    });
+  }
+  return recs;
+}
+
+function getBiasInfo(bias: string): { label: string; color: string; dot: string; description: string } {
+  switch (bias) {
+    case 'risk_on':
+      return { label: 'RISK ON', color: 'text-[#22C55E] dark:text-[#4ADE80]', dot: 'bg-[#22C55E] dark:bg-[#4ADE80]', description: 'Liquidity expanding. Capital favoring risk assets.' };
+    case 'risk_off':
+      return { label: 'RISK OFF', color: 'text-[#EF4444] dark:text-[#F87171]', dot: 'bg-[#EF4444] dark:bg-[#F87171]', description: 'Liquidity tightening. Capital moving to safe havens.' };
+    default:
+      return { label: 'NEUTRAL', color: 'text-neutral-500 dark:text-neutral-400', dot: 'bg-neutral-400 dark:bg-neutral-500', description: 'Mixed signals. No clear directional bias.' };
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Shared Components
@@ -548,10 +675,18 @@ function ContentPanel({
   activeSection,
   marketFilter,
   setMarketFilter,
+  liquidityMetrics,
+  marketFlowData,
+  sectorData,
+  recommendationData,
 }: {
   activeSection: SectionId;
   marketFilter: string;
   setMarketFilter: (f: string) => void;
+  liquidityMetrics: LiquidityMetric[];
+  marketFlowData: MarketFlowDetail[];
+  sectorData: SectorDetail[];
+  recommendationData: Recommendation[];
 }) {
   const markets = ['All', 'Crypto', 'Stocks', 'Metals', 'Bonds'];
 
@@ -578,10 +713,10 @@ function ContentPanel({
       )}
 
       {activeSection === 'l1' && <L1Liquidity metrics={liquidityMetrics} />}
-      {activeSection === 'l2' && <L2Markets flows={marketFlows} />}
-      {activeSection === 'rotation' && <RotationMatrix flows={marketFlows} />}
-      {activeSection === 'l3' && <L3Sectors sectors={sectors} marketFilter={marketFilter} />}
-      {activeSection === 'l4' && <L4Recommendation recs={recommendations} />}
+      {activeSection === 'l2' && <L2Markets flows={marketFlowData} />}
+      {activeSection === 'rotation' && <RotationMatrix flows={marketFlowData} />}
+      {activeSection === 'l3' && <L3Sectors sectors={sectorData} marketFilter={marketFilter} />}
+      {activeSection === 'l4' && <L4Recommendation recs={recommendationData} />}
     </div>
   );
 }
@@ -593,9 +728,54 @@ function ContentPanel({
 export default function FlowPage() {
   const [activeSection, setActiveSection] = useState<SectionId>('l1');
   const [marketFilter, setMarketFilter] = useState('All');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [apiData, setApiData] = useState<any>(null);
+
+  // Fetch Capital Flow data from API
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchData() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await authFetch('/api/capital-flow/summary');
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
+        const json = await res.json();
+        if (!cancelled) {
+          setApiData(json.data || json);
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          setError(err.message || 'Failed to load Capital Flow data');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchData();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Map API data to UI types
+  const liquidityMetrics = useMemo(() => mapLiquidityMetrics(apiData?.globalLiquidity), [apiData]);
+  const marketFlowData = useMemo(() => mapMarketFlows(apiData?.markets), [apiData]);
+  const sectorData = useMemo(() => mapSectors(apiData?.markets), [apiData]);
+  const recommendationData = useMemo(() => mapRecommendations(apiData?.recommendation, apiData?.sellRecommendation), [apiData]);
+  const biasInfo = useMemo(() => getBiasInfo(apiData?.liquidityBias || 'neutral'), [apiData]);
 
   const handleNavClick = useCallback((id: SectionId) => {
     setActiveSection(id);
+  }, []);
+
+  const handleRetry = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    authFetch('/api/capital-flow/summary')
+      .then(res => { if (!res.ok) throw new Error(`API error: ${res.status}`); return res.json(); })
+      .then(json => setApiData(json.data || json))
+      .catch(err => setError(err.message || 'Failed to load'))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -685,30 +865,59 @@ export default function FlowPage() {
               </div>
             ))}
 
-            {/* Sidebar summary */}
+            {/* Sidebar summary — dynamic from API */}
             <div className="mt-6 px-2 pt-4 border-t border-neutral-200 dark:border-neutral-800">
               <span className="text-[9px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block mb-2">
                 Bias
               </span>
-              <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] dark:bg-[#4ADE80]" />
-                <span className="text-xs font-sans font-semibold text-[#22C55E] dark:text-[#4ADE80]">
-                  RISK ON
-                </span>
-              </div>
-              <p className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 mt-1.5 leading-relaxed">
-                M2 expanding, DXY weakening. Capital entering crypto.
-              </p>
+              {loading ? (
+                <div className="h-4 w-20 bg-neutral-200 dark:bg-neutral-800 rounded animate-pulse" />
+              ) : (
+                <>
+                  <div className="flex items-center gap-1.5">
+                    <span className={cn('w-1.5 h-1.5 rounded-full', biasInfo.dot)} />
+                    <span className={cn('text-xs font-sans font-semibold', biasInfo.color)}>
+                      {biasInfo.label}
+                    </span>
+                  </div>
+                  <p className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 mt-1.5 leading-relaxed">
+                    {biasInfo.description}
+                  </p>
+                </>
+              )}
             </div>
           </nav>
 
           {/* Content */}
           <main className="flex-1 min-w-0 overflow-y-auto scrollbar-none lg:pl-5 py-1 pb-4">
-            <ContentPanel
-              activeSection={activeSection}
-              marketFilter={marketFilter}
-              setMarketFilter={setMarketFilter}
-            />
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3">
+                <Loader2 className="w-6 h-6 text-[#14B8A6] animate-spin" />
+                <span className="text-xs font-sans text-neutral-400 dark:text-neutral-500">Loading Capital Flow data...</span>
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3">
+                <AlertTriangle className="w-6 h-6 text-[#F59E0B]" />
+                <span className="text-xs font-sans text-neutral-500 dark:text-neutral-400">{error}</span>
+                <button
+                  onClick={handleRetry}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans text-[#14B8A6] border border-[#14B8A6]/30 rounded-sm hover:bg-[#14B8A6]/5 transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Retry
+                </button>
+              </div>
+            ) : (
+              <ContentPanel
+                activeSection={activeSection}
+                marketFilter={marketFilter}
+                setMarketFilter={setMarketFilter}
+                liquidityMetrics={liquidityMetrics}
+                marketFlowData={marketFlowData}
+                sectorData={sectorData}
+                recommendationData={recommendationData}
+              />
+            )}
           </main>
         </div>
 

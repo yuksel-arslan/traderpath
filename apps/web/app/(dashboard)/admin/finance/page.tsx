@@ -818,71 +818,19 @@ export default function FinancePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Free Tier */}
-              <div className="bg-card border rounded-lg p-4 relative">
-                <div className="flex items-center gap-2 mb-3">
-                  <Zap className="w-5 h-5 text-slate-500" />
-                  <span className="font-semibold">Free</span>
-                </div>
-                <div className="text-2xl font-bold mb-2">$0<span className="text-sm font-normal text-muted-foreground">/mo</span></div>
-                <ul className="text-sm space-y-1 text-muted-foreground">
-                  <li>• Capital Flow L1-L2</li>
-                  <li>• Basic Dashboard</li>
-                  <li>• 3 Scheduled Reports</li>
-                </ul>
-              </div>
-
-              {/* Starter Tier */}
-              <div className="bg-card border border-teal-500/30 rounded-lg p-4 relative">
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-5 h-5 text-teal-500" />
-                  <span className="font-semibold">Starter</span>
-                </div>
-                <div className="text-2xl font-bold mb-2">$29<span className="text-sm font-normal text-muted-foreground">/mo</span></div>
-                <ul className="text-sm space-y-1 text-muted-foreground">
-                  <li>• Capital Flow L1-L4</li>
-                  <li>• 5 Daily Analyses</li>
-                  <li>• 5 Scheduled Reports</li>
-                  <li>• 10 Price Alerts</li>
-                </ul>
-              </div>
-
-              {/* Pro Tier */}
-              <div className="bg-card border border-amber-500/30 rounded-lg p-4 relative">
-                <span className="absolute -top-2 right-4 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded">POPULAR</span>
-                <div className="flex items-center gap-2 mb-3">
-                  <Star className="w-5 h-5 text-amber-500" />
-                  <span className="font-semibold">Pro</span>
-                </div>
-                <div className="text-2xl font-bold mb-2">$59<span className="text-sm font-normal text-muted-foreground">/mo</span></div>
-                <ul className="text-sm space-y-1 text-muted-foreground">
-                  <li>• Everything in Starter</li>
-                  <li>• Asset Analysis</li>
-                  <li>• PDF/Email Reports</li>
-                  <li>• Automation</li>
-                </ul>
-              </div>
-
-              {/* Elite Tier */}
-              <div className="bg-gradient-to-br from-violet-500/10 to-purple-500/10 border border-violet-500/30 rounded-lg p-4 relative">
-                <span className="absolute -top-2 right-4 bg-violet-500 text-white text-xs font-bold px-2 py-0.5 rounded">BEST</span>
-                <div className="flex items-center gap-2 mb-3">
-                  <Crown className="w-5 h-5 text-violet-500" />
-                  <span className="font-semibold">Elite</span>
-                </div>
-                <div className="text-2xl font-bold mb-2">$79<span className="text-sm font-normal text-muted-foreground">/mo</span></div>
-                <ul className="text-sm space-y-1 text-muted-foreground">
-                  <li>• Everything in Pro</li>
-                  <li>• AI Concierge</li>
-                  <li>• AI Experts (Unlimited)</li>
-                  <li>• Priority Support</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-sm text-amber-600 dark:text-amber-400">
-              💡 Subscription plans are managed via Stripe. Edit prices in <code className="bg-amber-500/20 px-1 rounded">subscription-tiers.ts</code>
+            <div className="p-4 bg-muted/50 border rounded-lg text-center">
+              <p className="text-sm text-muted-foreground">
+                Subscription tiers are managed via Stripe Dashboard.
+                Prices and features are configured in the payment provider, not hardcoded here.
+              </p>
+              <a
+                href="https://dashboard.stripe.com/products"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block mt-2 text-sm text-teal-600 dark:text-teal-400 hover:underline"
+              >
+                Open Stripe Dashboard &rarr;
+              </a>
             </div>
           </div>
 

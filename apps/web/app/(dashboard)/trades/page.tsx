@@ -73,63 +73,34 @@ interface NavGroup {
 }
 
 // ---------------------------------------------------------------------------
-// Mock candle generator – deterministic from seed
+// Candle fetching – real chart data from API
 // ---------------------------------------------------------------------------
 
-function seededRandom(seed: number): () => number {
-  let s = seed;
-  return () => {
-    s = (s * 16807 + 0) % 2147483647;
-    return (s - 1) / 2147483646;
-  };
+async function fetchTradeCandles(symbol: string): Promise<Candle[]> {
+  try {
+    const res = await authFetch(
+      `/api/analysis/chart/candles?symbol=${encodeURIComponent(symbol)}&interval=1h&limit=80`,
+    );
+    if (!res.ok) return [];
+    const json = await res.json();
+    const raw = json?.data ?? json ?? [];
+    if (!Array.isArray(raw) || raw.length === 0) return [];
+    return raw.map((c: any) => ({
+      o: Number(c.open ?? c.o ?? 0),
+      h: Number(c.high ?? c.h ?? 0),
+      l: Number(c.low ?? c.l ?? 0),
+      c: Number(c.close ?? c.c ?? 0),
+    }));
+  } catch {
+    return [];
+  }
 }
 
-function generateCandles(
-  basePrice: number,
-  count: number,
-  seed: number,
-  trend: 'up' | 'down' | 'flat',
-  volatilityPct: number = 0.015,
-): Candle[] {
-  const rng = seededRandom(seed);
-  const candles: Candle[] = [];
-  let price = basePrice;
-
-  for (let i = 0; i < count; i++) {
-    const trendBias = trend === 'up' ? 0.0008 : trend === 'down' ? -0.0008 : 0;
-    const change = (rng() - 0.48 + trendBias) * volatilityPct * price;
-    const open = price;
-    const close = price + change;
-    const wickUp = Math.abs(change) * (0.3 + rng() * 0.8);
-    const wickDown = Math.abs(change) * (0.3 + rng() * 0.8);
-    const high = Math.max(open, close) + wickUp;
-    const low = Math.min(open, close) - wickDown;
-    candles.push({ o: open, h: high, l: low, c: close });
-    price = close;
-  }
-  return candles;
-}
-
-function generateBeforeCandles(trade: Trade): Candle[] {
-  const trend = trade.direction === 'long' ? 'up' : 'down';
-  const seed = trade.id.charCodeAt(0) * 1000 + 42;
-  const startPrice = trade.direction === 'long'
-    ? trade.entry * 0.97
-    : trade.entry * 1.03;
-  return generateCandles(startPrice, 40, seed, trend, 0.012);
-}
-
-function generateAfterCandles(trade: Trade): Candle[] {
-  const seed = trade.id.charCodeAt(0) * 1000 + 99;
-  if (trade.status === 'TP_HIT') {
-    const trend = trade.direction === 'long' ? 'up' : 'down';
-    return generateCandles(trade.entry, 30, seed, trend, 0.014);
-  }
-  if (trade.status === 'SL_HIT') {
-    const trend = trade.direction === 'long' ? 'down' : 'up';
-    return generateCandles(trade.entry, 25, seed, trend, 0.016);
-  }
-  return generateCandles(trade.entry, 20, seed, 'flat', 0.010);
+/** Split fetched candles into before/after halves for closed trades. */
+function splitCandles(all: Candle[]): { before: Candle[]; after: Candle[] } {
+  if (all.length === 0) return { before: [], after: [] };
+  const mid = Math.floor(all.length * 0.5);
+  return { before: all.slice(0, mid), after: all.slice(mid) };
 }
 
 function generateForecastBand(
@@ -533,8 +504,27 @@ function OverviewPanel({
 
 function TradeDetailPanel({ trade }: { trade: Trade }) {
   const isClosed = trade.status === 'TP_HIT' || trade.status === 'SL_HIT' || trade.status === 'CLOSED';
-  const beforeCandles = useMemo(() => generateBeforeCandles(trade), [trade]);
-  const afterCandles = useMemo(() => isClosed ? generateAfterCandles(trade) : [], [trade, isClosed]);
+  const [beforeCandles, setBeforeCandles] = useState<Candle[]>([]);
+  const [afterCandles, setAfterCandles] = useState<Candle[]>([]);
+  const [chartLoading, setChartLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setChartLoading(true);
+    fetchTradeCandles(trade.symbol).then((all) => {
+      if (cancelled) return;
+      if (isClosed) {
+        const { before, after } = splitCandles(all);
+        setBeforeCandles(before);
+        setAfterCandles(after);
+      } else {
+        setBeforeCandles(all);
+        setAfterCandles([]);
+      }
+      setChartLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [trade.symbol, trade.id, isClosed]);
 
   const levels = [
     { label: 'ENTRY', value: trade.entry, icon: <Target className="w-3 h-3" />, color: 'text-blue-500' },
@@ -577,7 +567,15 @@ function TradeDetailPanel({ trade }: { trade: Trade }) {
       </div>
 
       {/* Charts */}
-      {isClosed ? (
+      {chartLoading ? (
+        <div className="flex items-center justify-center h-[220px] border border-black/[0.06] dark:border-white/[0.06] rounded">
+          <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+        </div>
+      ) : beforeCandles.length === 0 ? (
+        <div className="flex items-center justify-center h-[220px] border border-black/[0.06] dark:border-white/[0.06] rounded">
+          <p className="text-[10px] text-slate-400 font-sans">No chart data available for {trade.symbol}</p>
+        </div>
+      ) : isClosed ? (
         <div className="space-y-2">
           <div className="text-[9px] font-sans font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
             Before / After Comparison
@@ -591,15 +589,17 @@ function TradeDetailPanel({ trade }: { trade: Trade }) {
                 showForecast={true}
               />
             </div>
-            <div className="border border-black/[0.06] dark:border-white/[0.06] rounded overflow-hidden">
-              <CandlestickChart
-                candles={afterCandles}
-                trade={trade}
-                label="AFTER"
-                showForecast={false}
-                showOutcome={true}
-              />
-            </div>
+            {afterCandles.length > 0 && (
+              <div className="border border-black/[0.06] dark:border-white/[0.06] rounded overflow-hidden">
+                <CandlestickChart
+                  candles={afterCandles}
+                  trade={trade}
+                  label="AFTER"
+                  showForecast={false}
+                  showOutcome={true}
+                />
+              </div>
+            )}
           </div>
         </div>
       ) : (

@@ -59,6 +59,7 @@ export default function BlogPage() {
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [traderCount, setTraderCount] = useState<number | null>(null);
 
   const featuredArticle = getFeaturedArticle();
   const allArticles = getAllArticles();
@@ -77,6 +78,18 @@ export default function BlogPage() {
     { name: 'Technology', count: allArticles.filter(a => a.category === 'Technology').length },
     { name: 'Product Updates', count: allArticles.filter(a => a.category === 'Product Updates').length },
   ].filter(c => c.count > 0);
+
+  // Fetch real trader count from platform stats
+  useEffect(() => {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
+    fetch(`${apiBase}/api/analysis/platform-stats`)
+      .then(r => r.ok ? r.json() : null)
+      .then(json => {
+        const count = json?.data?.totalUsers ?? json?.totalUsers;
+        if (typeof count === 'number' && count > 0) setTraderCount(count);
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchPrices = useCallback(async () => {
     try {
@@ -448,7 +461,7 @@ export default function BlogPage() {
             </h2>
             <p className="text-muted-foreground mb-8">
               Get the latest trading insights and platform updates delivered to your inbox.
-              Join 10,000+ traders who stay ahead of the market.
+              Join {traderCount ? `${traderCount.toLocaleString()}+` : 'our growing community of'} traders who stay ahead of the market.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
               <input
