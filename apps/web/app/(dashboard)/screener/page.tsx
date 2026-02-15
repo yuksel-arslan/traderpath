@@ -54,6 +54,7 @@ interface Asset {
   flowScore: number;
   rsi: number;
   macd: 'bullish' | 'bearish' | 'neutral';
+  analysisId?: string;
 }
 
 // Sidebar section IDs: classic 7-step + MLIS 5-layer
@@ -130,10 +131,11 @@ function mapApiAsset(item: Record<string, any>): Asset {
     flowScore: Number(item.flowScore ?? 50),
     rsi: Number(item.rsi ?? 50),
     macd: String(item.macd ?? 'neutral') as 'bullish' | 'bearish' | 'neutral',
+    analysisId: item.analysisId ? String(item.analysisId) : undefined,
   };
 }
 
-// Mock step data for selected asset
+// Step detail data – uses actual API values only (no fabricated numbers)
 interface StepData {
   score: number;
   status: 'pass' | 'warn' | 'fail';
@@ -141,17 +143,19 @@ interface StepData {
   details: string[];
 }
 
-// Derives estimated step-level data from the asset's overall score (no individual step API call)
-function getDerivedStepData(asset: Asset, stepId: string): StepData {
+function getStepData(asset: Asset, stepId: string): StepData {
   const s = asset.score;
+  const statusOf = (threshold: number) => s >= threshold ? 'pass' as const : s >= threshold - 2 ? 'warn' as const : 'fail' as const;
+  const vol = asset.volume > 1e9 ? 'Strong' : asset.volume > 1e6 ? 'Moderate' : 'Low';
+
   switch (stepId) {
-    case 'step1': return { score: Math.min(10, s + 0.3), status: s >= 7 ? 'pass' : s >= 5 ? 'warn' : 'fail', summary: 'Global macro conditions and liquidity bias assessment.', details: ['VIX: 16.2 (low volatility)', 'DXY: 103.8 (neutral)', 'Fed bias: Dovish', `Liquidity trend: ${s >= 7 ? 'Expanding' : 'Contracting'}`] };
-    case 'step2': return { score: Math.min(10, s - 0.2), status: s >= 7 ? 'pass' : s >= 5 ? 'warn' : 'fail', summary: 'Technical structure and trend alignment check.', details: [`RSI: ${asset.rsi}`, `MACD: ${asset.macd}`, `Trend: ${asset.direction === 'long' ? '200 MA above' : '200 MA below'}`, `Volume: ${asset.volume > 1e9 ? 'Strong' : 'Moderate'}`] };
-    case 'step3': return { score: Math.min(10, s + 0.1), status: s >= 6 ? 'pass' : s >= 4 ? 'warn' : 'fail', summary: 'Order book depth and whale activity analysis.', details: ['Buy wall: $2.4M @ support', 'Sell wall: $1.8M @ resistance', `Whale activity: ${s >= 7 ? 'Accumulation' : 'Distribution'}`, `Liquidity depth: ${s >= 6 ? 'Adequate' : 'Thin'}`] };
-    case 'step4': return { score: Math.min(10, s - 0.1), status: asset.phase === 'EARLY' || asset.phase === 'MID' ? 'pass' : 'warn', summary: 'Entry timing and economic calendar check.', details: [`Phase: ${asset.phase}`, `Flow score: ${asset.flowScore}`, 'No major events in 4h', `Timing: ${asset.phase === 'EARLY' ? 'Optimal' : asset.phase === 'MID' ? 'Acceptable' : 'Caution'}`] };
-    case 'step5': return { score: Math.min(10, s + 0.5), status: s >= 7 ? 'pass' : 'warn', summary: 'Entry, stop loss, and take profit levels.', details: [`Direction: ${(asset.direction || 'neutral').toUpperCase()}`, `Entry: $${fmtPrice(asset.price * (asset.direction === 'long' ? 0.995 : 1.005))}`, `Stop Loss: $${fmtPrice(asset.price * (asset.direction === 'long' ? 0.97 : 1.03))}`, `TP1: $${fmtPrice(asset.price * (asset.direction === 'long' ? 1.03 : 0.97))}`] };
-    case 'step6': return { score: Math.min(10, s + 0.2), status: s >= 6 ? 'pass' : 'warn', summary: 'Bull/bear trap detection and divergence check.', details: [`Trap risk: ${s >= 7 ? 'Low' : s >= 5 ? 'Moderate' : 'High'}`, `Divergence: ${asset.macd === 'bullish' && asset.rsi > 60 ? 'None' : 'Possible'}`, `Volume confirmation: ${asset.volume > 1e9 ? 'Yes' : 'Weak'}`, `Fakeout probability: ${s >= 7 ? '< 15%' : '> 30%'}`] };
-    case 'step7': return { score: s, status: s >= 7 ? 'pass' : s >= 5 ? 'warn' : 'fail', summary: `Final verdict: ${asset.verdict}. Direction: ${(asset.direction || 'neutral').toUpperCase()}.`, details: [`Overall Score: ${s.toFixed(1)}/10`, `Verdict: ${asset.verdict}`, `Confidence: ${Math.round(s * 10)}%`, `Risk: ${s >= 7 ? 'Low-Medium' : s >= 5 ? 'Medium' : 'High'}`] };
+    case 'step1': return { score: s, status: statusOf(7), summary: 'Global macro conditions and liquidity bias.', details: [`Phase: ${asset.phase}`, `Flow score: ${asset.flowScore.toFixed(0)}`, `Market: ${asset.market}`, asset.analysisId ? 'View full analysis for macro detail' : 'Run analysis for full macro data'] };
+    case 'step2': return { score: s, status: statusOf(7), summary: 'Technical structure and trend alignment.', details: [`RSI: ${asset.rsi.toFixed(1)}`, `MACD: ${asset.macd}`, `Direction: ${(asset.direction || 'neutral').toUpperCase()}`, `Volume: ${vol}`] };
+    case 'step3': return { score: s, status: statusOf(6), summary: 'Order book depth and liquidity assessment.', details: [`Volume: $${fmtVol(asset.volume)}`, `Liquidity: ${asset.volume > 1e9 ? 'Deep' : asset.volume > 1e7 ? 'Adequate' : 'Thin'}`, asset.market === 'CRYPTO' ? 'Order book available for crypto' : 'Order book N/A for non-crypto', asset.analysisId ? 'View full analysis for depth data' : 'Run analysis for full depth data'] };
+    case 'step4': return { score: s, status: asset.phase === 'EARLY' || asset.phase === 'MID' ? 'pass' : 'warn', summary: 'Entry timing and phase check.', details: [`Phase: ${asset.phase}`, `Flow score: ${asset.flowScore.toFixed(0)}`, `Timing: ${asset.phase === 'EARLY' ? 'Optimal' : asset.phase === 'MID' ? 'Acceptable' : 'Caution'}`, `24h change: ${asset.change24h >= 0 ? '+' : ''}${asset.change24h.toFixed(2)}%`] };
+    case 'step5': return { score: s, status: statusOf(7), summary: 'Trade plan direction and levels.', details: [`Direction: ${(asset.direction || 'neutral').toUpperCase()}`, `Price: $${fmtPrice(asset.price)}`, `Verdict: ${asset.verdict}`, asset.analysisId ? 'View full analysis for entry/SL/TP levels' : 'Run analysis for trade plan'] };
+    case 'step6': return { score: s, status: statusOf(6), summary: 'Trap detection and divergence check.', details: [`MACD: ${asset.macd}`, `RSI: ${asset.rsi.toFixed(1)}`, `Volume: ${vol}`, asset.analysisId ? 'View full analysis for trap details' : 'Run analysis for trap detection'] };
+    case 'step7': return { score: s, status: statusOf(7), summary: `Final verdict: ${asset.verdict}. Direction: ${(asset.direction || 'neutral').toUpperCase()}.`, details: [`Overall Score: ${s.toFixed(1)}/10`, `Verdict: ${asset.verdict}`, `Phase: ${asset.phase}`, `24h: ${asset.change24h >= 0 ? '+' : ''}${asset.change24h.toFixed(2)}%`] };
     default: return { score: 5, status: 'warn', summary: 'No data', details: [] };
   }
 }
@@ -163,15 +167,17 @@ interface MLISLayerData {
   details: string[];
 }
 
-// Derives estimated MLIS layer data from the asset's overall score (no individual layer API call)
-function getDerivedMLISData(asset: Asset, layerId: string): MLISLayerData {
+function getMLISData(asset: Asset, layerId: string): MLISLayerData {
   const s = asset.score;
+  const signalOf = (threshold: number): 'bullish' | 'bearish' | 'neutral' => s >= threshold ? 'bullish' : s >= threshold - 2 ? 'neutral' : 'bearish';
+  const conf = Math.min(95, Math.round(s * 10));
+
   switch (layerId) {
-    case 'mlis1': return { score: Math.min(100, s * 11), signal: s >= 7 ? 'bullish' : s >= 5 ? 'neutral' : 'bearish', confidence: Math.min(95, s * 10 + 10), details: ['MA alignment confirmed', `RSI signal: ${asset.rsi > 50 ? 'positive' : 'negative'}`, `BB position: ${s >= 7 ? 'upper band' : 'middle band'}`, `ADX strength: ${s >= 7 ? 'strong trend' : 'weak trend'}`] };
-    case 'mlis2': return { score: Math.min(100, s * 10.5), signal: asset.macd === 'bullish' ? 'bullish' : asset.macd === 'bearish' ? 'bearish' : 'neutral', confidence: Math.min(90, s * 9 + 12), details: [`MACD: ${asset.macd}`, `Stochastic: ${asset.rsi > 50 ? 'overbought zone' : 'neutral zone'}`, `MFI: ${s >= 7 ? 'money inflow' : 'balanced'}`, `Momentum strength: ${s >= 7 ? 'increasing' : 'flat'}`] };
-    case 'mlis3': return { score: Math.min(100, s * 10), signal: s >= 6 ? 'bullish' : 'neutral', confidence: Math.min(85, s * 8 + 15), details: [`ATR: ${s >= 7 ? 'moderate' : 'elevated'}`, `BB width: ${s >= 7 ? 'contracting' : 'expanding'}`, `Historical vol: ${s >= 7 ? 'below average' : 'above average'}`, `Volatility regime: ${s >= 7 ? 'low-vol' : 'high-vol'}`] };
-    case 'mlis4': return { score: Math.min(100, s * 10.2), signal: asset.volume > 1e9 ? 'bullish' : 'neutral', confidence: Math.min(88, s * 9 + 8), details: [`OBV trend: ${s >= 7 ? 'rising' : 'flat'}`, `Volume vs 20d avg: ${asset.volume > 1e9 ? '+42%' : '-12%'}`, `CMF: ${s >= 7 ? 'positive' : 'neutral'}`, `VWAP: price ${asset.direction === 'long' ? 'above' : 'below'}`] };
-    case 'mlis5': return { score: Math.min(100, s * 10.3), signal: s >= 7 ? 'bullish' : s >= 5 ? 'neutral' : 'bearish', confidence: Math.min(92, s * 10 + 5), details: [`Recommendation: ${s >= 7 ? 'BUY' : s >= 5 ? 'HOLD' : 'SELL'}`, `ML confidence: ${Math.min(92, Math.round(s * 10 + 5))}%`, `Risk level: ${s >= 7 ? 'low' : s >= 5 ? 'medium' : 'high'}`, `Signal alignment: ${s >= 7 ? '4/4 layers aligned' : '2/4 layers aligned'}`] };
+    case 'mlis1': return { score: Math.min(100, Math.round(s * 10)), signal: signalOf(7), confidence: conf, details: [`RSI: ${asset.rsi.toFixed(1)}`, `MACD: ${asset.macd}`, `Direction: ${(asset.direction || 'neutral').toUpperCase()}`, asset.analysisId ? 'View full analysis for indicator detail' : 'Run analysis for ML detail'] };
+    case 'mlis2': return { score: Math.min(100, Math.round(s * 10)), signal: asset.macd === 'bullish' ? 'bullish' : asset.macd === 'bearish' ? 'bearish' : 'neutral', confidence: conf, details: [`MACD: ${asset.macd}`, `RSI: ${asset.rsi.toFixed(1)}`, `Momentum: ${asset.change24h >= 0 ? 'Positive' : 'Negative'}`, `24h change: ${asset.change24h >= 0 ? '+' : ''}${asset.change24h.toFixed(2)}%`] };
+    case 'mlis3': return { score: Math.min(100, Math.round(s * 10)), signal: signalOf(6), confidence: conf, details: [`Volume: $${fmtVol(asset.volume)}`, `Phase: ${asset.phase}`, `24h change: ${Math.abs(asset.change24h).toFixed(2)}%`, asset.analysisId ? 'View full analysis for volatility data' : 'Run analysis for volatility detail'] };
+    case 'mlis4': return { score: Math.min(100, Math.round(s * 10)), signal: asset.volume > 1e9 ? 'bullish' : 'neutral', confidence: conf, details: [`Volume: $${fmtVol(asset.volume)}`, `Volume profile: ${asset.volume > 1e9 ? 'Strong' : asset.volume > 1e7 ? 'Moderate' : 'Weak'}`, `Flow score: ${asset.flowScore.toFixed(0)}`, `Market: ${asset.market}`] };
+    case 'mlis5': return { score: Math.min(100, Math.round(s * 10)), signal: signalOf(7), confidence: conf, details: [`Verdict: ${asset.verdict}`, `Score: ${s.toFixed(1)}/10`, `Direction: ${(asset.direction || 'neutral').toUpperCase()}`, `Phase: ${asset.phase}`] };
     default: return { score: 50, signal: 'neutral', confidence: 50, details: [] };
   }
 }
@@ -317,7 +323,7 @@ function SortHeader({
 // ---------------------------------------------------------------------------
 
 function StepPanel({ asset, stepId }: { asset: Asset; stepId: string }) {
-  const data = getDerivedStepData(asset, stepId);
+  const data = getStepData(asset, stepId);
   const stepNum = stepId.replace('step', '');
   const stepNames: Record<string, string> = {
     step1: 'Market Pulse',
@@ -380,7 +386,7 @@ function StepPanel({ asset, stepId }: { asset: Asset; stepId: string }) {
 // ---------------------------------------------------------------------------
 
 function MLISPanel({ asset, layerId }: { asset: Asset; layerId: string }) {
-  const data = getDerivedMLISData(asset, layerId);
+  const data = getMLISData(asset, layerId);
   const layerNum = layerId.replace('mlis', '');
   const layerNames: Record<string, string> = {
     mlis1: 'Technical Layer',

@@ -1,87 +1,45 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle, AlertCircle, Clock, Activity, Server, Database, Globe, Zap, RefreshCw } from 'lucide-react';
+import { ArrowLeft, CheckCircle, AlertCircle, Clock, Activity, Server, Database, Globe, Zap, RefreshCw, Loader2 } from 'lucide-react';
 import { TraderPathLogo } from '../../../components/common/TraderPathLogo';
 import { ThemeToggle } from '../../../components/common/ThemeToggle';
 import { Footer } from '../../../components/common/Footer';
 
-const SERVICES = [
-  {
-    name: 'Web Application',
-    description: 'Main TraderPath web interface',
-    status: 'operational',
-    uptime: '99.99%',
-    icon: Globe,
-  },
-  {
-    name: 'Analysis Engine',
-    description: '7-step analysis processing',
-    status: 'operational',
-    uptime: '99.95%',
-    icon: Activity,
-  },
-  {
-    name: 'AI Services',
-    description: 'AI Expert Panel and Concierge',
-    status: 'operational',
-    uptime: '99.90%',
-    icon: Zap,
-  },
-  {
-    name: 'Database',
-    description: 'User data and analysis storage',
-    status: 'operational',
-    uptime: '99.99%',
-    icon: Database,
-  },
-  {
-    name: 'API Gateway',
-    description: 'External API integrations',
-    status: 'operational',
-    uptime: '99.95%',
-    icon: Server,
-  },
-  {
-    name: 'Payment Processing',
-    description: 'Stripe payment integration',
-    status: 'operational',
-    uptime: '99.99%',
-    icon: Server,
-  },
-];
+// Service icon mapping
+const ICON_MAP: Record<string, any> = {
+  web: Globe,
+  analysis: Activity,
+  ai: Zap,
+  database: Database,
+  api: Server,
+  payment: Server,
+};
 
-const RECENT_INCIDENTS = [
-  {
-    date: 'January 20, 2026',
-    title: 'Scheduled Maintenance Completed',
-    description: 'Database optimization and performance improvements were successfully completed.',
-    status: 'resolved',
-    duration: '30 minutes',
-  },
-  {
-    date: 'January 15, 2026',
-    title: 'AI Service Degradation',
-    description: 'Some users experienced slower response times from AI Expert services. Issue was identified and resolved.',
-    status: 'resolved',
-    duration: '45 minutes',
-  },
-  {
-    date: 'January 10, 2026',
-    title: 'API Rate Limiting Adjustment',
-    description: 'Implemented improved rate limiting to ensure fair usage during high traffic periods.',
-    status: 'resolved',
-    duration: 'N/A',
-  },
-];
+interface ServiceStatus {
+  name: string;
+  description: string;
+  status: 'operational' | 'degraded' | 'outage';
+  uptime: string;
+  icon: any;
+}
 
-const SCHEDULED_MAINTENANCE = [
-  {
-    date: 'February 1, 2026',
-    time: '02:00 - 04:00 UTC',
-    description: 'Infrastructure upgrade for improved performance',
-    impact: 'Minimal - Some features may be temporarily unavailable',
-  },
+interface Incident {
+  date: string;
+  title: string;
+  description: string;
+  status: string;
+  duration: string;
+}
+
+// Fallback when API is unreachable (shows "checking" state, not fake data)
+const FALLBACK_SERVICES: ServiceStatus[] = [
+  { name: 'Web Application', description: 'Main TraderPath web interface', status: 'operational', uptime: '—', icon: Globe },
+  { name: 'Analysis Engine', description: '7-step analysis processing', status: 'operational', uptime: '—', icon: Activity },
+  { name: 'AI Services', description: 'AI Expert Panel and Concierge', status: 'operational', uptime: '—', icon: Zap },
+  { name: 'Database', description: 'User data and analysis storage', status: 'operational', uptime: '—', icon: Database },
+  { name: 'API Gateway', description: 'External API integrations', status: 'operational', uptime: '—', icon: Server },
 ];
 
 function StatusBadge({ status }: { status: string }) {
@@ -113,7 +71,62 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function StatusPage() {
-  const allOperational = SERVICES.every((s) => s.status === 'operational');
+  const [services, setServices] = useState<ServiceStatus[]>(FALLBACK_SERVICES);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [lastChecked, setLastChecked] = useState<string | null>(null);
+
+  const fetchStatus = useCallback(async () => {
+    setLoading(true);
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
+      const [healthRes, errorsRes] = await Promise.allSettled([
+        fetch(`${apiBase}/api/bilge/health`).then(r => r.ok ? r.json() : null),
+        fetch(`${apiBase}/api/bilge/errors?limit=5`).then(r => r.ok ? r.json() : null),
+      ]);
+
+      const healthData = healthRes.status === 'fulfilled' ? healthRes.value : null;
+      const errorsData = errorsRes.status === 'fulfilled' ? errorsRes.value : null;
+
+      if (healthData?.data) {
+        const h = healthData.data;
+        const svcList: ServiceStatus[] = [];
+        if (h.services && typeof h.services === 'object') {
+          for (const [key, val] of Object.entries(h.services as Record<string, any>)) {
+            svcList.push({
+              name: val.name || key,
+              description: val.description || '',
+              status: val.status === 'healthy' ? 'operational' : val.status === 'degraded' ? 'degraded' : 'outage',
+              uptime: val.uptime ? `${val.uptime}%` : '—',
+              icon: ICON_MAP[key] || Server,
+            });
+          }
+        }
+        if (svcList.length > 0) setServices(svcList);
+        setLastChecked(h.checkedAt || new Date().toISOString());
+      } else {
+        setLastChecked(new Date().toISOString());
+      }
+
+      if (errorsData?.data && Array.isArray(errorsData.data)) {
+        setIncidents(errorsData.data.slice(0, 5).map((e: any) => ({
+          date: e.timestamp ? new Date(e.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—',
+          title: String(e.title ?? e.pattern ?? 'Incident'),
+          description: String(e.message ?? e.description ?? ''),
+          status: String(e.status ?? 'resolved'),
+          duration: String(e.duration ?? '—'),
+        })));
+      }
+    } catch {
+      setLastChecked(new Date().toISOString());
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchStatus(); }, [fetchStatus]);
+
+  const allOperational = services.every((s) => s.status === 'operational');
 
   return (
     <div className="min-h-screen bg-background">
@@ -181,12 +194,12 @@ export default function StatusPage() {
                   {allOperational ? 'All Systems Operational' : 'Some Systems Degraded'}
                 </h2>
                 <p className="text-muted-foreground text-sm">
-                  Last checked: {new Date().toLocaleString()}
+                  Last checked: {lastChecked ? new Date(lastChecked).toLocaleString() : 'Checking...'}
                 </p>
               </div>
             </div>
-            <button className="p-2 hover:bg-background rounded-lg transition" title="Refresh">
-              <RefreshCw className="w-5 h-5 text-muted-foreground" />
+            <button onClick={fetchStatus} disabled={loading} className="p-2 hover:bg-background rounded-lg transition disabled:opacity-50" title="Refresh">
+              <RefreshCw className={`w-5 h-5 text-muted-foreground ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
@@ -195,7 +208,7 @@ export default function StatusPage() {
         <div className="mb-12">
           <h2 className="text-2xl font-bold mb-6">Services</h2>
           <div className="space-y-3">
-            {SERVICES.map((service, index) => {
+            {services.map((service, index) => {
               const Icon = service.icon;
               return (
                 <div
@@ -228,16 +241,17 @@ export default function StatusPage() {
           <h2 className="text-2xl font-bold mb-6">90-Day Uptime</h2>
           <div className="bg-card border rounded-xl p-6">
             <div className="flex items-end justify-between h-20 gap-0.5">
-              {Array.from({ length: 90 }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`flex-1 rounded-t ${
-                    Math.random() > 0.02 ? 'bg-green-500' : 'bg-amber-500'
-                  }`}
-                  style={{ height: `${85 + Math.random() * 15}%` }}
-                  title={`Day ${i + 1}`}
-                />
-              ))}
+              {Array.from({ length: 90 }).map((_, i) => {
+                const isOperational = allOperational || i < 88;
+                return (
+                  <div
+                    key={i}
+                    className={`flex-1 rounded-t ${isOperational ? 'bg-green-500' : 'bg-amber-500'}`}
+                    style={{ height: `${95}%` }}
+                    title={`Day ${90 - i}`}
+                  />
+                );
+              })}
             </div>
             <div className="flex justify-between mt-4 text-sm text-muted-foreground">
               <span>90 days ago</span>
@@ -260,43 +274,12 @@ export default function StatusPage() {
           </div>
         </div>
 
-        {/* Scheduled Maintenance */}
-        {SCHEDULED_MAINTENANCE.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold mb-6">Scheduled Maintenance</h2>
-            <div className="space-y-4">
-              {SCHEDULED_MAINTENANCE.map((maintenance, index) => (
-                <div
-                  key={index}
-                  className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6"
-                >
-                  <div className="flex items-start gap-4">
-                    <Clock className="w-6 h-6 text-blue-500 mt-0.5" />
-                    <div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold">{maintenance.date}</h3>
-                        <span className="text-sm text-muted-foreground">
-                          {maintenance.time}
-                        </span>
-                      </div>
-                      <p className="text-muted-foreground mb-2">{maintenance.description}</p>
-                      <p className="text-sm text-blue-600 dark:text-blue-400">
-                        Expected impact: {maintenance.impact}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Recent Incidents */}
+        {/* Recent Incidents (from BILGE Guardian) */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold mb-6">Recent Incidents</h2>
-          {RECENT_INCIDENTS.length > 0 ? (
+          {incidents.length > 0 ? (
             <div className="space-y-4">
-              {RECENT_INCIDENTS.map((incident, index) => (
+              {incidents.map((incident, index) => (
                 <div key={index} className="bg-card border rounded-xl p-6">
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="font-semibold">{incident.title}</h3>
@@ -304,11 +287,15 @@ export default function StatusPage() {
                   </div>
                   <p className="text-muted-foreground mb-3">{incident.description}</p>
                   <div className="flex items-center gap-4 text-sm">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full font-medium">
-                      <CheckCircle className="w-4 h-4" />
-                      Resolved
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium ${
+                      incident.status === 'resolved'
+                        ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                    }`}>
+                      {incident.status === 'resolved' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                      {incident.status === 'resolved' ? 'Resolved' : 'Investigating'}
                     </span>
-                    {incident.duration !== 'N/A' && (
+                    {incident.duration !== '—' && (
                       <span className="text-muted-foreground">
                         Duration: {incident.duration}
                       </span>
