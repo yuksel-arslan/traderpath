@@ -77,30 +77,27 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
 
   // Reset to English (remove translation)
   const resetToEnglish = useCallback(() => {
-    // Method 1: Use the combo box with 'en' value
-    const combo = findTranslateCombo();
-    if (combo) {
-      // Try setting to 'en' first
-      combo.value = 'en';
-      fireEvent(combo, 'change');
-
-      // If that doesn't work, try empty string
-      setTimeout(() => {
-        if (document.documentElement.classList.contains('translated-ltr') ||
-            document.documentElement.classList.contains('translated-rtl')) {
-          combo.value = '';
-          fireEvent(combo, 'change');
-        }
-      }, 100);
+    // Step 1: Clear ALL googtrans cookies first (before any DOM manipulation)
+    const domain = window.location.hostname;
+    const expiry = 'expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = `googtrans=; path=/; ${expiry}`;
+    document.cookie = `googtrans=; path=/; domain=${domain}; ${expiry}`;
+    document.cookie = `googtrans=; path=/; domain=.${domain}; ${expiry}`;
+    // Also clear with leading dot variations
+    const parts = domain.split('.');
+    if (parts.length >= 2) {
+      const rootDomain = parts.slice(-2).join('.');
+      document.cookie = `googtrans=; path=/; domain=.${rootDomain}; ${expiry}`;
     }
 
-    // Method 2: Clear cookies
-    const domain = window.location.hostname;
-    document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    document.cookie = `googtrans=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-    document.cookie = `googtrans=; path=/; domain=.${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    // Step 2: Try the combo box approach (empty string = original language)
+    const combo = findTranslateCombo();
+    if (combo) {
+      combo.value = '';
+      fireEvent(combo, 'change');
+    }
 
-    // Method 3: Try to click "Show original" in banner (if accessible)
+    // Step 3: Try "Show original" button in the translate banner
     try {
       const frame = document.querySelector('.goog-te-banner-frame') as HTMLIFrameElement;
       if (frame?.contentDocument) {
@@ -110,21 +107,20 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
           return true;
         }
       }
-    } catch (e) {
+    } catch {
       // Cross-origin access denied, ignore
     }
 
-    // Method 4: If still translated after 500ms, reload the page
+    // Step 4: Clean up DOM classes and reload if still translated
     setTimeout(() => {
-      if (document.documentElement.classList.contains('translated-ltr') ||
-          document.documentElement.classList.contains('translated-rtl')) {
-        // Remove classes manually
-        document.documentElement.classList.remove('translated-ltr', 'translated-rtl');
-
-        // Force reload as last resort
+      const html = document.documentElement;
+      if (html.classList.contains('translated-ltr') || html.classList.contains('translated-rtl')) {
+        html.classList.remove('translated-ltr', 'translated-rtl');
+        // Remove Google Translate's inline style on body
+        document.body.style.removeProperty('top');
         window.location.reload();
       }
-    }, 500);
+    }, 300);
 
     return true;
   }, [findTranslateCombo]);
@@ -184,7 +180,9 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
   }, []);
 
   const handleLanguageChange = async (lang: typeof LANGUAGES[0]) => {
-    if (isChanging || lang.code === selectedLang.code) return;
+    if (isChanging) return;
+    // Allow re-clicking EN to force reset even if already selected
+    if (lang.code === selectedLang.code && lang.code !== 'en') return;
 
     setSelectedLang(lang);
     setIsOpen(false);
@@ -192,22 +190,22 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
 
     try {
       if (lang.code === 'en') {
-        // Reset to English
+        // Reset to English — clear cookies first, then reset DOM
         resetToEnglish();
-        // Give time for reset methods to work
         setTimeout(() => {
           setIsChanging(false);
         }, 600);
       } else {
-        // Set cookie for persistence
+        // Set cookie for persistence (all domain variants)
         const domain = window.location.hostname;
-        document.cookie = `googtrans=/en/${lang.code}; path=/`;
-        document.cookie = `googtrans=/en/${lang.code}; path=/; domain=${domain}`;
+        const cookieVal = `/en/${lang.code}`;
+        document.cookie = `googtrans=${cookieVal}; path=/`;
+        document.cookie = `googtrans=${cookieVal}; path=/; domain=${domain}`;
+        document.cookie = `googtrans=${cookieVal}; path=/; domain=.${domain}`;
 
         // Trigger translation without page reload
         const success = triggerTranslation(lang.code);
 
-        // Short delay to allow translation to apply
         setTimeout(() => {
           setIsChanging(false);
         }, success ? 300 : 1000);

@@ -36,7 +36,7 @@ export function Hero() {
         {/* Heading */}
         <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight text-black dark:text-white mb-3 leading-snug">
           Follow the Money.{' '}
-          <span className="text-slate-300 dark:text-slate-600">Trade with Precision.</span>
+          <span className="text-slate-500 dark:text-slate-500">Trade with Precision.</span>
         </h2>
 
         {/* Description */}

@@ -110,11 +110,11 @@ function Stats() {
 
   if (!metrics) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-black/[0.04] dark:bg-white/[0.04]">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/[0.04]">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="bg-white dark:bg-black p-6">
-            <div className="h-7 w-16 bg-black/5 dark:bg-white/5 mb-2 animate-pulse" />
-            <div className="h-3 w-20 bg-black/5 dark:bg-white/5 animate-pulse" />
+          <div key={i} className="bg-[#0B1121] p-6">
+            <div className="h-7 w-16 bg-white/5 mb-2 animate-pulse" />
+            <div className="h-3 w-20 bg-white/5 animate-pulse" />
           </div>
         ))}
       </div>
@@ -129,9 +129,9 @@ function Stats() {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-black/[0.04] dark:bg-white/[0.04]">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-white/[0.04]">
       {stats.map((s, i) => (
-        <div key={i} className="bg-white dark:bg-black p-6">
+        <div key={i} className="bg-[#0B1121] p-6">
           <div className="text-2xl sm:text-3xl font-bold tabular-nums mb-1">{s.value}</div>
           <div className="text-[10px] tracking-wider text-slate-400">{s.label}</div>
         </div>
@@ -217,7 +217,7 @@ function PerformanceChart() {
   if (!ready) {
     return (
       <div className="max-w-[1200px] mx-auto px-4 py-10 sm:py-14">
-        <div className="h-[120px] animate-pulse bg-black/[0.02] dark:bg-white/[0.02]" />
+        <div className="h-[120px] animate-pulse bg-white/[0.02]" />
       </div>
     );
   }
@@ -270,54 +270,74 @@ function PerformanceChart() {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white dark:bg-black text-slate-900 dark:text-slate-200">
-      <PriceTicker />
-      <Navbar />
-      <Hero />
+    <div className="dark min-h-screen text-slate-200 relative" style={{ background: '#0B1121' }}>
+      {/* Ambient glow orbs */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full bg-teal-500/[0.07] blur-[120px]" />
+        <div className="absolute top-1/3 -right-32 w-[400px] h-[400px] rounded-full bg-cyan-500/[0.05] blur-[100px]" />
+        <div className="absolute bottom-0 left-1/3 w-[350px] h-[350px] rounded-full bg-teal-600/[0.04] blur-[100px]" />
+      </div>
 
-      {/* Stats */}
-      <section className="border-t border-black/[0.06] dark:border-white/[0.06]">
-        <div className="max-w-[1200px] mx-auto">
-          <Stats />
-        </div>
-      </section>
+      {/* Dot pattern */}
+      <div
+        className="pointer-events-none fixed inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.5) 1px, transparent 0)',
+          backgroundSize: '24px 24px',
+        }}
+      />
 
-      {/* Performance Chart */}
-      <section className="border-t border-black/[0.06] dark:border-white/[0.06]">
-        <PerformanceChart />
-      </section>
+      <div className="relative z-10">
+        <PriceTicker />
+        <Navbar />
+        <Hero />
 
-      {/* Methodology */}
-      <FlowAccordion />
-
-      {/* CTA */}
-      <section className="border-t border-black/[0.06] dark:border-white/[0.06] py-16 sm:py-24">
-        <div className="max-w-[600px] mx-auto px-4 text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">
-            Start Trading with AI
-          </h2>
-          <p className="text-sm text-slate-500 mb-8">
-            25 free credits on signup. No credit card required.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/register"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm font-semibold bg-black dark:bg-white text-white dark:text-black rounded-sm hover:opacity-80 transition-opacity"
-            >
-              GET STARTED FREE
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              href="/pricing"
-              className="w-full sm:w-auto inline-flex items-center justify-center px-7 py-3 text-sm text-slate-500 border border-black/[0.06] dark:border-white/[0.06] rounded-sm hover:text-black dark:hover:text-white transition-colors"
-            >
-              VIEW PRICING
-            </Link>
+        {/* Stats */}
+        <section className="border-t border-white/[0.06]">
+          <div className="max-w-[1200px] mx-auto">
+            <Stats />
           </div>
-        </div>
-      </section>
+        </section>
 
-      <Footer variant="minimal" />
+        {/* Performance Chart */}
+        <section className="border-t border-white/[0.06]">
+          <PerformanceChart />
+        </section>
+
+        {/* Methodology */}
+        <FlowAccordion />
+
+        {/* CTA */}
+        <section className="border-t border-white/[0.06] py-16 sm:py-24">
+          <div className="max-w-[600px] mx-auto px-4 text-center">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">
+              <span className="bg-gradient-to-r from-[#14B8A6] via-[#0EA5E9] to-[#F97316] bg-clip-text text-transparent animate-[gradient-shift_6s_ease_infinite] bg-[length:200%_auto]">
+                Start Trading with AI
+              </span>
+            </h2>
+            <p className="text-sm text-slate-400 mb-8">
+              25 free credits on signup. No credit card required.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                href="/register"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm font-semibold bg-white text-[#0B1121] rounded-sm hover:bg-slate-200 transition-colors"
+              >
+                GET STARTED FREE
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/pricing"
+                className="w-full sm:w-auto inline-flex items-center justify-center px-7 py-3 text-sm text-slate-400 border border-white/[0.1] rounded-sm hover:text-white hover:border-white/[0.2] transition-colors"
+              >
+                VIEW PRICING
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <Footer variant="minimal" />
+      </div>
     </div>
   );
 }

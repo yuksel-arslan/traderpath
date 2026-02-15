@@ -191,9 +191,16 @@ export function FlowAccordion() {
           <h2 className="text-xl sm:text-2xl md:text-3xl font-sans font-bold tracking-tight text-black dark:text-white mb-2">
             7-Layer Decision Engine
           </h2>
-          <p className="text-xs sm:text-sm font-sans text-slate-500 max-w-lg">
+          <p className="text-xs sm:text-sm font-sans text-slate-500 max-w-lg mb-3">
             Top-down capital flow analysis. Each layer narrows the decision
             from global macro to individual trade plan.
+          </p>
+          <p className="text-[10px] sm:text-xs font-sans text-slate-400 max-w-lg leading-relaxed">
+            Built on{' '}
+            <span className="text-slate-300 dark:text-slate-300 font-medium">Lean Construction</span>{' '}
+            principles — eliminate noise, pull decisions from data, and maintain
+            continuous flow from macro insight to micro execution. No wasted analysis,
+            no speculative guesswork.
           </p>
         </div>
 
@@ -215,7 +222,7 @@ export function FlowAccordion() {
               >
                 <button
                   onClick={() => setExpanded(isOpen ? null : layer.number)}
-                  className="w-full flex items-center gap-3 px-3 py-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-3 py-3 hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors text-left"
                 >
                   {/* Layer number */}
                   <span className={cn(
@@ -343,7 +350,7 @@ export function FlowAccordion() {
         <div className="mt-8 text-center">
           <Link
             href="/register"
-            className="inline-flex items-center gap-2 px-6 py-3 text-xs font-sans font-semibold bg-black dark:bg-white text-white dark:text-black hover:opacity-80 transition-opacity"
+            className="inline-flex items-center gap-2 px-6 py-3 text-xs font-sans font-semibold bg-black dark:bg-white text-white dark:text-[#0B1121] hover:opacity-80 transition-opacity"
           >
             ACCESS FULL TERMINAL
             <ArrowRight className="w-3.5 h-3.5" />

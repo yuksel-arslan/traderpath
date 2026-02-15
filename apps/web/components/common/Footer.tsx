@@ -19,7 +19,7 @@ export function Footer({ className, variant = 'default' }: FooterProps) {
 
   return (
     <footer className={cn(
-      "border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950",
+      "border-t border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-[#0B1121]",
       className
     )}>
       <div className="container mx-auto px-4 py-12">
@@ -108,13 +108,13 @@ export function Footer({ className, variant = 'default' }: FooterProps) {
             </div>
 
             {/* Divider */}
-            <div className="border-t border-slate-200 dark:border-slate-800 my-8" />
+            <div className="border-t border-slate-200 dark:border-white/[0.06] my-8" />
           </>
         )}
 
         {/* Disclaimer */}
         <div className="mb-8">
-          <div className="bg-slate-100 dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+          <div className="bg-slate-100 dark:bg-white/[0.03] rounded-xl p-4 border border-slate-200 dark:border-white/[0.06]">
             <h5 className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
               Important Disclaimer
             </h5>
