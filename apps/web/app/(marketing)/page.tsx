@@ -294,7 +294,9 @@ export default function LandingPage() {
       <section className="border-t border-black/[0.06] dark:border-white/[0.06] py-16 sm:py-24">
         <div className="max-w-[600px] mx-auto px-4 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">
-            Start Trading with AI
+            <span className="bg-gradient-to-r from-[#14B8A6] via-[#0EA5E9] to-[#F97316] bg-clip-text text-transparent animate-[gradient-shift_6s_ease_infinite] bg-[length:200%_auto]">
+              Start Trading with AI
+            </span>
           </h2>
           <p className="text-sm text-slate-500 mb-8">
             25 free credits on signup. No credit card required.
