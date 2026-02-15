@@ -73,7 +73,7 @@ export default function PricingPage() {
   const [packagesLoading, setPackagesLoading] = useState(true);
   const [packagesFromApi, setPackagesFromApi] = useState(false);
   const [pricingMode, setPricingMode] = useState<PricingMode>('active');
-  const [signalPlans, setSignalPlans] = useState<{ tier: string; name: string; price: { monthly: number }; maxSignalsPerDay: number; markets: string[]; features?: string[] }[]>([]);
+  const [signalPlans, setSignalPlans] = useState<{ tier: string; name: string; price: { monthly: number }; maxSignalsPerDay: number; markets: string[]; features?: string[]; deliveryChannels?: { telegram?: boolean; discord?: boolean; email?: boolean } }[]>([]);
   const [signalPlansLoading, setSignalPlansLoading] = useState(true);
 
   useEffect(() => {
@@ -687,7 +687,7 @@ export default function PricingPage() {
                                   7-Step + MLIS Pro analysis
                                 </span>
                               </li>
-                              {plan.deliveryChannels.telegram && (
+                              {plan.deliveryChannels?.telegram && (
                                 <li className="flex items-start gap-2 text-sm">
                                   <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
                                   <span className="text-slate-600 dark:text-slate-400">
@@ -695,7 +695,7 @@ export default function PricingPage() {
                                   </span>
                                 </li>
                               )}
-                              {plan.deliveryChannels.discord && (
+                              {plan.deliveryChannels?.discord && (
                                 <li className="flex items-start gap-2 text-sm">
                                   <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
                                   <span className="text-slate-600 dark:text-slate-400">
@@ -703,7 +703,7 @@ export default function PricingPage() {
                                   </span>
                                 </li>
                               )}
-                              {plan.deliveryChannels.email && (
+                              {plan.deliveryChannels?.email && (
                                 <li className="flex items-start gap-2 text-sm">
                                   <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
                                   <span className="text-slate-600 dark:text-slate-400">

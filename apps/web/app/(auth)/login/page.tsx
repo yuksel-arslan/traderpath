@@ -100,7 +100,7 @@ export default function LoginPage() {
       });
 
       // Handle Vercel function timeout (returns HTML 504, not JSON)
-      let data: Record<string, unknown>;
+      let data: Record<string, any>;
       try {
         data = await response.json();
       } catch {
@@ -114,8 +114,8 @@ export default function LoginPage() {
         return;
       }
 
-      const errorObj = data.error as Record<string, unknown> | undefined;
-      const dataObj = data.data as Record<string, unknown> | undefined;
+      const errorObj = data.error as Record<string, any> | undefined;
+      const dataObj = data.data as Record<string, any> | undefined;
 
       if (!response.ok || !data.success) {
         // Handle email not verified error specially
@@ -130,7 +130,7 @@ export default function LoginPage() {
         // Check if this is first login
         if (dataObj?.isFirstLogin && dataObj?.firstLoginBonus) {
           setFirstLoginBonus(dataObj.firstLoginBonus as number);
-          const user = dataObj.user as Record<string, unknown> | undefined;
+          const user = dataObj.user as Record<string, any> | undefined;
           setWelcomeName((user?.name as string) || '');
           setShowWelcomeModal(true);
         } else {

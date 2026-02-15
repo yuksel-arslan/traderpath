@@ -48,13 +48,13 @@ interface AnalysisData {
   expiresAt: string;
   outcome?: string;
   method?: string;
-  step1Result?: Record<string, unknown>; // Market Pulse
-  step2Result?: Record<string, unknown>; // Asset Scanner
-  step3Result?: Record<string, unknown>; // Safety Check
-  step4Result?: Record<string, unknown>; // Timing Analysis
-  step5Result?: Record<string, unknown>; // Trade Plan
-  step6Result?: Record<string, unknown>; // Trap Check
-  step7Result?: Record<string, unknown>; // Final Verdict + ML Confirmation
+  step1Result?: Record<string, any>; // Market Pulse
+  step2Result?: Record<string, any>; // Asset Scanner
+  step3Result?: Record<string, any>; // Safety Check
+  step4Result?: Record<string, any>; // Timing Analysis
+  step5Result?: Record<string, any>; // Trade Plan
+  step6Result?: Record<string, any>; // Trap Check
+  step7Result?: Record<string, any>; // Final Verdict + ML Confirmation
 }
 
 function formatPrice(price: number): string {

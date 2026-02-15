@@ -313,7 +313,7 @@ export default function DashboardPage() {
       if (livePricesRes.ok) {
         const data = await livePricesRes.json();
         const analyses = data.data?.analyses || [];
-        newRecentAnalyses = analyses.map((a: Record<string, unknown>) => {
+        newRecentAnalyses = analyses.map((a: Record<string, any>) => {
           const rawVerdict = (typeof a.verdict === 'string' ? a.verdict : '').toLowerCase().replace(/[^a-z_]/g, '');
           let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
           if (rawVerdict === 'go' || rawVerdict === 'go!') verdict = 'go';
@@ -390,7 +390,7 @@ export default function DashboardPage() {
           const winRate = totalClosed > 0 ? (wins / totalClosed) * 100 : 0;
 
           const recentSignals = await authFetch('/api/v1/signals?limit=3');
-          let recentSignalsData: Record<string, unknown>[] = [];
+          let recentSignalsData: Record<string, any>[] = [];
           if (recentSignals.ok) {
             const signalsJson = await recentSignals.json();
             recentSignalsData = signalsJson.data?.signals || [];

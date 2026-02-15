@@ -25,7 +25,7 @@ const TRANSIENT_STATUS_CODES = [502, 503, 504];
  * - Railway/proxy: { statusCode, message } or plain text
  * - Unknown: any other JSON
  */
-function parseBackendError(data: Record<string, unknown>, httpStatus: number): { code: string; message: string } {
+function parseBackendError(data: Record<string, any>, httpStatus: number): { code: string; message: string } {
   // App's standard format
   if (data?.error?.code && data?.error?.message) {
     return { code: data.error.code, message: data.error.message };
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
 
     // Call backend API with timeout and retry
     let response: Response | undefined;
-    let data: Record<string, unknown> | undefined;
+    let data: Record<string, any> | undefined;
     let lastError: string = '';
 
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract token, user, and login metadata from response
-    const responseData = (data.data ?? {}) as Record<string, unknown>;
+    const responseData = (data.data ?? {}) as Record<string, any>;
     const { token, user, credits, isFirstLogin, firstLoginBonus } = responseData;
 
     if (!token) {

@@ -265,7 +265,7 @@ export default function AutomatedAnalysisPage() {
           const result = JSON.parse(responseText);
           const liveAnalyses = result.data?.analyses || [];
 
-          const mapped = liveAnalyses.map((a: Record<string, unknown>) => {
+          const mapped = liveAnalyses.map((a: Record<string, any>) => {
             const rawVerdict = (a.verdict || '').toLowerCase().replace(/[^a-z_]/g, '');
             let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
             if (rawVerdict === 'go') verdict = 'go';

@@ -25,7 +25,7 @@ interface IndicatorChartData {
   secondaryValues?: number[];
   secondaryLabel?: string;
   referenceLines?: { value: number; label: string; color: string }[];
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, any>;
 }
 
 interface DetailedStepData {
@@ -53,7 +53,7 @@ interface DetailedStepData {
       value: number | null;
       signal: 'bullish' | 'bearish' | 'neutral';
       strength: number;
-      metadata?: Record<string, unknown>;
+      metadata?: Record<string, any>;
     }>;
     signals: {
       bullish: string[];

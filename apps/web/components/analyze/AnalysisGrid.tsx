@@ -29,13 +29,21 @@ interface GlobalLiquidity {
 
 interface Sector {
   name: string;
+  flow7d: number;
+  flow30d: number;
+  dominance: number;
   trending: 'up' | 'down' | 'stable';
   flowChange?: number;
+  phase?: Phase;
 }
 
 interface SuggestedAsset {
   symbol: string;
-  name?: string;
+  name: string;
+  market: string;
+  sector?: string;
+  riskLevel: string;
+  reason: string;
   direction?: string;
   confidence?: number;
 }
@@ -304,7 +312,7 @@ export function AnalysisGrid({ capitalFlow, loading }: AnalysisGridProps) {
       <AnalysisDetailDrawer
         open={activeLayer !== null}
         layer={activeLayer}
-        capitalFlow={capitalFlow}
+        capitalFlow={capitalFlow as any}
         onClose={closeDrawer}
       />
     </>

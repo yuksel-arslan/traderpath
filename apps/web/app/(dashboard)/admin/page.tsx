@@ -137,7 +137,7 @@ interface ActivityItem {
   amount: number;
   source: string;
   user: string;
-  metadata: Record<string, unknown>;
+  metadata: Record<string, any>;
   createdAt: string;
 }
 

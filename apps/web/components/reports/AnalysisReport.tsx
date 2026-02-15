@@ -241,7 +241,7 @@ interface IndicatorDetailItem {
   category: 'trend' | 'momentum' | 'volatility' | 'volume' | 'advanced';
   isLeadingIndicator: boolean;
   weight: number;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, any>;
 }
 
 // ===========================================

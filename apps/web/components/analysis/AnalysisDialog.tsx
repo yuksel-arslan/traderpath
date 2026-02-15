@@ -43,7 +43,7 @@ interface MLISLayerData {
   score?: number;
   signal?: string;
   weight?: number;
-  indicators?: Record<string, unknown>;
+  indicators?: Record<string, any>;
   mlis?: boolean;
 }
 
@@ -578,7 +578,7 @@ export function AnalysisDialog({
       });
 
       const responseText = await response.text();
-      let data: Record<string, unknown>;
+      let data: Record<string, any>;
       try {
         data = responseText ? JSON.parse(responseText) : {};
       } catch {
