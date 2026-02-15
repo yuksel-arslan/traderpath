@@ -259,13 +259,13 @@ export default function ReportsPage() {
           const analysis = data.data;
 
           // Extract step results
-          const step1 = analysis.step1Result || {};
-          const step2 = analysis.step2Result || {};
-          const step3 = analysis.step3Result || {};
-          const step4 = analysis.step4Result || {};
-          const step5 = analysis.step5Result || {};
-          const step6 = analysis.step6Result || {};
-          const step7 = analysis.step7Result || {};
+          const step1 = (analysis.step1Result || {}) as Record<string, any>;
+          const step2 = (analysis.step2Result || {}) as Record<string, any>;
+          const step3 = (analysis.step3Result || {}) as Record<string, any>;
+          const step4 = (analysis.step4Result || {}) as Record<string, any>;
+          const step5 = (analysis.step5Result || {}) as Record<string, any>;
+          const step6 = (analysis.step6Result || {}) as Record<string, any>;
+          const step7 = (analysis.step7Result || {}) as Record<string, any>;
 
           // Build comprehensive context
           const contextMessage = `I would like your expert opinion on this analysis:

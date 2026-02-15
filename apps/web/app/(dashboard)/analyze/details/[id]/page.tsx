@@ -463,13 +463,13 @@ export default function AnalysisDetailsPage() {
 
 
   // Extract data from steps
-  const step1 = analysis.step1Result || {};
-  const step2 = analysis.step2Result || {};
-  const step3 = analysis.step3Result || {};
-  const step4 = analysis.step4Result || {};
-  const step5 = analysis.step5Result || {};
-  const step6 = analysis.step6Result || {};
-  const step7 = analysis.step7Result || {};
+  const step1 = (analysis.step1Result || {}) as Record<string, any>;
+  const step2 = (analysis.step2Result || {}) as Record<string, any>;
+  const step3 = (analysis.step3Result || {}) as Record<string, any>;
+  const step4 = (analysis.step4Result || {}) as Record<string, any>;
+  const step5 = (analysis.step5Result || {}) as Record<string, any>;
+  const step6 = (analysis.step6Result || {}) as Record<string, any>;
+  const step7 = (analysis.step7Result || {}) as Record<string, any>;
 
   // Classic 7-Step: step5 is trade plan, step7 is verdict
   const rawDirection = (step5.direction || step7.direction || 'long');
