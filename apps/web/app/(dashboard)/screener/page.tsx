@@ -5,7 +5,7 @@
 // Hyper-Minimalist Financial Intelligence Terminal
 // =============================================================================
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Search,
   ArrowUpRight,
@@ -16,8 +16,10 @@ import {
   ChevronRight,
   Filter,
   X,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
+import { authFetch } from '../../../lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -107,31 +109,29 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Mock Data
+// Data mapping – connects to /api/analysis/top-coins
 // ---------------------------------------------------------------------------
 
-const MOCK_ASSETS: Asset[] = [
-  { symbol: 'BTC', name: 'Bitcoin', market: 'CRYPTO', price: 97250, change24h: 2.14, volume: 48200000000, score: 8.4, verdict: 'GO', direction: 'long', phase: 'MID', flowScore: 85, rsi: 62, macd: 'bullish' },
-  { symbol: 'ETH', name: 'Ethereum', market: 'CRYPTO', price: 3420, change24h: 3.87, volume: 22100000000, score: 7.9, verdict: 'GO', direction: 'long', phase: 'EARLY', flowScore: 91, rsi: 58, macd: 'bullish' },
-  { symbol: 'SOL', name: 'Solana', market: 'CRYPTO', price: 198.5, change24h: 5.22, volume: 8700000000, score: 8.1, verdict: 'GO', direction: 'long', phase: 'EARLY', flowScore: 88, rsi: 64, macd: 'bullish' },
-  { symbol: 'BNB', name: 'Binance Coin', market: 'CRYPTO', price: 612, change24h: -0.42, volume: 2100000000, score: 6.2, verdict: 'WAIT', direction: 'neutral', phase: 'LATE', flowScore: 45, rsi: 48, macd: 'neutral' },
-  { symbol: 'XRP', name: 'Ripple', market: 'CRYPTO', price: 2.34, change24h: 1.85, volume: 4500000000, score: 7.1, verdict: 'COND', direction: 'long', phase: 'MID', flowScore: 72, rsi: 55, macd: 'bullish' },
-  { symbol: 'ADA', name: 'Cardano', market: 'CRYPTO', price: 0.82, change24h: -2.1, volume: 1200000000, score: 4.8, verdict: 'AVOID', direction: 'short', phase: 'EXIT', flowScore: 22, rsi: 35, macd: 'bearish' },
-  { symbol: 'AVAX', name: 'Avalanche', market: 'CRYPTO', price: 38.2, change24h: 4.15, volume: 980000000, score: 7.6, verdict: 'GO', direction: 'long', phase: 'EARLY', flowScore: 82, rsi: 61, macd: 'bullish' },
-  { symbol: 'DOGE', name: 'Dogecoin', market: 'CRYPTO', price: 0.178, change24h: -3.42, volume: 2800000000, score: 3.5, verdict: 'AVOID', direction: 'short', phase: 'EXIT', flowScore: 18, rsi: 28, macd: 'bearish' },
-  { symbol: 'SPY', name: 'S&P 500 ETF', market: 'STOCKS', price: 512.3, change24h: 0.45, volume: 92000000, score: 7.2, verdict: 'COND', direction: 'long', phase: 'LATE', flowScore: 65, rsi: 52, macd: 'neutral' },
-  { symbol: 'QQQ', name: 'Nasdaq 100 ETF', market: 'STOCKS', price: 448.7, change24h: 0.82, volume: 55000000, score: 7.5, verdict: 'GO', direction: 'long', phase: 'MID', flowScore: 74, rsi: 57, macd: 'bullish' },
-  { symbol: 'AAPL', name: 'Apple Inc', market: 'STOCKS', price: 198.2, change24h: 1.12, volume: 62000000, score: 7.8, verdict: 'GO', direction: 'long', phase: 'MID', flowScore: 78, rsi: 59, macd: 'bullish' },
-  { symbol: 'MSFT', name: 'Microsoft', market: 'STOCKS', price: 412.5, change24h: 0.34, volume: 28000000, score: 6.9, verdict: 'COND', direction: 'long', phase: 'LATE', flowScore: 62, rsi: 51, macd: 'neutral' },
-  { symbol: 'NVDA', name: 'Nvidia', market: 'STOCKS', price: 878.3, change24h: 2.45, volume: 45000000, score: 8.2, verdict: 'GO', direction: 'long', phase: 'EARLY', flowScore: 89, rsi: 65, macd: 'bullish' },
-  { symbol: 'THYAO', name: 'THY', market: 'BIST', price: 312.5, change24h: 1.87, volume: 8500000, score: 7.4, verdict: 'COND', direction: 'long', phase: 'MID', flowScore: 68, rsi: 54, macd: 'bullish' },
-  { symbol: 'GARAN', name: 'Garanti BBVA', market: 'BIST', price: 142.8, change24h: -0.95, volume: 6200000, score: 5.8, verdict: 'WAIT', direction: 'neutral', phase: 'LATE', flowScore: 42, rsi: 44, macd: 'neutral' },
-  { symbol: 'GLD', name: 'Gold ETF', market: 'METALS', price: 215.4, change24h: 0.72, volume: 12000000, score: 7.0, verdict: 'COND', direction: 'long', phase: 'LATE', flowScore: 58, rsi: 53, macd: 'neutral' },
-  { symbol: 'SLV', name: 'Silver ETF', market: 'METALS', price: 28.6, change24h: 1.35, volume: 8500000, score: 6.8, verdict: 'WAIT', direction: 'neutral', phase: 'MID', flowScore: 55, rsi: 49, macd: 'neutral' },
-  { symbol: 'TLT', name: 'Treasury Bond ETF', market: 'BONDS', price: 92.4, change24h: -0.28, volume: 22000000, score: 5.2, verdict: 'WAIT', direction: 'neutral', phase: 'EXIT', flowScore: 32, rsi: 38, macd: 'bearish' },
-  { symbol: 'IEF', name: '7-10Y Treasury', market: 'BONDS', price: 98.1, change24h: 0.15, volume: 9800000, score: 5.5, verdict: 'WAIT', direction: 'neutral', phase: 'MID', flowScore: 40, rsi: 42, macd: 'neutral' },
-  { symbol: 'LINK', name: 'Chainlink', market: 'CRYPTO', price: 18.45, change24h: 6.82, volume: 1800000000, score: 7.8, verdict: 'GO', direction: 'long', phase: 'EARLY', flowScore: 86, rsi: 63, macd: 'bullish' },
-];
+function mapApiAsset(item: Record<string, unknown>): Asset {
+  const symbol = String(item.symbol ?? '');
+  const verdict = String(item.verdict ?? 'WAIT').toUpperCase();
+  const dir = String(item.direction ?? 'neutral').toLowerCase();
+  return {
+    symbol,
+    name: String(item.name ?? symbol),
+    market: (String(item.market ?? item.assetClass ?? 'CRYPTO').toUpperCase()) as Exclude<Market, 'ALL'>,
+    price: Number(item.currentPrice ?? item.price ?? 0),
+    change24h: Number(item.change24h ?? item.priceChange24h ?? 0),
+    volume: Number(item.volume ?? item.volume24h ?? 0),
+    score: Number(item.totalScore ?? item.reliabilityScore ?? item.score ?? 0),
+    verdict: (verdict === 'GO' || verdict === 'COND' || verdict === 'WAIT' || verdict === 'AVOID' ? verdict : 'WAIT') as Verdict,
+    direction: (dir === 'long' || dir === 'short' ? dir : 'neutral') as 'long' | 'short' | 'neutral',
+    phase: String(item.phase ?? 'MID').toUpperCase(),
+    flowScore: Number(item.flowScore ?? 50),
+    rsi: Number(item.rsi ?? 50),
+    macd: String(item.macd ?? 'neutral') as 'bullish' | 'bearish' | 'neutral',
+  };
+}
 
 // Mock step data for selected asset
 interface StepData {
@@ -141,7 +141,8 @@ interface StepData {
   details: string[];
 }
 
-function getMockStepData(asset: Asset, stepId: string): StepData {
+// Derives estimated step-level data from the asset's overall score (no individual step API call)
+function getDerivedStepData(asset: Asset, stepId: string): StepData {
   const s = asset.score;
   switch (stepId) {
     case 'step1': return { score: Math.min(10, s + 0.3), status: s >= 7 ? 'pass' : s >= 5 ? 'warn' : 'fail', summary: 'Global macro conditions and liquidity bias assessment.', details: ['VIX: 16.2 (low volatility)', 'DXY: 103.8 (neutral)', 'Fed bias: Dovish', `Liquidity trend: ${s >= 7 ? 'Expanding' : 'Contracting'}`] };
@@ -162,7 +163,8 @@ interface MLISLayerData {
   details: string[];
 }
 
-function getMockMLISData(asset: Asset, layerId: string): MLISLayerData {
+// Derives estimated MLIS layer data from the asset's overall score (no individual layer API call)
+function getDerivedMLISData(asset: Asset, layerId: string): MLISLayerData {
   const s = asset.score;
   switch (layerId) {
     case 'mlis1': return { score: Math.min(100, s * 11), signal: s >= 7 ? 'bullish' : s >= 5 ? 'neutral' : 'bearish', confidence: Math.min(95, s * 10 + 10), details: ['MA alignment confirmed', `RSI signal: ${asset.rsi > 50 ? 'positive' : 'negative'}`, `BB position: ${s >= 7 ? 'upper band' : 'middle band'}`, `ADX strength: ${s >= 7 ? 'strong trend' : 'weak trend'}`] };
@@ -315,7 +317,7 @@ function SortHeader({
 // ---------------------------------------------------------------------------
 
 function StepPanel({ asset, stepId }: { asset: Asset; stepId: string }) {
-  const data = getMockStepData(asset, stepId);
+  const data = getDerivedStepData(asset, stepId);
   const stepNum = stepId.replace('step', '');
   const stepNames: Record<string, string> = {
     step1: 'Market Pulse',
@@ -378,7 +380,7 @@ function StepPanel({ asset, stepId }: { asset: Asset; stepId: string }) {
 // ---------------------------------------------------------------------------
 
 function MLISPanel({ asset, layerId }: { asset: Asset; layerId: string }) {
-  const data = getMockMLISData(asset, layerId);
+  const data = getDerivedMLISData(asset, layerId);
   const layerNum = layerId.replace('mlis', '');
   const layerNames: Record<string, string> = {
     mlis1: 'Technical Layer',
@@ -640,6 +642,8 @@ function ContentPanel({
 // ---------------------------------------------------------------------------
 
 export default function ScreenerPage() {
+  const [allAssets, setAllAssets] = useState<Asset[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [market, setMarket] = useState<Market>('ALL');
   const [verdictFilter, setVerdictFilter] = useState<Verdict | 'ALL'>('ALL');
@@ -648,6 +652,26 @@ export default function ScreenerPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionId>('table');
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await authFetch('/api/analysis/top-coins?limit=30&sortBy=reliabilityScore');
+        if (!res.ok) throw new Error('Failed to fetch');
+        const json = await res.json();
+        const items = json?.data?.coins ?? json?.data ?? [];
+        if (!cancelled && Array.isArray(items)) {
+          setAllAssets(items.map(mapApiAsset));
+        }
+      } catch {
+        // empty state shown
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleSort = useCallback((key: SortKey) => {
     if (sortKey === key) {
@@ -667,7 +691,7 @@ export default function ScreenerPage() {
   }, []);
 
   const filtered = useMemo(() => {
-    let list = [...MOCK_ASSETS];
+    let list = [...allAssets];
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -691,12 +715,20 @@ export default function ScreenerPage() {
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return list;
-  }, [search, market, verdictFilter, sortKey, sortDir]);
+  }, [search, market, verdictFilter, sortKey, sortDir, allAssets]);
 
   const goCount = filtered.filter((a) => a.verdict === 'GO').length;
   const avgScore = filtered.length > 0
     ? (filtered.reduce((s, a) => s + a.score, 0) / filtered.length).toFixed(1)
     : '0';
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-white dark:bg-neutral-950">
+        <Loader2 className="w-6 h-6 animate-spin text-[#14B8A6]" />
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-black dark:text-white overflow-hidden">

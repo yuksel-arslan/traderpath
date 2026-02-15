@@ -41,22 +41,25 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // ─── MAINTENANCE MODE (REWRITE METHOD) ──────────────────────────
-  const maintenanceMode = false; // Temporarily disabled for development
+  const maintenanceMode = process.env.MAINTENANCE_MODE === 'true';
   
   if (maintenanceMode) {
-    // Statik dosyalar, API ve bakım sayfasının kendisine izin ver
+    // Allow static files, API, maintenance page, auth pages, and admin
     if (
       pathname.startsWith('/_next') ||
       pathname.startsWith('/api') ||
       pathname.startsWith('/static') ||
       pathname === '/maintenance.html' ||
       pathname === '/logo.svg' ||
-      pathname === '/favicon.ico'
+      pathname === '/favicon.ico' ||
+      pathname === '/login' ||
+      pathname === '/register' ||
+      pathname.startsWith('/admin')
     ) {
       return NextResponse.next();
     }
 
-    // URL'yi DEĞİŞTİRMEDEN bakım sayfasını göster (404'ü engeller)
+    // Rewrite to maintenance page without changing URL (prevents 404)
     return NextResponse.rewrite(new URL('/maintenance.html', request.url));
   }
 

@@ -578,8 +578,7 @@ export function AnalysisDialog({
       });
 
       const responseText = await response.text();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let data: any;
+      let data: Record<string, unknown>;
       try {
         data = responseText ? JSON.parse(responseText) : {};
       } catch {

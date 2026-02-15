@@ -31,8 +31,8 @@ export default function BriefingPage() {
       } else {
         setError(data.error || 'Failed to load briefing');
       }
-    } catch (err: any) {
-      console.error('Failed to load briefing:', err);
+    } catch (err: unknown) {
+      console.error('Failed to load briefing:', err instanceof Error ? err.message : String(err));
       setError('Failed to load morning briefing. Please try again.');
     } finally {
       setLoading(false);

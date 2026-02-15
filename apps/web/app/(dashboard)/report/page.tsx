@@ -18,7 +18,7 @@ interface StepDef {
   id: string;
   label: string;
   description: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
 }
 
 const STEPS: StepDef[] = [
@@ -117,8 +117,9 @@ function UnifiedReportPage() {
 
       setSessionId(data.data.sessionId);
       startPolling(data.data.sessionId);
-    } catch (err: any) {
-      setError(err.message || 'Network error');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(message || 'Network error');
     } finally {
       setIsStarting(false);
     }
@@ -177,8 +178,9 @@ function UnifiedReportPage() {
       } else {
         setError(data.error || 'Failed to load report');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load report');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(message || 'Failed to load report');
     }
   }, []);
 
@@ -381,7 +383,7 @@ function PipelineProgressView({ progress, symbol }: { progress: PipelineProgress
 // REPORT VIEW
 // ============================================================================
 
-function ReportView({ report }: { report: any }) {
+function ReportView({ report }: { report: Record<string, unknown> }) {
   if (!report) return null;
 
   const verdictColors: Record<string, string> = {
@@ -514,8 +516,8 @@ function ReportView({ report }: { report: any }) {
         <div className="bg-white dark:bg-[#0d1221] rounded-2xl border border-slate-200 dark:border-white/10 p-6">
           <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Multi-Horizon Analysis</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {report.horizonAnalyses.map((ha: any) => (
-              <HorizonCard key={ha.horizon} analysis={ha} prediction={report.horizonPredictions?.find((p: any) => p.horizon === ha.horizon)} />
+            {report.horizonAnalyses.map((ha: Record<string, unknown>) => (
+              <HorizonCard key={ha.horizon} analysis={ha} prediction={report.horizonPredictions?.find((p: Record<string, unknown>) => p.horizon === ha.horizon)} />
             ))}
           </div>
         </div>
@@ -526,7 +528,7 @@ function ReportView({ report }: { report: any }) {
         <div className="bg-white dark:bg-[#0d1221] rounded-2xl border border-slate-200 dark:border-white/10 p-6">
           <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">AI Price Predictions</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {report.horizonPredictions.map((pred: any) => (
+            {report.horizonPredictions.map((pred: Record<string, unknown>) => (
               <PredictionCard key={pred.horizon} prediction={pred} />
             ))}
           </div>
@@ -543,7 +545,7 @@ function ReportView({ report }: { report: any }) {
             </p>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {report.expertValidation.experts.map((expert: any, idx: number) => (
+            {report.expertValidation.experts.map((expert: Record<string, unknown>, idx: number) => (
               <ExpertCard key={expert.expertName || idx} expert={expert} />
             ))}
           </div>
@@ -583,7 +585,7 @@ function ReportView({ report }: { report: any }) {
           </div>
           {report.sentiment.economicEvents?.length > 0 && (
             <div className="mt-4 space-y-2">
-              {report.sentiment.economicEvents.map((ev: any, i: number) => (
+              {report.sentiment.economicEvents.map((ev: Record<string, unknown>, i: number) => (
                 <div key={i} className="flex items-center gap-3 text-sm">
                   <Clock className="w-4 h-4 text-slate-400 flex-shrink-0" />
                   <span className="text-slate-700 dark:text-slate-300">{ev.event}</span>
@@ -652,7 +654,7 @@ function ReportView({ report }: { report: any }) {
 // SUB-COMPONENTS
 // ============================================================================
 
-function HorizonCard({ analysis, prediction }: { analysis: any; prediction?: any }) {
+function HorizonCard({ analysis, prediction }: { analysis: Record<string, unknown>; prediction?: Record<string, unknown> }) {
   if (!analysis) return null;
 
   const directionIcon = analysis.direction === 'long'
@@ -724,7 +726,7 @@ function HorizonCard({ analysis, prediction }: { analysis: any; prediction?: any
   );
 }
 
-function PredictionCard({ prediction }: { prediction: any }) {
+function PredictionCard({ prediction }: { prediction: Record<string, unknown> }) {
   if (!prediction) return null;
 
   const horizonLabels: Record<string, string> = { short: 'Short-Term', medium: 'Medium-Term', long: 'Long-Term' };
@@ -773,7 +775,7 @@ function PredictionCard({ prediction }: { prediction: any }) {
   );
 }
 
-function ExpertCard({ expert }: { expert: any }) {
+function ExpertCard({ expert }: { expert: Record<string, unknown> }) {
   if (!expert) return null;
 
   const expertEmojis: Record<string, string> = {
@@ -820,7 +822,7 @@ function FundamentalItem({ label, value }: { label: string; value: string }) {
 // HELPERS
 // ============================================================================
 
-function safeFormatPrice(price: any): string {
+function safeFormatPrice(price: unknown): string {
   const num = Number(price);
   if (!num || isNaN(num)) return '0.00';
   if (num >= 1000) return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -829,7 +831,7 @@ function safeFormatPrice(price: any): string {
   return num.toFixed(6);
 }
 
-function formatLargeNumber(num: any): string {
+function formatLargeNumber(num: unknown): string {
   const n = Number(num);
   if (!n || isNaN(n)) return '0';
   if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;

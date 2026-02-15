@@ -190,21 +190,16 @@ export default function LandingPerformanceChart() {
         'https://traderpath-api-production.up.railway.app'
       ].filter(Boolean);
 
-      console.log('[LandingChart] Fetching performance data from API URLs:', apiUrls);
-
       // First try the new performance-history endpoint
       for (const baseUrl of apiUrls) {
         try {
-          console.log(`[LandingChart] Trying ${baseUrl}/api/analysis/platform-performance-history`);
           const res = await fetch(`${baseUrl}/api/analysis/platform-performance-history?days=30`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
             cache: 'no-store'
           });
-          console.log(`[LandingChart] Response status: ${res.status}`);
           if (res.ok) {
             const data = await res.json();
-            console.log('[LandingChart] API response:', { success: data.success, hasDaily: !!data.data?.daily?.length, summary: data.data?.summary });
             if (data.success && data.data?.daily?.length > 0) {
               setRawData(data.data.daily);
               setRawDataClassic(data.data.dailyClassic || []);
@@ -220,7 +215,6 @@ export default function LandingPerformanceChart() {
               const mlisTrades = data.data.summary.allTimeMlisTrades || 0;
               setHasMlisData(mlisTrades > 0);
               setLoading(false);
-              console.log('[LandingChart] Data loaded successfully. Trades:', data.data.summary.allTimeTotalTrades || data.data.summary.totalTrades);
               return;
             }
           }
@@ -231,7 +225,6 @@ export default function LandingPerformanceChart() {
       }
 
       // Fallback to platform-stats endpoint (always available)
-      console.log('[LandingChart] Trying fallback platform-stats endpoint');
       for (const baseUrl of apiUrls) {
         try {
           const res = await fetch(`${baseUrl}/api/analysis/platform-stats`, {
@@ -241,14 +234,12 @@ export default function LandingPerformanceChart() {
           });
           if (res.ok) {
             const data = await res.json();
-            console.log('[LandingChart] platform-stats response:', data);
             if (data.success && data.data?.accuracy) {
               setTotalPnL(data.data.accuracy.totalPnL || 0);
               setAllTimePnL(data.data.accuracy.totalPnL || 0);
               setTotalTrades(data.data.accuracy.closedCount || 0);
               setHasChartData(false);
               setLoading(false);
-              console.log('[LandingChart] Fallback data loaded. Closed trades:', data.data.accuracy.closedCount);
               return;
             }
           }
@@ -258,7 +249,6 @@ export default function LandingPerformanceChart() {
         }
       }
 
-      console.log('[LandingChart] No data available from any API');
       setLoading(false);
     };
     fetchPerformance();

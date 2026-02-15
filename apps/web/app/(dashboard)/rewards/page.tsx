@@ -128,8 +128,9 @@ export default function RewardsPage() {
             : 'Welcome back. Daily reward claimed.',
         });
       }
-    } catch (error: any) {
-      alert(error.message || 'Failed to claim daily login reward');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      alert(message || 'Failed to claim daily login reward');
     }
   };
 
@@ -150,8 +151,9 @@ export default function RewardsPage() {
           ? 'Outstanding! You hit the jackpot!'
           : 'Credits have been added to your account.',
       });
-    } catch (error: any) {
-      alert(error.message || 'Failed to spin the wheel');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      alert(message || 'Failed to spin the wheel');
     } finally {
       setIsSpinning(false);
     }
@@ -178,8 +180,9 @@ export default function RewardsPage() {
           });
         }, 500);
       }
-    } catch (error: any) {
-      alert(error.message || 'Failed to submit quiz answer');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      alert(message || 'Failed to submit quiz answer');
     }
   };
 

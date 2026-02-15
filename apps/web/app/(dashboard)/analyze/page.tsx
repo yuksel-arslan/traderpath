@@ -123,8 +123,8 @@ interface AIRecommendation {
   l2Status: { market: string; phase: Phase; flow7d: number; flow30d: number; rotationSignal: string | null }[];
   l3Status: { primaryMarket: string; sectors: { name: string; trending: string; flow7d: number }[] };
   l4Status: {
-    buyRecommendation: { market: string; confidence: number; action: string; suggestedAssets: any[] } | null;
-    sellRecommendation: { market: string; confidence: number; action: string; suggestedAssets: any[] } | null;
+    buyRecommendation: { market: string; confidence: number; action: string; suggestedAssets: { symbol: string; name?: string; direction?: string; confidence?: number }[] } | null;
+    sellRecommendation: { market: string; confidence: number; action: string; suggestedAssets: { symbol: string; name?: string; direction?: string; confidence?: number }[] } | null;
   };
   recommendedAssets: AIRecommendedAsset[];
   warnings: string[];
@@ -265,7 +265,7 @@ export default function AutomatedAnalysisPage() {
           const result = JSON.parse(responseText);
           const liveAnalyses = result.data?.analyses || [];
 
-          const mapped = liveAnalyses.map((a: any) => {
+          const mapped = liveAnalyses.map((a: Record<string, unknown>) => {
             const rawVerdict = (a.verdict || '').toLowerCase().replace(/[^a-z_]/g, '');
             let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
             if (rawVerdict === 'go') verdict = 'go';
@@ -397,9 +397,10 @@ export default function AutomatedAnalysisPage() {
       // Open analysis dialog - this triggers the actual 7-step analysis
       setShowAnalysisDialog(true);
 
-    } catch (error: any) {
-      console.error('Pipeline error:', error);
-      setPipelineError(error.message || 'An unexpected error occurred');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Pipeline error:', message);
+      setPipelineError(message || 'An unexpected error occurred');
       setPipelineStep('error');
     } finally {
       if (pipelineStep !== 'error') {

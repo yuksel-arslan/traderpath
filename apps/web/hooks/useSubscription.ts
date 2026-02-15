@@ -144,8 +144,9 @@ export function useSubscription(): UseSubscriptionReturn {
       }
 
       return data.data?.url || null;
-    } catch (err: any) {
-      setError(err.message || 'Failed to create checkout session');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(message || 'Failed to create checkout session');
       return null;
     } finally {
       setActionLoading(false);
@@ -169,8 +170,9 @@ export function useSubscription(): UseSubscriptionReturn {
       }
 
       return data.data?.url || null;
-    } catch (err: any) {
-      setError(err.message || 'Failed to open billing portal');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(message || 'Failed to open billing portal');
       return null;
     } finally {
       setActionLoading(false);
@@ -195,8 +197,9 @@ export function useSubscription(): UseSubscriptionReturn {
 
       await refreshSubscription();
       return true;
-    } catch (err: any) {
-      setError(err.message || 'Failed to cancel subscription');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(message || 'Failed to cancel subscription');
       return false;
     } finally {
       setActionLoading(false);
@@ -221,8 +224,9 @@ export function useSubscription(): UseSubscriptionReturn {
 
       await refreshSubscription();
       return true;
-    } catch (err: any) {
-      setError(err.message || 'Failed to resume subscription');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(message || 'Failed to resume subscription');
       return false;
     } finally {
       setActionLoading(false);

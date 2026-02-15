@@ -35,8 +35,8 @@ export default function BriefingCard() {
         // If no cached briefing, show error or empty state
         setError('No briefing available yet. Check back tomorrow morning!');
       }
-    } catch (err: any) {
-      console.error('Failed to load briefing:', err);
+    } catch (err: unknown) {
+      console.error('Failed to load briefing:', err instanceof Error ? err.message : String(err));
       setError('Failed to load briefing');
     } finally {
       setLoading(false);

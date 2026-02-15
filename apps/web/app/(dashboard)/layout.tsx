@@ -87,8 +87,8 @@ function NavDropdown({
   isActive,
 }: {
   name: string;
-  icon: any;
-  items: { name: string; href: string; icon: any }[];
+  icon: React.ComponentType<{ className?: string }>;
+  items: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }[];
   isActive: (href: string) => boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -146,8 +146,8 @@ function MobileNavGroup({
   onItemClick,
 }: {
   name: string;
-  icon: any;
-  items: { name: string; href: string; icon: any }[];
+  icon: React.ComponentType<{ className?: string }>;
+  items: { name: string; href: string; icon: React.ComponentType<{ className?: string }> }[];
   isActive: (href: string) => boolean;
   onItemClick: () => void;
 }) {

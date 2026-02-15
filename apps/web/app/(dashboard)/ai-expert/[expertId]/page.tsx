@@ -162,9 +162,20 @@ const EXPERT_STYLES = {
   SENTINEL: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/20' },
 };
 
+// Escape HTML to prevent XSS injection from API responses
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // Formatting function to style AI messages
 function formatAIMessage(content: string): string {
-  let formatted = content
+  // First escape all HTML in the raw content to prevent XSS
+  let formatted = escapeHtml(content)
     // Clean excessive line breaks (3+ lines -> 2 lines)
     .replace(/\n{3,}/g, '\n\n');
 
@@ -184,7 +195,7 @@ function formatAIMessage(content: string): string {
     return `<div class="flex items-start gap-2 p-3 my-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20"><span class="text-purple-500">${icon}</span><div class="flex-1"><span class="font-semibold bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">VOLTRAN PANEL VERDICT</span><span class="text-muted-foreground ml-1">—</span> `;
   });
 
-  // Replace panel header
+  // Replace panel header (content already escaped above)
   formatted = formatted.replace(/\[PANEL_HEADER\]\s*(.+?)(\n|$)/g, (_, title) => {
     return `<div class="text-lg font-bold mb-2">${title.trim()}</div>`;
   });
@@ -526,8 +537,6 @@ export default function AIExpertChatPage() {
     if (!currentAnalysisId || commentSavedRef.current) return;
 
     try {
-      console.log('Saving AI Expert comment for analysisId:', currentAnalysisId);
-
       // Find report by analysisId and save comment
       const res = await authFetch(`/api/reports/by-analysis/${currentAnalysisId}/ai-expert-comment`, {
         method: 'PATCH',
@@ -535,7 +544,6 @@ export default function AIExpertChatPage() {
       });
 
       if (res.ok) {
-        console.log('AI Expert comment saved successfully');
         setCommentSaved(true);
         commentSavedRef.current = true;
       } else {

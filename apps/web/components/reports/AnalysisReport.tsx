@@ -1895,7 +1895,6 @@ export async function captureChartAsImage(): Promise<string | null> {
     for (const id of chartIds) {
       element = document.getElementById(id);
       if (element) {
-        console.log(`[Chart Capture] Found chart element with id: ${id}`);
         break;
       }
     }
@@ -1903,18 +1902,16 @@ export async function captureChartAsImage(): Promise<string | null> {
     // Also try to find by class name if ID search fails
     if (!element) {
       element = document.querySelector('.trade-plan-chart-container') as HTMLElement;
-      if (element) console.log('[Chart Capture] Found chart by class name');
+      // Found by class name
     }
 
     // Try to find any canvas element as last resort (Lightweight Charts renders to canvas)
     if (!element) {
       const canvasElements = document.querySelectorAll('canvas');
-      console.log(`[Chart Capture] Found ${canvasElements.length} canvas elements`);
       for (const canvas of canvasElements) {
         const parent = canvas.parentElement;
         if (parent && (parent.offsetWidth > 400 || parent.clientHeight > 300)) {
           element = parent as HTMLElement;
-          console.log('[Chart Capture] Found chart via canvas parent');
           break;
         }
       }
@@ -1954,7 +1951,6 @@ export async function captureChartAsImage(): Promise<string | null> {
         }
       }
     });
-    console.log('[Chart Capture] Chart captured successfully with dark background');
     return canvas.toDataURL('image/png');
   } catch (error) {
     console.error('[Chart Capture] Failed:', error);
@@ -2592,7 +2588,6 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
 
     // SINGLE PAGE FORMAT - Compact layout with all info on one page
     if (singlePage) {
-      console.log('[PDF] Generating single page report');
       const canvas = await renderPageToCanvas(generateSinglePageReport(data));
       pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
@@ -2600,7 +2595,6 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
       const pdfBase64 = pdf.output('datauristring').split(',')[1];
       pdf.save(fileName);
 
-      console.log(`[TraderPath] Single page report generated successfully`);
       return { base64: pdfBase64, fileName };
     }
 
@@ -2609,49 +2603,41 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
     const totalPages = hasRAG ? 8 : 7;
 
     // Page 1: Executive Summary
-    console.log('[PDF] Generating page 1: Executive Summary');
     const canvas1 = await renderPageToCanvas(generatePageExecutiveSummary(data, totalPages));
     pdf.addImage(canvas1.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
     // Page 2: Trade Plan (Full Chart)
-    console.log('[PDF] Generating page 2: Trade Plan');
     pdf.addPage();
     const canvas2 = await renderPageToCanvas(generatePageTradePlan(data, totalPages));
     pdf.addImage(canvas2.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
     // Page 3: Tokenomics
-    console.log('[PDF] Generating page 3: Tokenomics');
     pdf.addPage();
     const canvas3 = await renderPageToCanvas(generatePageTokenomics(data, totalPages));
     pdf.addImage(canvas3.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
     // Page 4: Steps 1-2 (Market Pulse + Asset Scanner)
-    console.log('[PDF] Generating page 4: Steps 1-2');
     pdf.addPage();
     const canvas4 = await renderPageToCanvas(generatePageSteps12(data, totalPages));
     pdf.addImage(canvas4.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
     // Page 5: Steps 3-4 (Safety Check + Timing)
-    console.log('[PDF] Generating page 5: Steps 3-4');
     pdf.addPage();
     const canvas5 = await renderPageToCanvas(generatePageSteps34(data, totalPages));
     pdf.addImage(canvas5.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
     // Page 6: Steps 5-6 (Trade Plan Details + Trap Check)
-    console.log('[PDF] Generating page 6: Steps 5-6');
     pdf.addPage();
     const canvas6 = await renderPageToCanvas(generatePageSteps56(data, totalPages));
     pdf.addImage(canvas6.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
     // Page 7: Final Verdict
-    console.log('[PDF] Generating page 7: Final Verdict');
     pdf.addPage();
     const canvas7 = await renderPageToCanvas(generatePageVerdict(data, totalPages));
     pdf.addImage(canvas7.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
 
     // Page 8: RAG Intelligence Layer (optional - only if RAG enrichment data exists)
     if (hasRAG) {
-      console.log('[PDF] Generating page 8: RAG Intelligence Layer');
       pdf.addPage();
       const canvas8 = await renderPageToCanvas(generatePageRAG(data, totalPages));
       pdf.addImage(canvas8.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
@@ -2660,8 +2646,6 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
     const fileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_${new Date().toISOString().split('T')[0]}.pdf`;
     const pdfBase64 = pdf.output('datauristring').split(',')[1];
     pdf.save(fileName);
-
-    console.log(`[TraderPath] Report generated successfully: ${totalPages} pages`);
 
     return { base64: pdfBase64, fileName };
   } catch (error) {

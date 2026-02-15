@@ -24,7 +24,7 @@ const TRANSIENT_STATUS_CODES = [502, 503, 504];
  * - Fastify default: { statusCode, error, message }
  * - Railway/proxy: { statusCode, message } or plain text
  */
-function parseBackendErrorCode(data: any, httpStatus: number): string {
+function parseBackendErrorCode(data: Record<string, unknown>, httpStatus: number): string {
   // App's standard format - has error.code
   if (data?.error?.code && typeof data.error.code === 'string') {
     return data.error.code;
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
     const tokens = await tokenResponse.json();
 
     if (!tokens.access_token) {
-      console.error('[OAuth] Token exchange failed:', tokens);
+      console.error('[OAuth] Token exchange failed (no access_token in response)');
       return NextResponse.redirect(new URL('/login?error=token_exchange_failed', baseUrl));
     }
 
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
 
     // Send to backend for OAuth login/register with timeout and retry
     let backendResponse: Response | undefined;
-    let backendData: any;
+    let backendData: Record<string, unknown> | undefined;
 
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
@@ -160,12 +160,13 @@ export async function GET(request: NextRequest) {
 
         // Got a definitive response, break out of retry loop
         break;
-      } catch (fetchError: any) {
-        const errorMsg = fetchError.name === 'AbortError'
+      } catch (fetchError: unknown) {
+        const err = fetchError instanceof Error ? fetchError : new Error('Connection failed');
+        const errorMsg = err.name === 'AbortError'
           ? 'Request timed out'
-          : fetchError.message || 'Connection failed';
+          : err.message || 'Connection failed';
 
-        console.error(`[OAuth] Backend fetch failed (attempt ${attempt + 1}):`, errorMsg, { API_URL });
+        console.error(`[OAuth] Backend fetch failed (attempt ${attempt + 1}):`, errorMsg);
 
         // Retry on first attempt
         if (attempt === 0) {
@@ -173,7 +174,7 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        const detail = fetchError.name === 'AbortError' ? 'timeout' : 'fetch_failed';
+        const detail = err.name === 'AbortError' ? 'timeout' : 'fetch_failed';
         return NextResponse.redirect(new URL(`/login?error=server_error&detail=${detail}`, baseUrl));
       }
     }
@@ -184,14 +185,15 @@ export async function GET(request: NextRequest) {
     }
 
     if (!backendResponse.ok || !backendData.success) {
-      console.error('[OAuth] Backend OAuth failed:', { status: backendResponse.status, data: backendData });
+      console.error('[OAuth] Backend OAuth failed, status:', backendResponse.status);
 
       // Parse the error code properly - handles ALL backend response formats
       const errorCode = parseBackendErrorCode(backendData, backendResponse.status);
       return NextResponse.redirect(new URL(`/login?error=${errorCode}`, baseUrl));
     }
 
-    const { accessToken, isFirstLogin, firstLoginBonus } = backendData.data || {};
+    const bData = (backendData?.data ?? {}) as Record<string, unknown>;
+    const { accessToken, isFirstLogin, firstLoginBonus } = bData;
 
     if (!accessToken) {
       return NextResponse.redirect(new URL('/login?error=no_token', baseUrl));
@@ -226,7 +228,7 @@ export async function GET(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error('[OAuth] Unhandled error:', error);
+    console.error('[OAuth] Unhandled error:', error instanceof Error ? error.message : 'Unknown error');
     return NextResponse.redirect(new URL('/login?error=oauth_error', baseUrl));
   }
 }

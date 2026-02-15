@@ -1,11 +1,21 @@
 'use client';
 
-import { Flame } from 'lucide-react';
+import { Flame, Loader2 } from 'lucide-react';
+import { useDailyRewards } from '../../hooks/useRewardsAPI';
 
 export function StreakDisplay() {
-  // TODO: Fetch from API
-  const streakDays = 7;
-  const nextBonus = 20;
+  const { data, loading } = useDailyRewards();
+
+  const streakDays = data?.streak?.days ?? 0;
+  const nextBonus = data?.streak?.nextBonus ?? 20;
+
+  if (loading) {
+    return (
+      <div className="bg-card rounded-lg border p-6 flex items-center justify-center min-h-[140px]">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card rounded-lg border p-6">

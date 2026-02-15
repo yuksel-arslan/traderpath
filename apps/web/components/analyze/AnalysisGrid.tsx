@@ -27,6 +27,19 @@ interface GlobalLiquidity {
   netLiquidity?: { value: number; change7d: number; change30d: number; trend: string; interpretation: string };
 }
 
+interface Sector {
+  name: string;
+  trending: 'up' | 'down' | 'stable';
+  flowChange?: number;
+}
+
+interface SuggestedAsset {
+  symbol: string;
+  name?: string;
+  direction?: string;
+  confidence?: number;
+}
+
 interface MarketFlow {
   market: string;
   currentValue: number;
@@ -36,7 +49,7 @@ interface MarketFlow {
   phase: Phase;
   daysInPhase: number;
   rotationSignal: 'entering' | 'stable' | 'exiting' | null;
-  sectors?: any[];
+  sectors?: Sector[];
 }
 
 interface FlowRecommendation {
@@ -47,7 +60,14 @@ interface FlowRecommendation {
   reason: string;
   sectors?: string[];
   confidence: number;
-  suggestedAssets?: any[];
+  suggestedAssets?: SuggestedAsset[];
+}
+
+interface LayerInsights {
+  ragLayer1?: string;
+  ragLayer2?: string;
+  ragLayer3?: string;
+  ragLayer4?: string;
 }
 
 interface CapitalFlowSummary {
@@ -58,7 +78,7 @@ interface CapitalFlowSummary {
   recommendation: FlowRecommendation;
   sellRecommendation?: FlowRecommendation;
   activeRotation: { from: string; to: string; confidence: number; estimatedDuration: string } | null;
-  insights?: any;
+  insights?: LayerInsights;
 }
 
 interface AnalysisGridProps {
@@ -233,7 +253,7 @@ export function AnalysisGrid({ capitalFlow, loading }: AnalysisGridProps) {
             if (!sectors || sectors.length === 0) return <span className="text-[10px] text-slate-600">No sectors</span>;
             return (
               <div className="space-y-0.5">
-                {sectors.map((s: any, i: number) => (
+                {sectors.map((s: Sector, i: number) => (
                   <div key={i} className="flex items-center justify-between text-[10px]">
                     <span className="text-slate-600 dark:text-slate-400 truncate max-w-[70px]">{s.name}</span>
                     <span className={cn(
