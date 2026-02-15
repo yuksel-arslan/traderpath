@@ -4,12 +4,7 @@
   "installCommand": "pnpm install",
   "buildCommand": "NODE_OPTIONS='--max-old-space-size=4096' pnpm turbo build --filter=@traderpath/web",
   "outputDirectory": "apps/web/.next",
-  "rewrites": [
-    {
-      "source": "/((?!maintenance.html|_next|favicon.ico|api).*)",
-      "destination": "/maintenance.html"
-    }
-  ],
+  "rewrites": [],
   "headers": [
     {
       "source": "/(.*)",
