@@ -41,7 +41,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // ─── MAINTENANCE MODE (REWRITE METHOD) ──────────────────────────
-  const maintenanceMode = process.env['NEXT_PUBLIC_MAINTENANCE_MODE'] === 'true';
+  const maintenanceMode = false; // Temporarily disabled for development
   
   if (maintenanceMode) {
     // Statik dosyalar, API ve bakım sayfasının kendisine izin ver

@@ -1,114 +1,71 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  ArrowRight,
-  ChevronDown,
-} from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { cn } from '../../lib/utils';
-import { TraderPathLogo } from '../../components/common/TraderPathLogo';
-
-// Components
-import { PriceTicker } from '../../components/home/PriceTicker';
-import { Navbar } from '../../components/layout/Navbar';
-import { Hero } from '../../components/home/Hero';
-import { FlowAccordion } from '../../components/home/FlowAccordion';
-
-// Lazy load chart
-const LandingPerformanceChart = dynamic(
-  () => import('../../components/landing/LandingPerformanceChart'),
-  { ssr: false, loading: () => <div className="h-48 animate-pulse bg-black/5 dark:bg-white/5" /> }
-);
 
 // ---------------------------------------------------------------------------
-// Stats – real data from API
+// STATS – Real platform data
 // ---------------------------------------------------------------------------
 
-function StatsBoxes() {
-  const [metrics, setMetrics] = useState<{
-    totalAnalyses: number;
+function Stats() {
+  const [data, setData] = useState<{
+    analyses: number;
     accuracy: number;
-    totalPnL: number;
-    closedCount: number;
-    daysSinceStart: number;
+    pnl: number;
+    closed: number;
   } | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchMetrics = async () => {
+    const fetch = async () => {
       try {
-        const apiUrls = [
-          process.env.NEXT_PUBLIC_API_URL,
-          'https://api.traderpath.io',
-          'https://traderpath-api-production.up.railway.app'
-        ].filter(Boolean);
-        let data = null;
-        for (const baseUrl of apiUrls) {
-          try {
-            const res = await fetch(`${baseUrl}/api/analysis/platform-stats`, {
-              method: 'GET',
-              headers: { 'Content-Type': 'application/json' },
-              cache: 'no-store'
-            });
-            if (res.ok) {
-              data = await res.json();
-              if (data.success) break;
-            }
-          } catch { continue; }
-        }
-        if (data?.success) {
-          const platformSince = data.data.platform.platformSince;
-          const startDate = platformSince ? new Date(platformSince) : new Date();
-          const diffDays = Math.ceil(Math.abs(Date.now() - startDate.getTime()) / 86400000);
-          setMetrics({
-            totalAnalyses: data.data.platform.totalAnalyses || 0,
-            accuracy: data.data.accuracy.overall || 0,
-            totalPnL: data.data.accuracy.totalPnL || 0,
-            closedCount: data.data.accuracy.closedCount || 0,
-            daysSinceStart: diffDays || 1,
+        const res = await window.fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io'}/api/analysis/platform-stats`,
+          { cache: 'no-store' }
+        );
+        const json = await res.json();
+        if (json.success) {
+          setData({
+            analyses: json.data.platform.totalAnalyses || 0,
+            accuracy: json.data.accuracy.overall || 0,
+            pnl: json.data.accuracy.totalPnL || 0,
+            closed: json.data.accuracy.closedCount || 0,
           });
         }
       } catch {
         // silent
-      } finally {
-        setLoading(false);
       }
     };
-    fetchMetrics();
+    fetch();
   }, []);
 
-  if (loading) {
+  if (!data) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-black/[0.04] dark:bg-white/[0.04]">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-black/5 dark:bg-white/5">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="bg-white dark:bg-black p-5">
-            <div className="h-7 w-16 bg-black/5 dark:bg-white/5 rounded animate-pulse mb-1" />
-            <div className="h-3 w-24 bg-black/5 dark:bg-white/5 rounded animate-pulse" />
+          <div key={i} className="bg-white dark:bg-black p-6 lg:p-8">
+            <div className="h-8 w-20 bg-black/5 dark:bg-white/5 mb-2 animate-pulse" />
+            <div className="h-4 w-24 bg-black/5 dark:bg-white/5 animate-pulse" />
           </div>
         ))}
       </div>
     );
   }
 
-  if (!metrics) return null;
-
   const stats = [
-    { label: 'Total Analyses', value: metrics.totalAnalyses.toLocaleString(), color: '' },
-    { label: 'Platform Accuracy', value: metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—', color: 'text-emerald-600 dark:text-[#00f5c4]' },
-    { label: 'Total P/L', value: metrics.closedCount > 0 ? `${metrics.totalPnL >= 0 ? '+' : ''}${metrics.totalPnL}%` : '—', color: metrics.totalPnL >= 0 ? 'text-emerald-600 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400' },
-    { label: 'Days Elapsed', value: `${metrics.daysSinceStart}`, color: '' },
+    { label: 'ANALYSES', value: data.analyses.toLocaleString() },
+    { label: 'ACCURACY', value: data.closed > 0 ? `${data.accuracy}%` : '—' },
+    { label: 'P/L', value: data.closed > 0 ? `${data.pnl >= 0 ? '+' : ''}${data.pnl}%` : '—' },
+    { label: 'VERIFIED', value: data.closed.toLocaleString() },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-black/[0.04] dark:bg-white/[0.04]">
-      {stats.map((s) => (
-        <div key={s.label} className="bg-white dark:bg-black p-5">
-          <div className={cn('text-xl sm:text-2xl font-sans font-bold tabular-nums', s.color || 'text-black dark:text-white')}>
-            {s.value}
-          </div>
-          <div className="text-[11px] text-slate-400 uppercase tracking-wide mt-0.5">{s.label}</div>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-black/5 dark:bg-white/5">
+      {stats.map((s, i) => (
+        <div key={i} className="bg-white dark:bg-black p-6 lg:p-8">
+          <div className="font-mono text-3xl lg:text-4xl font-bold mb-1">{s.value}</div>
+          <div className="text-xs tracking-wider text-black/40 dark:text-white/40">{s.label}</div>
         </div>
       ))}
     </div>
@@ -116,202 +73,205 @@ function StatsBoxes() {
 }
 
 // ---------------------------------------------------------------------------
-// FAQ
-// ---------------------------------------------------------------------------
-
-const FAQS = [
-  {
-    q: 'What is Capital Flow and why does it matter?',
-    a: 'Capital Flow tracks where institutional money is moving across global markets. The principle: "Where money flows, potential exists." By monitoring Fed Balance Sheet, M2 Money Supply, DXY, and VIX, we identify which markets are receiving capital inflows.',
-  },
-  {
-    q: 'How does the 7-Layer System work?',
-    a: 'Top-down approach: L1 Global Liquidity checks macro conditions. L2 Market Flow identifies strongest inflow market. L3 Sector Activity pinpoints hot sectors. L4 Verdict Engine runs 7-step analysis with ML confirmation. L5 Screener filters all assets. L6 Risk Assessment validates against counter-flow. L7 Trade Visualizer provides interactive chart with price levels.',
-  },
-  {
-    q: 'What are market phases (EARLY, MID, LATE, EXIT)?',
-    a: 'EARLY (0-30d): Capital just started flowing — optimal entry. MID (30-60d): Trend maturing, caution. LATE (60-90d): Trend exhausting, avoid. EXIT (90+d): Capital leaving, do not enter.',
-  },
-  {
-    q: 'Which markets are supported?',
-    a: 'Crypto (Binance), Stocks (Yahoo Finance), Bonds (Treasury ETFs), Metals (Gold, Silver), and BIST (Borsa Istanbul). Each shows flow direction, velocity, phase, and rotation signals.',
-  },
-  {
-    q: 'How does the credit system work?',
-    a: 'L1-L2 are free. L3 and L4 each cost 25 credits/day. Full asset analysis costs 100 credits/day (up to 10 analyses). Earn free credits through daily login, quizzes, and referrals.',
-  },
-  {
-    q: 'Do I need to connect my exchange?',
-    a: 'No. TraderPath is purely an analysis tool. We never ask for trading keys, wallet addresses, or exchange credentials.',
-  },
-];
-
-function FAQItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="border-b border-black/[0.06] dark:border-white/[0.06]">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between py-4 px-1 text-left hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
-        aria-expanded={open}
-      >
-        <span className="text-sm font-semibold text-black dark:text-white pr-4">
-          {q}
-        </span>
-        <ChevronDown className={cn('w-4 h-4 text-slate-400 shrink-0 transition-transform', open && 'rotate-180')} />
-      </button>
-      {open && (
-        <div className="px-1 pb-4 text-sm text-slate-500 leading-relaxed">
-          {a}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Footer
-// ---------------------------------------------------------------------------
-
-function MinimalFooter() {
-  return (
-    <footer className="border-t border-black/[0.06] dark:border-white/[0.06]">
-      <div className="max-w-[1200px] mx-auto px-4 py-10">
-        {/* Logo + tagline */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8">
-          <div>
-            <TraderPathLogo size="sm" showText showTagline />
-          </div>
-          <div className="flex items-center gap-5 text-xs text-slate-400">
-            <Link href="/privacy" className="hover:text-black dark:hover:text-white transition-colors">Privacy</Link>
-            <Link href="/terms" className="hover:text-black dark:hover:text-white transition-colors">Terms</Link>
-            <Link href="/disclaimer" className="hover:text-black dark:hover:text-white transition-colors">Disclaimer</Link>
-            <Link href="/about" className="hover:text-black dark:hover:text-white transition-colors">About</Link>
-          </div>
-        </div>
-
-        {/* Disclaimer */}
-        <div className="mb-6 p-4 border border-black/[0.06] dark:border-white/[0.06] rounded-sm">
-          <div className="text-[9px] font-sans uppercase tracking-wider text-slate-400 mb-1">DISCLAIMER</div>
-          <p className="text-[11px] text-slate-400 leading-relaxed">
-            This platform is for informational and educational purposes only and does not constitute financial advice.
-            All investments carry risk including loss of principal. Past performance does not guarantee future results.
-            Conduct your own research and consult a licensed advisor before investing.
-          </p>
-        </div>
-
-        {/* Copyright */}
-        <div className="text-[11px] text-slate-400 text-center">
-          &copy; {new Date().getFullYear()} TraderPath. All rights reserved.
-        </div>
-      </div>
-    </footer>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Main Page
+// MAIN PAGE
 // ---------------------------------------------------------------------------
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
-      {/* Price Ticker */}
-      <PriceTicker />
+      {/* NAVBAR */}
+      <nav className="border-b border-black/10 dark:border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="font-mono text-xl font-bold">TRADERPATH</div>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/login"
+              className="text-sm font-mono hover:text-[#00f5c4] transition-colors"
+            >
+              LOGIN
+            </Link>
+            <Link
+              href="/pricing"
+              className="bg-[#00f5c4] text-black px-4 py-2 text-sm font-mono font-bold hover:bg-[#00d9b0] transition-colors"
+            >
+              PRICING
+            </Link>
+          </div>
+        </div>
+      </nav>
 
-      {/* Navbar */}
-      <Navbar />
-
-      {/* Hero */}
-      <Hero />
-
-      {/* Methodology (FlowAccordion) */}
-      <FlowAccordion />
-
-      {/* Performance */}
-      <section id="performance" className="py-14 md:py-20 border-t border-black/[0.06] dark:border-white/[0.06]">
-        <div className="max-w-[1000px] mx-auto px-4">
-          <div className="text-[10px] font-sans uppercase tracking-wider text-slate-400 mb-2">PERFORMANCE</div>
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-black dark:text-white mb-2">
-            Real Data. Real Results.
-          </h2>
-          <p className="text-sm text-slate-500 mb-8 max-w-lg">
-            Verified trade outcomes from our analysis engine. Every number backed by on-chain and market data.
-          </p>
-          <LandingPerformanceChart />
-          <div className="mt-6">
-            <StatsBoxes />
+      {/* HERO */}
+      <section className="border-b border-black/10 dark:border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
+          <div className="max-w-4xl">
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.1] mb-8">
+              AI-POWERED
+              <br />
+              TRADING
+              <br />
+              ANALYSIS
+            </h1>
+            <p className="text-xl lg:text-2xl text-black/60 dark:text-white/60 mb-12 max-w-2xl">
+              Capital Flow intelligence meets machine learning. Follow the money, trade with confidence.
+            </p>
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 bg-black dark:bg-white text-white dark:text-black px-8 py-4 text-base font-mono font-bold hover:bg-black/80 dark:hover:bg-white/80 transition-colors group"
+            >
+              START FREE
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* Pricing CTA */}
-      <section id="pricing" className="py-14 md:py-20 border-t border-black/[0.06] dark:border-white/[0.06]">
-        <div className="max-w-[600px] mx-auto px-4 text-center">
-          <div className="text-[10px] font-sans uppercase tracking-wider text-slate-400 mb-2">PRICING</div>
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-black dark:text-white mb-3">
-            Credit-Based. No Subscriptions.
-          </h2>
-          <p className="text-sm text-slate-500 mb-8">
-            Pay only for what you use. L1-L2 free. L3-L7 premium.
-          </p>
-          <Link
-            href="/pricing"
-            className="inline-flex items-center gap-2 px-7 py-3 text-sm font-semibold bg-black dark:bg-white text-white dark:text-black rounded-sm hover:opacity-80 transition-opacity"
-          >
-            VIEW PRICING
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
+      {/* STATS */}
+      <section className="border-b border-black/10 dark:border-white/10">
+        <Stats />
       </section>
 
-      {/* FAQ */}
-      <section id="faq" className="py-14 md:py-20 border-t border-black/[0.06] dark:border-white/[0.06]">
-        <div className="max-w-[700px] mx-auto px-4">
-          <div className="text-[10px] font-sans uppercase tracking-wider text-slate-400 mb-2">FAQ</div>
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-black dark:text-white mb-8">
-            Frequently Asked Questions
-          </h2>
-          <div>
-            {FAQS.map((faq, i) => (
-              <FAQItem key={i} q={faq.q} a={faq.a} />
+      {/* HOW IT WORKS */}
+      <section className="border-b border-black/10 dark:border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
+          <h2 className="text-3xl lg:text-4xl font-bold mb-16">HOW IT WORKS</h2>
+          <div className="grid lg:grid-cols-3 gap-12 lg:gap-16">
+            {[
+              {
+                num: '01',
+                title: 'CAPITAL FLOW',
+                desc: 'Track global liquidity across markets. See where money flows in real-time.',
+              },
+              {
+                num: '02',
+                title: 'AI ANALYSIS',
+                desc: '7-Step + MLIS Pro analysis. 40+ indicators. Machine learning confirmation.',
+              },
+              {
+                num: '03',
+                title: 'TRADE PLAN',
+                desc: 'Precise entry, stop loss, take profit. Risk-reward calculated. Ready to execute.',
+              },
+            ].map((step, i) => (
+              <div key={i}>
+                <div className="font-mono text-6xl font-bold text-[#00f5c4] mb-4">{step.num}</div>
+                <h3 className="text-xl font-bold mb-3">{step.title}</h3>
+                <p className="text-black/60 dark:text-white/60">{step.desc}</p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="py-20 md:py-28 border-t border-black/[0.06] dark:border-white/[0.06]">
-        <div className="max-w-[600px] mx-auto px-4 text-center">
-          {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <TraderPathLogo size="lg" showText={false} animated />
+      {/* FEATURES */}
+      <section className="border-b border-black/10 dark:border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
+          <div className="grid lg:grid-cols-2 gap-px bg-black/5 dark:bg-white/5">
+            {[
+              {
+                title: '4-LAYER CAPITAL FLOW',
+                items: ['Global Liquidity Tracker', 'Market Flow Analyzer', 'Sector Drill-Down', 'AI Recommendations'],
+              },
+              {
+                title: 'DUAL ANALYSIS ENGINE',
+                items: ['7-Step Classic Analysis', 'MLIS Pro (ML Signals)', '40+ Technical Indicators', 'Inter-Market Validation'],
+              },
+              {
+                title: 'PROACTIVE SIGNALS',
+                items: ['Automated Market Scans', 'Real-Time Opportunities', 'Telegram/Discord Delivery', 'Quality Score Filtering'],
+              },
+              {
+                title: 'SMART ALERTS',
+                items: ['L1-L4 Hierarchy Monitoring', 'Phase Change Detection', 'Rotation Signals', 'Risk-Off Warnings'],
+              },
+            ].map((feature, i) => (
+              <div key={i} className="bg-white dark:bg-black p-8 lg:p-12">
+                <h3 className="text-xl font-bold mb-6">{feature.title}</h3>
+                <ul className="space-y-3">
+                  {feature.items.map((item, j) => (
+                    <li key={j} className="flex items-start gap-3">
+                      <div className="w-1.5 h-1.5 bg-[#00f5c4] mt-2 flex-shrink-0" />
+                      <span className="text-black/70 dark:text-white/70">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
-
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 mb-5 text-[10px] font-sans text-amber-500 border border-amber-500/20 bg-amber-500/5 rounded-full">
-            25 FREE CREDITS ON SIGNUP
-          </div>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-black dark:text-white mb-4">
-            Ready to Trade Smarter?
-          </h2>
-          <p className="text-sm sm:text-base text-slate-500 mb-10">
-            Access the 7-layer decision engine. Follow institutional capital flows.
-          </p>
-          <Link
-            href="/register"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 text-sm font-semibold bg-black dark:bg-white text-white dark:text-black rounded-sm hover:opacity-80 transition-opacity"
-          >
-            START FREE ANALYSIS
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-          <p className="text-[11px] text-slate-400 mt-4">
-            No credit card required
-          </p>
         </div>
       </section>
 
-      {/* Footer */}
-      <MinimalFooter />
+      {/* CTA */}
+      <section>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-4xl lg:text-5xl font-bold mb-6">
+              START TRADING WITH AI
+            </h2>
+            <p className="text-xl text-black/60 dark:text-white/60 mb-12">
+              Join thousands of traders using capital flow intelligence to make better decisions.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center gap-2 bg-black dark:bg-white text-white dark:text-black px-8 py-4 text-base font-mono font-bold hover:bg-black/80 dark:hover:bg-white/80 transition-colors group"
+              >
+                GET STARTED FREE
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              <Link
+                href="/pricing"
+                className="inline-flex items-center justify-center px-8 py-4 text-base font-mono font-bold border-2 border-black dark:border-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+              >
+                VIEW PRICING
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="border-t border-black/10 dark:border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+            <div>
+              <div className="font-mono text-sm font-bold mb-4">PRODUCT</div>
+              <ul className="space-y-2 text-sm text-black/60 dark:text-white/60">
+                <li><Link href="/pricing" className="hover:text-[#00f5c4]">Pricing</Link></li>
+                <li><Link href="/login" className="hover:text-[#00f5c4]">Login</Link></li>
+              </ul>
+            </div>
+            <div>
+              <div className="font-mono text-sm font-bold mb-4">COMPANY</div>
+              <ul className="space-y-2 text-sm text-black/60 dark:text-white/60">
+                <li><Link href="/about" className="hover:text-[#00f5c4]">About</Link></li>
+                <li><Link href="/status" className="hover:text-[#00f5c4]">Status</Link></li>
+              </ul>
+            </div>
+            <div>
+              <div className="font-mono text-sm font-bold mb-4">LEGAL</div>
+              <ul className="space-y-2 text-sm text-black/60 dark:text-white/60">
+                <li><Link href="/privacy" className="hover:text-[#00f5c4]">Privacy</Link></li>
+                <li><Link href="/terms" className="hover:text-[#00f5c4]">Terms</Link></li>
+              </ul>
+            </div>
+            <div>
+              <div className="font-mono text-sm font-bold mb-4">CONNECT</div>
+              <ul className="space-y-2 text-sm text-black/60 dark:text-white/60">
+                <li><a href="https://twitter.com/traderpath" className="hover:text-[#00f5c4]">Twitter</a></li>
+                <li><a href="https://discord.gg/traderpath" className="hover:text-[#00f5c4]">Discord</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-black/10 dark:border-white/10">
+            <div className="font-mono text-sm text-black/40 dark:text-white/40">
+              © 2026 TraderPath. All rights reserved.
+            </div>
+            <div className="font-mono text-xs text-black/40 dark:text-white/40 mt-4 md:mt-0">
+              NOT FINANCIAL ADVICE
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
