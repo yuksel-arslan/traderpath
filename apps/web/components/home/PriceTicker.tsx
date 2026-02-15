@@ -71,25 +71,46 @@ export function PriceTicker() {
     );
   }
 
+  // Render coin items (reused for seamless loop)
+  const renderItems = (keyPrefix: string) =>
+    livePrices.map((coin) => (
+      <div
+        key={`${keyPrefix}-${coin.symbol}`}
+        className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-sans shrink-0 tabular-nums"
+      >
+        <span className="font-semibold text-black dark:text-white">{coin.symbol}</span>
+        <span className="text-slate-400">${coin.price}</span>
+        <span className={coin.up ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400'}>
+          {coin.change}
+        </span>
+      </div>
+    ));
+
   return (
     <div
       className="w-full overflow-hidden py-1.5 border-b border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-[#0B1121]"
       aria-label="Live cryptocurrency prices"
     >
-      <div className="flex items-center gap-4 sm:gap-6 overflow-x-auto px-4 scrollbar-none">
-        {livePrices.map((coin) => (
-          <div
-            key={coin.symbol}
-            className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-sans shrink-0 tabular-nums"
-          >
-            <span className="font-semibold text-black dark:text-white">{coin.symbol}</span>
-            <span className="text-slate-400">${coin.price}</span>
-            <span className={coin.up ? 'text-emerald-500 dark:text-[#00f5c4]' : 'text-red-500 dark:text-red-400'}>
-              {coin.change}
-            </span>
-          </div>
-        ))}
+      <div className="flex items-center gap-6 animate-marquee whitespace-nowrap">
+        {renderItems('a')}
+        {/* Separator dot */}
+        <span className="w-1 h-1 rounded-full bg-slate-600 shrink-0" />
+        {renderItems('b')}
+        <span className="w-1 h-1 rounded-full bg-slate-600 shrink-0" />
       </div>
+
+      <style jsx>{`
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+          animation: marquee 30s linear infinite;
+        }
+        .animate-marquee:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
     </div>
   );
 }
