@@ -29,7 +29,7 @@ interface Example {
   type: 'analysis' | 'quiz' | 'pattern';
   title: string;
   description: string;
-  details: Record<string, unknown>;
+  details: Record<string, any>;
 }
 
 interface ExpertResponse {

@@ -48,13 +48,13 @@ interface AnalysisData {
   expiresAt: string;
   outcome?: string;
   method?: string;
-  step1Result?: Record<string, unknown>; // Market Pulse
-  step2Result?: Record<string, unknown>; // Asset Scanner
-  step3Result?: Record<string, unknown>; // Safety Check
-  step4Result?: Record<string, unknown>; // Timing Analysis
-  step5Result?: Record<string, unknown>; // Trade Plan
-  step6Result?: Record<string, unknown>; // Trap Check
-  step7Result?: Record<string, unknown>; // Final Verdict + ML Confirmation
+  step1Result?: Record<string, any>; // Market Pulse
+  step2Result?: Record<string, any>; // Asset Scanner
+  step3Result?: Record<string, any>; // Safety Check
+  step4Result?: Record<string, any>; // Timing Analysis
+  step5Result?: Record<string, any>; // Trade Plan
+  step6Result?: Record<string, any>; // Trap Check
+  step7Result?: Record<string, any>; // Final Verdict + ML Confirmation
 }
 
 function formatPrice(price: number): string {
@@ -416,7 +416,7 @@ export default function AnalysisDetailsPage() {
           pdfBase64,
           score: analysis.totalScore,
           direction: analysis.step5Result?.direction || analysis.step7Result?.direction || 'long',
-          verdict: step7.verdict?.toUpperCase() || 'WAIT',
+          verdict: typeof step7.verdict === 'string' ? step7.verdict.toUpperCase() : 'WAIT',
         }),
       });
 
@@ -463,13 +463,13 @@ export default function AnalysisDetailsPage() {
 
 
   // Extract data from steps
-  const step1 = analysis.step1Result || {};
-  const step2 = analysis.step2Result || {};
-  const step3 = analysis.step3Result || {};
-  const step4 = analysis.step4Result || {};
-  const step5 = analysis.step5Result || {};
-  const step6 = analysis.step6Result || {};
-  const step7 = analysis.step7Result || {};
+  const step1 = (analysis.step1Result || {}) as Record<string, any>;
+  const step2 = (analysis.step2Result || {}) as Record<string, any>;
+  const step3 = (analysis.step3Result || {}) as Record<string, any>;
+  const step4 = (analysis.step4Result || {}) as Record<string, any>;
+  const step5 = (analysis.step5Result || {}) as Record<string, any>;
+  const step6 = (analysis.step6Result || {}) as Record<string, any>;
+  const step7 = (analysis.step7Result || {}) as Record<string, any>;
 
   // Classic 7-Step: step5 is trade plan, step7 is verdict
   const rawDirection = (step5.direction || step7.direction || 'long');
@@ -794,7 +794,7 @@ export default function AnalysisDetailsPage() {
                   )}>{marketStatus}</span>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-slate-400">
-                  Fear & Greed: {step1.fearGreedIndex || 0} ({step1.fearGreedLabel || 'N/A'}) • BTC Dom: {step1.btcDominance?.toFixed(1) || '0'}%
+                  Fear & Greed: {step1.fearGreedIndex || 0} ({step1.fearGreedLabel || 'N/A'}) • BTC Dom: {Number(step1.btcDominance ?? 0).toFixed(1)}%
                 </p>
               </div>
 
@@ -813,7 +813,7 @@ export default function AnalysisDetailsPage() {
                   )}>{assetStatus}</span>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-slate-400">
-                  Price: {formatPrice(step2.currentPrice)} • 24h: {(step2.priceChange24h || 0) >= 0 ? '+' : ''}{step2.priceChange24h?.toFixed(2) || '0'}%
+                  Price: {formatPrice(step2.currentPrice)} • 24h: {(step2.priceChange24h || 0) >= 0 ? '+' : ''}{Number(step2.priceChange24h ?? 0).toFixed(2)}%
                 </p>
               </div>
 

@@ -31,10 +31,10 @@ export function usePWAInstall() {
   useEffect(() => {
     // Check if running in standalone mode (already installed)
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-      || (window.navigator as unknown as Record<string, unknown>).standalone === true;
+      || (window.navigator as unknown as Record<string, any>).standalone === true;
 
     // Check if iOS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as unknown as Record<string, unknown>).MSStream;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as unknown as Record<string, any>).MSStream;
 
     // Check if already installed via localStorage
     const isInstalled = localStorage.getItem('pwa-installed') === 'true' || isStandalone;

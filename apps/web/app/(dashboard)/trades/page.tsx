@@ -166,13 +166,13 @@ function generateForecastBand(
 // Data fetching – connects to /api/reports/live-tracking
 // ---------------------------------------------------------------------------
 
-function mapApiTradeToTrade(apiTrade: Record<string, unknown>): Trade {
-  const analysis = apiTrade as Record<string, unknown>;
-  const step5 = (analysis.step5Result ?? {}) as Record<string, unknown>;
-  const tradePlan = (step5.tradePlan ?? step5) as Record<string, unknown>;
-  const tp = (Array.isArray(tradePlan.takeProfits) ? tradePlan.takeProfits : []) as Array<Record<string, unknown>>;
+function mapApiTradeToTrade(apiTrade: Record<string, any>): Trade {
+  const analysis = apiTrade as Record<string, any>;
+  const step5 = (analysis.step5Result ?? {}) as Record<string, any>;
+  const tradePlan = (step5.tradePlan ?? step5) as Record<string, any>;
+  const tp = (Array.isArray(tradePlan.takeProfits) ? tradePlan.takeProfits : []) as Array<Record<string, any>>;
   const entry = Number(tradePlan.averageEntry ?? tradePlan.entry ?? analysis.currentPrice ?? 0);
-  const sl = Number((tradePlan.stopLoss as Record<string, unknown>)?.price ?? tradePlan.stopLoss ?? 0);
+  const sl = Number((tradePlan.stopLoss as Record<string, any>)?.price ?? tradePlan.stopLoss ?? 0);
   const tp1 = Number(tp[0]?.price ?? tp[0] ?? 0);
   const tp2 = Number(tp[1]?.price ?? tp[1] ?? 0);
   const currentPrice = Number(analysis.currentPrice ?? entry);
@@ -210,9 +210,9 @@ function mapApiTradeToTrade(apiTrade: Record<string, unknown>): Trade {
     openedAt: new Date(createdAt).toLocaleString(),
     duration: `${days}d ${hours}h`,
     score: Number(analysis.totalScore ?? 0),
-    flowHealth: Number((analysis as Record<string, unknown>).flowHealth ?? 50),
-    flowSignal: String((analysis as Record<string, unknown>).flowSignal ?? 'hold'),
-    method: String(analysis.method ?? 'classic'),
+    flowHealth: Number((analysis as Record<string, any>).flowHealth ?? 50),
+    flowSignal: String((analysis as Record<string, any>).flowSignal ?? 'hold') as 'close' | 'hold' | 'tighten' | 'take_profit',
+    method: String(analysis.method ?? 'classic') as 'classic' | 'mlis',
   };
 }
 

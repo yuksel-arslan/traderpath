@@ -13,7 +13,7 @@ export interface IndicatorDetail {
   isLeadingIndicator: boolean;
   weight: number;
   strength?: number;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, any>;
 }
 
 export interface DivergenceInfo {

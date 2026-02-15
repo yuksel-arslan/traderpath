@@ -147,7 +147,7 @@ export function RecentAnalyses() {
       if (response.ok) {
         // Safely parse JSON response
         const responseText = await response.text();
-        let result: Record<string, unknown> = { data: { analyses: [] } };
+        let result: Record<string, any> = { data: { analyses: [] } };
 
         if (responseText && responseText.trim() !== '') {
           try {
@@ -163,7 +163,7 @@ export function RecentAnalyses() {
         const liveAnalyses = result.data?.analyses || [];
 
         // Map to RecentAnalysis format
-        const mapped = liveAnalyses.map((a: Record<string, unknown>) => {
+        const mapped = liveAnalyses.map((a: Record<string, any>) => {
           // Normalize verdict - NOTE: 'long'/'short' are DIRECTIONS, not verdicts!
           const rawVerdict = (a.verdict || '').toLowerCase().replace(/[^a-z_]/g, '');
           let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';

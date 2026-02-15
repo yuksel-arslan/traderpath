@@ -112,7 +112,7 @@ const NAV_GROUPS: NavGroup[] = [
 // Data mapping – connects to /api/analysis/top-coins
 // ---------------------------------------------------------------------------
 
-function mapApiAsset(item: Record<string, unknown>): Asset {
+function mapApiAsset(item: Record<string, any>): Asset {
   const symbol = String(item.symbol ?? '');
   const verdict = String(item.verdict ?? 'WAIT').toUpperCase();
   const dir = String(item.direction ?? 'neutral').toLowerCase();
@@ -126,7 +126,7 @@ function mapApiAsset(item: Record<string, unknown>): Asset {
     score: Number(item.totalScore ?? item.reliabilityScore ?? item.score ?? 0),
     verdict: (verdict === 'GO' || verdict === 'COND' || verdict === 'WAIT' || verdict === 'AVOID' ? verdict : 'WAIT') as Verdict,
     direction: (dir === 'long' || dir === 'short' ? dir : 'neutral') as 'long' | 'short' | 'neutral',
-    phase: String(item.phase ?? 'MID').toUpperCase(),
+    phase: String(item.phase ?? 'MID').toUpperCase() as 'EARLY' | 'MID' | 'LATE' | 'EXIT',
     flowScore: Number(item.flowScore ?? 50),
     rsi: Number(item.rsi ?? 50),
     macd: String(item.macd ?? 'neutral') as 'bullish' | 'bearish' | 'neutral',

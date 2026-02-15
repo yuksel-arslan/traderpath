@@ -24,7 +24,7 @@ const TRANSIENT_STATUS_CODES = [502, 503, 504];
  * - Fastify default: { statusCode, error, message }
  * - Railway/proxy: { statusCode, message } or plain text
  */
-function parseBackendErrorCode(data: Record<string, unknown>, httpStatus: number): string {
+function parseBackendErrorCode(data: Record<string, any>, httpStatus: number): string {
   // App's standard format - has error.code
   if (data?.error?.code && typeof data.error.code === 'string') {
     return data.error.code;
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
 
     // Send to backend for OAuth login/register with timeout and retry
     let backendResponse: Response | undefined;
-    let backendData: Record<string, unknown> | undefined;
+    let backendData: Record<string, any> | undefined;
 
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
@@ -192,7 +192,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL(`/login?error=${errorCode}`, baseUrl));
     }
 
-    const bData = (backendData?.data ?? {}) as Record<string, unknown>;
+    const bData = (backendData?.data ?? {}) as Record<string, any>;
     const { accessToken, isFirstLogin, firstLoginBonus } = bData;
 
     if (!accessToken) {

@@ -30,7 +30,7 @@ interface Notification {
   type: NotificationType;
   title: string;
   message: string;
-  metadata: Record<string, unknown>;
+  metadata: Record<string, any>;
   read: boolean;
   createdAt: string;
 }
@@ -146,7 +146,7 @@ export default function NotificationsPage() {
   // Mark all as read
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      const body: Record<string, unknown> = {};
+      const body: Record<string, any> = {};
       if (activeFilter !== 'ALL') body.type = activeFilter;
       await authFetch('/api/notifications/mark-all-read', {
         method: 'POST',

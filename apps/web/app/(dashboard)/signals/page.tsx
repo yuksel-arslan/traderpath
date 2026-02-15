@@ -45,7 +45,7 @@ interface Signal {
   capitalFlowBias: string;
   sectorFlow?: number;
   qualityScore?: number | null;
-  qualityData?: Record<string, unknown> | null;
+  qualityData?: any;
   status: 'pending' | 'published' | 'expired' | 'cancelled';
   publishedAt?: string;
   expiresAt: string;

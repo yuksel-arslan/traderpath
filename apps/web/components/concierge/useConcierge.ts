@@ -36,7 +36,7 @@ export interface ConciergeResponse {
   success: boolean;
   intent: IntentType;
   message: string;
-  data?: QuickAnalysisResult | QuickAnalysisResult[] | Record<string, unknown>;
+  data?: QuickAnalysisResult | QuickAnalysisResult[] | Record<string, any>;
   suggestions?: string[];
   creditsSpent: number;
   creditsRemaining: number;

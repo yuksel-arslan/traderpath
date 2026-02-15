@@ -325,7 +325,7 @@ export default function ConciergePage() {
   // Initialize speech recognition
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const SpeechRecognition = (window as unknown as Record<string, unknown>).SpeechRecognition || (window as unknown as Record<string, unknown>).webkitSpeechRecognition;
+      const SpeechRecognition = (window as unknown as Record<string, any>).SpeechRecognition || (window as unknown as Record<string, any>).webkitSpeechRecognition;
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
         recognition.continuous = false;
@@ -401,7 +401,7 @@ export default function ConciergePage() {
               setScanInProgress(false);
 
               const topCoins = data.data.slice(0, 5);
-              const coinList = topCoins.map((coin: Record<string, unknown>, i: number) => {
+              const coinList = topCoins.map((coin: Record<string, any>, i: number) => {
                 const emoji = coin.verdict === 'GO' ? '🟢' : coin.verdict === 'CONDITIONAL_GO' ? '🟡' : '🟠';
                 return `${i + 1}. ${emoji} **${coin.symbol}** - Score: ${coin.reliabilityScore}/100`;
               }).join('\n');
