@@ -7,7 +7,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 
 interface PageProps {
-  params: { coin: string };
+  params: Promise<{ coin: string }>;
 }
 
 // Coin display names
@@ -46,8 +46,9 @@ const coinNames: Record<string, string> = {
 
 // Generate metadata for each coin
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const coin = params.coin.toUpperCase();
-  const coinName = coinNames[params.coin.toLowerCase()] || coin;
+  const { coin: coinParam } = await params;
+  const coin = coinParam.toUpperCase();
+  const coinName = coinNames[coinParam.toLowerCase()] || coin;
 
   return {
     title: `${coin}/USDT Analysis - ${coinName} Trading Signals`,
@@ -83,9 +84,10 @@ export async function generateStaticParams() {
   }));
 }
 
-export default function PublicAnalysisPage({ params }: PageProps) {
-  const coin = params.coin.toUpperCase();
-  const coinName = coinNames[params.coin.toLowerCase()] || coin;
+export default async function PublicAnalysisPage({ params }: PageProps) {
+  const { coin: coinParam } = await params;
+  const coin = coinParam.toUpperCase();
+  const coinName = coinNames[coinParam.toLowerCase()] || coin;
 
   // Sample analysis data (static for SEO)
   const sampleData = {
