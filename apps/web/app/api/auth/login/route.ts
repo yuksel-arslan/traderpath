@@ -25,7 +25,7 @@ const TRANSIENT_STATUS_CODES = [502, 503, 504];
  * - Railway/proxy: { statusCode, message } or plain text
  * - Unknown: any other JSON
  */
-function parseBackendError(data: any, httpStatus: number): { code: string; message: string } {
+function parseBackendError(data: Record<string, unknown>, httpStatus: number): { code: string; message: string } {
   // App's standard format
   if (data?.error?.code && data?.error?.message) {
     return { code: data.error.code, message: data.error.message };
@@ -92,12 +92,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Log the API URL being used for debugging
-    console.log(`[Login] Calling backend at: ${API_URL}/api/auth/login`);
+    // Backend URL logged only in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Login] Calling backend at: ${API_URL}/api/auth/login`);
+    }
 
     // Call backend API with timeout and retry
     let response: Response | undefined;
-    let data: any;
+    let data: Record<string, unknown> | undefined;
     let lastError: string = '';
 
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -141,12 +143,13 @@ export async function POST(request: NextRequest) {
 
         // Got a definitive response, break out of retry loop
         break;
-      } catch (fetchError: any) {
-        lastError = fetchError.name === 'AbortError'
+      } catch (fetchError: unknown) {
+        const err = fetchError instanceof Error ? fetchError : new Error('Connection failed');
+        lastError = err.name === 'AbortError'
           ? 'Request timed out'
-          : fetchError.message || 'Connection failed';
+          : err.message || 'Connection failed';
 
-        console.error(`[Login] Backend fetch failed (attempt ${attempt + 1}):`, lastError, { API_URL });
+        console.error(`[Login] Backend fetch failed (attempt ${attempt + 1}):`, lastError);
 
         // Retry on first attempt for connection errors
         if (attempt === 0) {
@@ -159,7 +162,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: {
               code: 'SERVER_ERROR',
-              message: fetchError.name === 'AbortError'
+              message: err.name === 'AbortError'
                 ? 'Server is taking too long to respond. Please try again.'
                 : 'Cannot connect to server. Please try again later.',
             },
@@ -183,7 +186,7 @@ export async function POST(request: NextRequest) {
 
       // Don't mask server errors as "Invalid credentials"
       if (isServerError(response.status, parsed.code)) {
-        console.error('[Login] Backend server error:', { status: response.status, code: parsed.code, message: parsed.message });
+        console.error('[Login] Backend server error, status:', response.status);
         return NextResponse.json(
           { success: false, error: { code: 'SERVER_ERROR', message: 'Server is temporarily unavailable. Please try again in a moment.' } },
           { status: 502 }
@@ -198,10 +201,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract token, user, and login metadata from response
-    const { token, user, credits, isFirstLogin, firstLoginBonus } = data.data || {};
+    const responseData = (data.data ?? {}) as Record<string, unknown>;
+    const { token, user, credits, isFirstLogin, firstLoginBonus } = responseData;
 
     if (!token) {
-      console.error('[Login] Backend returned success but no token:', JSON.stringify(data).slice(0, 500));
+      console.error('[Login] Backend returned success but no token in response');
       return NextResponse.json(
         { success: false, error: { code: 'AUTH_ERROR', message: 'Authentication failed. Please try again.' } },
         { status: 500 }

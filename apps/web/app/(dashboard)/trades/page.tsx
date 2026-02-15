@@ -6,7 +6,7 @@
 // Sidebar + Content Panel pattern (matches Terminal / Flow / Screener)
 // =============================================================================
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -17,8 +17,10 @@ import {
   XCircle,
   Target,
   Shield,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
+import { authFetch } from '../../../lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -161,53 +163,58 @@ function generateForecastBand(
 }
 
 // ---------------------------------------------------------------------------
-// Mock Data
+// Data fetching – connects to /api/reports/live-tracking
 // ---------------------------------------------------------------------------
 
-const MOCK_TRADES: Trade[] = [
-  {
-    id: '1', symbol: 'BTC', market: 'CRYPTO', direction: 'long', status: 'ACTIVE',
-    entry: 95200, currentPrice: 97250, stopLoss: 92800, tp1: 102000, tp2: 108000,
-    pnl: 2050, pnlPercent: 2.15, rr: 2.8, openedAt: '2026-02-07 14:30',
-    duration: '1d 18h', score: 8.4, flowHealth: 85, flowSignal: 'hold', method: 'classic',
-  },
-  {
-    id: '2', symbol: 'ETH', market: 'CRYPTO', direction: 'long', status: 'ACTIVE',
-    entry: 3280, currentPrice: 3420, stopLoss: 3100, tp1: 3650, tp2: 3900,
-    pnl: 140, pnlPercent: 4.27, rr: 2.1, openedAt: '2026-02-06 09:15',
-    duration: '2d 23h', score: 7.9, flowHealth: 91, flowSignal: 'hold', method: 'classic',
-  },
-  {
-    id: '3', symbol: 'SOL', market: 'CRYPTO', direction: 'long', status: 'ACTIVE',
-    entry: 185, currentPrice: 198.5, stopLoss: 172, tp1: 215, tp2: 240,
-    pnl: 13.5, pnlPercent: 7.3, rr: 2.3, openedAt: '2026-02-05 11:00',
-    duration: '3d 21h', score: 8.1, flowHealth: 78, flowSignal: 'tighten', method: 'mlis',
-  },
-  {
-    id: '4', symbol: 'NVDA', market: 'STOCKS', direction: 'long', status: 'TP_HIT',
-    entry: 842, currentPrice: 878.3, stopLoss: 810, tp1: 880, tp2: 920,
-    pnl: 36.3, pnlPercent: 4.31, rr: 1.1, openedAt: '2026-02-03 15:30',
-    duration: '5d 17h', score: 8.2, flowHealth: 65, flowSignal: 'take_profit', method: 'classic',
-  },
-  {
-    id: '5', symbol: 'ADA', market: 'CRYPTO', direction: 'short', status: 'ACTIVE',
-    entry: 0.88, currentPrice: 0.82, stopLoss: 0.95, tp1: 0.75, tp2: 0.65,
-    pnl: 0.06, pnlPercent: 6.82, rr: 1.9, openedAt: '2026-02-08 08:45',
-    duration: '0d 23h', score: 4.8, flowHealth: 22, flowSignal: 'close', method: 'classic',
-  },
-  {
-    id: '6', symbol: 'GLD', market: 'METALS', direction: 'long', status: 'SL_HIT',
-    entry: 218, currentPrice: 215.4, stopLoss: 213, tp1: 225, tp2: 232,
-    pnl: -2.6, pnlPercent: -1.19, rr: -0.5, openedAt: '2026-02-04 10:00',
-    duration: '4d 22h', score: 7.0, flowHealth: 42, flowSignal: 'close', method: 'mlis',
-  },
-  {
-    id: '7', symbol: 'LINK', market: 'CRYPTO', direction: 'long', status: 'ACTIVE',
-    entry: 16.2, currentPrice: 18.45, stopLoss: 14.8, tp1: 20, tp2: 24,
-    pnl: 2.25, pnlPercent: 13.89, rr: 2.7, openedAt: '2026-02-04 16:20',
-    duration: '4d 16h', score: 7.8, flowHealth: 86, flowSignal: 'hold', method: 'classic',
-  },
-];
+function mapApiTradeToTrade(apiTrade: Record<string, unknown>): Trade {
+  const analysis = apiTrade as Record<string, unknown>;
+  const step5 = (analysis.step5Result ?? {}) as Record<string, unknown>;
+  const tradePlan = (step5.tradePlan ?? step5) as Record<string, unknown>;
+  const tp = (Array.isArray(tradePlan.takeProfits) ? tradePlan.takeProfits : []) as Array<Record<string, unknown>>;
+  const entry = Number(tradePlan.averageEntry ?? tradePlan.entry ?? analysis.currentPrice ?? 0);
+  const sl = Number((tradePlan.stopLoss as Record<string, unknown>)?.price ?? tradePlan.stopLoss ?? 0);
+  const tp1 = Number(tp[0]?.price ?? tp[0] ?? 0);
+  const tp2 = Number(tp[1]?.price ?? tp[1] ?? 0);
+  const currentPrice = Number(analysis.currentPrice ?? entry);
+  const direction = (typeof analysis.direction === 'string' ? analysis.direction : 'long') as 'long' | 'short';
+  const pnl = direction === 'long' ? currentPrice - entry : entry - currentPrice;
+  const pnlPercent = entry > 0 ? (pnl / entry) * 100 : 0;
+  const risk = Math.abs(entry - sl) || 1;
+  const rr = pnl / risk;
+
+  let status: TradeStatus = 'ACTIVE';
+  const outcome = typeof analysis.outcome === 'string' ? analysis.outcome : '';
+  if (outcome.includes('TP') || outcome === 'tp_hit') status = 'TP_HIT';
+  else if (outcome.includes('SL') || outcome === 'sl_hit') status = 'SL_HIT';
+  else if (outcome === 'closed') status = 'CLOSED';
+
+  const createdAt = typeof analysis.createdAt === 'string' ? analysis.createdAt : new Date().toISOString();
+  const durationMs = Date.now() - new Date(createdAt).getTime();
+  const days = Math.floor(durationMs / 86400000);
+  const hours = Math.floor((durationMs % 86400000) / 3600000);
+
+  return {
+    id: String(analysis.id ?? ''),
+    symbol: String(analysis.symbol ?? ''),
+    market: String(analysis.market ?? 'CRYPTO'),
+    direction,
+    status,
+    entry,
+    currentPrice,
+    stopLoss: sl,
+    tp1,
+    tp2,
+    pnl,
+    pnlPercent,
+    rr,
+    openedAt: new Date(createdAt).toLocaleString(),
+    duration: `${days}d ${hours}h`,
+    score: Number(analysis.totalScore ?? 0),
+    flowHealth: Number((analysis as Record<string, unknown>).flowHealth ?? 50),
+    flowSignal: String((analysis as Record<string, unknown>).flowSignal ?? 'hold'),
+    method: String(analysis.method ?? 'classic'),
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -659,7 +666,7 @@ function ContentPanel({
   }
 
   // Find trade by id
-  const trade = MOCK_TRADES.find((t) => t.id === activeSection);
+  const trade = trades.find((t) => t.id === activeSection);
   if (!trade) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -678,16 +685,38 @@ function ContentPanel({
 export default function TradesPage() {
   const [activeSection, setActiveSection] = useState<SectionId>('overview');
   const [statusFilter, setStatusFilter] = useState<'ALL' | TradeStatus>('ALL');
+  const [allTrades, setAllTrades] = useState<Trade[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const activeTrades = MOCK_TRADES.filter((t) => t.status === 'ACTIVE');
-  const closedTrades = MOCK_TRADES.filter((t) => t.status === 'TP_HIT' || t.status === 'SL_HIT' || t.status === 'CLOSED');
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await authFetch('/api/reports/live-tracking');
+        if (!res.ok) throw new Error('Failed to fetch');
+        const json = await res.json();
+        const items = json?.data?.activeTrades ?? json?.data ?? [];
+        if (!cancelled && Array.isArray(items)) {
+          setAllTrades(items.map(mapApiTradeToTrade));
+        }
+      } catch {
+        // silently fail – page shows empty state
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const activeTrades = allTrades.filter((t) => t.status === 'ACTIVE');
+  const closedTrades = allTrades.filter((t) => t.status === 'TP_HIT' || t.status === 'SL_HIT' || t.status === 'CLOSED');
   const totalPnl = activeTrades.reduce((s, t) => s + t.pnlPercent, 0);
   const warnings = activeTrades.filter((t) => t.flowSignal === 'close' || t.flowSignal === 'tighten').length;
 
   const filtered = useMemo(() => {
-    if (statusFilter === 'ALL') return MOCK_TRADES;
-    return MOCK_TRADES.filter((t) => t.status === statusFilter);
-  }, [statusFilter]);
+    if (statusFilter === 'ALL') return allTrades;
+    return allTrades.filter((t) => t.status === statusFilter);
+  }, [statusFilter, allTrades]);
 
   // Build nav groups
   const navGroups: NavGroup[] = useMemo(() => {
@@ -739,6 +768,14 @@ export default function TradesPage() {
     setActiveSection(id);
   }, []);
 
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-white dark:bg-neutral-950">
+        <Loader2 className="w-6 h-6 animate-spin text-[#14B8A6]" />
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-black dark:text-white overflow-hidden">
       {/* Header */}
@@ -782,7 +819,7 @@ export default function TradesPage() {
       <div className="lg:hidden shrink-0 border-b border-black/[0.06] dark:border-white/[0.06] overflow-x-auto scrollbar-none">
         <div className="flex gap-px w-max">
           {allNavItems.map((item) => {
-            const trade = MOCK_TRADES.find((t) => t.id === item.id);
+            const trade = allTrades.find((t) => t.id === item.id);
             return (
               <button
                 key={item.id}
@@ -824,7 +861,7 @@ export default function TradesPage() {
               <div className="space-y-0.5">
                 {group.items.map((item) => {
                   const isActive = activeSection === item.id;
-                  const trade = MOCK_TRADES.find((t) => t.id === item.id);
+                  const trade = allTrades.find((t) => t.id === item.id);
                   const isClosed = trade && (trade.status === 'TP_HIT' || trade.status === 'SL_HIT' || trade.status === 'CLOSED');
 
                   return (
