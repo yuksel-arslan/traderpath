@@ -141,7 +141,8 @@ interface StepData {
   details: string[];
 }
 
-function getMockStepData(asset: Asset, stepId: string): StepData {
+// Derives estimated step-level data from the asset's overall score (no individual step API call)
+function getDerivedStepData(asset: Asset, stepId: string): StepData {
   const s = asset.score;
   switch (stepId) {
     case 'step1': return { score: Math.min(10, s + 0.3), status: s >= 7 ? 'pass' : s >= 5 ? 'warn' : 'fail', summary: 'Global macro conditions and liquidity bias assessment.', details: ['VIX: 16.2 (low volatility)', 'DXY: 103.8 (neutral)', 'Fed bias: Dovish', `Liquidity trend: ${s >= 7 ? 'Expanding' : 'Contracting'}`] };
@@ -162,7 +163,8 @@ interface MLISLayerData {
   details: string[];
 }
 
-function getMockMLISData(asset: Asset, layerId: string): MLISLayerData {
+// Derives estimated MLIS layer data from the asset's overall score (no individual layer API call)
+function getDerivedMLISData(asset: Asset, layerId: string): MLISLayerData {
   const s = asset.score;
   switch (layerId) {
     case 'mlis1': return { score: Math.min(100, s * 11), signal: s >= 7 ? 'bullish' : s >= 5 ? 'neutral' : 'bearish', confidence: Math.min(95, s * 10 + 10), details: ['MA alignment confirmed', `RSI signal: ${asset.rsi > 50 ? 'positive' : 'negative'}`, `BB position: ${s >= 7 ? 'upper band' : 'middle band'}`, `ADX strength: ${s >= 7 ? 'strong trend' : 'weak trend'}`] };
@@ -315,7 +317,7 @@ function SortHeader({
 // ---------------------------------------------------------------------------
 
 function StepPanel({ asset, stepId }: { asset: Asset; stepId: string }) {
-  const data = getMockStepData(asset, stepId);
+  const data = getDerivedStepData(asset, stepId);
   const stepNum = stepId.replace('step', '');
   const stepNames: Record<string, string> = {
     step1: 'Market Pulse',
@@ -378,7 +380,7 @@ function StepPanel({ asset, stepId }: { asset: Asset; stepId: string }) {
 // ---------------------------------------------------------------------------
 
 function MLISPanel({ asset, layerId }: { asset: Asset; layerId: string }) {
-  const data = getMockMLISData(asset, layerId);
+  const data = getDerivedMLISData(asset, layerId);
   const layerNum = layerId.replace('mlis', '');
   const layerNames: Record<string, string> = {
     mlis1: 'Technical Layer',

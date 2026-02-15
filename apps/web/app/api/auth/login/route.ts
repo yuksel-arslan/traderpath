@@ -237,8 +237,9 @@ export async function POST(request: NextRequest) {
     });
 
     return res;
-  } catch (error: any) {
-    console.error('[Login] Unhandled error:', error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[Login] Unhandled error:', message);
     return NextResponse.json(
       { success: false, error: { code: 'SERVER_ERROR', message: 'An unexpected error occurred. Please try again.' } },
       { status: 500 }

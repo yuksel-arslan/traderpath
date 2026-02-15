@@ -100,7 +100,7 @@ export default function LoginPage() {
       });
 
       // Handle Vercel function timeout (returns HTML 504, not JSON)
-      let data: any;
+      let data: Record<string, unknown> | undefined;
       try {
         data = await response.json();
       } catch {

@@ -36,7 +36,7 @@ import { authFetch } from '../../../lib/api';
 // Frequency options
 type Frequency = 'DAILY' | 'WEEKLY' | 'MONTHLY';
 
-const FREQUENCY_CONFIG: Record<Frequency, { label: string; description: string; icon: any }> = {
+const FREQUENCY_CONFIG: Record<Frequency, { label: string; description: string; icon: React.ComponentType<{ className?: string }> }> = {
   DAILY: { label: 'Daily', description: 'Every day at scheduled time', icon: Clock },
   WEEKLY: { label: 'Weekly', description: 'Once a week on selected day', icon: Calendar },
   MONTHLY: { label: 'Monthly', description: 'First day of each month', icon: Timer },
@@ -252,8 +252,9 @@ export default function ScheduledReportsPage() {
         const limitsData = await limitsRes.json();
         setLimits(limitsData.data);
       }
-    } catch (err: any) {
-      alert(err.message || 'Failed to create scheduled report');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      alert(message || 'Failed to create scheduled report');
     } finally {
       setActionLoading(null);
     }

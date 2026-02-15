@@ -73,7 +73,7 @@ export default function PricingPage() {
   const [packagesLoading, setPackagesLoading] = useState(true);
   const [packagesFromApi, setPackagesFromApi] = useState(false);
   const [pricingMode, setPricingMode] = useState<PricingMode>('active');
-  const [signalPlans, setSignalPlans] = useState<any[]>([]);
+  const [signalPlans, setSignalPlans] = useState<{ tier: string; name: string; price: { monthly: number }; maxSignalsPerDay: number; markets: string[]; features?: string[] }[]>([]);
   const [signalPlansLoading, setSignalPlansLoading] = useState(true);
 
   useEffect(() => {
@@ -192,8 +192,9 @@ export default function PricingPage() {
       } else {
         throw new Error('No checkout URL received');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to start checkout');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(message || 'Failed to start checkout');
       setPurchasing(false);
       setSelectedPackage(null);
     }
@@ -620,7 +621,7 @@ export default function PricingPage() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
                     {signalPlans
-                      .filter((plan: any) => plan.tier !== 'SIGNAL_PRO_YEARLY') // Only monthly plans
+                      .filter((plan) => plan.tier !== 'SIGNAL_PRO_YEARLY') // Only monthly plans
                       .map((plan, index) => {
                       const isBasic = plan.tier === 'SIGNAL_BASIC';
                       const isPro = plan.tier === 'SIGNAL_PRO';

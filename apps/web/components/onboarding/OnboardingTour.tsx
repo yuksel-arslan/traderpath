@@ -245,9 +245,9 @@ export function OnboardingTour({
   }, []);
 
   useEffect(() => {
-    (window as any)[`startTour_${tourId}`] = startTour;
+    (window as unknown as Record<string, unknown>)[`startTour_${tourId}`] = startTour;
     return () => {
-      delete (window as any)[`startTour_${tourId}`];
+      delete (window as unknown as Record<string, unknown>)[`startTour_${tourId}`];
     };
   }, [tourId, startTour]);
 
@@ -436,7 +436,7 @@ export function TourTriggerButton({
   variant?: 'default' | 'minimal' | 'icon';
 }) {
   const handleClick = () => {
-    const startTour = (window as any)[`startTour_${tourId}`];
+    const startTour = (window as unknown as Record<string, unknown>)[`startTour_${tourId}`];
     if (startTour) {
       localStorage.removeItem(`tour_completed_${tourId}`);
       startTour();

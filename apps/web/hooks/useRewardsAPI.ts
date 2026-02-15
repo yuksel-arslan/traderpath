@@ -85,9 +85,10 @@ export function useTierInfo() {
         throw new Error(json.error?.message || 'Failed to fetch tier info');
       }
       setData(json.data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch tier info');
-      console.error('Tier info fetch error:', err);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(message || 'Failed to fetch tier info');
+      console.error('Tier info fetch error:', err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -115,9 +116,10 @@ export function useDailyRewards() {
         throw new Error(json.error?.message || 'Failed to fetch daily rewards');
       }
       setData(json.data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch daily rewards');
-      console.error('Daily rewards fetch error:', err);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(message || 'Failed to fetch daily rewards');
+      console.error('Daily rewards fetch error:', err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -148,9 +150,10 @@ export function useClaimLogin() {
         throw new Error(json.error?.message || 'Failed to claim login reward');
       }
       return json.data;
-    } catch (err: any) {
-      console.error('Login claim error:', err);
-      throw new Error(err.message || 'Failed to claim login reward');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Login claim error:', err instanceof Error ? err.message : String(err));
+      throw new Error(message || 'Failed to claim login reward');
     } finally {
       setLoading(false);
     }
@@ -173,9 +176,10 @@ export function useSpin() {
         throw new Error(json.error?.message || 'Failed to spin wheel');
       }
       return json.data;
-    } catch (err: any) {
-      console.error('Spin error:', err);
-      throw new Error(err.message || 'Failed to spin wheel');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Spin error:', err instanceof Error ? err.message : String(err));
+      throw new Error(message || 'Failed to spin wheel');
     } finally {
       setLoading(false);
     }
@@ -199,9 +203,10 @@ export function useAnswerQuiz() {
         throw new Error(json.error?.message || 'Failed to submit quiz answer');
       }
       return json.data;
-    } catch (err: any) {
-      console.error('Quiz answer error:', err);
-      throw new Error(err.message || 'Failed to submit quiz answer');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Quiz answer error:', err instanceof Error ? err.message : String(err));
+      throw new Error(message || 'Failed to submit quiz answer');
     } finally {
       setLoading(false);
     }
@@ -226,9 +231,10 @@ export function useAchievements() {
           throw new Error(json.error?.message || 'Failed to fetch achievements');
         }
         setData(json.data.achievements);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch achievements');
-        console.error('Achievements fetch error:', err);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        setError(message || 'Failed to fetch achievements');
+        console.error('Achievements fetch error:', err instanceof Error ? err.message : String(err));
       } finally {
         setLoading(false);
       }
@@ -263,9 +269,10 @@ export function useUserLevel() {
           streakDays: json.data.streakDays,
           referralCode: json.data.referralCode || '',
         });
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch user tier info');
-        console.error('User tier info fetch error:', err);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        setError(message || 'Failed to fetch user tier info');
+        console.error('User tier info fetch error:', err instanceof Error ? err.message : String(err));
       } finally {
         setLoading(false);
       }

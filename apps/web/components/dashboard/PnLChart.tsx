@@ -80,7 +80,7 @@ export function PnLChart({ chartData }: PnLChartProps) {
           strokeWidth={2.5}
           fill="url(#greenGradient)"
           filter="url(#glowEffect)"
-          dot={(props: any) => {
+          dot={(props: Record<string, number | undefined | Record<string, number>>) => {
             if (!props.payload || props.payload.positive <= 0) return <g key={props.key} />;
             return (
               <circle
@@ -104,7 +104,7 @@ export function PnLChart({ chartData }: PnLChartProps) {
           strokeWidth={2.5}
           fill="url(#redGradient)"
           filter="url(#glowEffect)"
-          dot={(props: any) => {
+          dot={(props: Record<string, number | undefined | Record<string, number>>) => {
             if (!props.payload || props.payload.negative >= 0) return <g key={props.key} />;
             return (
               <circle

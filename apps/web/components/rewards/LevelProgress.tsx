@@ -1,13 +1,25 @@
 'use client';
 
-import { Star } from 'lucide-react';
+import { Star, Loader2 } from 'lucide-react';
+import { useTierInfo } from '../../hooks/useRewardsAPI';
 
 export function LevelProgress() {
-  // TODO: Fetch from API
-  const level = 12;
-  const xp = 2800;
-  const xpForNext = 3500;
-  const progress = (xp / xpForNext) * 100;
+  const { data, loading } = useTierInfo();
+
+  const level = data?.currentTier?.tier ?? 1;
+  const tierName = data?.currentTier?.name ?? 'Trader';
+  const ap = data?.analysisPoints ?? 0;
+  const apForNext = data?.nextTier?.apRequired ?? 100;
+  const progress = data?.progress ?? 0;
+  const apRemaining = data?.nextTier?.apRemaining ?? apForNext - ap;
+
+  if (loading) {
+    return (
+      <div className="bg-card rounded-lg border p-6 flex items-center justify-center min-h-[140px]">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card rounded-lg border p-6">
@@ -17,14 +29,14 @@ export function LevelProgress() {
         </div>
         <div>
           <h3 className="font-semibold">Tier {level}</h3>
-          <p className="text-sm text-muted-foreground">Trader</p>
+          <p className="text-sm text-muted-foreground">{tierName}</p>
         </div>
       </div>
 
       <div className="mb-2">
         <div className="flex justify-between text-sm mb-1">
-          <span>{xp.toLocaleString()} AP</span>
-          <span className="text-muted-foreground">{xpForNext.toLocaleString()} AP</span>
+          <span>{ap.toLocaleString()} AP</span>
+          <span className="text-muted-foreground">{apForNext.toLocaleString()} AP</span>
         </div>
         <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
           <div
@@ -35,7 +47,7 @@ export function LevelProgress() {
       </div>
 
       <div className="text-sm text-muted-foreground">
-        {xpForNext - xp} AP to Tier {level + 1}
+        {data?.nextTier ? `${apRemaining} AP to Tier ${level + 1}` : 'Max tier reached'}
       </div>
     </div>
   );

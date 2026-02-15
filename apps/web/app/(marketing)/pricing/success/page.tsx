@@ -43,8 +43,9 @@ export default function PaymentSuccessPage() {
           setRetryCount((prev) => prev + 1);
         }, 3000); // Retry every 3 seconds
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to verify payment');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(message || 'Failed to verify payment');
     } finally {
       setLoading(false);
     }

@@ -301,7 +301,7 @@ export function AnalysisDetailDrawer({ open, layer, capitalFlow, onClose }: Anal
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
-  const handleDragEnd = useCallback((_: any, info: PanInfo) => {
+  const handleDragEnd = useCallback((_: unknown, info: PanInfo) => {
     if (info.offset.y > 100 || info.velocity.y > 500) onClose();
   }, [onClose]);
 
