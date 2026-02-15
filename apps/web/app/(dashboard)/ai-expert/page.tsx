@@ -137,7 +137,6 @@ export default function AIExpertsPage() {
         }
       } catch (error) {
         // Stats are optional, don't show error
-        console.log('Expert stats not available');
       }
     };
     fetchStats();

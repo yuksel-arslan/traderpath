@@ -537,8 +537,6 @@ export default function AIExpertChatPage() {
     if (!currentAnalysisId || commentSavedRef.current) return;
 
     try {
-      console.log('Saving AI Expert comment for analysisId:', currentAnalysisId);
-
       // Find report by analysisId and save comment
       const res = await authFetch(`/api/reports/by-analysis/${currentAnalysisId}/ai-expert-comment`, {
         method: 'PATCH',
@@ -546,7 +544,6 @@ export default function AIExpertChatPage() {
       });
 
       if (res.ok) {
-        console.log('AI Expert comment saved successfully');
         setCommentSaved(true);
         commentSavedRef.current = true;
       } else {

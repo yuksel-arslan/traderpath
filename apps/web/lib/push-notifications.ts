@@ -39,7 +39,6 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   }
 
   const permission = await Notification.requestPermission();
-  console.log('[Push] Permission:', permission);
   return permission;
 }
 
@@ -56,7 +55,6 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
     const registration = await navigator.serviceWorker.register('/sw.js', {
       scope: '/',
     });
-    console.log('[Push] Service worker registered:', registration.scope);
     return registration;
   } catch (error) {
     console.error('[Push] Service worker registration failed:', error);
@@ -145,9 +143,6 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
       });
-      console.log('[Push] New subscription created');
-    } else {
-      console.log('[Push] Using existing subscription');
     }
 
     // Save subscription to server
@@ -171,7 +166,6 @@ export async function unsubscribeFromPush(): Promise<boolean> {
     if (subscription) {
       await subscription.unsubscribe();
       await removeSubscriptionFromServer();
-      console.log('[Push] Unsubscribed successfully');
       return true;
     }
 
@@ -203,7 +197,6 @@ async function saveSubscriptionToServer(subscription: PushSubscription): Promise
       throw new Error(data.error?.message || 'Failed to save subscription');
     }
 
-    console.log('[Push] Subscription saved to server');
   } catch (error) {
     console.error('[Push] Failed to save subscription:', error);
     throw error;
@@ -231,7 +224,6 @@ async function removeSubscriptionFromServer(): Promise<void> {
       throw new Error(data.error?.message || 'Failed to remove subscription');
     }
 
-    console.log('[Push] Subscription removed from server');
   } catch (error) {
     console.error('[Push] Failed to remove subscription:', error);
     throw error;
