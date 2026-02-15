@@ -416,7 +416,7 @@ export default function AnalysisDetailsPage() {
           pdfBase64,
           score: analysis.totalScore,
           direction: analysis.step5Result?.direction || analysis.step7Result?.direction || 'long',
-          verdict: step7.verdict?.toUpperCase() || 'WAIT',
+          verdict: typeof step7.verdict === 'string' ? step7.verdict.toUpperCase() : 'WAIT',
         }),
       });
 
@@ -794,7 +794,7 @@ export default function AnalysisDetailsPage() {
                   )}>{marketStatus}</span>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-slate-400">
-                  Fear & Greed: {step1.fearGreedIndex || 0} ({step1.fearGreedLabel || 'N/A'}) • BTC Dom: {step1.btcDominance?.toFixed(1) || '0'}%
+                  Fear & Greed: {step1.fearGreedIndex || 0} ({step1.fearGreedLabel || 'N/A'}) • BTC Dom: {Number(step1.btcDominance ?? 0).toFixed(1)}%
                 </p>
               </div>
 
@@ -813,7 +813,7 @@ export default function AnalysisDetailsPage() {
                   )}>{assetStatus}</span>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-slate-400">
-                  Price: {formatPrice(step2.currentPrice)} • 24h: {(step2.priceChange24h || 0) >= 0 ? '+' : ''}{step2.priceChange24h?.toFixed(2) || '0'}%
+                  Price: {formatPrice(step2.currentPrice)} • 24h: {(step2.priceChange24h || 0) >= 0 ? '+' : ''}{Number(step2.priceChange24h ?? 0).toFixed(2)}%
                 </p>
               </div>
 
