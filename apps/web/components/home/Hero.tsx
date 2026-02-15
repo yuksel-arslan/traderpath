@@ -6,13 +6,8 @@ import { TraderPathLogo } from '../common/TraderPathLogo';
 
 export function Hero() {
   return (
-    <section className="py-20 sm:py-28 md:py-36 relative overflow-hidden">
-      {/* Subtle background glow */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-teal-500/[0.03] dark:bg-teal-400/[0.04] blur-3xl" />
-      </div>
-
-      <div className="max-w-[1200px] mx-auto px-4 text-center relative">
+    <section className="py-20 sm:py-28 md:py-36">
+      <div className="max-w-[1200px] mx-auto px-4 text-center">
         {/* Large Logo */}
         <div className="flex justify-center mb-8">
           <TraderPathLogo size="xl" showText={false} animated />
@@ -59,12 +54,12 @@ export function Hero() {
             START FREE ANALYSIS
             <ArrowRight className="w-4 h-4" />
           </Link>
-          <a
-            href="#methodology"
+          <Link
+            href="/pricing"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm text-slate-500 border border-black/[0.06] dark:border-white/[0.06] rounded-sm hover:text-black dark:hover:text-white transition-colors"
           >
-            VIEW METHODOLOGY
-          </a>
+            VIEW PRICING
+          </Link>
         </div>
 
         <p className="text-[10px] font-sans text-slate-400 mt-5">
