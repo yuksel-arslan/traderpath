@@ -6,12 +6,7 @@ import { Menu, X, Sun, Moon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { TraderPathLogo } from '../common/TraderPathLogo';
 
-const NAV_LINKS = [
-  { label: 'Methodology', href: '#methodology' },
-  { label: 'Performance', href: '#performance' },
-  { label: 'Pricing', href: '#pricing' },
-  { label: 'FAQ', href: '#faq' },
-];
+const NAV_LINKS: { label: string; href: string }[] = [];
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

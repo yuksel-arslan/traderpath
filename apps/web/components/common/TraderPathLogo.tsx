@@ -76,9 +76,9 @@ export function StarLogo({
           <stop offset="100%" stopColor="#B91C1C" />
         </linearGradient>
 
-        {/* Glow filter */}
-        <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+        {/* Subtle glow filter */}
+        <filter id={glowId} x="-10%" y="-10%" width="120%" height="120%">
+          <feGaussianBlur stdDeviation="0.5" result="coloredBlur"/>
           <feMerge>
             <feMergeNode in="coloredBlur"/>
             <feMergeNode in="SourceGraphic"/>
@@ -263,7 +263,7 @@ function StarWithMorphContainer({
         style={{
           background: 'linear-gradient(135deg, #2DD4BF, #14B8A6, #F87171, #EF5A6F)',
           borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%',
-          boxShadow: '0 0 15px rgba(45, 212, 191, 0.5), 0 0 30px rgba(248, 113, 113, 0.3)',
+          boxShadow: '0 0 8px rgba(45, 212, 191, 0.3), 0 0 16px rgba(248, 113, 113, 0.15)',
           animation: animated ? 'morph 8s ease-in-out infinite' : 'none',
         }}
       />
