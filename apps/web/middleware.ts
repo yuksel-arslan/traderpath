@@ -26,8 +26,6 @@ const protectedPaths = [
   '/top-coins',
   '/notifications',
   '/terminal',
-  '/flow',
-  '/screener',
   '/trades',
 ];
 

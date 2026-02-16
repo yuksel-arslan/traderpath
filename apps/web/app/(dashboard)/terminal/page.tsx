@@ -58,13 +58,18 @@ interface MarketFlow {
   flow30d: number;
   velocity: number;
   phase: 'EARLY' | 'MID' | 'LATE' | 'EXIT';
+  daysInPhase: number;
+  rotationSignal: 'entering' | 'stable' | 'exiting' | null;
+  marketCap: string;
 }
 
 interface SectorData {
   name: string;
+  market: string;
   flow: number;
   dominance: number;
   trending: 'up' | 'down' | 'flat';
+  topAssets: string[];
 }
 
 interface ScreenerAsset {
@@ -79,6 +84,11 @@ interface ScreenerAsset {
   verdict: 'GO' | 'COND' | 'WAIT' | 'AVOID';
   direction: 'LONG' | 'SHORT' | 'NEUTRAL';
   market: string;
+  phase: 'EARLY' | 'MID' | 'LATE' | 'EXIT';
+  rsi: number;
+  macd: 'bullish' | 'bearish' | 'neutral';
+  flowScore: number;
+  analysisId?: string;
 }
 
 interface DecisionGate {
@@ -120,7 +130,12 @@ type SortDir = 'asc' | 'desc';
 // Navigation
 // ---------------------------------------------------------------------------
 
-type SectionId = 'l1' | 'l2' | 'l3' | 'l4' | 'l5' | 'l7';
+type SectionId =
+  | 'l1' | 'l2' | 'rotation' | 'l3' | 'l4'
+  | 'l5'
+  | 'step1' | 'step2' | 'step3' | 'step4' | 'step5' | 'step6' | 'step7'
+  | 'mlis1' | 'mlis2' | 'mlis3' | 'mlis4' | 'mlis5'
+  | 'l7';
 
 interface NavItem {
   id: SectionId;
@@ -139,14 +154,32 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'l1', label: 'Global Liquidity', tag: 'L1' },
       { id: 'l2', label: 'Market Flow', tag: 'L2' },
+      { id: 'rotation', label: 'Rotation Matrix', tag: 'L2' },
       { id: 'l3', label: 'Sector Activity', tag: 'L3' },
-      { id: 'l4', label: 'Verdict Engine', tag: 'L4' },
+      { id: 'l4', label: 'AI Recommendation', tag: 'L4' },
     ],
   },
   {
     title: 'Asset Analysis',
     items: [
-      { id: 'l5', label: 'Asset Screener', tag: 'L5' },
+      { id: 'l5', label: 'Asset Table', tag: '' },
+      { id: 'step1', tag: 'S1', label: 'Market Pulse' },
+      { id: 'step2', tag: 'S2', label: 'Asset Scanner' },
+      { id: 'step3', tag: 'S3', label: 'Safety Check' },
+      { id: 'step4', tag: 'S4', label: 'Timing Analysis' },
+      { id: 'step5', tag: 'S5', label: 'Trade Plan' },
+      { id: 'step6', tag: 'S6', label: 'Trap Check' },
+      { id: 'step7', tag: 'S7', label: 'Final Verdict' },
+      { id: 'mlis1', tag: 'M1', label: 'Technical' },
+      { id: 'mlis2', tag: 'M2', label: 'Momentum' },
+      { id: 'mlis3', tag: 'M3', label: 'Volatility' },
+      { id: 'mlis4', tag: 'M4', label: 'Volume' },
+      { id: 'mlis5', tag: 'M5', label: 'ML Verdict' },
+    ],
+  },
+  {
+    title: 'Visualizer',
+    items: [
       { id: 'l7', label: 'Trade Visualizer', tag: 'L7' },
     ],
   },
@@ -226,6 +259,9 @@ function mapMarketFlows(markets: any[] | null | undefined): MarketFlow[] {
     flow30d: Number(m.flow30d ?? 0),
     velocity: Number(m.flowVelocity ?? 0),
     phase: String(m.phase ?? 'MID').toUpperCase() as 'EARLY' | 'MID' | 'LATE' | 'EXIT',
+    daysInPhase: Number(m.daysInPhase ?? 0),
+    rotationSignal: m.rotationSignal || null,
+    marketCap: m.currentValue ? `$${formatNumber(m.currentValue)}` : 'N/A',
   }));
 }
 
@@ -234,14 +270,17 @@ function mapSectors(markets: any[] | null | undefined): SectorData[] {
   const sectors: SectorData[] = [];
   for (const m of markets) {
     if (!m || !Array.isArray(m.sectors)) continue;
+    const marketName = String(m.market || '').charAt(0).toUpperCase() + String(m.market || '').slice(1).toLowerCase();
     for (const s of m.sectors) {
       if (!s) continue;
-      const flow = Number(s.flow ?? s.weeklyFlow ?? 0);
+      const flow = Number(s.flow ?? s.flow7d ?? s.weeklyFlow ?? 0);
       sectors.push({
         name: String(s.name ?? ''),
+        market: marketName,
         flow,
         dominance: Number(s.dominance ?? 0),
         trending: flow > 1 ? 'up' : flow < -1 ? 'down' : 'flat',
+        topAssets: Array.isArray(s.topAssets) ? s.topAssets : [],
       });
     }
   }
@@ -273,6 +312,11 @@ function mapScreenerAssets(items: any[] | null | undefined): ScreenerAsset[] {
       verdict: (['GO', 'COND', 'WAIT', 'AVOID'].includes(verdict) ? verdict : 'WAIT') as ScreenerAsset['verdict'],
       direction: (['LONG', 'SHORT', 'NEUTRAL'].includes(dir) ? dir : 'NEUTRAL') as ScreenerAsset['direction'],
       market: String(item.market ?? item.assetClass ?? 'Crypto'),
+      phase: String(item.phase ?? 'MID').toUpperCase() as ScreenerAsset['phase'],
+      rsi: Number(item.rsi ?? 50),
+      macd: String(item.macd ?? 'neutral') as ScreenerAsset['macd'],
+      flowScore: Number(item.flowScore ?? 50),
+      analysisId: item.analysisId ? String(item.analysisId) : undefined,
     };
   });
 }
@@ -608,20 +652,56 @@ function L2MarketFlow({ flows, interpretation }: { flows: MarketFlow[]; interpre
 // L3: Sector Activity
 // ---------------------------------------------------------------------------
 
-function L3Sectors({ sectors }: { sectors: SectorData[] }) {
+function L3Sectors({ sectors, marketFilter, setMarketFilter }: { sectors: SectorData[]; marketFilter: string; setMarketFilter: (f: string) => void }) {
+  const filtered = useMemo(() => {
+    if (marketFilter === 'All') return sectors;
+    return sectors.filter((s) => s.market === marketFilter);
+  }, [sectors, marketFilter]);
+
+  const markets = ['All', 'Crypto', 'Stocks', 'Metals', 'Bonds'];
+
   return (
     <section>
-      <SectionLabel layer="L3" label="Sector Activity" count={sectors.length} />
+      <SectionLabel layer="L3" label="Sector Activity" count={filtered.length} />
+
+      {/* Market filter */}
+      <div className="flex gap-px bg-neutral-200 dark:bg-neutral-800 rounded-sm overflow-hidden w-max mb-3">
+        {markets.map((m) => (
+          <button
+            key={m}
+            onClick={() => setMarketFilter(m)}
+            className={cn(
+              'px-2.5 py-1.5 text-[10px] font-sans uppercase tracking-wider transition-colors min-w-[48px]',
+              marketFilter === m
+                ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
+                : 'bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white',
+            )}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
+
       <div className="space-y-1.5">
-        {sectors.map((s) => (
+        {filtered.map((s) => (
           <div key={s.name} className="rounded-xl px-3 py-2.5 flex items-center gap-3 text-xs hover:bg-neutral-50 dark:hover:bg-white/[0.03] transition-colors">
-            <div className="min-w-0 flex-1 font-medium text-neutral-900 dark:text-white">{s.name}</div>
+            <div className="min-w-0 flex-1">
+              <div className="font-medium text-neutral-900 dark:text-white">{s.name}</div>
+              <div className="text-[10px] text-neutral-400 dark:text-neutral-500 font-sans">{s.market}</div>
+            </div>
             <div className="shrink-0"><Delta value={s.flow} /></div>
             <span className="font-sans text-neutral-500 dark:text-neutral-400 tabular-nums shrink-0 w-12 text-right">{s.dominance.toFixed(1)}%</span>
             <div className="shrink-0">
               {s.trending === 'up' && <ArrowUpRight className="w-3.5 h-3.5 text-[#22C55E] dark:text-[#4ADE80]" />}
               {s.trending === 'down' && <ArrowDownRight className="w-3.5 h-3.5 text-[#EF4444] dark:text-[#F87171]" />}
               {s.trending === 'flat' && <Minus className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500" />}
+            </div>
+            <div className="flex gap-1 hidden md:flex shrink-0">
+              {s.topAssets.map((a) => (
+                <span key={a} className="px-1 py-0.5 text-[10px] font-sans bg-neutral-100 dark:bg-neutral-800 rounded text-neutral-600 dark:text-neutral-400">
+                  {a}
+                </span>
+              ))}
             </div>
           </div>
         ))}
@@ -633,7 +713,7 @@ function L3Sectors({ sectors }: { sectors: SectorData[] }) {
           Leading
         </span>
         <div className="flex flex-wrap gap-1">
-          {sectors.filter((s) => s.trending === 'up').map((s) => (
+          {filtered.filter((s) => s.trending === 'up').map((s) => (
             <span
               key={s.name}
               className="px-1.5 py-0.5 text-[10px] font-sans border border-[#22C55E]/20 dark:border-[#4ADE80]/20 text-[#22C55E] dark:text-[#4ADE80] rounded"
@@ -641,6 +721,70 @@ function L3Sectors({ sectors }: { sectors: SectorData[] }) {
               {s.name} +{s.flow.toFixed(1)}%
             </span>
           ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// L2: Rotation Matrix
+// ---------------------------------------------------------------------------
+
+function RotationMatrix({ flows }: { flows: MarketFlow[] }) {
+  return (
+    <section>
+      <SectionLabel layer="L2" label="Rotation Matrix" />
+      <div className="rounded-xl bg-neutral-50 dark:bg-white/[0.02] p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {flows.map((f) => {
+            const isActive = f.rotationSignal === 'entering';
+            const isExiting = f.rotationSignal === 'exiting';
+            return (
+              <div key={f.market} className="text-center">
+                <div className={cn(
+                  'w-12 h-12 mx-auto rounded-full border-2 flex items-center justify-center mb-1.5 transition-all',
+                  isActive
+                    ? 'border-[#22C55E] dark:border-[#4ADE80] bg-[#22C55E]/5 dark:bg-[#4ADE80]/5'
+                    : isExiting
+                    ? 'border-[#EF4444] dark:border-[#F87171] bg-[#EF4444]/5 dark:bg-[#F87171]/5'
+                    : 'border-neutral-200 dark:border-neutral-700',
+                )}>
+                  <span className={cn(
+                    'text-lg font-sans font-bold tabular-nums',
+                    isActive ? 'text-[#22C55E] dark:text-[#4ADE80]'
+                    : isExiting ? 'text-[#EF4444] dark:text-[#F87171]'
+                    : 'text-neutral-400 dark:text-neutral-500',
+                  )}>
+                    {f.flow7d > 0 ? '+' : ''}{f.flow7d.toFixed(0)}
+                  </span>
+                </div>
+                <span className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400">{f.market}</span>
+                {f.rotationSignal && (
+                  <div className={cn(
+                    'text-[9px] font-sans uppercase tracking-wider mt-0.5',
+                    isActive ? 'text-[#22C55E] dark:text-[#4ADE80]'
+                    : isExiting ? 'text-[#EF4444] dark:text-[#F87171]'
+                    : 'text-neutral-400 dark:text-neutral-500',
+                  )}>
+                    {f.rotationSignal === 'entering' ? '↗ Entering' : f.rotationSignal === 'exiting' ? '↘ Exiting' : '→ Stable'}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800/50">
+          <div className="flex items-center justify-between text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
+            {flows.map((f) => (
+              <div key={f.market} className="text-center">
+                <span>{f.market}</span>
+                <div className="mt-0.5">
+                  <PhaseBadge phase={f.phase} />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -726,7 +870,7 @@ function L4VerdictEngine({ verdict }: { verdict: VerdictData }) {
 
   return (
     <section>
-      <SectionLabel layer="L4" label="Verdict Engine" />
+      <SectionLabel layer="L4" label="AI Recommendation" />
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
         {/* Regime bar */}
         <div className="px-3 py-2 flex items-center justify-between">
@@ -1002,6 +1146,174 @@ function L5Screener({
         )}
       </div>
     </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 7-Step Analysis Panels (S1–S7)
+// ---------------------------------------------------------------------------
+
+interface StepData {
+  score: number;
+  status: 'pass' | 'warn' | 'fail';
+  summary: string;
+  details: string[];
+}
+
+function getStepData(asset: ScreenerAsset, stepId: string): StepData {
+  const s = asset.aiScore / 10; // convert 0-100 back to 0-10
+  const statusOf = (threshold: number) => s >= threshold ? 'pass' as const : s >= threshold - 2 ? 'warn' as const : 'fail' as const;
+  const vol = asset.volume > 1e9 ? 'Strong' : asset.volume > 1e6 ? 'Moderate' : 'Low';
+
+  switch (stepId) {
+    case 'step1': return { score: s, status: statusOf(7), summary: 'Global macro conditions and liquidity bias.', details: [`Phase: ${asset.phase}`, `Flow score: ${asset.flowScore.toFixed(0)}`, `Market: ${asset.market}`, asset.analysisId ? 'View full analysis for macro detail' : 'Run analysis for full macro data'] };
+    case 'step2': return { score: s, status: statusOf(7), summary: 'Technical structure and trend alignment.', details: [`RSI: ${asset.rsi.toFixed(1)}`, `MACD: ${asset.macd}`, `Direction: ${asset.direction}`, `Volume: ${vol}`] };
+    case 'step3': return { score: s, status: statusOf(6), summary: 'Order book depth and liquidity assessment.', details: [`Volume: $${formatNumber(asset.volume)}`, `Liquidity: ${asset.volume > 1e9 ? 'Deep' : asset.volume > 1e7 ? 'Adequate' : 'Thin'}`, asset.market === 'Crypto' ? 'Order book available for crypto' : 'Order book N/A for non-crypto', asset.analysisId ? 'View full analysis for depth data' : 'Run analysis for full depth data'] };
+    case 'step4': return { score: s, status: asset.phase === 'EARLY' || asset.phase === 'MID' ? 'pass' : 'warn', summary: 'Entry timing and phase check.', details: [`Phase: ${asset.phase}`, `Flow score: ${asset.flowScore.toFixed(0)}`, `Timing: ${asset.phase === 'EARLY' ? 'Optimal' : asset.phase === 'MID' ? 'Acceptable' : 'Caution'}`, `24h change: ${asset.change24h >= 0 ? '+' : ''}${asset.change24h.toFixed(2)}%`] };
+    case 'step5': return { score: s, status: statusOf(7), summary: 'Trade plan direction and levels.', details: [`Direction: ${asset.direction}`, `Price: ${formatPrice(asset.price)}`, `Verdict: ${asset.verdict}`, asset.analysisId ? 'View full analysis for entry/SL/TP levels' : 'Run analysis for trade plan'] };
+    case 'step6': return { score: s, status: statusOf(6), summary: 'Trap detection and divergence check.', details: [`MACD: ${asset.macd}`, `RSI: ${asset.rsi.toFixed(1)}`, `Volume: ${vol}`, asset.analysisId ? 'View full analysis for trap details' : 'Run analysis for trap detection'] };
+    case 'step7': return { score: s, status: statusOf(7), summary: `Final verdict: ${asset.verdict}. Direction: ${asset.direction}.`, details: [`Overall Score: ${s.toFixed(1)}/10`, `Verdict: ${asset.verdict}`, `Phase: ${asset.phase}`, `24h: ${asset.change24h >= 0 ? '+' : ''}${asset.change24h.toFixed(2)}%`] };
+    default: return { score: 5, status: 'warn', summary: 'No data', details: [] };
+  }
+}
+
+function StepPanel({ asset, stepId }: { asset: ScreenerAsset; stepId: string }) {
+  const data = getStepData(asset, stepId);
+  const stepNum = stepId.replace('step', '');
+  const stepNames: Record<string, string> = {
+    step1: 'Market Pulse', step2: 'Asset Scanner', step3: 'Safety Check',
+    step4: 'Timing Analysis', step5: 'Trade Plan', step6: 'Trap Check', step7: 'Final Verdict',
+  };
+
+  const statusBg = (s: string) => s === 'pass' ? 'bg-[#22C55E]/10 dark:bg-[#4ADE80]/10' : s === 'warn' ? 'bg-[#F59E0B]/10' : 'bg-[#EF4444]/10';
+  const statusClr = (s: string) => s === 'pass' ? 'text-[#22C55E] dark:text-[#4ADE80]' : s === 'warn' ? 'text-[#F59E0B] dark:text-[#FBBF24]' : 'text-[#EF4444] dark:text-[#F87171]';
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] font-sans text-[#14B8A6] dark:text-[#5EEAD4] bg-[#14B8A6]/10 dark:bg-[#5EEAD4]/10 px-1.5 py-0.5 rounded">S{stepNum}</span>
+          <h3 className="text-sm font-sans font-semibold">{stepNames[stepId]}</h3>
+        </div>
+        <div className={cn('flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-sans font-semibold', statusBg(data.status), statusClr(data.status))}>
+          {data.status === 'pass' ? 'PASS' : data.status === 'warn' ? 'WARN' : 'FAIL'}
+          <span className="text-[9px] opacity-70">{data.score.toFixed(1)}</span>
+        </div>
+      </div>
+      <p className="text-xs text-neutral-500 dark:text-neutral-400">{data.summary}</p>
+      <div className="space-y-1.5">
+        {data.details.map((d, i) => (
+          <div key={i} className="flex items-center gap-2 text-[11px] font-sans">
+            <span className="text-neutral-300 dark:text-neutral-600">&middot;</span>
+            <span className="text-neutral-600 dark:text-neutral-300">{d}</span>
+          </div>
+        ))}
+      </div>
+      <div className="pt-2">
+        <div className="flex items-center justify-between text-[10px] font-sans mb-1">
+          <span className="text-neutral-400">Score</span>
+          <span className={statusClr(data.status)}>{data.score.toFixed(1)}/10</span>
+        </div>
+        <div className="w-full h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
+          <div className={cn('h-full rounded-full transition-all', data.status === 'pass' ? 'bg-[#22C55E] dark:bg-[#4ADE80]' : data.status === 'warn' ? 'bg-[#F59E0B]' : 'bg-[#EF4444]')} style={{ width: `${(data.score / 10) * 100}%` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MLIS 5-Layer Panels (M1–M5)
+// ---------------------------------------------------------------------------
+
+interface MLISLayerData {
+  score: number;
+  signal: 'bullish' | 'bearish' | 'neutral';
+  confidence: number;
+  details: string[];
+}
+
+function getMLISData(asset: ScreenerAsset, layerId: string): MLISLayerData {
+  const s = asset.aiScore / 10;
+  const signalOf = (threshold: number): 'bullish' | 'bearish' | 'neutral' => s >= threshold ? 'bullish' : s >= threshold - 2 ? 'neutral' : 'bearish';
+  const conf = Math.min(95, Math.round(s * 10));
+
+  switch (layerId) {
+    case 'mlis1': return { score: Math.min(100, Math.round(s * 10)), signal: signalOf(7), confidence: conf, details: [`RSI: ${asset.rsi.toFixed(1)}`, `MACD: ${asset.macd}`, `Direction: ${asset.direction}`, asset.analysisId ? 'View full analysis for indicator detail' : 'Run analysis for ML detail'] };
+    case 'mlis2': return { score: Math.min(100, Math.round(s * 10)), signal: asset.macd === 'bullish' ? 'bullish' : asset.macd === 'bearish' ? 'bearish' : 'neutral', confidence: conf, details: [`MACD: ${asset.macd}`, `RSI: ${asset.rsi.toFixed(1)}`, `Momentum: ${asset.change24h >= 0 ? 'Positive' : 'Negative'}`, `24h change: ${asset.change24h >= 0 ? '+' : ''}${asset.change24h.toFixed(2)}%`] };
+    case 'mlis3': return { score: Math.min(100, Math.round(s * 10)), signal: signalOf(6), confidence: conf, details: [`Volume: $${formatNumber(asset.volume)}`, `Phase: ${asset.phase}`, `24h change: ${Math.abs(asset.change24h).toFixed(2)}%`, asset.analysisId ? 'View full analysis for volatility data' : 'Run analysis for volatility detail'] };
+    case 'mlis4': return { score: Math.min(100, Math.round(s * 10)), signal: asset.volume > 1e9 ? 'bullish' : 'neutral', confidence: conf, details: [`Volume: $${formatNumber(asset.volume)}`, `Volume profile: ${asset.volume > 1e9 ? 'Strong' : asset.volume > 1e7 ? 'Moderate' : 'Weak'}`, `Flow score: ${asset.flowScore.toFixed(0)}`, `Market: ${asset.market}`] };
+    case 'mlis5': return { score: Math.min(100, Math.round(s * 10)), signal: signalOf(7), confidence: conf, details: [`Verdict: ${asset.verdict}`, `Score: ${s.toFixed(1)}/10`, `Direction: ${asset.direction}`, `Phase: ${asset.phase}`] };
+    default: return { score: 50, signal: 'neutral', confidence: 50, details: [] };
+  }
+}
+
+function MLISPanel({ asset, layerId }: { asset: ScreenerAsset; layerId: string }) {
+  const data = getMLISData(asset, layerId);
+  const layerNum = layerId.replace('mlis', '');
+  const layerNames: Record<string, string> = {
+    mlis1: 'Technical Layer', mlis2: 'Momentum Layer', mlis3: 'Volatility Layer',
+    mlis4: 'Volume Layer', mlis5: 'ML Verdict',
+  };
+
+  const signalClr = (s: string) => s === 'bullish' ? 'text-[#22C55E] dark:text-[#4ADE80]' : s === 'bearish' ? 'text-[#EF4444] dark:text-[#F87171]' : 'text-neutral-500 dark:text-neutral-400';
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] font-sans text-violet-500 dark:text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded">M{layerNum}</span>
+          <h3 className="text-sm font-sans font-semibold">{layerNames[layerId]}</h3>
+        </div>
+        <div className={cn('flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-sans font-semibold uppercase', signalClr(data.signal))}>
+          {data.signal}
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="text-[10px] font-sans text-neutral-400">Confidence</div>
+        <div className="flex-1 h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
+          <div className="h-full rounded-full bg-violet-500 dark:bg-violet-400 transition-all" style={{ width: `${data.confidence}%` }} />
+        </div>
+        <div className="text-[10px] font-sans font-semibold text-violet-500 dark:text-violet-400">{data.confidence}%</div>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="text-[10px] font-sans text-neutral-400">Score</div>
+        <div className="flex-1 h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
+          <div className={cn('h-full rounded-full transition-all', data.signal === 'bullish' ? 'bg-[#22C55E] dark:bg-[#4ADE80]' : data.signal === 'bearish' ? 'bg-[#EF4444]' : 'bg-neutral-400')} style={{ width: `${data.score}%` }} />
+        </div>
+        <div className={cn('text-[10px] font-sans font-semibold', signalClr(data.signal))}>{data.score}</div>
+      </div>
+      <div className="space-y-1.5 pt-1">
+        {data.details.map((d, i) => (
+          <div key={i} className="flex items-center gap-2 text-[11px] font-sans">
+            <span className="text-neutral-300 dark:text-neutral-600">&middot;</span>
+            <span className="text-neutral-600 dark:text-neutral-300">{d}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Asset Context Bar (for Step/MLIS panels)
+// ---------------------------------------------------------------------------
+
+function AssetContextBar({ asset, isMLIS }: { asset: ScreenerAsset; isMLIS?: boolean }) {
+  return (
+    <div className="flex items-center gap-2 mb-4 pb-3 border-b border-black/[0.06] dark:border-white/[0.06]">
+      <span className="text-xs font-sans font-semibold">{asset.symbol}</span>
+      <span className="text-[10px] text-neutral-400">{asset.name}</span>
+      <span className="text-neutral-300 dark:text-neutral-600">›</span>
+      {isMLIS ? (
+        <span className="text-[10px] font-sans text-violet-500 dark:text-violet-400 font-semibold">MLIS Pro</span>
+      ) : (
+        <>
+          <VerdictBadgeSmall verdict={asset.verdict} />
+          <span className="text-[10px] font-sans tabular-nums text-neutral-500">{(asset.aiScore / 10).toFixed(1)}/10</span>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -1438,6 +1750,8 @@ function ContentPanel({
   onAssetSelect,
   l1Interpretation,
   l2Interpretation,
+  marketFilter,
+  setMarketFilter,
 }: {
   activeSection: SectionId;
   macroMetrics: MacroMetric[];
@@ -1450,14 +1764,60 @@ function ContentPanel({
   onAssetSelect: (asset: ScreenerAsset) => void;
   l1Interpretation?: string;
   l2Interpretation?: string;
+  marketFilter: string;
+  setMarketFilter: (f: string) => void;
 }) {
+  // Step panels (S1-S7)
+  if (activeSection.startsWith('step')) {
+    if (!selectedAsset) {
+      return (
+        <section>
+          <SectionLabel layer={activeSection.replace('step', 'S')} label={({ step1: 'Market Pulse', step2: 'Asset Scanner', step3: 'Safety Check', step4: 'Timing Analysis', step5: 'Trade Plan', step6: 'Trap Check', step7: 'Final Verdict' } as Record<string, string>)[activeSection] || ''} />
+          <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 p-8 text-center">
+            <Eye className="w-5 h-5 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
+            <p className="text-xs font-sans text-neutral-400 dark:text-neutral-500">Select an asset from the Asset Table first</p>
+          </div>
+        </section>
+      );
+    }
+    return (
+      <section>
+        <AssetContextBar asset={selectedAsset} />
+        <StepPanel asset={selectedAsset} stepId={activeSection} />
+      </section>
+    );
+  }
+
+  // MLIS panels (M1-M5)
+  if (activeSection.startsWith('mlis')) {
+    if (!selectedAsset) {
+      return (
+        <section>
+          <SectionLabel layer={activeSection.replace('mlis', 'M')} label={({ mlis1: 'Technical', mlis2: 'Momentum', mlis3: 'Volatility', mlis4: 'Volume', mlis5: 'ML Verdict' } as Record<string, string>)[activeSection] || ''} />
+          <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 p-8 text-center">
+            <Eye className="w-5 h-5 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
+            <p className="text-xs font-sans text-neutral-400 dark:text-neutral-500">Select an asset from the Asset Table first</p>
+          </div>
+        </section>
+      );
+    }
+    return (
+      <section>
+        <AssetContextBar asset={selectedAsset} isMLIS />
+        <MLISPanel asset={selectedAsset} layerId={activeSection} />
+      </section>
+    );
+  }
+
   switch (activeSection) {
     case 'l1':
       return <L1MacroGrid metrics={macroMetrics} interpretation={l1Interpretation} />;
     case 'l2':
       return <L2MarketFlow flows={marketFlows} interpretation={l2Interpretation} />;
+    case 'rotation':
+      return <RotationMatrix flows={marketFlows} />;
     case 'l3':
-      return <L3Sectors sectors={sectors} />;
+      return <L3Sectors sectors={sectors} marketFilter={marketFilter} setMarketFilter={setMarketFilter} />;
     case 'l4':
       return <L4VerdictEngine verdict={verdict} />;
     case 'l5':
@@ -1497,6 +1857,7 @@ export default function TestPage() {
 
   // Navigation
   const [activeSection, setActiveSection] = useState<SectionId>('l1');
+  const [marketFilter, setMarketFilter] = useState('All');
 
   // Fetch Capital Flow + Top Coins on mount
   useEffect(() => {
@@ -1638,6 +1999,13 @@ export default function TestPage() {
                 <div className="space-y-0.5">
                   {group.items.map((item) => {
                     const isActive = activeSection === item.id;
+                    const isMLIS = item.id.startsWith('mlis');
+                    const accentBorder = isMLIS
+                      ? 'border-violet-500 dark:border-violet-400'
+                      : 'border-[#14B8A6] dark:border-[#5EEAD4]';
+                    const accentText = isMLIS
+                      ? 'text-violet-500 dark:text-violet-400'
+                      : 'text-[#14B8A6] dark:text-[#5EEAD4]';
                     return (
                       <button
                         key={item.id}
@@ -1645,7 +2013,7 @@ export default function TestPage() {
                         className={cn(
                           'w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-left transition-all duration-150',
                           isActive
-                            ? 'bg-neutral-100 dark:bg-neutral-900/50 border-l-2 border-[#14B8A6] dark:border-[#5EEAD4] -ml-px'
+                            ? cn('bg-neutral-100 dark:bg-neutral-900/50 border-l-2 -ml-px', accentBorder)
                             : 'border-l-2 border-transparent hover:bg-neutral-50 dark:hover:bg-neutral-900/20 -ml-px',
                         )}
                       >
@@ -1653,7 +2021,7 @@ export default function TestPage() {
                           <span className={cn(
                             'text-[9px] font-sans tabular-nums w-4 shrink-0',
                             isActive
-                              ? 'text-[#14B8A6] dark:text-[#5EEAD4]'
+                              ? accentText
                               : 'text-neutral-400 dark:text-neutral-600',
                           )}>
                             {item.tag}
@@ -1714,6 +2082,8 @@ export default function TestPage() {
               onAssetSelect={handleAssetSelect}
               l1Interpretation={l1Interpretation}
               l2Interpretation={l2Interpretation}
+              marketFilter={marketFilter}
+              setMarketFilter={setMarketFilter}
             />
           </main>
         </div>

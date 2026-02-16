@@ -26,8 +26,6 @@ import {
   ShieldAlert,
   Sparkles,
   Monitor,
-  Waves,
-  SlidersHorizontal,
   BarChart3,
   FlaskConical,
 } from 'lucide-react';
@@ -46,8 +44,6 @@ const PriceTicker = dynamic(
 // Primary navigation - Top-Down Methodology Flow (L1→L7)
 const directNav = [
   { name: 'Terminal', href: '/terminal', icon: Monitor },
-  { name: 'Flow', href: '/flow', icon: Waves },
-  { name: 'Screener', href: '/screener', icon: SlidersHorizontal },
   { name: 'Analyze', href: '/analyze', icon: BarChart3 },
   { name: 'Signals', href: '/signals', icon: Activity },
   { name: 'Trades', href: '/trades', icon: TrendingUp },
