@@ -664,6 +664,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-16 | Trade Visualizer her asset için aynı mock grafiği gösteriyordu | API response `{ data: { candles: [...] } }` döndürüyordu ama frontend `json?.data` ile objenin kendisini alıyordu (dizi değil). `Array.isArray(raw)` her zaman `false` olduğu için her seferinde flat synthetic fallback verileri üretiliyordu. Fix: `json?.data?.candles` olarak düzeltildi | `terminal/page.tsx:1908` |
 | 2026-02-16 | Market Pulse HTTP 451 hatası - analiz başlatılamıyordu | **3 katmanlı fix**: 1) `fetch24hTicker()`, `fetchKlines()`, `fetchOrderBook()`, `fetchRecentTrades()` hata durumunda throw ediyordu → try-catch ile fallback döndürüyor, 2) `multi-asset-data-provider.ts`'de crypto için Binance → Yahoo Finance otomatik fallback eklendi: `fetchCandles()` ve `fetchTicker()` Binance başarısız olunca (HTTP 451 geo-block) `cryptoToYahooSymbol()` ile Yahoo Finance'e yönlendiriyor (BTC→BTC-USD), 3) Böylece gerçek fiyat verisi alınıyor (price:0 yerine). `fetchOrderBook()` ve `fetchRecentTrades()` Binance'e özel olduğu için sadece fallback (Yahoo'da eşdeğeri yok) | `analysis.engine.ts`, `multi-asset-data-provider.ts` |
 | 2026-02-07 | API timeout - sistem zaman aşımına uğruyordu (6 kök neden) | **1) 3 duplicate PrismaClient instance** connection pool'u tüketiyordu (coin-score-cache, multi-asset-score-cache, asset-logos). **2) Server startup blocking** - `startOutcomeTracker()` ve `initializeAssetLogos()` await ediliyordu, external API'ler yanıt vermezse server hiç başlamıyordu. **3) Binance ticker fetch timeout eksik** - `binance.provider.ts:213`'te AbortSignal.timeout yoktu. **4) Prisma query timeout yok** - hiçbir DB sorgusu timeout'a sahip değildi, tek bir yavaş sorgu tüm pool'u bloke edebilirdi. **5) Polling job'lar overlap** - 30s/15s interval job'lar önceki çalışma bitmeden tekrar tetikleniyordu, DB bağlantıları birikiyordu. **6) Auth middleware P2022 hata yönetimi eksik** - missing column hatası tüm auth'u kırıyordu. **Fix**: 1) Tüm duplicate PrismaClient kaldırıldı → singleton import, 2) Startup non-blocking yapıldı (fire-and-forget + timeout), 3) Binance fetch'e 10s timeout eklendi, 4) Prisma middleware ile 15s query timeout + slow query log eklendi, 5) Overlap guard flag'leri + withTimeout wrapper'ları eklendi, 6) Auth middleware'e P2022 fallback eklendi, duplicate decorator kaldırılıp jwt-middleware'e delege edildi | `database.ts`, `index.ts`, `jwt-middleware.ts`, `binance.provider.ts`, `coin-score-cache.service.ts`, `multi-asset-score-cache.service.ts`, `asset-logos.service.ts`, `schema.prisma` |
+| 2026-02-16 | Binance HTTP 451 geo-block tüm analizleri kırıyordu (Railway EUR bölgesine taşındığında) | **Circuit Breaker pattern eklendi**: 1) İlk 451 hatasında tüm Binance çağrıları 5 dakika boyunca otomatik atlanıyor (Yahoo Finance fallback), 2) `multi-asset-data-provider.ts`: `isBinanceBlocked()`, `tripBinanceCircuitBreaker()`, `isBinanceAvailable()` export, `fetchWithRetry` 451/418/403'te retry yapmıyor, `fetchCandles` catch'te throw yerine `return []`, 3) `analysis.engine.ts`: 7 direct Binance fonksiyonuna (`fetchOrderBook`, `fetchRecentTrades`, `fetchFundingRate`, `fetchOpenInterest`, `fetchLongShortRatio`, `fetchTopTraderSentiment`, `fetchTakerBuySellRatio`) circuit breaker guard eklendi - Binance blocked ise fallback döndürüyor, 4) `analysis.routes.ts`: `/indicator-charts/:symbol` endpoint direct Binance çağrısı kaldırıldı → `fetchCandles()` multi-asset provider kullanılıyor | `multi-asset-data-provider.ts`, `analysis.engine.ts`, `analysis.routes.ts` |
 
 ---
 
@@ -2249,6 +2250,14 @@ Kullanıcı Hakları Aktif:
   - Dosya: `apps/web/app/(dashboard)/layout.tsx`
 
 ### 2026-02-16
+- **Binance Circuit Breaker (HTTP 451 Geo-Block Fix)**:
+  - Railway EUR bölgesine taşındığında Binance tüm istekleri 451 ile reddediyordu
+  - ~20 Binance çağrısı × 3 retry × 3-7s = 40-60+ saniye timeout → analiz başarısız
+  - **Circuit Breaker Pattern**: İlk 451'de tüm Binance çağrıları 5 dakika boyunca otomatik skip
+  - `multi-asset-data-provider.ts`: Circuit breaker state, `isBinanceAvailable()` export
+  - `analysis.engine.ts`: 7 direct Binance fonksiyonuna guard eklendi (fallback döndürüyor)
+  - `analysis.routes.ts`: `/indicator-charts/:symbol` endpoint multi-asset provider kullanıyor (direkt Binance kaldırıldı)
+  - Dosyalar: `multi-asset-data-provider.ts`, `analysis.engine.ts`, `analysis.routes.ts`
 - **Analysis Engine Deep Audit - 15 Runtime Bug Düzeltildi**:
   - **analysis.engine.ts** (10 bug):
     - CRITICAL: `riskAmount=0` → `Infinity` propagation (trade plan R:R)

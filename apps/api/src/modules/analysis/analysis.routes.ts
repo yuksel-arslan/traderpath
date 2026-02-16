@@ -2632,53 +2632,17 @@ Explain the key risks and what conditions would need to change before trading th
       const tradeType = (request.query.tradeType || 'dayTrade') as TradeType;
       const timeframe = request.query.timeframe || '4h';
 
-      // Map timeframe to Binance interval
-      const intervalMap: Record<string, string> = {
-        '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
-        '1h': '1h', '4h': '4h', '1d': '1d', '1w': '1w'
-      };
-      const interval = intervalMap[timeframe] || '4h';
+      const interval = timeframe || '4h';
 
-      // Fetch kline data from Binance (500 candles for good chart data)
-      const response = await fetch(
-        `https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}USDT&interval=${interval}&limit=500`
-      );
+      // Fetch candles using multi-asset provider (handles Binance + Yahoo Finance fallback)
+      const ohlcv = await fetchCandles(symbol, interval, 500);
 
-      if (!response.ok) {
+      if (!ohlcv || ohlcv.length === 0) {
         return reply.status(400).send({
           success: false,
           error: { code: 'FETCH_ERROR', message: 'Failed to fetch market data' }
         });
       }
-
-      // Safely parse JSON response
-      const responseText = await response.text();
-      if (!responseText || responseText.trim() === '') {
-        return reply.status(400).send({
-          success: false,
-          error: { code: 'EMPTY_RESPONSE', message: 'Empty response from Binance API' }
-        });
-      }
-
-      let klines: (string | number)[][];
-      try {
-        klines = JSON.parse(responseText);
-      } catch {
-        return reply.status(400).send({
-          success: false,
-          error: { code: 'PARSE_ERROR', message: 'Invalid JSON response from Binance API' }
-        });
-      }
-
-      // Convert Binance klines to OHLCV format
-      const ohlcv = klines.map((k: (string | number)[]) => ({
-        timestamp: Number(k[0]),
-        open: parseFloat(k[1] as string),
-        high: parseFloat(k[2] as string),
-        low: parseFloat(k[3] as string),
-        close: parseFloat(k[4] as string),
-        volume: parseFloat(k[5] as string),
-      }));
 
       // Define indicators per step based on trade type (40+ indicators total)
       // Trade type specific configurations with different periods and indicator focus
