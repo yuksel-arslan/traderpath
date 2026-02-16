@@ -386,7 +386,8 @@ export class MLISService {
     const willROS = thresholds?.williamsROversold ?? -80;
 
     if (thresholds) {
-      signals.push(`Regime: ${thresholds.regime} (factor: ${thresholds.regimeFactor.toFixed(2)})`);
+      const factor = isNaN(thresholds.regimeFactor) ? 1.0 : thresholds.regimeFactor;
+      signals.push(`Regime: ${thresholds.regime} (factor: ${factor.toFixed(2)})`);
     }
 
     // RSI Analysis with adaptive thresholds

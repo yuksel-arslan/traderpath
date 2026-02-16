@@ -790,9 +790,10 @@ Include specific price levels and actionable insights.
         return `Neutral at ${value.toFixed(1)} - No extreme conditions`;
       },
       'MACD': () => {
-        const histogram = result.metadata?.histogram as number;
+        const histogram = Number(result.metadata?.histogram ?? 0);
+        if (isNaN(histogram)) return 'MACD data unavailable';
         if (histogram > 0) return `Bullish momentum - Histogram positive at ${histogram.toFixed(4)}`;
-        return `Bearish momentum - Histogram negative at ${histogram?.toFixed(4) || 0}`;
+        return `Bearish momentum - Histogram negative at ${histogram.toFixed(4)}`;
       },
       'ADX': () => {
         if (value === null) return 'Data insufficient';
@@ -805,13 +806,15 @@ Include specific price levels and actionable insights.
         : 'Downtrend confirmed - Price below Supertrend line',
       'BOLLINGER': () => {
         const percentB = result.metadata?.percentB as number;
+        if (percentB == null || isNaN(percentB)) return 'Bollinger band data unavailable';
         if (percentB > 1) return 'Price above upper band - Overbought/Strong breakout';
         if (percentB < 0) return 'Price below lower band - Oversold/Breakdown';
         return `Price within bands at ${(percentB * 100).toFixed(0)}% position`;
       },
       'ATR': () => {
-        const atrPercent = result.metadata?.atrPercent as number;
-        return `Volatility at ${atrPercent?.toFixed(2) || 0}% - ${atrPercent > 3 ? 'High' : atrPercent > 1.5 ? 'Moderate' : 'Low'} volatility`;
+        const atrPercent = Number(result.metadata?.atrPercent ?? 0);
+        if (isNaN(atrPercent)) return 'ATR data unavailable';
+        return `Volatility at ${atrPercent.toFixed(2)}% - ${atrPercent > 3 ? 'High' : atrPercent > 1.5 ? 'Moderate' : 'Low'} volatility`;
       },
       'VWAP': () => signal === 'bullish'
         ? 'Price above VWAP - Bullish intraday bias'
@@ -821,6 +824,7 @@ Include specific price levels and actionable insights.
         : 'Volume supporting downward moves - Distribution detected',
       'STOCHASTIC': () => {
         const k = result.metadata?.k as number;
+        if (k == null || isNaN(k)) return 'Stochastic data unavailable';
         if (k > 80) return 'Overbought zone - Momentum extended';
         if (k < 20) return 'Oversold zone - Momentum compressed';
         return 'Neutral momentum zone';

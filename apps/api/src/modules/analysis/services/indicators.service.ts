@@ -67,11 +67,11 @@ function std(arr: number[]): number {
 }
 
 function max(arr: number[]): number {
-  return Math.max(...arr);
+  return arr.length > 0 ? Math.max(...arr) : 0;
 }
 
 function min(arr: number[]): number {
-  return Math.min(...arr);
+  return arr.length > 0 ? Math.min(...arr) : 0;
 }
 
 function typicalPrice(candle: OHLCV): number {
@@ -125,7 +125,7 @@ export class IndicatorsService {
       value: currentEma,
       values: emaValues,
       signal: currentPrice > currentEma ? 'bullish' : 'bearish',
-      strength: Math.abs((currentPrice - currentEma) / currentEma * 100),
+      strength: currentEma === 0 ? 0 : Math.abs((currentPrice - currentEma) / currentEma * 100),
     };
   }
 
@@ -251,8 +251,8 @@ export class IndicatorsService {
     }
 
     // Calculate +DI and -DI
-    const plusDI: number[] = smoothPlusDM.map((v, i) => (v / smoothTR[i]) * 100);
-    const minusDI: number[] = smoothMinusDM.map((v, i) => (v / smoothTR[i]) * 100);
+    const plusDI: number[] = smoothPlusDM.map((v, i) => (smoothTR[i] === 0 ? 0 : (v / smoothTR[i]) * 100));
+    const minusDI: number[] = smoothMinusDM.map((v, i) => (smoothTR[i] === 0 ? 0 : (v / smoothTR[i]) * 100));
 
     // Calculate DX
     const dx: number[] = plusDI.map((v, i) => {
@@ -317,7 +317,7 @@ export class IndicatorsService {
       name: 'ICHIMOKU',
       value: currentPrice > cloudTop ? 1 : currentPrice < cloudBottom ? -1 : 0,
       signal,
-      strength: Math.abs((currentPrice - (cloudTop + cloudBottom) / 2) / currentPrice * 100),
+      strength: currentPrice === 0 ? 0 : Math.abs((currentPrice - (cloudTop + cloudBottom) / 2) / currentPrice * 100),
       metadata: {
         tenkanSen,
         kijunSen,
@@ -389,7 +389,7 @@ export class IndicatorsService {
       name: 'SUPERTREND',
       value: supertrendLine,
       signal: currentTrend === 1 ? 'bullish' : 'bearish',
-      strength: Math.abs((data[data.length - 1].close - supertrendLine) / supertrendLine * 100),
+      strength: supertrendLine === 0 ? 0 : Math.abs((data[data.length - 1].close - supertrendLine) / supertrendLine * 100),
       metadata: {
         trend: currentTrend,
         supertrendLine,
@@ -454,7 +454,7 @@ export class IndicatorsService {
       name: 'PSAR',
       value: sar,
       signal: trend === 1 ? 'bullish' : 'bearish',
-      strength: Math.abs((data[data.length - 1].close - sar) / sar * 100),
+      strength: sar === 0 ? 0 : Math.abs((data[data.length - 1].close - sar) / sar * 100),
       metadata: { trend, ep, acceleration },
     };
   }
@@ -502,7 +502,7 @@ export class IndicatorsService {
     const recentData = data.slice(-period);
     const sumPV = sum(recentData.map(d => d.close * d.volume));
     const sumV = sum(recentData.map(d => d.volume));
-    const vwma = sumPV / sumV;
+    const vwma = sumV === 0 ? data[data.length - 1].close : sumPV / sumV;
 
     const currentPrice = data[data.length - 1].close;
 
@@ -510,7 +510,7 @@ export class IndicatorsService {
       name: 'VWMA',
       value: vwma,
       signal: currentPrice > vwma ? 'bullish' : 'bearish',
-      strength: Math.abs((currentPrice - vwma) / vwma * 100),
+      strength: vwma === 0 ? 0 : Math.abs((currentPrice - vwma) / vwma * 100),
     };
   }
 
@@ -737,7 +737,7 @@ export class IndicatorsService {
 
     const currentClose = data[data.length - 1].close;
     const pastClose = data[data.length - 1 - period].close;
-    const roc = ((currentClose - pastClose) / pastClose) * 100;
+    const roc = pastClose === 0 ? 0 : ((currentClose - pastClose) / pastClose) * 100;
 
     return {
       name: 'ROC',
@@ -799,9 +799,12 @@ export class IndicatorsService {
       tr.push(Math.max(data[i].high, data[i - 1].close) - Math.min(data[i].low, data[i - 1].close));
     }
 
-    const avgShort = sum(bp.slice(-short)) / sum(tr.slice(-short));
-    const avgMedium = sum(bp.slice(-medium)) / sum(tr.slice(-medium));
-    const avgLong = sum(bp.slice(-long)) / sum(tr.slice(-long));
+    const trSumShort = sum(tr.slice(-short));
+    const avgShort = trSumShort === 0 ? 0 : sum(bp.slice(-short)) / trSumShort;
+    const trSumMedium = sum(tr.slice(-medium));
+    const avgMedium = trSumMedium === 0 ? 0 : sum(bp.slice(-medium)) / trSumMedium;
+    const trSumLong = sum(tr.slice(-long));
+    const avgLong = trSumLong === 0 ? 0 : sum(bp.slice(-long)) / trSumLong;
 
     const uo = ((avgShort * 4) + (avgMedium * 2) + avgLong) / 7 * 100;
 
@@ -884,10 +887,11 @@ export class IndicatorsService {
     const currentPrice = data[data.length - 1].close;
 
     // %B indicator (position within bands)
-    const percentB = (currentPrice - lower) / (upper - lower);
+    const bandRange = upper - lower;
+    const percentB = bandRange === 0 ? 0.5 : (currentPrice - lower) / bandRange;
 
     // Bandwidth
-    const bandwidth = ((upper - lower) / sma) * 100;
+    const bandwidth = sma === 0 ? 0 : ((upper - lower) / sma) * 100;
 
     let signal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
     if (currentPrice < lower) signal = 'bullish';
@@ -968,7 +972,7 @@ export class IndicatorsService {
 
     return {
       name: 'KELTNER',
-      value: (currentPrice - lower) / (upper - lower) * 100,
+      value: upper === lower ? 50 : (currentPrice - lower) / (upper - lower) * 100,
       signal,
       metadata: { upper, middle, lower },
     };
@@ -1010,7 +1014,8 @@ export class IndicatorsService {
 
     const returns: number[] = [];
     for (let i = 1; i < data.length; i++) {
-      returns.push(Math.log(data[i].close / data[i - 1].close));
+      const ratio = data[i - 1].close === 0 ? 1 : data[i].close / data[i - 1].close;
+      returns.push(Math.log(ratio));
     }
 
     const recentReturns = returns.slice(-period);
@@ -1108,7 +1113,7 @@ export class IndicatorsService {
       const tp = typicalPrice(candle);
       cumulativeTPV += tp * candle.volume;
       cumulativeVolume += candle.volume;
-      vwapValues.push(cumulativeTPV / cumulativeVolume);
+      vwapValues.push(cumulativeVolume === 0 ? tp : cumulativeTPV / cumulativeVolume);
     }
 
     const vwap = vwapValues[vwapValues.length - 1];
@@ -1119,7 +1124,7 @@ export class IndicatorsService {
       value: vwap,
       values: vwapValues,
       signal: currentPrice > vwap ? 'bullish' : 'bearish',
-      strength: Math.abs((currentPrice - vwap) / vwap * 100),
+      strength: vwap === 0 ? 0 : Math.abs((currentPrice - vwap) / vwap * 100),
     };
   }
 
@@ -1207,7 +1212,7 @@ export class IndicatorsService {
       name: 'FORCE_INDEX',
       value: emaForce,
       signal: emaForce > 0 ? 'bullish' : 'bearish',
-      strength: Math.abs(emaForce) / data[data.length - 1].volume * 100,
+      strength: data[data.length - 1].volume === 0 ? 0 : Math.abs(emaForce) / data[data.length - 1].volume * 100,
     };
   }
 
@@ -1247,7 +1252,8 @@ export class IndicatorsService {
     const pvtValues: number[] = [pvt];
 
     for (let i = 1; i < data.length; i++) {
-      const change = (data[i].close - data[i - 1].close) / data[i - 1].close;
+      const prevClose = data[i - 1].close;
+      const change = prevClose === 0 ? 0 : (data[i].close - prevClose) / prevClose;
       pvt += change * data[i].volume;
       pvtValues.push(pvt);
     }
@@ -1273,7 +1279,7 @@ export class IndicatorsService {
 
     const avgVolume = mean(data.slice(-period - 1, -1).map(d => d.volume));
     const currentVolume = data[data.length - 1].volume;
-    const rvol = currentVolume / avgVolume;
+    const rvol = avgVolume === 0 ? 1 : currentVolume / avgVolume;
 
     return {
       name: 'RELATIVE_VOLUME',
@@ -1296,7 +1302,7 @@ export class IndicatorsService {
 
     const avgVolume = mean(data.slice(-21, -1).map(d => d.volume));
     const currentVolume = data[data.length - 1].volume;
-    const ratio = currentVolume / avgVolume;
+    const ratio = avgVolume === 0 ? 1 : currentVolume / avgVolume;
     const isSpike = ratio > threshold;
 
     return {
@@ -1330,6 +1336,7 @@ export class IndicatorsService {
     for (const candle of data.slice(-10)) {
       const bodySize = Math.abs(candle.close - candle.open);
       const totalRange = candle.high - candle.low;
+      if (totalRange === 0) continue;
 
       if (candle.close > candle.open) {
         // Bullish candle
@@ -1342,7 +1349,8 @@ export class IndicatorsService {
       }
     }
 
-    const imbalance = (buyPressure - sellPressure) / (buyPressure + sellPressure);
+    const total = buyPressure + sellPressure;
+    const imbalance = total === 0 ? 0 : (buyPressure - sellPressure) / total;
 
     return {
       name: 'ORDER_FLOW_IMBALANCE',
@@ -1422,9 +1430,9 @@ export class IndicatorsService {
     const avgRange = mean(data.slice(-20).map(d => (d.high - d.low)));
 
     // Estimate slippage based on order size relative to average volume
-    const volumeImpact = (orderSize / avgPrice) / avgVolume;
+    const volumeImpact = (avgPrice === 0 || avgVolume === 0) ? 0 : (orderSize / avgPrice) / avgVolume;
     const estimatedSlippage = volumeImpact * avgRange;
-    const slippageBps = (estimatedSlippage / avgPrice) * 10000;
+    const slippageBps = avgPrice === 0 ? 0 : (estimatedSlippage / avgPrice) * 10000;
 
     return {
       name: 'SLIPPAGE_ESTIMATE',
@@ -1449,7 +1457,8 @@ export class IndicatorsService {
     }
 
     // Lower ATR and higher liquidity = lower market impact
-    const impactScore = (atrResult.strength || 0) / (liquidityResult.value / 100);
+    const liquidityDivisor = (liquidityResult.value || 1) / 100;
+    const impactScore = (atrResult.strength || 0) / liquidityDivisor;
 
     return {
       name: 'MARKET_IMPACT',
@@ -1516,7 +1525,7 @@ export class IndicatorsService {
 
       const bodySize = Math.abs(candle.close - candle.open);
       const totalRange = candle.high - candle.low;
-      const wickRatio = (totalRange - bodySize) / totalRange;
+      const wickRatio = totalRange === 0 ? 0 : (totalRange - bodySize) / totalRange;
 
       // Large wicks with reversal
       if (wickRatio > 0.7) {
@@ -1566,7 +1575,7 @@ export class IndicatorsService {
    * Calculate a single indicator by name
    */
   calculateIndicator(name: string, data: OHLCV[], params?: Record<string, number>): IndicatorResult | null {
-    const upperName = name.toUpperCase();
+    const upperName = (name || '').toUpperCase();
 
     // Trend indicators
     if (upperName.startsWith('EMA_')) {

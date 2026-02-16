@@ -154,8 +154,9 @@ export function interpretBollingerBands(
   let signalStrength: 'strong' | 'moderate' | 'weak' = 'weak';
   let interpretation = '';
 
-  const bandwidth = (upper - lower) / middle * 100;
-  const percentB = (price - lower) / (upper - lower);
+  const bandRange = upper - lower;
+  const bandwidth = middle === 0 ? 0 : bandRange / middle * 100;
+  const percentB = bandRange === 0 ? 0.5 : (price - lower) / bandRange;
 
   if (price <= lower) {
     signal = 'bullish';
@@ -493,8 +494,8 @@ export function detectDivergences(
   const recentPrices = prices.slice(-10);
   const recentRsi = rsiValues.slice(-10);
 
-  const priceHighIdx = recentPrices.indexOf(Math.max(...recentPrices));
-  const priceLowIdx = recentPrices.indexOf(Math.min(...recentPrices));
+  const priceHighIdx = recentPrices.length > 0 ? recentPrices.indexOf(Math.max(...recentPrices)) : -1;
+  const priceLowIdx = recentPrices.length > 0 ? recentPrices.indexOf(Math.min(...recentPrices)) : -1;
 
   // Bearish RSI Divergence: Price making higher high, RSI making lower high
   if (priceHighIdx > 3 && recentPrices[recentPrices.length - 1] >= recentPrices[priceHighIdx] * 0.99) {
@@ -531,8 +532,8 @@ export function detectDivergences(
   // MACD Histogram Divergence
   if (macdHistogram.length >= 10) {
     const recentMacd = macdHistogram.slice(-10);
-    const macdHighIdx = recentMacd.indexOf(Math.max(...recentMacd));
-    const macdLowIdx = recentMacd.indexOf(Math.min(...recentMacd));
+    const macdHighIdx = recentMacd.length > 0 ? recentMacd.indexOf(Math.max(...recentMacd)) : -1;
+    const macdLowIdx = recentMacd.length > 0 ? recentMacd.indexOf(Math.min(...recentMacd)) : -1;
 
     // Check for histogram divergence with price
     if (priceHighIdx !== macdHighIdx && Math.abs(priceHighIdx - macdHighIdx) > 2) {
