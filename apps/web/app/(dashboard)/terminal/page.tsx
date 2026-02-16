@@ -135,6 +135,7 @@ type SectionId =
   | 'l5'
   | 'step1' | 'step2' | 'step3' | 'step4' | 'step5' | 'step6' | 'step7'
   | 'mlis1' | 'mlis2' | 'mlis3' | 'mlis4' | 'mlis5'
+  | 'classic7' | 'mlispro'
   | 'l7';
 
 interface NavItem {
@@ -163,18 +164,8 @@ const NAV_GROUPS: NavGroup[] = [
     title: 'Asset Analysis',
     items: [
       { id: 'l5', label: 'Asset Table', tag: '' },
-      { id: 'step1', tag: 'S1', label: 'Market Pulse' },
-      { id: 'step2', tag: 'S2', label: 'Asset Scanner' },
-      { id: 'step3', tag: 'S3', label: 'Safety Check' },
-      { id: 'step4', tag: 'S4', label: 'Timing Analysis' },
-      { id: 'step5', tag: 'S5', label: 'Trade Plan' },
-      { id: 'step6', tag: 'S6', label: 'Trap Check' },
-      { id: 'step7', tag: 'S7', label: 'Final Verdict' },
-      { id: 'mlis1', tag: 'M1', label: 'Technical' },
-      { id: 'mlis2', tag: 'M2', label: 'Momentum' },
-      { id: 'mlis3', tag: 'M3', label: 'Volatility' },
-      { id: 'mlis4', tag: 'M4', label: 'Volume' },
-      { id: 'mlis5', tag: 'M5', label: 'ML Verdict' },
+      { id: 'classic7', label: '7-Step Analysis', tag: '' },
+      { id: 'mlispro', label: 'MLIS Pro', tag: '' },
     ],
   },
   {
@@ -1318,6 +1309,116 @@ function AssetContextBar({ asset, isMLIS }: { asset: ScreenerAsset; isMLIS?: boo
 }
 
 // ---------------------------------------------------------------------------
+// 7-Step Tabbed Panel (Classic7StepTabbed)
+// ---------------------------------------------------------------------------
+
+const STEP_TABS = [
+  { id: 'step1' as const, tag: 'S1', label: 'Market Pulse' },
+  { id: 'step2' as const, tag: 'S2', label: 'Asset Scanner' },
+  { id: 'step3' as const, tag: 'S3', label: 'Safety Check' },
+  { id: 'step4' as const, tag: 'S4', label: 'Timing' },
+  { id: 'step5' as const, tag: 'S5', label: 'Trade Plan' },
+  { id: 'step6' as const, tag: 'S6', label: 'Trap Check' },
+  { id: 'step7' as const, tag: 'S7', label: 'Verdict' },
+];
+
+function Classic7StepTabbed({ asset }: { asset: ScreenerAsset | null }) {
+  const [activeTab, setActiveTab] = useState<string>('step1');
+
+  if (!asset) {
+    return (
+      <section>
+        <SectionLabel layer="" label="7-Step Analysis" />
+        <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 p-8 text-center">
+          <Eye className="w-5 h-5 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
+          <p className="text-xs font-sans text-neutral-400 dark:text-neutral-500">Select an asset from the Asset Table first</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section>
+      <AssetContextBar asset={asset} />
+      {/* Tab bar */}
+      <div className="flex gap-px bg-neutral-200 dark:bg-neutral-800 rounded-sm overflow-hidden mb-4">
+        {STEP_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              'flex-1 px-1.5 py-2 text-[10px] font-sans uppercase tracking-wider transition-colors text-center min-w-0',
+              activeTab === tab.id
+                ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
+                : 'bg-white dark:bg-neutral-950 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white',
+            )}
+          >
+            <span className="text-[9px] opacity-50 mr-0.5">{tab.tag}</span>
+            <span className="hidden sm:inline">{tab.label}</span>
+          </button>
+        ))}
+      </div>
+      {/* Active step content */}
+      <StepPanel asset={asset} stepId={activeTab} />
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MLIS Pro Tabbed Panel (MLISProTabbed)
+// ---------------------------------------------------------------------------
+
+const MLIS_TABS = [
+  { id: 'mlis1' as const, tag: 'M1', label: 'Technical' },
+  { id: 'mlis2' as const, tag: 'M2', label: 'Momentum' },
+  { id: 'mlis3' as const, tag: 'M3', label: 'Volatility' },
+  { id: 'mlis4' as const, tag: 'M4', label: 'Volume' },
+  { id: 'mlis5' as const, tag: 'M5', label: 'ML Verdict' },
+];
+
+function MLISProTabbed({ asset }: { asset: ScreenerAsset | null }) {
+  const [activeTab, setActiveTab] = useState<string>('mlis1');
+
+  if (!asset) {
+    return (
+      <section>
+        <SectionLabel layer="" label="MLIS Pro" />
+        <div className="border border-neutral-200 dark:border-neutral-800 rounded-sm bg-white dark:bg-neutral-950 p-8 text-center">
+          <Eye className="w-5 h-5 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
+          <p className="text-xs font-sans text-neutral-400 dark:text-neutral-500">Select an asset from the Asset Table first</p>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section>
+      <AssetContextBar asset={asset} isMLIS />
+      {/* Tab bar */}
+      <div className="flex gap-px bg-neutral-200 dark:bg-neutral-800 rounded-sm overflow-hidden mb-4">
+        {MLIS_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              'flex-1 px-2 py-2 text-[10px] font-sans uppercase tracking-wider transition-colors text-center',
+              activeTab === tab.id
+                ? 'bg-violet-600 dark:bg-violet-500 text-white'
+                : 'bg-white dark:bg-neutral-950 text-neutral-500 dark:text-neutral-400 hover:text-violet-600 dark:hover:text-violet-400',
+            )}
+          >
+            <span className="text-[9px] opacity-50 mr-0.5">{tab.tag}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      {/* Active MLIS layer content */}
+      <MLISPanel asset={asset} layerId={activeTab} />
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // L7: Trade Visualizer (Lightweight Charts)
 // ---------------------------------------------------------------------------
 
@@ -1767,7 +1868,17 @@ function ContentPanel({
   marketFilter: string;
   setMarketFilter: (f: string) => void;
 }) {
-  // Step panels (S1-S7)
+  // Tabbed 7-Step Analysis
+  if (activeSection === 'classic7') {
+    return <Classic7StepTabbed asset={selectedAsset} />;
+  }
+
+  // Tabbed MLIS Pro
+  if (activeSection === 'mlispro') {
+    return <MLISProTabbed asset={selectedAsset} />;
+  }
+
+  // Legacy step panels (S1-S7) — kept for direct deep-links
   if (activeSection.startsWith('step')) {
     if (!selectedAsset) {
       return (
@@ -1788,7 +1899,7 @@ function ContentPanel({
     );
   }
 
-  // MLIS panels (M1-M5)
+  // Legacy MLIS panels (M1-M5) — kept for direct deep-links
   if (activeSection.startsWith('mlis')) {
     if (!selectedAsset) {
       return (
@@ -1999,7 +2110,7 @@ export default function TestPage() {
                 <div className="space-y-0.5">
                   {group.items.map((item) => {
                     const isActive = activeSection === item.id;
-                    const isMLIS = item.id.startsWith('mlis');
+                    const isMLIS = item.id === 'mlispro' || item.id.startsWith('mlis');
                     const accentBorder = isMLIS
                       ? 'border-violet-500 dark:border-violet-400'
                       : 'border-[#14B8A6] dark:border-[#5EEAD4]';
