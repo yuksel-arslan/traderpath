@@ -77,7 +77,12 @@ export default async function notificationCenterRoutes(app: FastifyInstance) {
     try {
       const counts = await notificationCenterService.getUnreadCounts(userId);
       return reply.send({ success: true, data: counts });
-    } catch {
+    } catch (err: any) {
+      // Graceful degradation if notifications table doesn't exist yet (P2010/P2021)
+      const code = err?.code || '';
+      if (code === 'P2010' || code === 'P2021' || code === 'P2022' || (err?.message && err.message.includes('does not exist'))) {
+        return reply.send({ success: true, data: { BRIEFING: 0, ALERT: 0, SIGNAL: 0, REWARD: 0, SYSTEM: 0 } });
+      }
       return reply.status(500).send({
         success: false,
         error: { code: 'NOTIF_003', message: 'Failed to fetch unread counts' },
