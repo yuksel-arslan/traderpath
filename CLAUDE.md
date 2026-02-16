@@ -23,6 +23,80 @@
 - Font: Inter veya Geist Sans (Google Fonts'tan)
 - Mobile-first yaklaşım: `sm:`, `md:`, `lg:` sırasıyla
 
+### 🎨 TASARIM SİSTEMİ: Railway/Linear Minimal (ZORUNLU)
+
+> **Referans**: Railway Project Settings sayfası tarzı — sade, temiz, profesyonel SaaS.
+> **Felsefe**: "Az çoktur." Dekoratif elementler yerine içerik ön planda.
+
+#### Arka Plan & Renkler
+- **Arka plan**: `bg-white dark:bg-[#0A0A0A]` — saf beyaz/siyah, gradient yok
+- **Kart arka planı**: `bg-white dark:bg-[#111111]` — şeffaflık/glassmorphism YOK
+- **Border**: `border border-gray-200 dark:border-gray-800` — ince, subtle
+- **Accent renk**: Tek bir vurgu rengi: `teal-500` (#14B8A6) — sadece CTA butonlar ve aktif state
+- **Metin**: `text-gray-900 dark:text-gray-100` (başlık), `text-gray-600 dark:text-gray-400` (açıklama)
+- **Negatif**: `text-red-500`, **Pozitif**: `text-green-500` — sadece veri gösteriminde
+
+#### Tipografi
+- **Font**: `font-sans` (Inter) — tüm sayfada tek font
+- **Başlık**: `text-2xl font-semibold` — büyük, bold değil semibold
+- **Alt başlık**: `text-sm text-gray-500` — küçük, soluk
+- **Veri/Sayı**: `font-mono` — sadece fiyat, skor gibi numerik değerlerde
+- **Label**: `text-sm font-medium text-gray-700 dark:text-gray-300`
+
+#### Layout
+- **Max genişlik**: `max-w-4xl mx-auto` — içerik dar ve ortalı
+- **Spacing**: `space-y-8` bölümler arası, `space-y-4` bölüm içi
+- **Padding**: `p-6` kart içi, `py-8 px-4 sm:px-6` sayfa kenar boşlukları
+- **Kart border radius**: `rounded-lg` — `rounded-2xl` değil, `rounded-xl` değil
+
+#### Kaldırılacaklar (YASAK)
+- ❌ Gradient orbs (arka plan küreleri)
+- ❌ Grain/noise texture overlay
+- ❌ Glassmorphism (backdrop-blur, bg-white/5)
+- ❌ Neon glow efektleri
+- ❌ Marquee/kayan yazı
+- ❌ Kinetic typography
+- ❌ Animasyonlu gradient text (başlıklar düz renk olacak)
+- ❌ `bg-white/5`, `bg-white/10` — şeffaf arka planlar
+- ❌ `backdrop-blur-md`, `backdrop-blur-xl`
+- ❌ `shadow-xl`, `shadow-2xl` — maksimum `shadow-sm`
+- ❌ Pulse/ping/bounce animasyonları (loading spinner hariç)
+
+#### İzin Verilenler
+- ✅ Hover'da subtle border renk değişimi: `hover:border-gray-300`
+- ✅ Transition: `transition-colors duration-150`
+- ✅ Loading spinner: `animate-spin`
+- ✅ `shadow-sm` — sadece dropdown/modal'larda
+- ✅ Accent renk CTA butonlarında: `bg-teal-500 hover:bg-teal-600 text-white`
+- ✅ Divider: `border-t border-gray-200 dark:border-gray-800`
+- ✅ Badge: `text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600`
+
+#### Kart Yapısı (Standart)
+```html
+<div class="border border-gray-200 dark:border-gray-800 rounded-lg p-6 bg-white dark:bg-[#111111]">
+  <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Başlık</h3>
+  <p class="text-sm text-gray-500 mt-1">Açıklama</p>
+  <!-- İçerik -->
+</div>
+```
+
+#### Buton Stilleri
+```html
+<!-- Primary CTA -->
+<button class="bg-teal-500 hover:bg-teal-600 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors">
+  Update
+</button>
+<!-- Secondary -->
+<button class="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium px-4 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+  Cancel
+</button>
+```
+
+#### Input Stilleri
+```html
+<input class="w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-[#111111] text-gray-900 dark:text-gray-100 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition-colors" />
+```
+
 ### Teknik
 - Python 3.11 syntax kullan
 - Node.js 22+ features (ES modules default)
