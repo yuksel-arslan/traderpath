@@ -578,6 +578,8 @@ Kullanıcı Hakları Aktif:
 | 2026-02-08 | MultiStrategyCards crash - strategy.entry/stopLoss/takeProfits undefined | `strategy.entry?.price`, `strategy.stopLoss?.price`, `strategy.takeProfits ?? []`, `strategy.riskReward ?? 0` ile guard edildi | `MultiStrategyCards.tsx` |
 | 2026-02-08 | WebResearchPanel crash - research.citations undefined | `research.citations ?? []` ile guard edildi, tüm `.length` ve `.slice()` çağrıları güvenli hale getirildi | `WebResearchPanel.tsx` |
 | 2026-02-08 | signals/stats 500 error - try/catch eksikti | Route handler'a try/catch eklendi, hata durumunda fallback boş stats objesi döndürülüyor | `signal.routes.ts` |
+| 2026-02-16 | Analysis engine 10 runtime bug (deep audit) | **Engine (5+5 bug)**: 1) `riskAmount=0` → `Infinity` (trade plan R:R division by zero), 2) `.toLowerCase()` crash on undefined `event.title`, 3) `data.data[0]` empty array crash (Fear & Greed), 4) `Math.max(...[])` → `-Infinity` in trapCheck (empty candles), 5) `Math.max(...sizeFrequency.values())` on empty Map, 6) `macd.histogram` access without optional chaining, 7) `timeframes.find()` on undefined array, 8) `ctx.assetClass.charAt(0)` on undefined, 9) `tp.price/tp.percentage` NaN propagation in reduce, 10) `indicators.rsi` unguarded access. **Dead code kaldırıldı** (~200 satır): `detectMACDDivergence`, `calculateVolumeProfile`, `calculateMomentumConfluence` fonksiyonları hesaplanıp hiç kullanılmıyordu | `analysis.engine.ts` |
+| 2026-02-16 | Analysis routes 5 runtime bug | 1) PSAR `currentSar=0` division by zero, 2) Non-crypto symbols (GLD, SPY) Binance'e USDT suffix ile gönderiliyordu, 3) Binance API response `Array.isArray` check eksikti + 10s timeout yoktu, 4) `Number()` on non-numeric string → NaN propagation, 5) `outcomeDate!` non-null assertion crash riski | `analysis.routes.ts` |
 | 2026-02-07 | API timeout - sistem zaman aşımına uğruyordu (6 kök neden) | **1) 3 duplicate PrismaClient instance** connection pool'u tüketiyordu (coin-score-cache, multi-asset-score-cache, asset-logos). **2) Server startup blocking** - `startOutcomeTracker()` ve `initializeAssetLogos()` await ediliyordu, external API'ler yanıt vermezse server hiç başlamıyordu. **3) Binance ticker fetch timeout eksik** - `binance.provider.ts:213`'te AbortSignal.timeout yoktu. **4) Prisma query timeout yok** - hiçbir DB sorgusu timeout'a sahip değildi, tek bir yavaş sorgu tüm pool'u bloke edebilirdi. **5) Polling job'lar overlap** - 30s/15s interval job'lar önceki çalışma bitmeden tekrar tetikleniyordu, DB bağlantıları birikiyordu. **6) Auth middleware P2022 hata yönetimi eksik** - missing column hatası tüm auth'u kırıyordu. **Fix**: 1) Tüm duplicate PrismaClient kaldırıldı → singleton import, 2) Startup non-blocking yapıldı (fire-and-forget + timeout), 3) Binance fetch'e 10s timeout eklendi, 4) Prisma middleware ile 15s query timeout + slow query log eklendi, 5) Overlap guard flag'leri + withTimeout wrapper'ları eklendi, 6) Auth middleware'e P2022 fallback eklendi, duplicate decorator kaldırılıp jwt-middleware'e delege edildi | `database.ts`, `index.ts`, `jwt-middleware.ts`, `binance.provider.ts`, `coin-score-cache.service.ts`, `multi-asset-score-cache.service.ts`, `asset-logos.service.ts`, `schema.prisma` |
 
 ---
@@ -2162,6 +2164,31 @@ Kullanıcı Hakları Aktif:
     - End: Trader Program
     - User Menu: Profile | Settings | Admin | Logout
   - Dosya: `apps/web/app/(dashboard)/layout.tsx`
+
+### 2026-02-16
+- **Analysis Engine Deep Audit - 15 Runtime Bug Düzeltildi**:
+  - **analysis.engine.ts** (10 bug):
+    - CRITICAL: `riskAmount=0` → `Infinity` propagation (trade plan R:R)
+    - CRITICAL: `Math.max(...[])` → `-Infinity` in trapCheck (empty candles for non-crypto)
+    - HIGH: `.toLowerCase()` on undefined `event.title` (economic calendar)
+    - HIGH: `data.data[0]` without empty array guard (Fear & Greed API)
+    - HIGH: `macd.histogram` access without optional chaining
+    - HIGH: `timeframes.find()` on potentially undefined array
+    - HIGH: `ctx.assetClass.charAt(0)` on undefined assetClass
+    - MEDIUM: `Math.max(...sizeFrequency.values())` on empty Map
+    - MEDIUM: `tp.price/tp.percentage` NaN propagation in reduce
+    - MEDIUM: `indicators.rsi` unguarded access
+  - **analysis.routes.ts** (5 bug):
+    - HIGH: PSAR `currentSar=0` division by zero
+    - HIGH: Non-crypto symbols (GLD, SPY) sent to Binance with USDT suffix
+    - HIGH: Binance API response no `Array.isArray` check + no timeout
+    - MEDIUM: `Number()` on non-numeric → NaN propagation
+    - LOW: `outcomeDate!` non-null assertion
+  - **Dead code kaldırıldı** (~200 satır):
+    - `detectMACDDivergence`, `calculateVolumeProfile`, `calculateMomentumConfluence`
+    - Bu fonksiyonlar `scanAsset()` içinde hesaplanıp hiçbir yere döndürülmüyordu
+    - `timingAnalysis()` dönüşünde referans edilmişti ama farklı scope → ReferenceError
+  - Login sonrası yönlendirme `/dashboard` → `/terminal` olarak değiştirildi (5 dosya)
 
 ### 2026-02-08
 - **Analiz Sistemi Yeniden Yapılandırıldı (3 Mod)**:

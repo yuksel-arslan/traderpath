@@ -2040,20 +2040,6 @@ interface TimingResult {
     confidence: number;
     urgency: 'immediate' | 'soon' | 'wait' | 'avoid';
   };
-  // Volume Profile & Momentum Confluence
-  volumeProfile?: {
-    vpoc: number;
-    valueAreaHigh: number;
-    valueAreaLow: number;
-  };
-  momentumConfluence?: {
-    score: number;
-    signals: { indicator: string; signal: 'bullish' | 'bearish' | 'neutral'; weight: number }[];
-  };
-  macdDivergence?: {
-    type: string;
-    strength: number;
-  };
 }
 
 // Step 5 Types (Enhanced - uses all previous step data)
@@ -2738,6 +2724,10 @@ async function fetchFearGreedIndex(): Promise<FearGreedData> {
       data: Array<{ value: string; value_classification: string }>;
     }>(response);
 
+    if (!data.data || data.data.length === 0) {
+      return { value: 50, classification: 'Neutral' };
+    }
+
     const result = {
       value: parseInt(data.data[0].value),
       classification: data.data[0].value_classification,
@@ -3062,208 +3052,6 @@ function calculateMACD(prices: number[]): {
   const histogram = macd - signal;
 
   return { macd, signal, histogram };
-}
-
-/**
- * Detect MACD divergence (price vs MACD direction disagreement).
- * Bullish divergence: price makes lower low but MACD makes higher low.
- * Bearish divergence: price makes higher high but MACD makes lower high.
- */
-function detectMACDDivergence(
-  closes: number[],
-  lookback: number = 20
-): { type: 'bullish' | 'bearish' | 'none'; strength: number } {
-  if (closes.length < 35) return { type: 'none', strength: 0 };
-
-  // Calculate MACD for recent history
-  const macdHistory: number[] = [];
-  for (let i = Math.max(26, closes.length - lookback - 10); i <= closes.length; i++) {
-    const slice = closes.slice(0, i);
-    if (slice.length < 26) continue;
-    const ema12 = calculateEMA(slice, 12);
-    const ema26 = calculateEMA(slice, 26);
-    macdHistory.push(ema12 - ema26);
-  }
-
-  if (macdHistory.length < lookback) return { type: 'none', strength: 0 };
-
-  const recentPrices = closes.slice(-lookback);
-  const recentMACD = macdHistory.slice(-lookback);
-
-  // Find swing lows and highs in last N bars
-  const halfLB = Math.floor(lookback / 2);
-  const priceFront = recentPrices.slice(0, halfLB);
-  const priceBack = recentPrices.slice(halfLB);
-  const macdFront = recentMACD.slice(0, halfLB);
-  const macdBack = recentMACD.slice(halfLB);
-
-  const priceLow1 = Math.min(...priceFront);
-  const priceLow2 = Math.min(...priceBack);
-  const priceHigh1 = Math.max(...priceFront);
-  const priceHigh2 = Math.max(...priceBack);
-
-  const macdLow1 = Math.min(...macdFront);
-  const macdLow2 = Math.min(...macdBack);
-  const macdHigh1 = Math.max(...macdFront);
-  const macdHigh2 = Math.max(...macdBack);
-
-  // Bullish divergence: price lower low, MACD higher low
-  if (priceLow2 < priceLow1 && macdLow2 > macdLow1) {
-    const priceChange = ((priceLow1 - priceLow2) / priceLow1) * 100;
-    return { type: 'bullish', strength: Math.min(100, priceChange * 20) };
-  }
-
-  // Bearish divergence: price higher high, MACD lower high
-  if (priceHigh2 > priceHigh1 && macdHigh2 < macdHigh1) {
-    const priceChange = ((priceHigh2 - priceHigh1) / priceHigh1) * 100;
-    return { type: 'bearish', strength: Math.min(100, priceChange * 20) };
-  }
-
-  return { type: 'none', strength: 0 };
-}
-
-/**
- * Calculate Volume Profile and VPOC (Volume Point of Control).
- * Distributes volume across price bins and finds the price level with most volume.
- */
-function calculateVolumeProfile(
-  candles: Array<{ high: number; low: number; close: number; volume: number }>,
-  bins: number = 24
-): { vpoc: number; valueAreaHigh: number; valueAreaLow: number; profileBins: Array<{ price: number; volume: number }> } {
-  if (candles.length < 10) {
-    const lastPrice = candles[candles.length - 1]?.close || 0;
-    return { vpoc: lastPrice, valueAreaHigh: lastPrice * 1.02, valueAreaLow: lastPrice * 0.98, profileBins: [] };
-  }
-
-  const allHighs = candles.map(c => c.high);
-  const allLows = candles.map(c => c.low);
-  const priceHigh = Math.max(...allHighs);
-  const priceLow = Math.min(...allLows);
-  const range = priceHigh - priceLow;
-
-  if (range <= 0) {
-    const p = candles[candles.length - 1].close;
-    return { vpoc: p, valueAreaHigh: p, valueAreaLow: p, profileBins: [] };
-  }
-
-  const binSize = range / bins;
-  const profile = new Array(bins).fill(0);
-
-  // Distribute each candle's volume across its price range
-  for (const candle of candles) {
-    const lowBin = Math.floor((candle.low - priceLow) / binSize);
-    const highBin = Math.min(bins - 1, Math.floor((candle.high - priceLow) / binSize));
-    const binsSpanned = highBin - lowBin + 1;
-    const volumePerBin = candle.volume / binsSpanned;
-
-    for (let b = Math.max(0, lowBin); b <= highBin; b++) {
-      profile[b] += volumePerBin;
-    }
-  }
-
-  // Find VPOC (bin with highest volume)
-  let maxVol = 0;
-  let vpocBin = 0;
-  for (let i = 0; i < profile.length; i++) {
-    if (profile[i] > maxVol) {
-      maxVol = profile[i];
-      vpocBin = i;
-    }
-  }
-
-  const vpoc = priceLow + (vpocBin + 0.5) * binSize;
-
-  // Value Area (70% of total volume)
-  const totalVolume = profile.reduce((a, b) => a + b, 0);
-  const targetVolume = totalVolume * 0.7;
-
-  let vaVolume = profile[vpocBin];
-  let vaLow = vpocBin;
-  let vaHigh = vpocBin;
-
-  while (vaVolume < targetVolume && (vaLow > 0 || vaHigh < bins - 1)) {
-    const expandLow = vaLow > 0 ? profile[vaLow - 1] : 0;
-    const expandHigh = vaHigh < bins - 1 ? profile[vaHigh + 1] : 0;
-
-    if (expandLow >= expandHigh && vaLow > 0) {
-      vaLow--;
-      vaVolume += profile[vaLow];
-    } else if (vaHigh < bins - 1) {
-      vaHigh++;
-      vaVolume += profile[vaHigh];
-    } else {
-      break;
-    }
-  }
-
-  const valueAreaLow = priceLow + vaLow * binSize;
-  const valueAreaHigh = priceLow + (vaHigh + 1) * binSize;
-
-  const profileBins = profile.map((vol, i) => ({
-    price: priceLow + (i + 0.5) * binSize,
-    volume: vol,
-  }));
-
-  return { vpoc, valueAreaHigh, valueAreaLow, profileBins };
-}
-
-/**
- * Calculate Momentum Confluence Score (0-100).
- * Combines RSI, MACD, ADX, Stochastic signals into a single score.
- */
-function calculateMomentumConfluence(indicators: {
-  rsi: number;
-  macdHistogram: number;
-  adx: number;
-  stochK?: number;
-  trendDirection: 'bullish' | 'bearish' | 'neutral';
-}): { score: number; signals: { indicator: string; signal: 'bullish' | 'bearish' | 'neutral'; weight: number }[] } {
-  const signals: { indicator: string; signal: 'bullish' | 'bearish' | 'neutral'; weight: number }[] = [];
-
-  // RSI (25% weight)
-  let rsiSignal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-  if (indicators.rsi < 35) rsiSignal = 'bullish'; // Oversold = potential reversal up
-  else if (indicators.rsi > 65) rsiSignal = 'bearish'; // Overbought = potential reversal down
-  else if (indicators.rsi > 50) rsiSignal = 'bullish';
-  else rsiSignal = 'bearish';
-  signals.push({ indicator: 'RSI', signal: rsiSignal, weight: 0.25 });
-
-  // MACD Histogram (30% weight)
-  let macdSignal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-  if (indicators.macdHistogram > 0) macdSignal = 'bullish';
-  else if (indicators.macdHistogram < 0) macdSignal = 'bearish';
-  signals.push({ indicator: 'MACD', signal: macdSignal, weight: 0.30 });
-
-  // ADX Trend Strength (25% weight)
-  let adxSignal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-  if (indicators.adx > 25) {
-    adxSignal = indicators.trendDirection === 'bearish' ? 'bearish' : 'bullish';
-  }
-  signals.push({ indicator: 'ADX', signal: adxSignal, weight: 0.25 });
-
-  // Stochastic K (20% weight)
-  if (indicators.stochK != null) {
-    let stochSignal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-    if (indicators.stochK < 20) stochSignal = 'bullish';
-    else if (indicators.stochK > 80) stochSignal = 'bearish';
-    else if (indicators.stochK > 50) stochSignal = 'bullish';
-    else stochSignal = 'bearish';
-    signals.push({ indicator: 'Stochastic', signal: stochSignal, weight: 0.20 });
-  }
-
-  // Calculate weighted score (0 = full bearish, 100 = full bullish)
-  let totalWeight = 0;
-  let weightedSum = 0;
-  for (const s of signals) {
-    totalWeight += s.weight;
-    if (s.signal === 'bullish') weightedSum += s.weight * 100;
-    else if (s.signal === 'neutral') weightedSum += s.weight * 50;
-    // bearish = 0
-  }
-
-  const score = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 50;
-
-  return { score, signals };
 }
 
 /**
@@ -3810,9 +3598,9 @@ export const analysisEngine = {
         if (hoursUntilEvent > -2 && hoursUntilEvent < 4) {
           shouldBlockTrade = true;
           if (hoursUntilEvent > 0) {
-            blockReason = `High-impact event "${event.title}" in ${hoursUntilEvent.toFixed(1)} hours. DO NOT TRADE.`;
+            blockReason = `High-impact event "${event.title || 'Unknown'}" in ${hoursUntilEvent.toFixed(1)} hours. DO NOT TRADE.`;
           } else {
-            blockReason = `High-impact event "${event.title}" occurred ${Math.abs(hoursUntilEvent).toFixed(1)} hours ago. Wait for market to stabilize.`;
+            blockReason = `High-impact event "${event.title || 'Unknown'}" occurred ${Math.abs(hoursUntilEvent).toFixed(1)} hours ago. Wait for market to stabilize.`;
           }
           break;
         }
@@ -3821,7 +3609,7 @@ export const analysisEngine = {
       // Also block if FOMC is today (regardless of time)
       if (!shouldBlockTrade) {
         const fomcToday = economicCalendar.todayHighImpact.find(e =>
-          e.title.toLowerCase().includes('fomc')
+          (e.title || '').toLowerCase().includes('fomc')
         );
         if (fomcToday) {
           shouldBlockTrade = true;
@@ -4021,7 +3809,6 @@ export const analysisEngine = {
     // Traditional indicators (kept for backwards compatibility in indicators object)
     const rsi = calculateRSI(prices4h);
     const macd = calculateMACD(prices4h);
-    const macdDivergence = detectMACDDivergence(prices4h);
     const bb = calculateBollingerBands(prices4h);
     const atr = calculateATR(candles4h);
 
@@ -4032,19 +3819,6 @@ export const analysisEngine = {
 
     // Support/Resistance levels - use primary timeframe candles (same timeframe as analysis)
     const levels = findSupportResistance(candlesPrimary);
-
-    // Volume Profile & VPOC
-    const volumeProfile = calculateVolumeProfile(candlesPrimary);
-
-    // Momentum Confluence Score
-    const trendDir = ma20 > ma50 ? 'bullish' : ma20 < ma50 ? 'bearish' : 'neutral';
-    const momentumConfluence = calculateMomentumConfluence({
-      rsi,
-      macdHistogram: macd.histogram,
-      adx: stepIndicators.adx ?? 25,
-      stochK: stepIndicators.stochasticK ?? undefined,
-      trendDirection: trendDir as 'bullish' | 'bearish' | 'neutral',
-    });
 
     // ===== TFT FORECAST (Primary) or Statistical Fallback =====
     // Try to get prediction from TFT service first
@@ -4368,8 +4142,8 @@ export const analysisEngine = {
       const key = size.toFixed(4);
       sizeFrequency.set(key, (sizeFrequency.get(key) || 0) + 1);
     }
-    const maxFrequency = Math.max(...sizeFrequency.values());
-    const washTrading = maxFrequency > recentTrades.length * 0.1;
+    const maxFrequency = sizeFrequency.size > 0 ? Math.max(...sizeFrequency.values()) : 0;
+    const washTrading = recentTrades.length > 0 && maxFrequency > recentTrades.length * 0.1;
 
     // Pump & dump risk
     let pumpDumpRisk: 'low' | 'medium' | 'high' = 'low';
@@ -4700,20 +4474,6 @@ export const analysisEngine = {
     const pvt = calculatePVT(candles4h);
     const volumeSpike = detectVolumeSpike(candles1h, 15, 2.0);
 
-    // Volume Profile, Momentum Confluence & MACD Divergence (needed for return value)
-    const volumeProfile = calculateVolumeProfile(candlesPrimary);
-    const macdDivergence = detectMACDDivergence(prices4h);
-    const ma20 = calculateSMA(prices4h, 20);
-    const ma50 = calculateSMA(prices4h, 50);
-    const trendDir = ma20 > ma50 ? 'bullish' : ma20 < ma50 ? 'bearish' : 'neutral';
-    const momentumConfluence = calculateMomentumConfluence({
-      rsi: rsi4h,
-      macdHistogram: macd.histogram,
-      adx: 25,
-      stochK: undefined,
-      trendDirection: trendDir as 'bullish' | 'bearish' | 'neutral',
-    });
-
     // Candlestick pattern detection for entry confirmation
     const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candles4h);
     const patterns = candlestickPatterns.metadata?.patterns || [];
@@ -4914,20 +4674,6 @@ export const analysisEngine = {
         confidence: timingGateResult.confidence,
         urgency: timingGateResult.urgency,
       },
-      // New: Volume Profile & Momentum Confluence
-      volumeProfile: {
-        vpoc: volumeProfile.vpoc,
-        valueAreaHigh: volumeProfile.valueAreaHigh,
-        valueAreaLow: volumeProfile.valueAreaLow,
-      },
-      momentumConfluence: {
-        score: momentumConfluence.score,
-        signals: momentumConfluence.signals,
-      },
-      macdDivergence: {
-        type: macdDivergence.type,
-        strength: macdDivergence.strength,
-      },
     };
   },
 
@@ -5110,11 +4856,26 @@ export const analysisEngine = {
     const currentPrice = ticker.price;
     const levels = findSupportResistance(candles4h);
 
+    // Guard against empty candle arrays (non-crypto assets may not have secondary timeframe data)
+    if (prices1h.length === 0 || prices4h.length === 0) {
+      return {
+        score: 5,
+        bullTrap: false,
+        bearTrap: false,
+        fakeBreakout: false,
+        squeezeDetected: false,
+        manipulationRisk: 'low' as const,
+        warnings: ['Insufficient candle data for trap detection'],
+        details: 'Trap check skipped due to insufficient data.',
+        gate: { canProceed: true, reason: 'Trap check skipped - insufficient data', confidence: 50, urgency: 'medium' as const },
+      };
+    }
+
     // Recent price action analysis
     const recentHigh = Math.max(...prices1h.slice(-24));
     const recentLow = Math.min(...prices1h.slice(-24));
-    const avgVolume = volumes1h.reduce((a, b) => a + b, 0) / volumes1h.length;
-    const recentVolume = volumes1h.slice(-6).reduce((a, b) => a + b, 0) / 6;
+    const avgVolume = volumes1h.length > 0 ? volumes1h.reduce((a, b) => a + b, 0) / volumes1h.length : 0;
+    const recentVolume = volumes1h.length >= 6 ? volumes1h.slice(-6).reduce((a, b) => a + b, 0) / 6 : avgVolume;
 
     // Bull trap detection
     const resistanceLevel = levels.resistance[0];
@@ -5280,7 +5041,7 @@ export const analysisEngine = {
     const directionSources: PreliminaryVerdictResult['directionSources'] = [];
 
     // 1. Asset Scanner Daily Trend (10% weight) - lowered threshold to 30%
-    const dailyTrend = assetScan.timeframes.find(t => t.tf === '1D');
+    const dailyTrend = assetScan.timeframes?.find(t => t.tf === '1D');
     if (dailyTrend && dailyTrend.strength >= 30) {
       directionSources.push({
         source: 'Asset Scanner (Daily)',
@@ -5291,7 +5052,7 @@ export const analysisEngine = {
     }
 
     // 2. Asset Scanner 4H Trend (10% weight) - lowered threshold to 30%
-    const h4Trend = assetScan.timeframes.find(t => t.tf === '4H');
+    const h4Trend = assetScan.timeframes?.find(t => t.tf === '4H');
     if (h4Trend && h4Trend.strength >= 30) {
       directionSources.push({
         source: 'Asset Scanner (4H)',
@@ -5408,7 +5169,7 @@ export const analysisEngine = {
       // Use asset-specific sentiment as primary direction signal
       if (metrics.sentiment !== 'neutral') {
         directionSources.push({
-          source: `${ctx.assetClass.charAt(0).toUpperCase() + ctx.assetClass.slice(1)} Analysis`,
+          source: `${(ctx.assetClass || 'Asset').charAt(0).toUpperCase() + (ctx.assetClass || 'Asset').slice(1)} Analysis`,
           direction: metrics.sentiment === 'bullish' ? 'long' : 'short',
           weight: 0.25, // High weight for non-crypto assets
           reason: `${ctx.assetClass} sentiment: ${metrics.sentiment} (${metrics.sentimentScore}/100)`
@@ -5423,7 +5184,7 @@ export const analysisEngine = {
           factor: driver,
           positive: isPositive,
           impact: 'high',
-          source: `${ctx.assetClass.charAt(0).toUpperCase() + ctx.assetClass.slice(1)} Driver`
+          source: `${(ctx.assetClass || 'Asset').charAt(0).toUpperCase() + (ctx.assetClass || 'Asset').slice(1)} Driver`
         });
       }
 
@@ -5999,10 +5760,11 @@ export const analysisEngine = {
 
     // ===== RISK/REWARD CALCULATION =====
     const avgTP = takeProfits.reduce(
-      (sum, tp) => sum + Math.abs(tp.price - averageEntry) * (tp.percentage / 100),
+      (sum, tp) => sum + Math.abs((tp.price ?? averageEntry) - averageEntry) * ((tp.percentage ?? 0) / 100),
       0
     );
-    const riskReward = parseFloat((avgTP / riskAmount).toFixed(2));
+    const safeRiskAmount = riskAmount === 0 ? currentPrice * 0.015 : riskAmount;
+    const riskReward = parseFloat((avgTP / safeRiskAmount).toFixed(2));
 
     // ===== POSITION SIZE (from Safety + Confidence) =====
     let baseRiskPercent = 2.0; // Base 2% risk
@@ -6023,7 +5785,7 @@ export const analysisEngine = {
 
     const riskAmountUsd = accountSize * (baseRiskPercent / 100);
     const positionSizePercent = parseFloat(
-      ((riskAmountUsd / riskAmount) * averageEntry / accountSize * 100).toFixed(2)
+      ((riskAmountUsd / safeRiskAmount) * averageEntry / accountSize * 100).toFixed(2)
     );
 
     // ===== WIN RATE ESTIMATE =====
@@ -6221,8 +5983,8 @@ export const analysisEngine = {
       currentPrice: assetScan.currentPrice,
       riskReward: tradePlan?.riskReward,
       keyMetrics: {
-        rsi: assetScan.indicators.rsi,
-        macdHistogram: assetScan.indicators.macd.histogram,
+        rsi: assetScan.indicators?.rsi ?? 50,
+        macdHistogram: assetScan.indicators?.macd?.histogram ?? 0,
         fearGreedIndex: marketPulse.fearGreedIndex,
         btcDominance: marketPulse.btcDominance || 0,
         riskLevel: safetyCheck.riskLevel,

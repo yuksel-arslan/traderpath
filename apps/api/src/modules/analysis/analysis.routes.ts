@@ -794,7 +794,7 @@ Warn about potential traps and give protective advice.`;
     const capitalFlowContext = body.capitalFlowContext;
     let capitalFlowWarning: string | null = null;
 
-    if (capitalFlowContext) {
+    if (capitalFlowContext && Array.isArray(capitalFlowContext.recommendedAssets)) {
       const isRecommended = capitalFlowContext.recommendedAssets.includes(body.symbol.toUpperCase());
       if (!isRecommended) {
         // Asset not in AI recommended list - block analysis
@@ -1014,7 +1014,7 @@ Warn about potential traps and give protective advice.`;
             riskReward: tradePlan.riskReward,
           } : null,
           news: marketPulse.news ? {
-            items: (marketPulse.news.items || []).map((n: Record<string, unknown>) => ({
+            items: (marketPulse.news?.items || []).map((n: Record<string, unknown>) => ({
               title: String(n.title || ''),
               url: String(n.url || ''),
               source: String(n.source || ''),
@@ -1622,7 +1622,7 @@ Explain the key risks and what conditions would need to change before trading th
         const currentPrice = prices[a.symbol] || null;
 
         let unrealizedPnL: number | null = null;
-        if (entryPrice && currentPrice) {
+        if (entryPrice && entryPrice > 0 && currentPrice) {
           const pnlPercent = ((currentPrice - entryPrice) / entryPrice) * 100;
           unrealizedPnL = direction === 'short' ? -pnlPercent : pnlPercent;
         }
@@ -1648,10 +1648,10 @@ Explain the key risks and what conditions would need to change before trading th
           const totalDistance = isLong ? (maxTarget - entryPrice) : (entryPrice - maxTarget);
           const coveredDistance = isLong ? (currentPrice - entryPrice) : (entryPrice - currentPrice);
           tpProgress = totalDistance !== 0 ? Math.min(100, Math.max(-100, (coveredDistance / totalDistance) * 100)) : 0;
-          distanceToTP1 = ((tp1 - currentPrice) / currentPrice) * 100;
+          distanceToTP1 = currentPrice > 0 ? ((tp1 - currentPrice) / currentPrice) * 100 : 0;
         }
 
-        if (currentPrice && stopLoss) {
+        if (currentPrice && currentPrice > 0 && stopLoss) {
           distanceToSL = ((stopLoss - currentPrice) / currentPrice) * 100;
         }
 
@@ -1909,7 +1909,7 @@ Explain the key risks and what conditions would need to change before trading th
         select: { createdAt: true }
       });
 
-      const platformSince = firstUser
+      const platformSince = firstUser?.createdAt
         ? firstUser.createdAt.toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0];
 
@@ -4049,7 +4049,7 @@ Explain the key risks and what conditions would need to change before trading th
             values: sarValues,
             currentValue: currentSar,
             signal: finalIsLong ? 'bullish' : 'bearish',
-            signalStrength: Math.min(100, Math.abs((currentPrice - currentSar) / currentSar * 100) * 20),
+            signalStrength: currentSar !== 0 ? Math.min(100, Math.abs((currentPrice - currentSar) / currentSar * 100) * 20) : 0,
             metadata: { isLong: finalIsLong, sar: currentSar }
           };
         }
@@ -5458,8 +5458,8 @@ Explain the key risks and what conditions would need to change before trading th
               volatilityScore: 50,
               trendScore: 50,
               momentumScore: 50,
-              verdict: String(step7?.verdict || 'WAIT'),
-              direction: String(step7?.direction || step5?.direction || null),
+              verdict: typeof step7?.verdict === 'string' ? step7.verdict : 'WAIT',
+              direction: (step7?.direction || step5?.direction || null) as string | null,
               confidence: Number(step7?.confidence || 50),
               price: 0,
               priceChange24h: 0,
@@ -5924,11 +5924,11 @@ Explain the key risks and what conditions would need to change before trading th
       const tradesWithPnL = analyses.map(analysis => {
         const step5 = analysis.step5Result as Record<string, unknown> | null;
         const direction = ((step5?.direction as string) || 'long').toLowerCase();
-        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
-        const stopLoss = Number((step5?.stopLoss as Record<string, unknown>)?.price || step5?.stopLossPrice || 0);
-        const tp1 = Number((step5?.takeProfits as Array<Record<string, unknown>>)?.[0]?.price || step5?.takeProfit1 || 0);
-        const tp2 = Number((step5?.takeProfits as Array<Record<string, unknown>>)?.[1]?.price || step5?.takeProfit2 || 0);
-        const tp3 = Number((step5?.takeProfits as Array<Record<string, unknown>>)?.[2]?.price || step5?.takeProfit3 || 0);
+        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0) || 0;
+        const stopLoss = Number((step5?.stopLoss as Record<string, unknown>)?.price || step5?.stopLossPrice || 0) || 0;
+        const tp1 = Number((step5?.takeProfits as Array<Record<string, unknown>>)?.[0]?.price || step5?.takeProfit1 || 0) || 0;
+        const tp2 = Number((step5?.takeProfits as Array<Record<string, unknown>>)?.[1]?.price || step5?.takeProfit2 || 0) || 0;
+        const tp3 = Number((step5?.takeProfits as Array<Record<string, unknown>>)?.[2]?.price || step5?.takeProfit3 || 0) || 0;
 
         let pnlPercent = 0;
         let isRealized = false;
@@ -5978,8 +5978,8 @@ Explain the key risks and what conditions would need to change before trading th
 
       // Fill in realized P/L by outcomeAt date
       tradesWithPnL.filter(t => t.isRealized && t.outcomeDate).forEach(trade => {
-        const dateStr = trade.outcomeDate!.toISOString().split('T')[0];
-        if (dailyData[dateStr]) {
+        const dateStr = trade.outcomeDate?.toISOString().split('T')[0];
+        if (dateStr && dailyData[dateStr]) {
           dailyData[dateStr].realized += trade.pnlPercent;
           dailyData[dateStr].trades++;
         }
@@ -5992,15 +5992,23 @@ Explain the key risks and what conditions would need to change before trading th
         const prices: Record<string, number> = {};
 
         try {
-          const pairs = symbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
-          const priceResponse = await fetch(
-            `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
-          );
-          if (priceResponse.ok) {
-            const priceData = await priceResponse.json();
-            for (const item of priceData) {
-              const symbol = item.symbol.replace('USDT', '');
-              prices[symbol] = parseFloat(item.price);
+          const cryptoSymbols = symbols.filter(s => getAssetClass(s) === 'crypto');
+          if (cryptoSymbols.length > 0) {
+            const pairs = cryptoSymbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
+            const priceResponse = await fetch(
+              `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`,
+              { signal: AbortSignal.timeout(10000) }
+            );
+            if (priceResponse.ok) {
+              const priceData = await priceResponse.json();
+              if (Array.isArray(priceData)) {
+                for (const item of priceData) {
+                  if (item && typeof item.symbol === 'string' && item.price) {
+                    const symbol = item.symbol.replace('USDT', '');
+                    prices[symbol] = parseFloat(item.price);
+                  }
+                }
+              }
             }
           }
         } catch (err) {
