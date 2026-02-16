@@ -794,7 +794,7 @@ Warn about potential traps and give protective advice.`;
     const capitalFlowContext = body.capitalFlowContext;
     let capitalFlowWarning: string | null = null;
 
-    if (capitalFlowContext) {
+    if (capitalFlowContext && Array.isArray(capitalFlowContext.recommendedAssets)) {
       const isRecommended = capitalFlowContext.recommendedAssets.includes(body.symbol.toUpperCase());
       if (!isRecommended) {
         // Asset not in AI recommended list - block analysis
@@ -1014,7 +1014,7 @@ Warn about potential traps and give protective advice.`;
             riskReward: tradePlan.riskReward,
           } : null,
           news: marketPulse.news ? {
-            items: (marketPulse.news.items || []).map((n: Record<string, unknown>) => ({
+            items: (marketPulse.news?.items || []).map((n: Record<string, unknown>) => ({
               title: String(n.title || ''),
               url: String(n.url || ''),
               source: String(n.source || ''),
@@ -1622,7 +1622,7 @@ Explain the key risks and what conditions would need to change before trading th
         const currentPrice = prices[a.symbol] || null;
 
         let unrealizedPnL: number | null = null;
-        if (entryPrice && currentPrice) {
+        if (entryPrice && entryPrice > 0 && currentPrice) {
           const pnlPercent = ((currentPrice - entryPrice) / entryPrice) * 100;
           unrealizedPnL = direction === 'short' ? -pnlPercent : pnlPercent;
         }
@@ -1648,10 +1648,10 @@ Explain the key risks and what conditions would need to change before trading th
           const totalDistance = isLong ? (maxTarget - entryPrice) : (entryPrice - maxTarget);
           const coveredDistance = isLong ? (currentPrice - entryPrice) : (entryPrice - currentPrice);
           tpProgress = totalDistance !== 0 ? Math.min(100, Math.max(-100, (coveredDistance / totalDistance) * 100)) : 0;
-          distanceToTP1 = ((tp1 - currentPrice) / currentPrice) * 100;
+          distanceToTP1 = currentPrice > 0 ? ((tp1 - currentPrice) / currentPrice) * 100 : 0;
         }
 
-        if (currentPrice && stopLoss) {
+        if (currentPrice && currentPrice > 0 && stopLoss) {
           distanceToSL = ((stopLoss - currentPrice) / currentPrice) * 100;
         }
 
@@ -1909,7 +1909,7 @@ Explain the key risks and what conditions would need to change before trading th
         select: { createdAt: true }
       });
 
-      const platformSince = firstUser
+      const platformSince = firstUser?.createdAt
         ? firstUser.createdAt.toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0];
 
@@ -5458,8 +5458,8 @@ Explain the key risks and what conditions would need to change before trading th
               volatilityScore: 50,
               trendScore: 50,
               momentumScore: 50,
-              verdict: String(step7?.verdict || 'WAIT'),
-              direction: String(step7?.direction || step5?.direction || null),
+              verdict: typeof step7?.verdict === 'string' ? step7.verdict : 'WAIT',
+              direction: (step7?.direction || step5?.direction || null) as string | null,
               confidence: Number(step7?.confidence || 50),
               price: 0,
               priceChange24h: 0,
