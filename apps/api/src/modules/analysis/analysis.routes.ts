@@ -2926,7 +2926,7 @@ Explain the key risks and what conditions would need to change before trading th
           let ema = closes.slice(0, period).reduce((a: number, b: number) => a + b, 0) / period;
           const emaValues: number[] = [ema];
           for (let i = period; i < closes.length; i++) {
-            ema = (closes[i] - ema) * multiplier + ema;
+            ema = ((closes[i] ?? 0) - ema) * multiplier + ema;
             emaValues.push(ema);
           }
           const currentValue = emaValues[emaValues.length - 1] ?? 0;
@@ -3605,7 +3605,7 @@ Explain the key risks and what conditions would need to change before trading th
           let ema = closes.slice(0, period).reduce((a: number, b: number) => a + b, 0) / period;
           const emaValues: number[] = [ema];
           for (let i = period; i < closes.length; i++) {
-            ema = (closes[i] - ema) * multiplier + ema;
+            ema = ((closes[i] ?? 0) - ema) * multiplier + ema;
             emaValues.push(ema);
           }
 
@@ -3778,7 +3778,7 @@ Explain the key risks and what conditions would need to change before trading th
           let ema = forceRaw.slice(0, period).reduce((a, b) => a + b, 0) / period;
           const forceValues: number[] = [ema];
           for (let i = period; i < forceRaw.length; i++) {
-            ema = (forceRaw[i] - ema) * multiplier + ema;
+            ema = ((forceRaw[i] ?? 0) - ema) * multiplier + ema;
             forceValues.push(ema);
           }
           if (forceValues.length === 0) return null;
@@ -3837,7 +3837,7 @@ Explain the key risks and what conditions would need to change before trading th
           const bullPower: number[] = [], bearPower: number[] = [];
 
           for (let i = period; i < data.length; i++) {
-            ema = (closes[i] - ema) * multiplier + ema;
+            ema = ((closes[i] ?? 0) - ema) * multiplier + ema;
             const d = data[i];
             if (d) {
               bullPower.push(d.high - ema);
@@ -3909,7 +3909,7 @@ Explain the key risks and what conditions would need to change before trading th
           const closes = data.map((d: { close: number }) => d.close);
           const gains: number[] = [], losses: number[] = [];
           for (let i = 1; i < closes.length; i++) {
-            const change = closes[i] - closes[i - 1];
+            const change = (closes[i] ?? 0) - (closes[i - 1] ?? 0);
             gains.push(change > 0 ? change : 0);
             losses.push(change < 0 ? -change : 0);
           }
@@ -3948,7 +3948,7 @@ Explain the key risks and what conditions would need to change before trading th
           const dpoValues: number[] = [];
           for (let i = period - 1 + shift; i < closes.length; i++) {
             const sma = closes.slice(i - period - shift + 1, i - shift + 1).reduce((a: number, b: number) => a + b, 0) / period;
-            dpoValues.push(closes[i - shift] - sma);
+            dpoValues.push((closes[i - shift] ?? 0) - sma);
           }
           if (dpoValues.length === 0) return null;
           const currentDpo = dpoValues[dpoValues.length - 1] ?? 0;
@@ -4110,7 +4110,7 @@ Explain the key risks and what conditions would need to change before trading th
             let ema = arr.slice(0, len).reduce((a, b) => a + b, 0) / len;
             const result = [ema];
             for (let i = len; i < arr.length; i++) {
-              ema = (arr[i] - ema) * multiplier + ema;
+              ema = ((arr[i] ?? 0) - ema) * multiplier + ema;
               result.push(ema);
             }
             return result;
@@ -4149,7 +4149,7 @@ Explain the key risks and what conditions would need to change before trading th
             let ema = arr.slice(0, len).reduce((a, b) => a + b, 0) / len;
             const result = [ema];
             for (let i = len; i < arr.length; i++) {
-              ema = (arr[i] - ema) * multiplier + ema;
+              ema = ((arr[i] ?? 0) - ema) * multiplier + ema;
               result.push(ema);
             }
             return result;
@@ -4193,7 +4193,7 @@ Explain the key risks and what conditions would need to change before trading th
             let ema = arr.slice(0, len).reduce((a, b) => a + b, 0) / len;
             const result = [ema];
             for (let i = len; i < arr.length; i++) {
-              ema = (arr[i] - ema) * multiplier + ema;
+              ema = ((arr[i] ?? 0) - ema) * multiplier + ema;
               result.push(ema);
             }
             return result;
@@ -4231,7 +4231,7 @@ Explain the key risks and what conditions would need to change before trading th
             let ema = arr.slice(0, len).reduce((a, b) => a + b, 0) / len;
             const result = [ema];
             for (let i = len; i < arr.length; i++) {
-              ema = (arr[i] - ema) * multiplier + ema;
+              ema = ((arr[i] ?? 0) - ema) * multiplier + ema;
               result.push(ema);
             }
             return result;
@@ -4561,8 +4561,11 @@ Explain the key risks and what conditions would need to change before trading th
 
           const rocSum: number[] = [];
           for (let i = roc14; i < closes.length; i++) {
-            const r14 = closes[i - roc14] !== 0 ? ((closes[i] - closes[i - roc14]) / closes[i - roc14]) * 100 : 0;
-            const r11 = closes[i - roc11] !== 0 ? ((closes[i] - closes[i - roc11]) / closes[i - roc11]) * 100 : 0;
+            const ci = closes[i] ?? 0;
+            const c14 = closes[i - roc14] ?? 0;
+            const c11 = closes[i - roc11] ?? 0;
+            const r14 = c14 !== 0 ? ((ci - c14) / c14) * 100 : 0;
+            const r11 = c11 !== 0 ? ((ci - c11) / c11) * 100 : 0;
             rocSum.push(r14 + r11);
           }
 
@@ -4634,7 +4637,7 @@ Explain the key risks and what conditions would need to change before trading th
           // Find Value Area (70% of volume)
           const totalVolume = volumeProfile.reduce((a, b) => a + b, 0);
           const targetVolume = totalVolume * 0.7;
-          let vaVolume = volumeProfile[pocIndex];
+          let vaVolume = volumeProfile[pocIndex] ?? 0;
           let vaHigh = pocIndex, vaLow = pocIndex;
 
           while (vaVolume < targetVolume) {
