@@ -603,7 +603,7 @@ function L2MarketFlow({ flows, interpretation }: { flows: MarketFlow[]; interpre
   return (
     <section>
       <SectionLabel layer="L2" label="Market Flow" count={flows.length} />
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-neutral-200 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
+      <div className="grid grid-cols-5 gap-px bg-neutral-200 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden">
         {flows.map((f) => (
           <div
             key={f.market}
