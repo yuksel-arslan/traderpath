@@ -2415,9 +2415,14 @@ async function fetchOrderBook(
   symbol: string,
   limit: number = 100
 ): Promise<{ bids: [string, string][]; asks: [string, string][] }> {
-  const url = `https://api.binance.com/api/v3/depth?symbol=${symbol}USDT&limit=${limit}`;
-  const response = await fetchWithRetry(url);
-  return safeJsonParse<{ bids: [string, string][]; asks: [string, string][] }>(response);
+  try {
+    const url = `https://api.binance.com/api/v3/depth?symbol=${symbol}USDT&limit=${limit}`;
+    const response = await fetchWithRetry(url);
+    return safeJsonParse<{ bids: [string, string][]; asks: [string, string][] }>(response);
+  } catch (error) {
+    console.error(`[AnalysisEngine] Failed to fetch order book for ${symbol}:`, error);
+    return { bids: [], asks: [] };
+  }
 }
 
 async function fetchRecentTrades(
@@ -2426,9 +2431,14 @@ async function fetchRecentTrades(
 ): Promise<
   Array<{ price: string; qty: string; time: number; isBuyerMaker: boolean }>
 > {
-  const url = `https://api.binance.com/api/v3/trades?symbol=${symbol}USDT&limit=${limit}`;
-  const response = await fetchWithRetry(url);
-  return safeJsonParse<Array<{ price: string; qty: string; time: number; isBuyerMaker: boolean }>>(response);
+  try {
+    const url = `https://api.binance.com/api/v3/trades?symbol=${symbol}USDT&limit=${limit}`;
+    const response = await fetchWithRetry(url);
+    return safeJsonParse<Array<{ price: string; qty: string; time: number; isBuyerMaker: boolean }>>(response);
+  } catch (error) {
+    console.error(`[AnalysisEngine] Failed to fetch recent trades for ${symbol}:`, error);
+    return [];
+  }
 }
 
 // =========================================
