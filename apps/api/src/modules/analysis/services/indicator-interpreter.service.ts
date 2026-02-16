@@ -431,7 +431,7 @@ export function interpretMovingAverage(
   period: number,
   type: 'EMA' | 'SMA'
 ): IndicatorDetail {
-  const percentDiff = ((currentPrice - maValue) / maValue) * 100;
+  const percentDiff = maValue !== 0 ? ((currentPrice - maValue) / maValue) * 100 : 0;
   let signal: 'bullish' | 'bearish' | 'neutral' = 'neutral';
   let signalStrength: 'strong' | 'moderate' | 'weak' = 'weak';
   let interpretation = '';

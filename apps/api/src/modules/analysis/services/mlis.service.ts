@@ -213,8 +213,8 @@ export class MLISService {
       else if (conv1dFeatures.trendSignal < -0.5) keySignals.push('Conv1D: Strong downtrend pattern');
       if (conv1dFeatures.spikeSignal > 0.5) riskFactors.push('Conv1D: Spike pattern detected');
 
-      if (garchResult.regimeLabel === 'extreme') riskFactors.push(`GARCH: Extreme volatility (${garchResult.annualizedVol.toFixed(1)}% ann.)`);
-      else if (garchResult.regimeLabel === 'high') riskFactors.push(`GARCH: Elevated volatility (${garchResult.annualizedVol.toFixed(1)}% ann.)`);
+      if (garchResult.regimeLabel === 'extreme') riskFactors.push(`GARCH: Extreme volatility (${(isNaN(garchResult.annualizedVol) ? 0 : garchResult.annualizedVol).toFixed(1)}% ann.)`);
+      else if (garchResult.regimeLabel === 'high') riskFactors.push(`GARCH: Elevated volatility (${(isNaN(garchResult.annualizedVol) ? 0 : garchResult.annualizedVol).toFixed(1)}% ann.)`);
 
       if (institutionalFlow.smartMoneyDirection === 'accumulating') keySignals.push('Institutional: Smart money accumulating');
       else if (institutionalFlow.smartMoneyDirection === 'distributing') riskFactors.push('Institutional: Smart money distributing');

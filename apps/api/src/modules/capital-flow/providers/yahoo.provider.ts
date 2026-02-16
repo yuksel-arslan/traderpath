@@ -133,7 +133,7 @@ async function fetchYahooQuote(symbol: string): Promise<{
     const price = result.meta.regularMarketPrice;
     const previousClose = result.meta.previousClose;
     const change = price - previousClose;
-    const changePercent = (change / previousClose) * 100;
+    const changePercent = previousClose !== 0 ? (change / previousClose) * 100 : 0;
 
     return {
       price,
@@ -294,10 +294,10 @@ export async function calculateVolumeWeightedFlow(symbol: string): Promise<{
     const day = ohlcv[i];
 
     // Price direction: +1 for up, -1 for down
-    const priceChange = ((day.close - day.open) / day.open) * 100;
+    const priceChange = day.open !== 0 ? ((day.close - day.open) / day.open) * 100 : 0;
 
     // Volume conviction: how much above/below average
-    const volumeRatio = day.volume / avgVolume;
+    const volumeRatio = avgVolume > 0 ? day.volume / avgVolume : 1;
 
     // Daily flow = price change × volume conviction
     // Higher volume amplifies the signal
