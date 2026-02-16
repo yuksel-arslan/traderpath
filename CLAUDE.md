@@ -2269,6 +2269,23 @@ Kullanıcı Hakları Aktif:
     - Bu fonksiyonlar `scanAsset()` içinde hesaplanıp hiçbir yere döndürülmüyordu
     - `timingAnalysis()` dönüşünde referans edilmişti ama farklı scope → ReferenceError
   - Login sonrası yönlendirme `/dashboard` → `/terminal` olarak değiştirildi (5 dosya)
+- **Terminal: Flow ve Screener sidebars entegre edildi**:
+  - Terminal sidebar artık 3 grup içeriyor:
+    - **CAPITAL FLOW**: L1 Global Liquidity, L2 Market Flow, L2 Rotation Matrix, L3 Sector Activity, L4 AI Recommendation
+    - **ASSET ANALYSIS**: Asset Table, S1-S7 (7-Step Analysis), M1-M5 (MLIS 5-Layer)
+    - **VISUALIZER**: L7 Trade Visualizer (TradingView Candlestick Chart with Trade Plan)
+  - Flow ve Screener sayfalarındaki tüm içerikler Terminal sayfasında görüntüleniyor
+  - `ContentPanel` switch: rotation, step1-step7, mlis1-mlis5 destekleniyor
+  - MLIS sidebar öğeleri violet (#5f3dc4) accent rengi ile gösteriliyor
+  - L4 etiketi "Verdict Engine" → "AI Recommendation" olarak güncellendi
+  - Asset seçilmeden step/MLIS panellerine tıklandığında "Select an asset first" mesajı
+  - L3 Sectors'a market filter eklendi (All/Crypto/Stocks/Metals/Bonds)
+  - `RotationMatrix` komponenti eklendi (market rotation görselleştirme)
+  - `StepPanel` (S1-S7) ve `MLISPanel` (M1-M5) bileşenleri eklendi
+  - `AssetContextBar` seçili asset bilgisini gösteriyor
+  - Layout.tsx'den Flow ve Screener nav linkleri kaldırıldı
+  - Middleware'den /flow ve /screener protected path'leri kaldırıldı
+  - Dosyalar: `terminal/page.tsx`, `layout.tsx`, `middleware.ts`
 
 ### 2026-02-08
 - **Analiz Sistemi Yeniden Yapılandırıldı (3 Mod)**:
