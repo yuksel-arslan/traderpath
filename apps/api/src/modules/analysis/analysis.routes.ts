@@ -4049,7 +4049,7 @@ Explain the key risks and what conditions would need to change before trading th
             values: sarValues,
             currentValue: currentSar,
             signal: finalIsLong ? 'bullish' : 'bearish',
-            signalStrength: Math.min(100, Math.abs((currentPrice - currentSar) / currentSar * 100) * 20),
+            signalStrength: currentSar !== 0 ? Math.min(100, Math.abs((currentPrice - currentSar) / currentSar * 100) * 20) : 0,
             metadata: { isLong: finalIsLong, sar: currentSar }
           };
         }
@@ -5924,11 +5924,11 @@ Explain the key risks and what conditions would need to change before trading th
       const tradesWithPnL = analyses.map(analysis => {
         const step5 = analysis.step5Result as Record<string, unknown> | null;
         const direction = ((step5?.direction as string) || 'long').toLowerCase();
-        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
-        const stopLoss = Number((step5?.stopLoss as Record<string, unknown>)?.price || step5?.stopLossPrice || 0);
-        const tp1 = Number((step5?.takeProfits as Array<Record<string, unknown>>)?.[0]?.price || step5?.takeProfit1 || 0);
-        const tp2 = Number((step5?.takeProfits as Array<Record<string, unknown>>)?.[1]?.price || step5?.takeProfit2 || 0);
-        const tp3 = Number((step5?.takeProfits as Array<Record<string, unknown>>)?.[2]?.price || step5?.takeProfit3 || 0);
+        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0) || 0;
+        const stopLoss = Number((step5?.stopLoss as Record<string, unknown>)?.price || step5?.stopLossPrice || 0) || 0;
+        const tp1 = Number((step5?.takeProfits as Array<Record<string, unknown>>)?.[0]?.price || step5?.takeProfit1 || 0) || 0;
+        const tp2 = Number((step5?.takeProfits as Array<Record<string, unknown>>)?.[1]?.price || step5?.takeProfit2 || 0) || 0;
+        const tp3 = Number((step5?.takeProfits as Array<Record<string, unknown>>)?.[2]?.price || step5?.takeProfit3 || 0) || 0;
 
         let pnlPercent = 0;
         let isRealized = false;
@@ -5978,8 +5978,8 @@ Explain the key risks and what conditions would need to change before trading th
 
       // Fill in realized P/L by outcomeAt date
       tradesWithPnL.filter(t => t.isRealized && t.outcomeDate).forEach(trade => {
-        const dateStr = trade.outcomeDate!.toISOString().split('T')[0];
-        if (dailyData[dateStr]) {
+        const dateStr = trade.outcomeDate?.toISOString().split('T')[0];
+        if (dateStr && dailyData[dateStr]) {
           dailyData[dateStr].realized += trade.pnlPercent;
           dailyData[dateStr].trades++;
         }
@@ -5992,15 +5992,23 @@ Explain the key risks and what conditions would need to change before trading th
         const prices: Record<string, number> = {};
 
         try {
-          const pairs = symbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
-          const priceResponse = await fetch(
-            `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
-          );
-          if (priceResponse.ok) {
-            const priceData = await priceResponse.json();
-            for (const item of priceData) {
-              const symbol = item.symbol.replace('USDT', '');
-              prices[symbol] = parseFloat(item.price);
+          const cryptoSymbols = symbols.filter(s => getAssetClass(s) === 'crypto');
+          if (cryptoSymbols.length > 0) {
+            const pairs = cryptoSymbols.map(s => `"${s.toUpperCase()}USDT"`).join(',');
+            const priceResponse = await fetch(
+              `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`,
+              { signal: AbortSignal.timeout(10000) }
+            );
+            if (priceResponse.ok) {
+              const priceData = await priceResponse.json();
+              if (Array.isArray(priceData)) {
+                for (const item of priceData) {
+                  if (item && typeof item.symbol === 'string' && item.price) {
+                    const symbol = item.symbol.replace('USDT', '');
+                    prices[symbol] = parseFloat(item.price);
+                  }
+                }
+              }
             }
           }
         } catch (err) {
