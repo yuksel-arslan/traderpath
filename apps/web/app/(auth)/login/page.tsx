@@ -134,7 +134,7 @@ export default function LoginPage() {
           setWelcomeName((user?.name as string) || '');
           setShowWelcomeModal(true);
         } else {
-          router.push('/dashboard');
+          router.push('/terminal');
           router.refresh();
         }
       }
@@ -161,7 +161,7 @@ export default function LoginPage() {
   // Handle welcome modal close
   const handleWelcomeModalClose = () => {
     setShowWelcomeModal(false);
-    router.push('/dashboard');
+    router.push('/terminal');
     router.refresh();
   };
 

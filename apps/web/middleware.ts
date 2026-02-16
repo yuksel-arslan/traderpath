@@ -99,11 +99,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Redirect to dashboard if accessing login/register while authenticated
+  // Redirect to terminal if accessing login/register while authenticated
   // (but not for public auth pages like forgot-password, verify-email, etc.)
   if (isAuthPage && !isPublicAuthPage && isLoggedIn) {
-    const dashboardUrl = new URL('/dashboard', request.url);
-    return NextResponse.redirect(dashboardUrl);
+    const terminalUrl = new URL('/terminal', request.url);
+    return NextResponse.redirect(terminalUrl);
   }
 
   return NextResponse.next();
