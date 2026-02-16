@@ -2363,7 +2363,8 @@ async function fetchKlines(
     return result;
   } catch (error) {
     console.error(`[AnalysisEngine] Failed to fetch klines for ${symbol}:`, error);
-    throw error;
+    // Return empty array instead of throwing - callers should handle empty candles
+    return [];
   }
 }
 
@@ -2391,7 +2392,17 @@ async function fetch24hTicker(symbol: string): Promise<MarketData> {
     return result;
   } catch (error) {
     console.error(`[AnalysisEngine] Failed to fetch ticker for ${symbol}:`, error);
-    throw error;
+    // Return fallback instead of throwing - prevents Promise.all from crashing
+    return {
+      symbol,
+      price: 0,
+      priceChange24h: 0,
+      priceChangePercent24h: 0,
+      high24h: 0,
+      low24h: 0,
+      volume24h: 0,
+      quoteVolume24h: 0,
+    };
   }
 }
 

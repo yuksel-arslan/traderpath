@@ -1905,7 +1905,8 @@ function L7TradeVisualizer({
         const res = await authFetch(`/api/analysis/chart/candles?symbol=${encodeURIComponent(selectedAsset.symbol)}&interval=1h&limit=100`);
         if (res.ok) {
           const json = await res.json();
-          const raw = json?.data ?? json ?? [];
+          // API returns { success, data: { symbol, assetClass, interval, candles: [...] } }
+          const raw = json?.data?.candles ?? json?.data ?? json ?? [];
           if (Array.isArray(raw) && raw.length > 0) {
             candles = raw.map((c: any) => ({
               time: (typeof c.time === 'number' ? c.time : Math.floor(new Date(c.time ?? c.openTime ?? 0).getTime() / 1000)) as Time,
