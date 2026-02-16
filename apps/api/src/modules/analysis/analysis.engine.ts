@@ -5041,7 +5041,7 @@ export const analysisEngine = {
     const directionSources: PreliminaryVerdictResult['directionSources'] = [];
 
     // 1. Asset Scanner Daily Trend (10% weight) - lowered threshold to 30%
-    const dailyTrend = assetScan.timeframes.find(t => t.tf === '1D');
+    const dailyTrend = assetScan.timeframes?.find(t => t.tf === '1D');
     if (dailyTrend && dailyTrend.strength >= 30) {
       directionSources.push({
         source: 'Asset Scanner (Daily)',
@@ -5052,7 +5052,7 @@ export const analysisEngine = {
     }
 
     // 2. Asset Scanner 4H Trend (10% weight) - lowered threshold to 30%
-    const h4Trend = assetScan.timeframes.find(t => t.tf === '4H');
+    const h4Trend = assetScan.timeframes?.find(t => t.tf === '4H');
     if (h4Trend && h4Trend.strength >= 30) {
       directionSources.push({
         source: 'Asset Scanner (4H)',
@@ -5169,7 +5169,7 @@ export const analysisEngine = {
       // Use asset-specific sentiment as primary direction signal
       if (metrics.sentiment !== 'neutral') {
         directionSources.push({
-          source: `${ctx.assetClass.charAt(0).toUpperCase() + ctx.assetClass.slice(1)} Analysis`,
+          source: `${(ctx.assetClass || 'Asset').charAt(0).toUpperCase() + (ctx.assetClass || 'Asset').slice(1)} Analysis`,
           direction: metrics.sentiment === 'bullish' ? 'long' : 'short',
           weight: 0.25, // High weight for non-crypto assets
           reason: `${ctx.assetClass} sentiment: ${metrics.sentiment} (${metrics.sentimentScore}/100)`
@@ -5184,7 +5184,7 @@ export const analysisEngine = {
           factor: driver,
           positive: isPositive,
           impact: 'high',
-          source: `${ctx.assetClass.charAt(0).toUpperCase() + ctx.assetClass.slice(1)} Driver`
+          source: `${(ctx.assetClass || 'Asset').charAt(0).toUpperCase() + (ctx.assetClass || 'Asset').slice(1)} Driver`
         });
       }
 
@@ -5760,7 +5760,7 @@ export const analysisEngine = {
 
     // ===== RISK/REWARD CALCULATION =====
     const avgTP = takeProfits.reduce(
-      (sum, tp) => sum + Math.abs(tp.price - averageEntry) * (tp.percentage / 100),
+      (sum, tp) => sum + Math.abs((tp.price ?? averageEntry) - averageEntry) * ((tp.percentage ?? 0) / 100),
       0
     );
     const safeRiskAmount = riskAmount === 0 ? currentPrice * 0.015 : riskAmount;
@@ -5983,8 +5983,8 @@ export const analysisEngine = {
       currentPrice: assetScan.currentPrice,
       riskReward: tradePlan?.riskReward,
       keyMetrics: {
-        rsi: assetScan.indicators.rsi,
-        macdHistogram: assetScan.indicators.macd.histogram,
+        rsi: assetScan.indicators?.rsi ?? 50,
+        macdHistogram: assetScan.indicators?.macd?.histogram ?? 0,
         fearGreedIndex: marketPulse.fearGreedIndex,
         btcDominance: marketPulse.btcDominance || 0,
         riskLevel: safetyCheck.riskLevel,
