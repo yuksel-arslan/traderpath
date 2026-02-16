@@ -2040,20 +2040,6 @@ interface TimingResult {
     confidence: number;
     urgency: 'immediate' | 'soon' | 'wait' | 'avoid';
   };
-  // Volume Profile & Momentum Confluence
-  volumeProfile?: {
-    vpoc: number;
-    valueAreaHigh: number;
-    valueAreaLow: number;
-  };
-  momentumConfluence?: {
-    score: number;
-    signals: { indicator: string; signal: 'bullish' | 'bearish' | 'neutral'; weight: number }[];
-  };
-  macdDivergence?: {
-    type: string;
-    strength: number;
-  };
 }
 
 // Step 5 Types (Enhanced - uses all previous step data)
@@ -4700,20 +4686,6 @@ export const analysisEngine = {
     const pvt = calculatePVT(candles4h);
     const volumeSpike = detectVolumeSpike(candles1h, 15, 2.0);
 
-    // Volume Profile, Momentum Confluence & MACD Divergence (needed for return value)
-    const volumeProfile = calculateVolumeProfile(candlesPrimary);
-    const macdDivergence = detectMACDDivergence(prices4h);
-    const ma20 = calculateSMA(prices4h, 20);
-    const ma50 = calculateSMA(prices4h, 50);
-    const trendDir = ma20 > ma50 ? 'bullish' : ma20 < ma50 ? 'bearish' : 'neutral';
-    const momentumConfluence = calculateMomentumConfluence({
-      rsi: rsi4h,
-      macdHistogram: macd.histogram,
-      adx: 25,
-      stochK: undefined,
-      trendDirection: trendDir as 'bullish' | 'bearish' | 'neutral',
-    });
-
     // Candlestick pattern detection for entry confirmation
     const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candles4h);
     const patterns = candlestickPatterns.metadata?.patterns || [];
@@ -4913,20 +4885,6 @@ export const analysisEngine = {
         reason: timingGateResult.reason,
         confidence: timingGateResult.confidence,
         urgency: timingGateResult.urgency,
-      },
-      // New: Volume Profile & Momentum Confluence
-      volumeProfile: {
-        vpoc: volumeProfile.vpoc,
-        valueAreaHigh: volumeProfile.valueAreaHigh,
-        valueAreaLow: volumeProfile.valueAreaLow,
-      },
-      momentumConfluence: {
-        score: momentumConfluence.score,
-        signals: momentumConfluence.signals,
-      },
-      macdDivergence: {
-        type: macdDivergence.type,
-        strength: macdDivergence.strength,
       },
     };
   },
