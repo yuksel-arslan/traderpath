@@ -27,6 +27,12 @@ import {
   Loader2,
   AlertTriangle,
   RefreshCw,
+  Plus,
+  X,
+  Play,
+  CheckCircle2,
+  ChevronRight,
+  Star,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import {
@@ -142,6 +148,7 @@ type SectionId =
   | 'step1' | 'step2' | 'step3' | 'step4' | 'step5' | 'step6' | 'step7'
   | 'mlis1' | 'mlis2' | 'mlis3' | 'mlis4' | 'mlis5'
   | 'classic7' | 'mlispro'
+  | 'analysis'
   | 'l7';
 
 interface NavItem {
@@ -170,8 +177,7 @@ const NAV_GROUPS: NavGroup[] = [
     title: 'Asset Analysis',
     items: [
       { id: 'l5', label: 'Asset Table', tag: '' },
-      { id: 'classic7', label: '7-Step Analysis', tag: '' },
-      { id: 'mlispro', label: 'MLIS Pro', tag: '' },
+      { id: 'analysis', label: 'Run Analysis', tag: '' },
     ],
   },
   {
@@ -946,6 +952,75 @@ function L4VerdictEngine({ verdict }: { verdict: VerdictData }) {
 }
 
 // ---------------------------------------------------------------------------
+// Asset Row (shared between L5 Screener and Analysis Panel)
+// ---------------------------------------------------------------------------
+
+function AssetRow({
+  asset,
+  selectedSymbol,
+  onSelect,
+  isRecommended,
+}: {
+  asset: ScreenerAsset;
+  selectedSymbol: string | null;
+  onSelect: (asset: ScreenerAsset) => void;
+  isRecommended?: boolean;
+}) {
+  return (
+    <button
+      onClick={() => onSelect(asset)}
+      className={cn(
+        'w-full text-left rounded-xl px-3 py-2.5 flex items-center gap-3 transition-all duration-150',
+        selectedSymbol === asset.symbol
+          ? 'bg-neutral-100 dark:bg-white/[0.06] ring-1 ring-neutral-300 dark:ring-white/10'
+          : isRecommended
+          ? 'bg-[#14B8A6]/[0.04] dark:bg-[#5EEAD4]/[0.04] hover:bg-[#14B8A6]/[0.08] dark:hover:bg-[#5EEAD4]/[0.08] border border-[#14B8A6]/10 dark:border-[#5EEAD4]/10 rounded-lg'
+          : 'hover:bg-neutral-50 dark:hover:bg-white/[0.03]',
+      )}
+    >
+      {/* Rank */}
+      <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 tabular-nums w-5 text-center shrink-0">
+        {asset.rank}
+      </span>
+
+      {/* Logo + Asset */}
+      <CoinIcon symbol={asset.symbol} size={20} />
+      <div className="min-w-0 flex-1">
+        <span className="font-sans font-semibold text-xs text-neutral-900 dark:text-white">{asset.symbol}</span>
+        <span className="text-[10px] text-neutral-400 dark:text-neutral-500 ml-1.5 truncate hidden sm:inline">{asset.name}</span>
+      </div>
+
+      {/* Price + 24h */}
+      <div className="text-right shrink-0">
+        <div className="font-sans font-medium text-xs text-neutral-900 dark:text-white tabular-nums">{formatPrice(asset.price)}</div>
+        <Delta value={asset.change24h} />
+      </div>
+
+      {/* Volume (md+) */}
+      <span className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400 tabular-nums hidden md:block w-16 text-right shrink-0">
+        {formatNumber(asset.volume)}
+      </span>
+
+      {/* Score */}
+      <div className="w-20 shrink-0 hidden sm:block">
+        <ScoreBar score={asset.aiScore} />
+      </div>
+
+      {/* Trend */}
+      <div className="shrink-0 hidden sm:block">
+        <TrendIndicator trend={asset.trend} />
+      </div>
+
+      {/* Verdict + Direction */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <VerdictBadgeSmall verdict={asset.verdict} />
+        <DirectionTag direction={asset.direction} />
+      </div>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // L5: Asset Screener
 // ---------------------------------------------------------------------------
 
@@ -953,10 +1028,12 @@ function L5Screener({
   assets,
   selectedSymbol,
   onSelect,
+  recommendedSymbols,
 }: {
   assets: ScreenerAsset[];
   selectedSymbol: string | null;
   onSelect: (asset: ScreenerAsset) => void;
+  recommendedSymbols?: string[];
 }) {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('aiScore');
@@ -976,6 +1053,8 @@ function L5Screener({
       setSortDir('desc');
     }
   }, [sortKey]);
+
+  const recSet = useMemo(() => new Set((recommendedSymbols ?? []).map(s => s.toUpperCase())), [recommendedSymbols]);
 
   const filtered = useMemo(() => {
     let result = [...assets];
@@ -1017,6 +1096,15 @@ function L5Screener({
 
     return result;
   }, [assets, search, sortKey, sortDir, marketFilter]);
+
+  // Split into recommended (top) and others
+  const { recommended, others } = useMemo(() => {
+    if (recSet.size === 0) return { recommended: [], others: filtered };
+    return {
+      recommended: filtered.filter(a => recSet.has(a.symbol.toUpperCase())),
+      others: filtered.filter(a => !recSet.has(a.symbol.toUpperCase())),
+    };
+  }, [filtered, recSet]);
 
   const SortBtn = ({ label, sKey }: { label: string; sKey: SortKey }) => (
     <button
@@ -1086,56 +1174,27 @@ function L5Screener({
 
       {/* Card list */}
       <div className="space-y-1.5">
-        {filtered.map((asset) => (
-          <button
-            key={asset.symbol}
-            onClick={() => onSelect(asset)}
-            className={cn(
-              'w-full text-left rounded-xl px-3 py-2.5 flex items-center gap-3 transition-all duration-150',
-              selectedSymbol === asset.symbol
-                ? 'bg-neutral-100 dark:bg-white/[0.06] ring-1 ring-neutral-300 dark:ring-white/10'
-                : 'hover:bg-neutral-50 dark:hover:bg-white/[0.03]',
+        {/* L4 Recommended assets — highlighted at top */}
+        {recommended.length > 0 && (
+          <>
+            <div className="flex items-center gap-1.5 px-1 pt-1 pb-0.5">
+              <Star className="w-3 h-3 text-[#14B8A6] dark:text-[#5EEAD4]" />
+              <span className="text-[10px] font-sans text-[#14B8A6] dark:text-[#5EEAD4] uppercase tracking-widest font-medium">
+                L4 Recommended
+              </span>
+            </div>
+            {recommended.map((asset) => (
+              <AssetRow key={asset.symbol} asset={asset} selectedSymbol={selectedSymbol} onSelect={onSelect} isRecommended />
+            ))}
+            {others.length > 0 && (
+              <div className="border-t border-neutral-200 dark:border-neutral-800 my-2" />
             )}
-          >
-            {/* Rank */}
-            <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 tabular-nums w-5 text-center shrink-0">
-              {asset.rank}
-            </span>
+          </>
+        )}
 
-            {/* Logo + Asset */}
-            <CoinIcon symbol={asset.symbol} size={20} />
-            <div className="min-w-0 flex-1">
-              <span className="font-sans font-semibold text-xs text-neutral-900 dark:text-white">{asset.symbol}</span>
-              <span className="text-[10px] text-neutral-400 dark:text-neutral-500 ml-1.5 truncate hidden sm:inline">{asset.name}</span>
-            </div>
-
-            {/* Price + 24h */}
-            <div className="text-right shrink-0">
-              <div className="font-sans font-medium text-xs text-neutral-900 dark:text-white tabular-nums">{formatPrice(asset.price)}</div>
-              <Delta value={asset.change24h} />
-            </div>
-
-            {/* Volume (md+) */}
-            <span className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400 tabular-nums hidden md:block w-16 text-right shrink-0">
-              {formatNumber(asset.volume)}
-            </span>
-
-            {/* Score */}
-            <div className="w-20 shrink-0 hidden sm:block">
-              <ScoreBar score={asset.aiScore} />
-            </div>
-
-            {/* Trend */}
-            <div className="shrink-0 hidden sm:block">
-              <TrendIndicator trend={asset.trend} />
-            </div>
-
-            {/* Verdict + Direction */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <VerdictBadgeSmall verdict={asset.verdict} />
-              <DirectionTag direction={asset.direction} />
-            </div>
-          </button>
+        {/* Remaining assets */}
+        {others.map((asset) => (
+          <AssetRow key={asset.symbol} asset={asset} selectedSymbol={selectedSymbol} onSelect={onSelect} />
         ))}
 
         {filtered.length === 0 && (
@@ -1427,15 +1486,357 @@ function MLISProTabbed({ asset }: { asset: ScreenerAsset | null }) {
 }
 
 // ---------------------------------------------------------------------------
+// Unified Analysis Panel (7-Step → MLIS Pro sequential flow)
+// ---------------------------------------------------------------------------
+
+type AnalysisPhase = 'select' | 'running_classic' | 'running_mlis' | 'done';
+
+interface AnalysisResult {
+  symbol: string;
+  classicDone: boolean;
+  mlisDone: boolean;
+  tradePlan?: TradePlan;
+  verdict?: string;
+  direction?: string;
+  score?: number;
+}
+
+function UnifiedAnalysisPanel({
+  screenerData,
+  recommendedSymbols,
+  onAnalysisComplete,
+}: {
+  screenerData: ScreenerAsset[];
+  recommendedSymbols: string[];
+  onAnalysisComplete: (results: AnalysisResult[]) => void;
+}) {
+  const [selectedSymbols, setSelectedSymbols] = useState<string[]>([]);
+  const [phase, setPhase] = useState<AnalysisPhase>('select');
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [results, setResults] = useState<AnalysisResult[]>([]);
+  const [addInput, setAddInput] = useState('');
+  const [activeResultTab, setActiveResultTab] = useState<'classic7' | 'mlispro'>('classic7');
+  const [activeResultAsset, setActiveResultAsset] = useState<string | null>(null);
+
+  // Initialize with L4 recommended symbols
+  useEffect(() => {
+    if (selectedSymbols.length === 0 && recommendedSymbols.length > 0) {
+      setSelectedSymbols([...recommendedSymbols]);
+    }
+  }, [recommendedSymbols]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const addSymbol = useCallback((sym: string) => {
+    const upper = sym.toUpperCase().trim();
+    if (upper && !selectedSymbols.includes(upper)) {
+      setSelectedSymbols(prev => [...prev, upper]);
+    }
+    setAddInput('');
+  }, [selectedSymbols]);
+
+  const removeSymbol = useCallback((sym: string) => {
+    setSelectedSymbols(prev => prev.filter(s => s !== sym));
+  }, []);
+
+  const handleRunAnalysis = useCallback(() => {
+    if (selectedSymbols.length === 0) return;
+    setPhase('running_classic');
+    setCurrentIdx(0);
+    setResults([]);
+
+    // Simulate sequential analysis: 7-Step for each asset, then MLIS for each
+    const allResults: AnalysisResult[] = selectedSymbols.map(sym => ({
+      symbol: sym,
+      classicDone: false,
+      mlisDone: false,
+    }));
+    setResults(allResults);
+
+    let step = 0;
+    const total = selectedSymbols.length * 2; // classic + mlis for each
+
+    const runNext = () => {
+      step++;
+      const assetIdx = step <= selectedSymbols.length ? step - 1 : step - selectedSymbols.length - 1;
+      const isMLIS = step > selectedSymbols.length;
+
+      if (step <= selectedSymbols.length) {
+        // Running 7-Step for asset
+        setPhase('running_classic');
+        setCurrentIdx(assetIdx);
+        setResults(prev => prev.map((r, i) => {
+          if (i === assetIdx) {
+            const asset = screenerData.find(a => a.symbol.toUpperCase() === r.symbol.toUpperCase());
+            return {
+              ...r,
+              classicDone: true,
+              tradePlan: asset ? calculateTradePlan(asset) : undefined,
+              verdict: asset?.verdict,
+              direction: asset?.direction,
+              score: asset?.aiScore,
+            };
+          }
+          return r;
+        }));
+      } else if (step <= total) {
+        // Running MLIS for asset
+        setPhase('running_mlis');
+        setCurrentIdx(assetIdx);
+        setResults(prev => prev.map((r, i) => i === assetIdx ? { ...r, mlisDone: true } : r));
+      }
+
+      if (step < total) {
+        setTimeout(runNext, 800);
+      } else {
+        setTimeout(() => {
+          setPhase('done');
+          setResults(prev => {
+            onAnalysisComplete(prev);
+            return prev;
+          });
+        }, 500);
+      }
+    };
+
+    setTimeout(runNext, 600);
+  }, [selectedSymbols, screenerData, onAnalysisComplete]);
+
+  // Available symbols from screener for adding
+  const availableSymbols = useMemo(() =>
+    screenerData
+      .map(a => a.symbol.toUpperCase())
+      .filter(s => !selectedSymbols.includes(s))
+      .slice(0, 10),
+  [screenerData, selectedSymbols]);
+
+  // SELECT phase: show asset selection with add/remove
+  if (phase === 'select') {
+    return (
+      <section>
+        <SectionLabel layer="" label="Run Analysis" />
+
+        {/* Info note */}
+        <div className="border border-[#14B8A6]/20 dark:border-[#5EEAD4]/20 rounded-sm bg-[#14B8A6]/[0.04] dark:bg-[#5EEAD4]/[0.04] p-3 mb-4">
+          <p className="text-[11px] font-sans text-neutral-600 dark:text-neutral-300 leading-relaxed">
+            <span className="text-[#14B8A6] dark:text-[#5EEAD4] font-medium">Default:</span>{' '}
+            L4 recommended assets will be analyzed. You can add or remove assets below.
+            Each asset runs <span className="font-medium">7-Step Analysis</span> followed by <span className="text-violet-500 dark:text-violet-400 font-medium">MLIS Pro</span>.
+          </p>
+        </div>
+
+        {/* Selected assets */}
+        <div className="mb-3">
+          <div className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2">
+            Assets to analyze ({selectedSymbols.length})
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {selectedSymbols.map(sym => (
+              <span
+                key={sym}
+                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-sans bg-neutral-100 dark:bg-neutral-800 rounded text-neutral-900 dark:text-white"
+              >
+                <CoinIcon symbol={sym} size={14} />
+                {sym}
+                <button
+                  onClick={() => removeSymbol(sym)}
+                  className="ml-0.5 text-neutral-400 hover:text-red-500 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+            {selectedSymbols.length === 0 && (
+              <span className="text-[11px] text-neutral-400 dark:text-neutral-500">No assets selected</span>
+            )}
+          </div>
+        </div>
+
+        {/* Add asset input */}
+        <div className="flex gap-2 mb-3">
+          <div className="relative flex-1">
+            <Plus className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+            <input
+              type="text"
+              placeholder="Add symbol (e.g. SOL)..."
+              value={addInput}
+              onChange={e => setAddInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && addInput.trim()) addSymbol(addInput); }}
+              className="w-full pl-8 pr-3 py-2 text-xs font-sans bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-neutral-400 dark:focus:border-neutral-600 transition-colors"
+            />
+          </div>
+          <button
+            onClick={() => { if (addInput.trim()) addSymbol(addInput); }}
+            className="px-3 py-2 text-xs font-sans bg-neutral-100 dark:bg-neutral-800 rounded-sm hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+          >
+            Add
+          </button>
+        </div>
+
+        {/* Quick add from screener */}
+        {availableSymbols.length > 0 && (
+          <div className="mb-4">
+            <div className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-1.5">
+              Quick add
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {availableSymbols.map(sym => (
+                <button
+                  key={sym}
+                  onClick={() => addSymbol(sym)}
+                  className="px-2 py-0.5 text-[10px] font-sans border border-neutral-200 dark:border-neutral-800 rounded text-neutral-500 dark:text-neutral-400 hover:border-[#14B8A6] hover:text-[#14B8A6] dark:hover:border-[#5EEAD4] dark:hover:text-[#5EEAD4] transition-colors"
+                >
+                  + {sym}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Run button */}
+        <button
+          onClick={handleRunAnalysis}
+          disabled={selectedSymbols.length === 0}
+          className={cn(
+            'w-full flex items-center justify-center gap-2 py-2.5 rounded-sm text-xs font-sans font-medium transition-colors',
+            selectedSymbols.length > 0
+              ? 'bg-[#14B8A6] hover:bg-[#0D9488] text-white'
+              : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed',
+          )}
+        >
+          <Play className="w-3.5 h-3.5" />
+          Run 7-Step + MLIS Pro ({selectedSymbols.length} asset{selectedSymbols.length !== 1 ? 's' : ''})
+        </button>
+      </section>
+    );
+  }
+
+  // RUNNING / DONE phase: show progress and results
+  const totalSteps = selectedSymbols.length * 2;
+  const completedSteps = results.filter(r => r.classicDone).length + results.filter(r => r.mlisDone).length;
+  const progressPct = phase === 'done' ? 100 : Math.round((completedSteps / totalSteps) * 100);
+
+  return (
+    <section>
+      <SectionLabel layer="" label="Analysis Progress" />
+
+      {/* Progress bar */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+            {phase === 'done' ? 'Complete' : phase === 'running_classic' ? '7-Step Analysis' : 'MLIS Pro'}
+          </span>
+          <span className="text-[10px] font-sans text-neutral-500 dark:text-neutral-400 tabular-nums">
+            {completedSteps}/{totalSteps}
+          </span>
+        </div>
+        <div className="h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+          <div
+            className={cn(
+              'h-full rounded-full transition-all duration-500',
+              phase === 'done' ? 'bg-[#22C55E] dark:bg-[#4ADE80]' : phase === 'running_mlis' ? 'bg-violet-500' : 'bg-[#14B8A6]',
+            )}
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Per-asset status */}
+      <div className="space-y-1.5 mb-4">
+        {results.map((r) => (
+          <div
+            key={r.symbol}
+            className={cn(
+              'flex items-center gap-2 px-3 py-2 rounded-sm transition-colors cursor-pointer',
+              activeResultAsset === r.symbol ? 'bg-neutral-100 dark:bg-white/[0.06] ring-1 ring-neutral-300 dark:ring-white/10' : 'hover:bg-neutral-50 dark:hover:bg-white/[0.03]',
+            )}
+            onClick={() => { if (r.classicDone) setActiveResultAsset(r.symbol); }}
+          >
+            <CoinIcon symbol={r.symbol} size={18} />
+            <span className="text-xs font-sans font-semibold text-neutral-900 dark:text-white flex-1">{r.symbol}</span>
+            {/* 7-Step status */}
+            <span className={cn(
+              'text-[9px] font-sans px-1.5 py-0.5 rounded',
+              r.classicDone ? 'bg-[#14B8A6]/10 text-[#14B8A6] dark:text-[#5EEAD4]' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400',
+            )}>
+              {r.classicDone ? '✓ 7-Step' : '… 7-Step'}
+            </span>
+            {/* MLIS status */}
+            <span className={cn(
+              'text-[9px] font-sans px-1.5 py-0.5 rounded',
+              r.mlisDone ? 'bg-violet-500/10 text-violet-500 dark:text-violet-400' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400',
+            )}>
+              {r.mlisDone ? '✓ MLIS' : '… MLIS'}
+            </span>
+            {r.verdict && <VerdictBadgeSmall verdict={r.verdict} />}
+            {r.direction && <DirectionTag direction={r.direction} />}
+          </div>
+        ))}
+      </div>
+
+      {/* Result detail tabs (7-Step / MLIS) for selected result asset */}
+      {phase === 'done' && activeResultAsset && (() => {
+        const asset = screenerData.find(a => a.symbol.toUpperCase() === activeResultAsset.toUpperCase());
+        if (!asset) return null;
+        return (
+          <div className="border-t border-neutral-200 dark:border-neutral-800 pt-4">
+            {/* Method toggle */}
+            <div className="flex gap-px bg-neutral-200 dark:bg-neutral-800 rounded-sm overflow-hidden mb-4">
+              <button
+                onClick={() => setActiveResultTab('classic7')}
+                className={cn(
+                  'flex-1 px-3 py-2 text-[10px] font-sans uppercase tracking-wider transition-colors text-center',
+                  activeResultTab === 'classic7'
+                    ? 'bg-neutral-900 dark:bg-white text-white dark:text-black'
+                    : 'bg-white dark:bg-neutral-950 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white',
+                )}
+              >
+                7-Step Analysis
+              </button>
+              <button
+                onClick={() => setActiveResultTab('mlispro')}
+                className={cn(
+                  'flex-1 px-3 py-2 text-[10px] font-sans uppercase tracking-wider transition-colors text-center',
+                  activeResultTab === 'mlispro'
+                    ? 'bg-violet-600 dark:bg-violet-500 text-white'
+                    : 'bg-white dark:bg-neutral-950 text-neutral-500 dark:text-neutral-400 hover:text-violet-600 dark:hover:text-violet-400',
+                )}
+              >
+                MLIS Pro
+              </button>
+            </div>
+            {activeResultTab === 'classic7' ? (
+              <Classic7StepTabbed asset={asset} />
+            ) : (
+              <MLISProTabbed asset={asset} />
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Run again button */}
+      {phase === 'done' && (
+        <button
+          onClick={() => { setPhase('select'); setResults([]); setActiveResultAsset(null); }}
+          className="mt-4 w-full flex items-center justify-center gap-2 py-2 rounded-sm text-xs font-sans text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900/30 transition-colors"
+        >
+          <RefreshCw className="w-3 h-3" /> Run New Analysis
+        </button>
+      )}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // L7: Trade Visualizer (Lightweight Charts)
 // ---------------------------------------------------------------------------
 
 function L7TradeVisualizer({
   selectedAsset,
   tradePlan,
+  analysisResults,
 }: {
   selectedAsset: ScreenerAsset | null;
   tradePlan: TradePlan | null;
+  analysisResults?: AnalysisResult[];
 }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -1784,6 +2185,43 @@ function L7TradeVisualizer({
           </div>
         );
       })()}
+
+      {/* Analysis results summary (from unified analysis) */}
+      {analysisResults && analysisResults.length > 0 && (
+        <div className="mt-4">
+          <div className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2">
+            Analysis Results
+          </div>
+          <div className="space-y-1">
+            {analysisResults.filter(r => r.tradePlan).map(r => (
+              <div
+                key={r.symbol}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-2 rounded-sm border transition-colors cursor-pointer',
+                  r.symbol === selectedAsset.symbol
+                    ? 'border-[#14B8A6]/30 dark:border-[#5EEAD4]/30 bg-[#14B8A6]/[0.04] dark:bg-[#5EEAD4]/[0.04]'
+                    : 'border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-white/[0.03]',
+                )}
+              >
+                <CoinIcon symbol={r.symbol} size={16} />
+                <span className="text-xs font-sans font-semibold text-neutral-900 dark:text-white">{r.symbol}</span>
+                <div className="flex-1" />
+                {r.classicDone && (
+                  <span className="text-[9px] font-sans px-1.5 py-0.5 rounded bg-[#14B8A6]/10 text-[#14B8A6] dark:text-[#5EEAD4]">7-Step</span>
+                )}
+                {r.mlisDone && (
+                  <span className="text-[9px] font-sans px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-500 dark:text-violet-400">MLIS</span>
+                )}
+                {r.verdict && <VerdictBadgeSmall verdict={r.verdict} />}
+                {r.direction && <DirectionTag direction={r.direction} />}
+                {r.score !== undefined && (
+                  <span className="text-[10px] font-sans tabular-nums text-neutral-500">{(r.score / 10).toFixed(1)}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -1861,6 +2299,9 @@ function ContentPanel({
   l2Interpretation,
   marketFilter,
   setMarketFilter,
+  recommendedSymbols,
+  analysisResults,
+  onAnalysisComplete,
 }: {
   activeSection: SectionId;
   macroMetrics: MacroMetric[];
@@ -1875,13 +2316,27 @@ function ContentPanel({
   l2Interpretation?: string;
   marketFilter: string;
   setMarketFilter: (f: string) => void;
+  recommendedSymbols: string[];
+  analysisResults: AnalysisResult[];
+  onAnalysisComplete: (results: AnalysisResult[]) => void;
 }) {
-  // Tabbed 7-Step Analysis
+  // Unified Analysis Panel
+  if (activeSection === 'analysis') {
+    return (
+      <UnifiedAnalysisPanel
+        screenerData={screenerData}
+        recommendedSymbols={recommendedSymbols}
+        onAnalysisComplete={onAnalysisComplete}
+      />
+    );
+  }
+
+  // Tabbed 7-Step Analysis (legacy)
   if (activeSection === 'classic7') {
     return <Classic7StepTabbed asset={selectedAsset} />;
   }
 
-  // Tabbed MLIS Pro
+  // Tabbed MLIS Pro (legacy)
   if (activeSection === 'mlispro') {
     return <MLISProTabbed asset={selectedAsset} />;
   }
@@ -1945,6 +2400,7 @@ function ContentPanel({
           assets={screenerData}
           selectedSymbol={selectedAsset?.symbol ?? null}
           onSelect={onAssetSelect}
+          recommendedSymbols={recommendedSymbols}
         />
       );
     case 'l7':
@@ -1952,6 +2408,7 @@ function ContentPanel({
         <L7TradeVisualizer
           selectedAsset={selectedAsset}
           tradePlan={tradePlan}
+          analysisResults={analysisResults}
         />
       );
     default:
@@ -1973,6 +2430,9 @@ export default function TestPage() {
   // Selection state
   const [selectedAsset, setSelectedAsset] = useState<ScreenerAsset | null>(null);
   const [tradePlan, setTradePlan] = useState<TradePlan | null>(null);
+
+  // Analysis results state
+  const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
 
   // Navigation
   const [activeSection, setActiveSection] = useState<SectionId>('l1');
@@ -2014,11 +2474,37 @@ export default function TestPage() {
   const l1Interpretation = cfData?.insights?.ragLayer1 as string | undefined;
   const l2Interpretation = cfData?.insights?.ragLayer2 as string | undefined;
 
+  // Derive recommended symbols from L4 verdict
+  const recommendedSymbols = useMemo(() => {
+    const syms: string[] = [];
+    if (verdict.buy?.suggestedAssets) {
+      syms.push(...verdict.buy.suggestedAssets.map(s => s.toUpperCase()));
+    }
+    if (verdict.sell?.suggestedAssets) {
+      syms.push(...verdict.sell.suggestedAssets.map(s => s.toUpperCase()));
+    }
+    return [...new Set(syms)];
+  }, [verdict]);
+
   const handleAssetSelect = useCallback((asset: ScreenerAsset) => {
     setSelectedAsset(asset);
     setTradePlan(calculateTradePlan(asset));
     setActiveSection('l7');
   }, []);
+
+  const handleAnalysisComplete = useCallback((results: AnalysisResult[]) => {
+    setAnalysisResults(results);
+    // Auto-select first completed asset and navigate to L7
+    const first = results.find(r => r.tradePlan);
+    if (first) {
+      const asset = screenerData.find(a => a.symbol.toUpperCase() === first.symbol.toUpperCase());
+      if (asset) {
+        setSelectedAsset(asset);
+        setTradePlan(first.tradePlan ?? calculateTradePlan(asset));
+      }
+    }
+    setActiveSection('l7');
+  }, [screenerData]);
 
   const handleNavClick = useCallback((id: SectionId) => {
     setActiveSection(id);
@@ -2203,6 +2689,9 @@ export default function TestPage() {
               l2Interpretation={l2Interpretation}
               marketFilter={marketFilter}
               setMarketFilter={setMarketFilter}
+              recommendedSymbols={recommendedSymbols}
+              analysisResults={analysisResults}
+              onAnalysisComplete={handleAnalysisComplete}
             />
           </main>
         </div>
