@@ -257,21 +257,30 @@ async function sendUserNotifications(
 ) {
   try {
     // Get users who have this signal's market enabled
-    const preferences = await prisma.userSignalPreferences.findMany({
-      where: {
-        enabledMarkets: {
-          has: signal.market,
-        },
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
+    let preferences;
+    try {
+      preferences = await prisma.userSignalPreferences.findMany({
+        where: {
+          enabledMarkets: {
+            has: signal.market,
           },
         },
-      },
-    });
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+            },
+          },
+        },
+      });
+    } catch (dbError) {
+      if (isTableMissing(dbError)) {
+        console.warn('[OutcomeTracker] user_signal_preferences table not found, skipping user notifications');
+        return;
+      }
+      throw dbError;
+    }
 
     const message = formatSignalUpdate(
       signal.symbol,
@@ -351,6 +360,18 @@ async function sendUserNotifications(
   }
 }
 
+/**
+ * Check if a Prisma error is due to missing table (P2021) or missing column (P2022)
+ */
+function isTableMissing(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const code = (error as any).code;
+  const message = (error as any).message || '';
+  return code === 'P2021' || code === 'P2022' || message.includes('does not exist');
+}
+
+let tableMissingWarningLogged = false;
+
 // Main tracking function
 export async function trackSignalOutcomes() {
   const startTime = Date.now();
@@ -370,15 +391,27 @@ export async function trackSignalOutcomes() {
 
   try {
     // Fetch all published signals that haven't been closed yet
-    const activeSignals = await prisma.signal.findMany({
-      where: {
-        status: 'published',
-        outcome: null,
-      },
-      orderBy: {
-        publishedAt: 'asc',
-      },
-    });
+    let activeSignals;
+    try {
+      activeSignals = await prisma.signal.findMany({
+        where: {
+          status: 'published',
+          outcome: null,
+        },
+        orderBy: {
+          publishedAt: 'asc',
+        },
+      });
+    } catch (error) {
+      if (isTableMissing(error)) {
+        if (!tableMissingWarningLogged) {
+          console.warn('[OutcomeTracker] signals table not found in database. Run the migration: apps/api/prisma/migrations/apply_signals_production.sql');
+          tableMissingWarningLogged = true;
+        }
+        return { success: true, checked: 0, updated: 0, errors: 0, message: 'signals table not migrated yet' };
+      }
+      throw error;
+    }
 
     console.log(`[OutcomeTracker] Found ${activeSignals.length} active signals to track`);
 

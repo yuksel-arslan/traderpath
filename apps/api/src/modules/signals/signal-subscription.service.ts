@@ -60,6 +60,38 @@ export const SIGNAL_TIER_CONFIG: Record<
 // SERVICE
 // ===========================================
 
+/**
+ * Check if a Prisma error is due to missing table (P2021) or missing column (P2022)
+ */
+function isTableMissing(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const code = (error as any).code;
+  const message = (error as any).message || '';
+  return code === 'P2021' || code === 'P2022' || message.includes('does not exist');
+}
+
+let tableMissingWarningLogged = false;
+
+const DEFAULT_FREE_SUBSCRIPTION = {
+  id: '',
+  userId: '',
+  tier: 'SIGNAL_FREE' as const,
+  status: 'INACTIVE' as const,
+  stripeCustomerId: null,
+  stripeSubscriptionId: null,
+  stripePriceId: null,
+  currentPeriodStart: null,
+  currentPeriodEnd: null,
+  cancelAtPeriodEnd: false,
+  enabledMarkets: [] as string[],
+  maxSignalsPerDay: 0,
+  telegramDelivery: false,
+  discordDelivery: false,
+  emailDelivery: false,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
 export const signalSubscriptionService = {
   /**
    * Get user's signal subscription status
@@ -72,30 +104,41 @@ export const signalSubscriptionService = {
       return JSON.parse(cached);
     }
 
-    let subscription = await prisma.signalSubscription.findUnique({
-      where: { userId },
-    });
-
-    // Create free tier subscription if doesn't exist
-    if (!subscription) {
-      subscription = await prisma.signalSubscription.create({
-        data: {
-          userId,
-          tier: 'SIGNAL_FREE',
-          status: 'INACTIVE',
-          enabledMarkets: [],
-          maxSignalsPerDay: 0,
-          telegramDelivery: false,
-          discordDelivery: false,
-          emailDelivery: false,
-        },
+    try {
+      let subscription = await prisma.signalSubscription.findUnique({
+        where: { userId },
       });
+
+      // Create free tier subscription if doesn't exist
+      if (!subscription) {
+        subscription = await prisma.signalSubscription.create({
+          data: {
+            userId,
+            tier: 'SIGNAL_FREE',
+            status: 'INACTIVE',
+            enabledMarkets: [],
+            maxSignalsPerDay: 0,
+            telegramDelivery: false,
+            discordDelivery: false,
+            emailDelivery: false,
+          },
+        });
+      }
+
+      // Cache for 5 minutes
+      await cache.set(cacheKey, JSON.stringify(subscription), 300);
+
+      return subscription;
+    } catch (error) {
+      if (isTableMissing(error)) {
+        if (!tableMissingWarningLogged) {
+          console.warn('[SignalSubscription] signal_subscriptions table not found. Run migration: apps/api/prisma/migrations/apply_signals_production.sql');
+          tableMissingWarningLogged = true;
+        }
+        return { ...DEFAULT_FREE_SUBSCRIPTION, userId };
+      }
+      throw error;
     }
-
-    // Cache for 5 minutes
-    await cache.set(cacheKey, JSON.stringify(subscription), 300);
-
-    return subscription;
   },
 
   /**
