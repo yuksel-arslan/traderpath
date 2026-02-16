@@ -404,8 +404,24 @@ export interface TickerData {
 }
 
 /**
+ * Convert crypto symbol to Yahoo Finance format (BTC → BTC-USD)
+ */
+function cryptoToYahooSymbol(symbol: string): string {
+  let base = symbol.toUpperCase();
+  const suffixes = ['USDT', 'BUSD', 'USD', 'PERP', 'USDC'];
+  for (const suffix of suffixes) {
+    if (base.endsWith(suffix)) {
+      base = base.slice(0, -suffix.length);
+      break;
+    }
+  }
+  return `${base}-USD`;
+}
+
+/**
  * Fetch candle data for any supported asset
  * Automatically routes to correct provider based on asset class
+ * Crypto: Binance → Yahoo Finance fallback (handles HTTP 451 geo-blocks)
  */
 export async function fetchCandles(
   symbol: string,
@@ -418,7 +434,15 @@ export async function fetchCandles(
 
   try {
     if (assetClass === 'crypto') {
-      return await fetchBinanceCandles(symbol, interval, limit);
+      try {
+        return await fetchBinanceCandles(symbol, interval, limit);
+      } catch (binanceError) {
+        // Binance failed (HTTP 451 geo-block, rate limit, etc.) — fallback to Yahoo Finance
+        const errMsg = binanceError instanceof Error ? binanceError.message : String(binanceError);
+        console.warn(`[MultiAssetProvider] Binance failed for ${symbol}: ${errMsg}. Falling back to Yahoo Finance.`);
+        const yahooSymbol = cryptoToYahooSymbol(symbol);
+        return await fetchYahooCandles(yahooSymbol, interval, limit);
+      }
     } else {
       // stocks, bonds, metals, bist - use Yahoo Finance
       // BIST symbols use .IS suffix (e.g., THYAO.IS, GARAN.IS)
@@ -434,6 +458,7 @@ export async function fetchCandles(
 /**
  * Fetch market data/ticker for any supported asset
  * Automatically routes to correct provider based on asset class
+ * Crypto: Binance → Yahoo Finance fallback (handles HTTP 451 geo-blocks)
  */
 export async function fetchTicker(symbol: string): Promise<TickerData> {
   const assetClass = detectAssetClass(symbol);
@@ -442,17 +467,36 @@ export async function fetchTicker(symbol: string): Promise<TickerData> {
 
   try {
     if (assetClass === 'crypto') {
-      const data = await fetchBinanceTicker(symbol);
-      return {
-        symbol: data.symbol,
-        assetClass: 'crypto',
-        price: data.price,
-        change24h: data.change24h,
-        changePercent24h: data.changePercent24h,
-        high24h: data.high24h,
-        low24h: data.low24h,
-        volume24h: data.volume24h,
-      };
+      try {
+        const data = await fetchBinanceTicker(symbol);
+        return {
+          symbol: data.symbol,
+          assetClass: 'crypto',
+          price: data.price,
+          change24h: data.change24h,
+          changePercent24h: data.changePercent24h,
+          high24h: data.high24h,
+          low24h: data.low24h,
+          volume24h: data.volume24h,
+        };
+      } catch (binanceError) {
+        // Binance failed — fallback to Yahoo Finance
+        const errMsg = binanceError instanceof Error ? binanceError.message : String(binanceError);
+        console.warn(`[MultiAssetProvider] Binance ticker failed for ${symbol}: ${errMsg}. Falling back to Yahoo Finance.`);
+        const yahooSymbol = cryptoToYahooSymbol(symbol);
+        const data = await fetchYahooTicker(yahooSymbol);
+        return {
+          symbol: symbol.toUpperCase().replace(/USDT|BUSD|USD|PERP|USDC$/, ''),
+          assetClass: 'crypto',
+          price: data.price,
+          change24h: data.change24h,
+          changePercent24h: data.changePercent24h,
+          high24h: data.high24h,
+          low24h: data.low24h,
+          volume24h: data.volume24h,
+          marketCap: data.marketCap,
+        };
+      }
     } else {
       // stocks, bonds, metals, bist - use Yahoo Finance
       const resolved = resolveSymbol(symbol);
