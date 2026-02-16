@@ -840,7 +840,7 @@ Warn about potential traps and give protective advice.`;
 
       // Step 7: Integrated Trade Plan - only generated for GO/CONDITIONAL_GO signals
       // Uses ALL previous step data for intelligent decision making
-      const tradePlan = await analysisEngine.integratedTradePlan(
+      let tradePlan = await analysisEngine.integratedTradePlan(
         body.symbol,
         preliminaryVerdict,
         { marketPulse, assetScan, safetyCheck, timing, trapCheck },
