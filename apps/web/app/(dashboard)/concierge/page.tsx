@@ -799,9 +799,15 @@ export default function ConciergePage() {
                                   const percentage = typeof item === 'object' && item
                                     ? Number((item as { percentage?: number }).percentage) || 0
                                     : 0;
-                                  const riskReward = typeof item === 'object' && item
-                                    ? Number((item as { riskReward?: number }).riskReward) || (i + 1)
-                                    : (i + 1);
+                                  let riskReward = typeof item === 'object' && item
+                                    ? Number((item as { riskReward?: number }).riskReward) || 0
+                                    : 0;
+                                  // Calculate per-TP R:R if not provided by backend
+                                  if (!riskReward && price && entryPrice && slPrice) {
+                                    const risk = Math.abs(entryPrice - slPrice);
+                                    riskReward = risk > 0 ? parseFloat((Math.abs(price - entryPrice) / risk).toFixed(1)) : (i + 1);
+                                  }
+                                  if (!riskReward) riskReward = i + 1;
                                   return { price, percentage, riskReward };
                                 }).filter(t => t.price > 0)
                               : [];

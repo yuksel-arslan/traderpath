@@ -1186,7 +1186,8 @@ export default function AnalysisDetailsPage() {
                   takeProfits={[tp1, tp2].filter(Boolean).map((tp, i) => ({
                     price: tp,
                     percentage: 0,
-                    riskReward: step5.riskReward || (i + 1),
+                    riskReward: step5.takeProfits?.[i]?.riskReward
+                      || (stopLossPrice && entryPrice ? parseFloat((Math.abs(tp - entryPrice) / Math.abs(entryPrice - stopLossPrice)).toFixed(1)) : (i + 1)),
                   }))}
                   currentPrice={step2.currentPrice || entryPrice}
                   support={step2.levels?.support}

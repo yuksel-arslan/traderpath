@@ -831,10 +831,13 @@ export default function ReportViewPage() {
                   direction={(isLong ? 'long' : 'short') as 'long' | 'short'}
                   entries={report.tradePlan.averageEntry ? [{ price: report.tradePlan.averageEntry, percentage: 100 }] : []}
                   stopLoss={{ price: report.tradePlan.stopLoss?.price || 0, percentage: 0 }}
-                  takeProfits={report.tradePlan.takeProfits?.map((tp, i) => ({
+                  takeProfits={report.tradePlan.takeProfits?.map((tp: { price: number; riskReward?: number }, i: number) => ({
                     price: tp.price,
                     percentage: 0,
-                    riskReward: report.tradePlan.riskReward || (i + 1),
+                    riskReward: tp.riskReward
+                      || (report.tradePlan.stopLoss?.price && report.tradePlan.averageEntry
+                        ? parseFloat((Math.abs(tp.price - report.tradePlan.averageEntry) / Math.abs(report.tradePlan.averageEntry - report.tradePlan.stopLoss.price)).toFixed(1))
+                        : (i + 1)),
                   })) || []}
                   currentPrice={report.assetScan?.currentPrice || report.tradePlan.averageEntry || 0}
                   support={report.assetScan?.levels?.support}
