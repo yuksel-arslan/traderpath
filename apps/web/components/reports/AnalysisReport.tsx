@@ -453,12 +453,12 @@ const styles = `
   .verdict-box { border: 2px solid #1a1a1a; border-radius: 6px; padding: 15px; margin-bottom: 12px; text-align: center; }
   .verdict-action { font-size: 28px; font-weight: 700; }
   .verdict-subtitle { font-size: 9px; color: #666; margin-top: 6px; line-height: 1.5; }
-  .chart-container { border: 1px solid #ddd; border-radius: 6px; background: #fff; padding: 8px; margin: 10px 0; }
+  .chart-container { border: 1px solid #e0e0e0; border-radius: 6px; background: #fff; padding: 8px; margin: 10px 0; }
   .chart-container img { width: 100%; height: auto; display: block; }
-  .summary-box { background: #f8f9fa; border-left: 3px solid #1a1a1a; padding: 8px 10px; margin-top: 8px; }
+  .summary-box { background: #fafafa; border-left: 2px solid #e0e0e0; padding: 8px 10px; margin-top: 8px; }
   .summary-text { font-size: 8px; color: #333; line-height: 1.5; }
-  .step-summary { font-size: 7px; color: #333; background: #f0f9f0; border-left: 2px solid #16a34a; padding: 6px 8px; margin-top: 8px; line-height: 1.5; }
-  .step-summary-title { font-size: 7px; font-weight: 600; color: #16a34a; margin-bottom: 3px; }
+  .step-summary { font-size: 7px; color: #333; background: #fafafa; border-left: 2px solid #e0e0e0; padding: 6px 8px; margin-top: 8px; line-height: 1.5; }
+  .step-summary-title { font-size: 7px; font-weight: 600; color: #333; margin-bottom: 3px; }
   .step-box-expanded { border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; background: #fafafa; min-height: 200px; }
   .footer { position: absolute; bottom: 8px; left: 24px; right: 24px; font-size: 6px; color: #999; border-top: 1px solid #eee; padding-top: 4px; }
   .footer-row { display: flex; justify-content: space-between; align-items: center; }
@@ -545,7 +545,7 @@ function generateTradePlanSvgChart(
     return candles.map((candle, i) => {
       const x = startX + (i * totalCandleWidth);
       const isGreen = candle.close >= candle.open;
-      const color = isGreen ? '#22c55e' : '#ef4444';
+      const color = isGreen ? '#16a34a' : '#dc2626';
       const bodyTop = priceToY(Math.max(candle.open, candle.close));
       const bodyBottom = priceToY(Math.min(candle.open, candle.close));
       const bodyHeight = Math.max(1, bodyBottom - bodyTop);
@@ -567,8 +567,8 @@ function generateTradePlanSvgChart(
   for (let i = 0; i <= 4; i++) {
     const price = minPrice + (priceRange * i) / 4;
     const y = priceToY(price);
-    priceLabels.push(`<text x="${chartLeft - 5}" y="${y + 3}" fill="#9ca3af" font-size="8" text-anchor="end">${formatPrice(price)}</text>`);
-    priceLabels.push(`<line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#374151" stroke-width="0.5" stroke-dasharray="3,3"/>`);
+    priceLabels.push(`<text x="${chartLeft - 5}" y="${y + 3}" fill="#666" font-size="8" text-anchor="end">${formatPrice(price)}</text>`);
+    priceLabels.push(`<line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#e0e0e0" stroke-width="0.5" stroke-dasharray="3,3"/>`);
   }
 
   // Generate level lines and labels
@@ -578,8 +578,8 @@ function generateTradePlanSvgChart(
   if (sl > 0) {
     const y = priceToY(sl);
     levelLines.push(`
-      <line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,3"/>
-      <rect x="${chartRight - 85}" y="${y - 9}" width="82" height="16" fill="#ef4444" rx="2"/>
+      <line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#dc2626" stroke-width="2" stroke-dasharray="5,3"/>
+      <rect x="${chartRight - 85}" y="${y - 9}" width="82" height="16" fill="#dc2626" rx="2"/>
       <text x="${chartRight - 80}" y="${y + 3}" fill="#fff" font-size="7" font-weight="600">STOP ${formatPrice(sl)}</text>
     `);
   }
@@ -588,14 +588,14 @@ function generateTradePlanSvgChart(
   if (entry > 0) {
     const y = priceToY(entry);
     levelLines.push(`
-      <line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#fbbf24" stroke-width="2"/>
-      <rect x="${chartLeft + 5}" y="${y - 9}" width="82" height="16" fill="#fbbf24" rx="2"/>
-      <text x="${chartLeft + 10}" y="${y + 3}" fill="#000" font-size="7" font-weight="600">ENTRY ${formatPrice(entry)}</text>
+      <line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#d97706" stroke-width="2"/>
+      <rect x="${chartLeft + 5}" y="${y - 9}" width="82" height="16" fill="#d97706" rx="2"/>
+      <text x="${chartLeft + 10}" y="${y + 3}" fill="#fff" font-size="7" font-weight="600">ENTRY ${formatPrice(entry)}</text>
     `);
   }
 
   // Take Profit lines (only TP1 and TP2)
-  const tpColors = ['#3b82f6', '#8b5cf6'];
+  const tpColors = ['#16a34a', '#15803d'];
   const tpPrices = [tp1, tp2];
   tpPrices.forEach((price, i) => {
     if (price > 0) {
@@ -616,8 +616,8 @@ function generateTradePlanSvgChart(
     <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#16162a;stop-opacity:1" />
+          <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#fafafa;stop-opacity:1" />
         </linearGradient>
         <linearGradient id="profitZone" x1="0%" y1="100%" x2="0%" y2="0%">
           <stop offset="0%" style="stop-color:#22c55e;stop-opacity:0.05" />
@@ -633,12 +633,12 @@ function generateTradePlanSvgChart(
       <rect width="${width}" height="${height}" fill="url(#bgGrad)" rx="8"/>
 
       <!-- Title -->
-      <text x="${width / 2}" y="22" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">
-        ${as?.symbol || 'Trade'} - ${isLong ? '📈 LONG' : '📉 SHORT'} Trade Plan ${hasCandles ? `(${candles.length} candles)` : ''}
+      <text x="${width / 2}" y="22" fill="#1a1a1a" font-size="11" font-weight="600" text-anchor="middle">
+        ${as?.symbol || 'Trade'} - ${isLong ? 'LONG' : 'SHORT'} Trade Plan ${hasCandles ? `(${candles.length} candles)` : ''}
       </text>
 
       <!-- Chart area border -->
-      <rect x="${chartLeft}" y="${chartTop}" width="${chartWidth}" height="${chartHeight}" fill="none" stroke="#374151" stroke-width="1" rx="4"/>
+      <rect x="${chartLeft}" y="${chartTop}" width="${chartWidth}" height="${chartHeight}" fill="none" stroke="#e0e0e0" stroke-width="1" rx="4"/>
 
       <!-- Profit/Loss zones (behind candles) -->
       ${entry > 0 && sl > 0 && tp1 > 0 ? `
@@ -656,30 +656,30 @@ function generateTradePlanSvgChart(
       ${levelLines.join('')}
 
       <!-- Legend -->
-      <rect x="${chartLeft}" y="${chartBottom + 8}" width="${chartWidth}" height="35" fill="#1e293b" rx="4"/>
-      <circle cx="${chartLeft + 15}" cy="${chartBottom + 20}" r="4" fill="#fbbf24"/>
-      <text x="${chartLeft + 25}" y="${chartBottom + 23}" fill="#9ca3af" font-size="7">Entry</text>
-      <circle cx="${chartLeft + 70}" cy="${chartBottom + 20}" r="4" fill="#ef4444"/>
-      <text x="${chartLeft + 80}" y="${chartBottom + 23}" fill="#9ca3af" font-size="7">Stop Loss</text>
-      <circle cx="${chartLeft + 140}" cy="${chartBottom + 20}" r="4" fill="#3b82f6"/>
-      <text x="${chartLeft + 150}" y="${chartBottom + 23}" fill="#9ca3af" font-size="7">Targets</text>
+      <rect x="${chartLeft}" y="${chartBottom + 8}" width="${chartWidth}" height="35" fill="#f9fafb" stroke="#e0e0e0" stroke-width="0.5" rx="4"/>
+      <circle cx="${chartLeft + 15}" cy="${chartBottom + 20}" r="4" fill="#d97706"/>
+      <text x="${chartLeft + 25}" y="${chartBottom + 23}" fill="#666" font-size="7">Entry</text>
+      <circle cx="${chartLeft + 70}" cy="${chartBottom + 20}" r="4" fill="#dc2626"/>
+      <text x="${chartLeft + 80}" y="${chartBottom + 23}" fill="#666" font-size="7">Stop Loss</text>
+      <circle cx="${chartLeft + 140}" cy="${chartBottom + 20}" r="4" fill="#16a34a"/>
+      <text x="${chartLeft + 150}" y="${chartBottom + 23}" fill="#666" font-size="7">Targets</text>
 
       <!-- R:R and Win Rate -->
       ${rrRatio > 0 ? `
-        <text x="${chartRight - 100}" y="${chartBottom + 23}" fill="#fbbf24" font-size="8" font-weight="600">R:R ${rrRatio.toFixed(1)}:1</text>
+        <text x="${chartRight - 100}" y="${chartBottom + 23}" fill="#1a1a1a" font-size="8" font-weight="600">R:R ${rrRatio.toFixed(1)}:1</text>
       ` : ''}
       ${winRate > 0 ? `
-        <text x="${chartRight - 40}" y="${chartBottom + 23}" fill="#22c55e" font-size="8" font-weight="600">${winRate.toFixed(0)}%</text>
+        <text x="${chartRight - 40}" y="${chartBottom + 23}" fill="#16a34a" font-size="8" font-weight="600">${winRate.toFixed(0)}%</text>
       ` : ''}
 
       <!-- Candle legend -->
       ${hasCandles ? `
-        <rect x="${chartLeft + 15}" y="${chartBottom + 30}" width="8" height="8" fill="#22c55e" rx="1"/>
-        <text x="${chartLeft + 28}" y="${chartBottom + 37}" fill="#9ca3af" font-size="6">Bullish</text>
-        <rect x="${chartLeft + 70}" y="${chartBottom + 30}" width="8" height="8" fill="#ef4444" rx="1"/>
-        <text x="${chartLeft + 83}" y="${chartBottom + 37}" fill="#9ca3af" font-size="6">Bearish</text>
+        <rect x="${chartLeft + 15}" y="${chartBottom + 30}" width="8" height="8" fill="#16a34a" rx="1"/>
+        <text x="${chartLeft + 28}" y="${chartBottom + 37}" fill="#666" font-size="6">Bullish</text>
+        <rect x="${chartLeft + 70}" y="${chartBottom + 30}" width="8" height="8" fill="#dc2626" rx="1"/>
+        <text x="${chartLeft + 83}" y="${chartBottom + 37}" fill="#666" font-size="6">Bearish</text>
       ` : `
-        <text x="${chartLeft + 15}" y="${chartBottom + 37}" fill="#6b7280" font-size="6" font-style="italic">No candlestick data available</text>
+        <text x="${chartLeft + 15}" y="${chartBottom + 37}" fill="#999" font-size="6" font-style="italic">No candlestick data available</text>
       `}
     </svg>
   `;
@@ -762,7 +762,7 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
       <div style="font-size: 16px; font-weight: 700; color: #1a1a1a; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">Asset Analysis Report</div>
 
       <!-- Method Badge -->
-      <div style="display: inline-block; padding: 4px 12px; background: ${methodColor}; color: #fff; border-radius: 4px; font-size: 10px; font-weight: 600; margin-bottom: 10px;">
+      <div style="display: inline-block; padding: 3px 10px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 10px; font-weight: 600; color: #333; margin-bottom: 10px;">
         ${methodDisplay}
       </div>
 
@@ -775,12 +775,12 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
       <!-- Symbol and Direction -->
       <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
         <span class="symbol" style="font-size: 22px; font-weight: 800;">${data.symbol}/USDT</span>
-        <span class="direction-tag ${hasDirection ? (isLong ? 'tag-long' : 'tag-short') : ''}" style="font-size: 14px; margin-left: 12px; padding: 3px 10px; border-radius: 4px; ${!hasDirection ? 'background: #fef3c7; color: #d97706;' : hasDirection ? (isLong ? 'background: #dcfce7; color: #16a34a;' : 'background: #fee2e2; color: #dc2626;') : ''}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'WAIT'}</span>
+        <span class="direction-tag ${hasDirection ? (isLong ? 'tag-long' : 'tag-short') : ''}" style="font-size: 14px; margin-left: 12px; padding: 3px 10px; border-radius: 4px; border: 1px solid #e0e0e0; ${!hasDirection ? 'color: #d97706;' : isLong ? 'color: #16a34a;' : 'color: #dc2626;'}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'WAIT'}</span>
       </div>
     </div>
 
     <!-- Verdict & Direction Box -->
-    <div class="step-box" style="background: ${hasDirection ? (isLong ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fef2f2, #fee2e2)') : 'linear-gradient(135deg, #fef3c7, #fde68a)'}; border: 1px solid ${hasDirection ? (isLong ? '#16a34a' : '#dc2626') : '#d97706'}; padding: 10px 15px;">
+    <div class="step-box" style="background: #fff; border: 1px solid #e0e0e0; padding: 10px 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
           <div style="font-size: 8px; color: #666; margin-bottom: 2px;">VERDICT</div>
@@ -803,10 +803,9 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
 
     ${isConditional ? `
     <!-- CONDITIONAL GO Explanation Box -->
-    <div style="margin-top: 8px; margin-bottom: 8px; padding: 10px 12px; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #d97706; border-radius: 6px;">
+    <div style="margin-top: 8px; margin-bottom: 8px; padding: 10px 12px; background: #fff; border: 1px solid #e0e0e0; border-left: 3px solid #d97706; border-radius: 4px;">
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-        <span style="font-size: 14px;">⚠️</span>
-        <span style="font-size: 10px; font-weight: 700; color: #92400e;">CONDITIONAL ENTRY - CONDITIONS REQUIRED</span>
+        <span style="font-size: 10px; font-weight: 700; color: #d97706;">CONDITIONAL ENTRY - CONDITIONS REQUIRED</span>
       </div>
       <div style="font-size: 8px; color: #78350f; line-height: 1.5;">
         <strong>This trade requires specific conditions to be met before entry:</strong>
@@ -884,8 +883,8 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
     </div>
 
     <!-- Note about full report -->
-    <div style="margin-top: 15px; padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; text-align: center;">
-      <div style="font-size: 9px; color: #0369a1; font-weight: 600;">📊 Full detailed analysis available in the following pages</div>
+    <div style="margin-top: 15px; padding: 10px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; text-align: center;">
+      <div style="font-size: 9px; color: #666; font-weight: 600;">Full detailed analysis available in the following pages</div>
     </div>
 
     ${generateFooter(data, 1, totalPages)}
@@ -924,7 +923,7 @@ function generatePageTradePlan(data: AnalysisReportData, totalPages: number): st
       </div>
       <div class="header-center">
         <div class="report-title">Trade Plan</div>
-        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #e0e0e0; border-radius: 3px; font-size: 7px; font-weight: 600; color: #333; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -935,13 +934,13 @@ function generatePageTradePlan(data: AnalysisReportData, totalPages: number): st
     <!-- Trade Levels Table -->
     <table class="table" style="margin-bottom: 10px;">
       <tr><th style="width: 25%;">Level</th><th style="width: 25%;">Price</th><th style="width: 20%;">Change</th><th style="width: 30%;">Note</th></tr>
-      <tr style="background: #f0fdf4;">
+      <tr>
         <td style="font-weight: 600;">Entry</td>
         <td style="font-weight: 700; font-size: 9px;">${formatPrice(tp?.averageEntry)}</td>
         <td>-</td>
         <td style="font-size: 6px;">${tp?.entries?.length ? `${tp.entries.length} entry zones` : 'Single entry'}</td>
       </tr>
-      <tr style="background: #fef2f2;">
+      <tr>
         <td style="font-weight: 600;">Stop Loss</td>
         <td style="font-weight: 700; font-size: 9px;" class="text-red">${formatPrice(tp?.stopLoss?.price)}</td>
         <td class="text-red">${tp?.stopLoss?.percentage ? `-${tp.stopLoss.percentage.toFixed(2)}%` : ''}</td>
@@ -957,13 +956,13 @@ function generatePageTradePlan(data: AnalysisReportData, totalPages: number): st
       `).join('')}
     </table>
 
-    <!-- Full Page Chart with Dark Background -->
+    <!-- Full Page Chart -->
     ${data.chartImage ? `
-    <div class="chart-container" style="height: 480px; display: flex; align-items: center; justify-content: center; background: #1a1a2e; border-radius: 8px;">
-      <img src="${data.chartImage}" style="max-height: 100%; width: auto; max-width: 100%; border-radius: 6px;" alt="Trade Plan Chart" />
+    <div class="chart-container" style="height: 480px; display: flex; align-items: center; justify-content: center; border: 1px solid #e0e0e0; border-radius: 6px;">
+      <img src="${data.chartImage}" style="max-height: 100%; width: auto; max-width: 100%; border-radius: 4px;" alt="Trade Plan Chart" />
     </div>
     ` : `
-    <div class="chart-container" style="height: 480px; background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 8px; padding: 15px;">
+    <div class="chart-container" style="height: 480px; border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px;">
       ${generateTradePlanSvgChart(tp, as, as?.chartCandles)}
     </div>
     `}
@@ -1019,7 +1018,7 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
       </div>
       <div class="header-center">
         <div class="report-title">Tokenomics Analysis</div>
-        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #e0e0e0; border-radius: 3px; font-size: 7px; font-weight: 600; color: #333; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1130,10 +1129,9 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
     ` : `
     <!-- No Tokenomics Data - Enhanced Display -->
     <div style="padding: 20px;">
-      <div class="verdict-box" style="padding: 20px; margin-bottom: 20px; background: linear-gradient(135deg, #fef3c7, #fde68a); border-color: #d97706;">
-        <div style="font-size: 36px; margin-bottom: 10px;">⚠️</div>
-        <div style="font-size: 16px; font-weight: 700; color: #92400e; margin-bottom: 5px;">Tokenomics Data Unavailable</div>
-        <div style="font-size: 10px; color: #78350f;">Data could not be retrieved from CoinGecko API</div>
+      <div class="verdict-box" style="padding: 20px; margin-bottom: 20px; background: #fff; border-color: #e0e0e0;">
+        <div style="font-size: 16px; font-weight: 700; color: #666; margin-bottom: 5px;">Tokenomics Data Unavailable</div>
+        <div style="font-size: 10px; color: #999;">Data could not be retrieved from CoinGecko API</div>
       </div>
 
       <div class="step-box" style="margin-bottom: 15px;">
@@ -1158,11 +1156,11 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
         </div>
       </div>
 
-      <div class="step-box" style="background: #fef2f2; border-color: #fca5a5;">
-        <div class="step-box-header" style="border-color: #fca5a5;">
-          <span class="step-box-title" style="color: #dc2626;">⚠️ Risk Warning</span>
+      <div class="step-box" style="background: #fff; border: 1px solid #e0e0e0; border-left: 3px solid #dc2626;">
+        <div class="step-box-header" style="border-color: #e0e0e0;">
+          <span class="step-box-title" style="color: #dc2626;">Risk Warning</span>
         </div>
-        <div style="font-size: 8px; line-height: 1.6; color: #b91c1c;">
+        <div style="font-size: 8px; line-height: 1.6; color: #666;">
           Trading without tokenomics data increases risk. Unknown supply dynamics, whale concentration, and dilution risks could significantly impact your trade. Proceed with caution and use smaller position sizes.
         </div>
       </div>
@@ -1223,7 +1221,7 @@ function generatePageSteps12(data: AnalysisReportData, totalPages: number): stri
       </div>
       <div class="header-center">
         <div class="report-title">Analysis Steps 1-2</div>
-        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #e0e0e0; border-radius: 3px; font-size: 7px; font-weight: 600; color: #333; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1388,7 +1386,7 @@ function generatePageSteps34(data: AnalysisReportData, totalPages: number): stri
       </div>
       <div class="header-center">
         <div class="report-title">Analysis Steps 3-4</div>
-        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #e0e0e0; border-radius: 3px; font-size: 7px; font-weight: 600; color: #333; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1549,7 +1547,7 @@ function generatePageSteps56(data: AnalysisReportData, totalPages: number): stri
       </div>
       <div class="header-center">
         <div class="report-title">Analysis Steps 5-6</div>
-        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #e0e0e0; border-radius: 3px; font-size: 7px; font-weight: 600; color: #333; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1657,7 +1655,7 @@ function generatePageSteps56(data: AnalysisReportData, totalPages: number): stri
         `).join('')}
       </div>
       ` : ''}
-      ${tc.proTip ? `<div style="margin-top: 6px; font-size: 7px; background: #fef3c7; padding: 6px 8px; border-radius: 3px;"><strong>Pro Tip:</strong> ${tc.proTip}</div>` : ''}
+      ${tc.proTip ? `<div style="margin-top: 6px; font-size: 7px; background: #fafafa; border: 1px solid #e0e0e0; padding: 6px 8px; border-radius: 3px; color: #444;"><strong>Pro Tip:</strong> ${tc.proTip}</div>` : ''}
       ${tcSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tcSummary}</div>` : ''}
     </div>
     ` : ''}
@@ -1716,7 +1714,7 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
       </div>
       <div class="header-center">
         <div class="report-title">Final Verdict</div>
-        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #e0e0e0; border-radius: 3px; font-size: 7px; font-weight: 600; color: #333; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1724,7 +1722,7 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
     </div>
 
     <!-- Step 07: Final Verdict -->
-    <div class="step-box" style="background: ${hasDirection ? (isLong ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fef2f2, #fee2e2)') : 'linear-gradient(135deg, #fef3c7, #fde68a)'};">
+    <div class="step-box" style="background: #fff; border: 1px solid #e0e0e0;">
       <div class="step-box-header">
         <span class="step-box-num">07</span>
         <span class="step-box-title">Final Verdict</span>
@@ -1738,7 +1736,7 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
 
     ${isConditional ? `
     <!-- CONDITIONAL GO Explanation -->
-    <div style="margin-bottom: 10px; padding: 12px; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid #d97706; border-radius: 6px;">
+    <div style="margin-bottom: 10px; padding: 12px; background: #fff; border: 1px solid #e0e0e0; border-left: 3px solid #d97706; border-radius: 6px;">
       <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
         <span style="font-size: 18px;">⚠️</span>
         <span style="font-size: 12px; font-weight: 700; color: #92400e;">CONDITIONAL ENTRY REQUIREMENTS</span>
@@ -1758,11 +1756,11 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
           `}
         </div>
         ${data.timing?.waitFor ? `
-        <div style="margin-top: 8px; padding: 6px 10px; background: #fef9c3; border-radius: 4px;">
-          <strong>⏳ Wait for:</strong> ${data.timing.waitFor.event} (Estimated: ${data.timing.waitFor.estimatedTime})
+        <div style="margin-top: 8px; padding: 6px 10px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; color: #444;">
+          <strong>Wait for:</strong> ${data.timing.waitFor.event} (Estimated: ${data.timing.waitFor.estimatedTime})
         </div>
         ` : ''}
-        <div style="margin-top: 8px; padding: 6px 10px; background: #fef2f2; border-left: 3px solid #dc2626; font-size: 8px; color: #991b1b;">
+        <div style="margin-top: 8px; padding: 6px 10px; background: #fafafa; border-left: 3px solid #dc2626; font-size: 8px; color: #666;">
           <strong>Warning:</strong> Do NOT enter this trade until all conditions above are satisfied. Entering prematurely significantly increases risk.
         </div>
       </div>
@@ -1795,19 +1793,19 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
 
       <!-- Main Stats -->
       <div class="row" style="margin-bottom: 8px;">
-        <div class="col metric metric-sm" style="text-align: center; background: linear-gradient(135deg, #f0fdf4, #dcfce7);">
+        <div class="col metric metric-sm" style="text-align: center; background: #fafafa; border: 1px solid #e0e0e0;">
           <div class="metric-value text-green" style="font-size: 18px;">${ind.summary.bullishIndicators}</div>
           <div class="metric-label">Bullish</div>
         </div>
-        <div class="col metric metric-sm" style="text-align: center; background: linear-gradient(135deg, #fef2f2, #fee2e2);">
+        <div class="col metric metric-sm" style="text-align: center; background: #fafafa; border: 1px solid #e0e0e0;">
           <div class="metric-value text-red" style="font-size: 18px;">${ind.summary.bearishIndicators}</div>
           <div class="metric-label">Bearish</div>
         </div>
-        <div class="col metric metric-sm" style="text-align: center;">
+        <div class="col metric metric-sm" style="text-align: center; background: #fafafa; border: 1px solid #e0e0e0;">
           <div class="metric-value" style="font-size: 18px;">${ind.summary.neutralIndicators}</div>
           <div class="metric-label">Neutral</div>
         </div>
-        <div class="col metric metric-sm" style="text-align: center; background: ${ind.summary.overallSignal === 'bullish' ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : ind.summary.overallSignal === 'bearish' ? 'linear-gradient(135deg, #fef2f2, #fee2e2)' : '#fafafa'};">
+        <div class="col metric metric-sm" style="text-align: center; background: #fafafa; border: 1px solid #e0e0e0;">
           <div class="metric-value ${ind.summary.overallSignal === 'bullish' ? 'text-green' : ind.summary.overallSignal === 'bearish' ? 'text-red' : ''}" style="font-size: 14px;">${formatDirection(ind.summary.overallSignal).toUpperCase()}</div>
           <div class="metric-label">Overall Signal</div>
         </div>
@@ -1862,12 +1860,12 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
 
     <!-- AI Expert Comment -->
     ${data.aiExpertComment ? `
-    <div class="step-box" style="background: linear-gradient(135deg, #f0fdf4, #ecfdf5); border-color: #86efac;">
-      <div class="step-box-header" style="border-color: #86efac;">
+    <div class="step-box" style="background: #fff; border: 1px solid #e0e0e0;">
+      <div class="step-box-header" style="border-color: #e0e0e0;">
         <span style="font-size: 8px; font-weight: 700; color: #fff; background: #16a34a; padding: 2px 5px; border-radius: 3px;">AI</span>
-        <span class="step-box-title" style="color: #166534;">Expert Review</span>
+        <span class="step-box-title" style="color: #333;">Expert Review</span>
       </div>
-      <div style="font-size: 7px; line-height: 1.5; color: #15803d; max-height: 150px; overflow: hidden;">${data.aiExpertComment.slice(0, 800)}${data.aiExpertComment.length > 800 ? '...' : ''}</div>
+      <div style="font-size: 7px; line-height: 1.5; color: #444; max-height: 150px; overflow: hidden;">${data.aiExpertComment.slice(0, 800)}${data.aiExpertComment.length > 800 ? '...' : ''}</div>
     </div>
     ` : ''}
 
@@ -1936,7 +1934,7 @@ export async function captureChartAsImage(): Promise<string | null> {
 
     // Capture with dark background for better visibility
     const canvas = await html2canvas(element, {
-      backgroundColor: '#1a1a2e',  // Dark background
+      backgroundColor: '#ffffff',  // Light background
       scale: 2,
       logging: false,
       useCORS: true,
@@ -2027,10 +2025,10 @@ function generatePageRAG(data: AnalysisReportData, totalPages: number): string {
 
     ${validation ? `
     <!-- Validation Badge -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:6px 10px;border-radius:6px;border:1px solid ${validation.passed ? '#86efac' : '#fca5a5'};background:${validation.passed ? '#f0fdf4' : '#fef2f2'};">
-      <span style="font-size:12px;">${validation.passed ? '✓' : '✗'}</span>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:6px 10px;border-radius:6px;border:1px solid #e0e0e0;background:#fff;">
+      <span style="font-size:12px;color:${validation.passed ? '#16a34a' : '#dc2626'};">${validation.passed ? '✓' : '✗'}</span>
       <span style="font-size:8px;font-weight:600;color:${validation.passed ? '#16a34a' : '#dc2626'};">${validation.passed ? 'Plan Validated' : 'Validation Issues Found'}</span>
-      ${rag.capitalFlowAligned != null ? `<span style="margin-left:auto;font-size:6px;font-weight:600;color:${rag.capitalFlowAligned ? '#16a34a' : '#dc2626'};padding:2px 6px;border-radius:3px;background:${rag.capitalFlowAligned ? '#dcfce7' : '#fee2e2'};">${rag.capitalFlowAligned ? 'Flow Aligned' : 'Counter-Flow'}</span>` : ''}
+      ${rag.capitalFlowAligned != null ? `<span style="margin-left:auto;font-size:6px;font-weight:600;color:${rag.capitalFlowAligned ? '#16a34a' : '#dc2626'};padding:2px 6px;border-radius:3px;border:1px solid #e0e0e0;background:#fafafa;">${rag.capitalFlowAligned ? 'Flow Aligned' : 'Counter-Flow'}</span>` : ''}
     </div>
     ${validation.summary ? `<div style="font-size:7px;color:#666;margin-bottom:10px;padding:4px 8px;background:#fafafa;border-radius:4px;">${validation.summary}</div>` : ''}
     ` : ''}
@@ -2047,11 +2045,11 @@ function generatePageRAG(data: AnalysisReportData, totalPages: number): string {
             <div style="font-size:7px;font-weight:600;color:${horizonColor};text-transform:uppercase;margin-bottom:4px;">${b.label || b.horizon}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;text-align:center;">
               <div><div style="font-size:5px;color:#999;">P10</div><div style="font-size:8px;font-weight:600;color:#dc2626;">${formatPrice(b.p10)}</div></div>
-              <div style="background:#f0fdf4;border-radius:3px;padding:2px;"><div style="font-size:5px;color:#999;">P50</div><div style="font-size:10px;font-weight:700;color:#1a1a1a;">${formatPrice(b.p50)}</div></div>
+              <div style="background:#fafafa;border:1px solid #e0e0e0;border-radius:3px;padding:2px;"><div style="font-size:5px;color:#999;">P50</div><div style="font-size:10px;font-weight:700;color:#1a1a1a;">${formatPrice(b.p50)}</div></div>
               <div><div style="font-size:5px;color:#999;">P90</div><div style="font-size:8px;font-weight:600;color:#16a34a;">${formatPrice(b.p90)}</div></div>
             </div>
             <div style="font-size:6px;color:#888;margin-top:3px;text-align:center;">Band: ${b.bandWidthPercent?.toFixed(1) || '0'}%</div>
-            ${b.drivers?.length ? `<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px;">${b.drivers.slice(0, 3).map((d: string) => `<span style="font-size:5px;padding:1px 4px;background:#e0e7ff;border-radius:2px;color:#3730a3;">${d}</span>`).join('')}</div>` : ''}
+            ${b.drivers?.length ? `<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px;">${b.drivers.slice(0, 3).map((d: string) => `<span style="font-size:5px;padding:1px 4px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:2px;color:#666;">${d}</span>`).join('')}</div>` : ''}
           </div>`;
         }).join('')}
       </div>
@@ -2078,7 +2076,7 @@ function generatePageRAG(data: AnalysisReportData, totalPages: number): string {
           ${strategies.map((s: { id: string; label: string; direction: string; entry: { price: number; type: string }; stopLoss: { price: number }; takeProfits: Array<{ price: number; label: string }>; riskReward: number; applicability: number; counterFlow?: boolean }) => {
             const isRec = s.id === recommended;
             return `
-            <tr style="${isRec ? 'background:#f0fdf4;font-weight:600;' : ''}">
+            <tr style="${isRec ? 'background:#fafafa;font-weight:600;' : ''}">
               <td>
                 ${s.label}${isRec ? ' ★' : ''}${s.counterFlow ? ' ⚠️' : ''}
               </td>
@@ -2232,10 +2230,10 @@ function generateSinglePageReport(data: AnalysisReportData): string {
         .step-mini-metric { background: #fff; border: 1px solid #eee; border-radius: 2px; padding: 2px 5px; flex: 1; text-align: center; }
         .step-mini-metric-label { font-size: 5px; color: #888; text-transform: uppercase; }
         .step-mini-metric-value { font-size: 8px; font-weight: 600; color: #1a1a1a; }
-        .trade-decision-box { border: 2px solid #1a1a1a; border-radius: 4px; padding: 8px 12px; text-align: center; background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%); }
+        .trade-decision-box { border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px 12px; text-align: center; background: #fff; }
         .trade-decision-action { font-size: 20px; font-weight: 700; }
         .trade-decision-sub { font-size: 7px; color: #666; margin-top: 2px; }
-        .ml-box { border: 1px solid #8b5cf6; border-radius: 4px; padding: 6px 10px; background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); margin-top: 6px; }
+        .ml-box { border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px 10px; background: #fff; margin-top: 6px; }
         .ml-header { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px; }
         .ml-badge { font-size: 7px; font-weight: 700; color: #fff; background: #8b5cf6; padding: 2px 6px; border-radius: 3px; }
         .ml-title { font-size: 8px; font-weight: 600; color: #6b21a8; }
@@ -2246,7 +2244,7 @@ function generateSinglePageReport(data: AnalysisReportData): string {
         .ml-layer { flex: 1; max-width: 60px; background: #fff; border: 1px solid #ddd6fe; border-radius: 2px; padding: 2px 4px; text-align: center; }
         .ml-layer-name { font-size: 5px; color: #7c3aed; text-transform: uppercase; }
         .ml-layer-score { font-size: 8px; font-weight: 600; color: #6b21a8; }
-        .trade-plan-box { border: 1px solid #0d9488; border-radius: 4px; padding: 8px 10px; background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); margin-top: 6px; }
+        .trade-plan-box { border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px 10px; background: #fff; margin-top: 6px; }
         .tp-header { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 6px; }
         .tp-badge { font-size: 7px; font-weight: 700; color: #fff; background: #0d9488; padding: 2px 6px; border-radius: 3px; }
         .tp-title { font-size: 9px; font-weight: 600; color: #0f766e; }
@@ -2484,7 +2482,7 @@ function generateSinglePageReport(data: AnalysisReportData): string {
           </div>
 
           <!-- AI RECOMMENDATION (Full Width) -->
-          <div style="border: 1px solid #f59e0b; border-radius: 4px; padding: 6px 10px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); margin-top: 6px;">
+          <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px 10px; background: #fff; margin-top: 6px;">
             <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px;">
               <span style="font-size: 7px; font-weight: 700; color: #fff; background: #f59e0b; padding: 2px 6px; border-radius: 3px;">AI</span>
               <span style="font-size: 8px; font-weight: 600; color: #92400e;">AI Recommendation</span>
@@ -2540,10 +2538,10 @@ function generateSinglePageReport(data: AnalysisReportData): string {
           </div>
 
           <!-- TRADE PLAN CHART (Full Width) -->
-          <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px; margin-top: 6px; background: #1a1a2e;">
-            <div style="font-size: 7px; font-weight: 600; color: #fff; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px; margin-top: 6px; background: #fff;">
+            <div style="font-size: 7px; font-weight: 600; color: #333; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 6px;">
               <span>Trade Plan Chart</span>
-              <span style="font-size: 6px; color: #9ca3af;">Entry • TP1-2 • SL</span>
+              <span style="font-size: 6px; color: #999;">Entry • TP1-2 • SL</span>
             </div>
             ${generateTradePlanSvgChart(tp, as, as?.chartCandles)}
           </div>
