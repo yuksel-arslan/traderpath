@@ -1,8 +1,7 @@
 'use client';
 
-import { ArrowUp, ArrowDown, Minus, Target, Shield, AlertTriangle, TrendingUp, TrendingDown, Zap, Activity, BarChart3 } from 'lucide-react';
+import { ArrowUp, ArrowDown, Minus, Target, AlertTriangle, TrendingUp, TrendingDown, Shield } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { useEffect, useState, useRef } from 'react';
 
 type Verdict = 'go' | 'conditional_go' | 'wait' | 'avoid';
 type Direction = 'long' | 'short' | null;
@@ -27,8 +26,8 @@ interface TradeDecisionVisualProps {
   variant?: 'full' | 'compact';
 }
 
-// Premium Signal Bar - Replaces traffic light
-function SignalBar({
+// Verdict Badge
+function VerdictBadge({
   verdict,
   recommendation,
   size = 'md'
@@ -38,92 +37,109 @@ function SignalBar({
   size?: 'sm' | 'md' | 'lg';
 }) {
   const sizeConfig = {
-    sm: { width: 'w-32', height: 'h-2', dotSize: 'w-3 h-3' },
-    md: { width: 'w-48', height: 'h-2.5', dotSize: 'w-4 h-4' },
-    lg: { width: 'w-64', height: 'h-3', dotSize: 'w-5 h-5' }
+    sm: { container: 'px-2.5 py-1', icon: 'w-3.5 h-3.5', text: 'text-xs' },
+    md: { container: 'px-3 py-1.5', icon: 'w-4 h-4', text: 'text-sm' },
+    lg: { container: 'px-4 py-2', icon: 'w-5 h-5', text: 'text-base' }
   };
 
   const config = sizeConfig[size];
 
+  const getVerdictConfig = () => {
+    if (recommendation) {
+      switch (recommendation) {
+        case 'STRONG_BUY':
+          return { label: 'STRONG BUY', icon: <TrendingUp className={config.icon} />, bg: 'bg-green-500', text: 'text-white' };
+        case 'BUY':
+          return { label: 'BUY', icon: <ArrowUp className={config.icon} />, bg: 'bg-green-500', text: 'text-white' };
+        case 'HOLD':
+          return { label: 'HOLD', icon: <Minus className={config.icon} />, bg: 'bg-amber-500', text: 'text-white' };
+        case 'SELL':
+          return { label: 'SELL', icon: <ArrowDown className={config.icon} />, bg: 'bg-red-500', text: 'text-white' };
+        case 'STRONG_SELL':
+          return { label: 'STRONG SELL', icon: <TrendingDown className={config.icon} />, bg: 'bg-red-500', text: 'text-white' };
+      }
+    }
+
+    switch (verdict) {
+      case 'go':
+        return { label: 'GO', icon: <TrendingUp className={config.icon} />, bg: 'bg-green-500', text: 'text-white' };
+      case 'conditional_go':
+        return { label: 'CONDITIONAL', icon: <Target className={config.icon} />, bg: 'bg-teal-500', text: 'text-white' };
+      case 'wait':
+        return { label: 'WAIT', icon: <AlertTriangle className={config.icon} />, bg: 'bg-amber-500', text: 'text-white' };
+      case 'avoid':
+        return { label: 'AVOID', icon: <TrendingDown className={config.icon} />, bg: 'bg-red-500', text: 'text-white' };
+      default:
+        return { label: 'UNKNOWN', icon: <Minus className={config.icon} />, bg: 'bg-gray-400 dark:bg-gray-600', text: 'text-white' };
+    }
+  };
+
+  const verdictConfig = getVerdictConfig();
+
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-1.5 rounded-md font-semibold",
+      config.container,
+      verdictConfig.bg,
+      verdictConfig.text
+    )}>
+      {verdictConfig.icon}
+      <span className={config.text}>{verdictConfig.label}</span>
+    </span>
+  );
+}
+
+// Signal Strength Indicator (simplified bar segments)
+function SignalBar({
+  verdict,
+  recommendation,
+  size = 'md'
+}: {
+  verdict?: Verdict;
+  recommendation?: Recommendation;
+  size?: 'sm' | 'md' | 'lg';
+}) {
   const getSignalLevel = () => {
     if (recommendation) {
-      if (recommendation === 'STRONG_BUY') return { level: 4, color: 'emerald', label: 'Strong' };
-      if (recommendation === 'BUY') return { level: 3, color: 'green', label: 'Bullish' };
-      if (recommendation === 'HOLD') return { level: 2, color: 'amber', label: 'Neutral' };
-      if (recommendation === 'SELL') return { level: 1, color: 'orange', label: 'Bearish' };
-      return { level: 0, color: 'red', label: 'Strong Sell' };
+      if (recommendation === 'STRONG_BUY') return { level: 4, color: 'bg-green-500', label: 'Strong' };
+      if (recommendation === 'BUY') return { level: 3, color: 'bg-green-500', label: 'Bullish' };
+      if (recommendation === 'HOLD') return { level: 2, color: 'bg-amber-500', label: 'Neutral' };
+      if (recommendation === 'SELL') return { level: 1, color: 'bg-red-500', label: 'Bearish' };
+      return { level: 0, color: 'bg-red-500', label: 'Strong Sell' };
     }
     if (verdict) {
-      if (verdict === 'go') return { level: 4, color: 'emerald', label: 'Strong' };
-      if (verdict === 'conditional_go') return { level: 3, color: 'blue', label: 'Conditional' };
-      if (verdict === 'wait') return { level: 2, color: 'amber', label: 'Neutral' };
-      return { level: 1, color: 'red', label: 'Weak' };
+      if (verdict === 'go') return { level: 4, color: 'bg-green-500', label: 'Strong' };
+      if (verdict === 'conditional_go') return { level: 3, color: 'bg-teal-500', label: 'Conditional' };
+      if (verdict === 'wait') return { level: 2, color: 'bg-amber-500', label: 'Neutral' };
+      return { level: 1, color: 'bg-red-500', label: 'Weak' };
     }
-    return { level: 2, color: 'slate', label: 'Unknown' };
+    return { level: 2, color: 'bg-gray-400', label: 'Unknown' };
   };
 
   const signal = getSignalLevel();
-  const segments = 4;
-
-  const getSegmentColor = (index: number) => {
-    if (index >= signal.level) return 'bg-slate-700/30';
-    const colors: Record<string, string> = {
-      emerald: 'bg-emerald-500',
-      green: 'bg-green-500',
-      blue: 'bg-blue-500',
-      amber: 'bg-amber-500',
-      orange: 'bg-orange-500',
-      red: 'bg-red-500',
-      slate: 'bg-slate-500'
-    };
-    return colors[signal.color] || 'bg-slate-500';
-  };
-
-  const getGlowColor = () => {
-    const glows: Record<string, string> = {
-      emerald: 'shadow-emerald-500/50',
-      green: 'shadow-green-500/50',
-      blue: 'shadow-blue-500/50',
-      amber: 'shadow-amber-500/50',
-      orange: 'shadow-orange-500/50',
-      red: 'shadow-red-500/50',
-      slate: ''
-    };
-    return glows[signal.color] || '';
-  };
+  const widthMap = { sm: 'w-24', md: 'w-32', lg: 'w-40' };
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className={cn("flex items-center gap-1 rounded-full bg-slate-900/60 p-1.5 backdrop-blur-sm border border-slate-700/50", config.width)}>
-        {Array.from({ length: segments }).map((_, i) => (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className={cn("flex items-center gap-0.5", widthMap[size])}>
+        {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
             className={cn(
-              "flex-1 rounded-full transition-all duration-500",
-              config.height,
-              getSegmentColor(segments - 1 - i),
-              i < signal.level && `shadow-lg ${getGlowColor()}`
+              "flex-1 h-1.5 rounded-full transition-colors",
+              (3 - i) < signal.level ? signal.color : 'bg-gray-200 dark:bg-gray-700'
             )}
           />
         ))}
       </div>
-      <span className={cn(
-        "text-[10px] font-medium uppercase tracking-wider",
-        signal.color === 'emerald' && 'text-emerald-400',
-        signal.color === 'green' && 'text-green-400',
-        signal.color === 'blue' && 'text-blue-400',
-        signal.color === 'amber' && 'text-amber-400',
-        signal.color === 'orange' && 'text-orange-400',
-        signal.color === 'red' && 'text-red-400',
-        signal.color === 'slate' && 'text-slate-400'
-      )}>
-        {signal.label} Signal
+      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        {signal.label}
       </span>
     </div>
   );
 }
 
-// Premium Direction Indicator
+// Direction Indicator
 function DirectionIndicator({
   direction,
   size = 'md'
@@ -132,82 +148,47 @@ function DirectionIndicator({
   size?: 'sm' | 'md' | 'lg';
 }) {
   const sizeConfig = {
-    sm: { container: 'w-20 h-20', icon: 'w-6 h-6', text: 'text-xs', arrow: 'w-8 h-8' },
-    md: { container: 'w-28 h-28', icon: 'w-8 h-8', text: 'text-sm', arrow: 'w-10 h-10' },
-    lg: { container: 'w-36 h-36', icon: 'w-10 h-10', text: 'text-base', arrow: 'w-12 h-12' }
+    sm: { container: 'w-12 h-12', icon: 'w-5 h-5', text: 'text-[9px]' },
+    md: { container: 'w-16 h-16', icon: 'w-6 h-6', text: 'text-[10px]' },
+    lg: { container: 'w-20 h-20', icon: 'w-7 h-7', text: 'text-xs' }
   };
 
   const config = sizeConfig[size];
 
   if (!direction) {
     return (
-      <div className={cn(
-        "relative flex flex-col items-center justify-center",
-        config.container
-      )}>
-        {/* Outer ring */}
-        <div className="absolute inset-0 rounded-full border-2 border-slate-600/50 border-dashed animate-[spin_20s_linear_infinite]" />
-
-        {/* Inner content */}
-        <div className="relative z-10 flex flex-col items-center justify-center bg-slate-800/80 rounded-full w-[85%] h-[85%] backdrop-blur-sm border border-slate-700/50">
-          <Minus className={cn("text-slate-400", config.arrow)} />
-          <span className={cn("font-bold text-slate-400 mt-1", config.text)}>NEUTRAL</span>
-        </div>
+      <div className={cn("flex flex-col items-center justify-center rounded-full border-2 border-dashed border-gray-300 dark:border-gray-600", config.container)}>
+        <Minus className={cn("text-gray-400", config.icon)} />
+        <span className={cn("font-semibold text-gray-400 mt-0.5", config.text)}>NEUTRAL</span>
       </div>
     );
   }
 
   const isLong = direction === 'long';
-  const baseColor = isLong ? 'emerald' : 'red';
 
   return (
-    <div className={cn("relative flex flex-col items-center justify-center", config.container)}>
-      {/* Animated outer ring */}
-      <div className={cn(
-        "absolute inset-0 rounded-full",
-        isLong
-          ? "bg-gradient-to-b from-emerald-500/20 via-transparent to-emerald-500/20"
-          : "bg-gradient-to-b from-red-500/20 via-transparent to-red-500/20",
-        "animate-[spin_4s_linear_infinite]"
-      )} />
-
-      {/* Pulse ring */}
-      <div className={cn(
-        "absolute inset-2 rounded-full animate-ping opacity-20",
-        isLong ? "bg-emerald-500" : "bg-red-500"
-      )} style={{ animationDuration: '2s' }} />
-
-      {/* Main content */}
-      <div className={cn(
-        "relative z-10 flex flex-col items-center justify-center rounded-full w-[85%] h-[85%] backdrop-blur-sm border-2",
-        isLong
-          ? "bg-gradient-to-br from-emerald-950/80 to-emerald-900/60 border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.3)]"
-          : "bg-gradient-to-br from-red-950/80 to-red-900/60 border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.3)]"
+    <div className={cn(
+      "flex flex-col items-center justify-center rounded-full border-2",
+      isLong ? "border-green-500 bg-green-50 dark:bg-green-500/10" : "border-red-500 bg-red-50 dark:bg-red-500/10",
+      config.container
+    )}>
+      {isLong ? (
+        <ArrowUp className={cn("text-green-600 dark:text-green-400", config.icon)} strokeWidth={2.5} />
+      ) : (
+        <ArrowDown className={cn("text-red-600 dark:text-red-400", config.icon)} strokeWidth={2.5} />
+      )}
+      <span className={cn(
+        "font-bold mt-0.5",
+        config.text,
+        isLong ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
       )}>
-        {/* Arrow with animation */}
-        <div className={cn(
-          "transition-transform",
-          isLong ? "animate-[bounce_1s_ease-in-out_infinite]" : "animate-[bounce_1s_ease-in-out_infinite_reverse]"
-        )}>
-          {isLong ? (
-            <ArrowUp className={cn("text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]", config.arrow)} strokeWidth={3} />
-          ) : (
-            <ArrowDown className={cn("text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]", config.arrow)} strokeWidth={3} />
-          )}
-        </div>
-        <span className={cn(
-          "font-black tracking-wider mt-1",
-          config.text,
-          isLong ? "text-emerald-400" : "text-red-400"
-        )}>
-          {isLong ? 'LONG' : 'SHORT'}
-        </span>
-      </div>
+        {isLong ? 'LONG' : 'SHORT'}
+      </span>
     </div>
   );
 }
 
-// Premium Score Gauge with modern design
+// Score Display
 function ScoreGauge({
   score,
   maxScore = 100,
@@ -222,276 +203,46 @@ function ScoreGauge({
   showPercentage?: boolean;
 }) {
   const safeScore = typeof score === 'number' && !isNaN(score) ? score : 0;
-  const [animatedScore, setAnimatedScore] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setIsVisible(true);
-    const timer = setTimeout(() => {
-      setAnimatedScore(safeScore);
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [safeScore]);
-
-  const percentage = (animatedScore / maxScore) * 100;
+  const percentage = Math.min(100, Math.max(0, (safeScore / maxScore) * 100));
 
   const sizeConfig = {
-    sm: { size: 90, strokeWidth: 8, radius: 36, fontSize: 'text-xl', labelSize: 'text-[9px]' },
-    md: { size: 130, strokeWidth: 10, radius: 52, fontSize: 'text-3xl', labelSize: 'text-[10px]' },
-    lg: { size: 170, strokeWidth: 12, radius: 68, fontSize: 'text-4xl', labelSize: 'text-xs' }
+    sm: { numSize: 'text-lg', labelSize: 'text-[9px]' },
+    md: { numSize: 'text-2xl', labelSize: 'text-[10px]' },
+    lg: { numSize: 'text-3xl', labelSize: 'text-xs' }
   };
 
   const config = sizeConfig[size];
-  const circumference = 2 * Math.PI * config.radius;
-  const offset = circumference - (percentage / 100) * circumference;
 
   const getColor = () => {
-    if (safeScore >= 70) return {
-      stroke: 'url(#gaugeGradientGreen)',
-      glow: 'rgba(16, 185, 129, 0.4)',
-      text: 'text-emerald-400',
-      bg: 'from-emerald-500/10 to-emerald-500/5'
-    };
-    if (safeScore >= 50) return {
-      stroke: 'url(#gaugeGradientYellow)',
-      glow: 'rgba(245, 158, 11, 0.4)',
-      text: 'text-amber-400',
-      bg: 'from-amber-500/10 to-amber-500/5'
-    };
-    return {
-      stroke: 'url(#gaugeGradientRed)',
-      glow: 'rgba(239, 68, 68, 0.4)',
-      text: 'text-red-400',
-      bg: 'from-red-500/10 to-red-500/5'
-    };
+    if (percentage >= 70) return 'text-green-600 dark:text-green-400';
+    if (percentage >= 50) return 'text-amber-600 dark:text-amber-400';
+    return 'text-red-600 dark:text-red-400';
   };
 
-  const color = getColor();
+  const getBarColor = () => {
+    if (percentage >= 70) return 'bg-green-500';
+    if (percentage >= 50) return 'bg-amber-500';
+    return 'bg-red-500';
+  };
 
   return (
-    <div
-      ref={ref}
-      className={cn(
-        "relative flex flex-col items-center transition-opacity duration-500",
-        isVisible ? "opacity-100" : "opacity-0"
+    <div className="flex flex-col items-center gap-1">
+      <span className={cn("font-mono font-bold tabular-nums", config.numSize, getColor())}>
+        {showPercentage ? `${Math.round(safeScore)}%` : safeScore.toFixed(1)}
+      </span>
+      {!showPercentage && (
+        <span className="text-gray-500 dark:text-gray-400 text-[10px] font-medium">/ {maxScore}</span>
       )}
-      style={{ width: config.size, height: config.size }}
-    >
-      {/* Background glow */}
-      <div
-        className="absolute inset-4 rounded-full blur-2xl opacity-50 transition-opacity duration-1000"
-        style={{ backgroundColor: color.glow }}
-      />
-
-      {/* SVG */}
-      <svg
-        className="transform -rotate-90 relative z-10"
-        width={config.size}
-        height={config.size}
-      >
-        <defs>
-          <linearGradient id="gaugeGradientGreen" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#10b981" />
-            <stop offset="100%" stopColor="#34d399" />
-          </linearGradient>
-          <linearGradient id="gaugeGradientYellow" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#fbbf24" />
-          </linearGradient>
-          <linearGradient id="gaugeGradientRed" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#ef4444" />
-            <stop offset="100%" stopColor="#f87171" />
-          </linearGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-            <feMerge>
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
-
-        {/* Background track */}
-        <circle
-          cx={config.size / 2}
-          cy={config.size / 2}
-          r={config.radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={config.strokeWidth}
-          className="text-slate-800/60"
+      {/* Progress bar */}
+      <div className="w-16 h-1 rounded-full bg-gray-200 dark:bg-gray-700">
+        <div
+          className={cn("h-full rounded-full transition-all duration-500", getBarColor())}
+          style={{ width: `${percentage}%` }}
         />
-
-        {/* Progress arc */}
-        <circle
-          cx={config.size / 2}
-          cy={config.size / 2}
-          r={config.radius}
-          fill="none"
-          stroke={color.stroke}
-          strokeWidth={config.strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          filter="url(#glow)"
-          style={{
-            transition: 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-        />
-
-        {/* End cap glow */}
-        {animatedScore > 0 && (
-          <circle
-            cx={config.size / 2 + config.radius * Math.cos((percentage * 3.6 - 90) * Math.PI / 180)}
-            cy={config.size / 2 + config.radius * Math.sin((percentage * 3.6 - 90) * Math.PI / 180)}
-            r={config.strokeWidth / 2 + 2}
-            fill={safeScore >= 70 ? '#10b981' : safeScore >= 50 ? '#f59e0b' : '#ef4444'}
-            className="transition-all duration-1000"
-            style={{ filter: `drop-shadow(0 0 8px ${color.glow})` }}
-          />
-        )}
-      </svg>
-
-      {/* Center content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-        <span className={cn("font-black tabular-nums tracking-tight", config.fontSize, color.text)}>
-          {showPercentage ? `${Math.round(animatedScore)}` : animatedScore.toFixed(1)}
-        </span>
-        <span className="text-slate-500 text-xs font-medium">
-          {showPercentage ? '%' : `/ ${maxScore}`}
-        </span>
-        <span className={cn("text-slate-400 font-semibold mt-0.5 uppercase tracking-wider", config.labelSize)}>
-          {label}
-        </span>
       </div>
-    </div>
-  );
-}
-
-// Premium Verdict Badge
-function VerdictBadge({
-  verdict,
-  recommendation,
-  size = 'md'
-}: {
-  verdict?: Verdict;
-  recommendation?: Recommendation;
-  size?: 'sm' | 'md' | 'lg';
-}) {
-  const sizeConfig = {
-    sm: { container: 'px-4 py-2', icon: 'w-4 h-4', text: 'text-sm' },
-    md: { container: 'px-6 py-3', icon: 'w-5 h-5', text: 'text-lg' },
-    lg: { container: 'px-8 py-4', icon: 'w-6 h-6', text: 'text-xl' }
-  };
-
-  const config = sizeConfig[size];
-
-  const getVerdictConfig = () => {
-    if (recommendation) {
-      switch (recommendation) {
-        case 'STRONG_BUY':
-          return {
-            label: 'STRONG BUY',
-            icon: <TrendingUp className={cn(config.icon)} strokeWidth={2.5} />,
-            bg: 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-500',
-            border: 'border-emerald-400/30',
-            shadow: 'shadow-[0_0_40px_rgba(16,185,129,0.4),inset_0_1px_0_rgba(255,255,255,0.1)]'
-          };
-        case 'BUY':
-          return {
-            label: 'BUY',
-            icon: <ArrowUp className={cn(config.icon)} strokeWidth={2.5} />,
-            bg: 'bg-gradient-to-r from-green-600 via-green-500 to-emerald-500',
-            border: 'border-green-400/30',
-            shadow: 'shadow-[0_0_30px_rgba(34,197,94,0.3),inset_0_1px_0_rgba(255,255,255,0.1)]'
-          };
-        case 'HOLD':
-          return {
-            label: 'HOLD',
-            icon: <Minus className={cn(config.icon)} strokeWidth={2.5} />,
-            bg: 'bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500',
-            border: 'border-amber-400/30',
-            shadow: 'shadow-[0_0_30px_rgba(245,158,11,0.3),inset_0_1px_0_rgba(255,255,255,0.1)]'
-          };
-        case 'SELL':
-          return {
-            label: 'SELL',
-            icon: <ArrowDown className={cn(config.icon)} strokeWidth={2.5} />,
-            bg: 'bg-gradient-to-r from-orange-600 via-red-500 to-red-500',
-            border: 'border-red-400/30',
-            shadow: 'shadow-[0_0_30px_rgba(239,68,68,0.3),inset_0_1px_0_rgba(255,255,255,0.1)]'
-          };
-        case 'STRONG_SELL':
-          return {
-            label: 'STRONG SELL',
-            icon: <TrendingDown className={cn(config.icon)} strokeWidth={2.5} />,
-            bg: 'bg-gradient-to-r from-red-700 via-red-600 to-rose-500',
-            border: 'border-red-400/30',
-            shadow: 'shadow-[0_0_40px_rgba(239,68,68,0.4),inset_0_1px_0_rgba(255,255,255,0.1)]'
-          };
-      }
-    }
-
-    switch (verdict) {
-      case 'go':
-        return {
-          label: 'GO',
-          icon: <TrendingUp className={cn(config.icon)} strokeWidth={2.5} />,
-          bg: 'bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-500',
-          border: 'border-emerald-400/30',
-          shadow: 'shadow-[0_0_40px_rgba(16,185,129,0.4),inset_0_1px_0_rgba(255,255,255,0.1)]'
-        };
-      case 'conditional_go':
-        return {
-          label: 'CONDITIONAL',
-          icon: <Target className={cn(config.icon)} strokeWidth={2.5} />,
-          bg: 'bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500',
-          border: 'border-blue-400/30',
-          shadow: 'shadow-[0_0_35px_rgba(59,130,246,0.4),inset_0_1px_0_rgba(255,255,255,0.1)]'
-        };
-      case 'wait':
-        return {
-          label: 'WAIT',
-          icon: <AlertTriangle className={cn(config.icon)} strokeWidth={2.5} />,
-          bg: 'bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500',
-          border: 'border-amber-400/30',
-          shadow: 'shadow-[0_0_30px_rgba(245,158,11,0.3),inset_0_1px_0_rgba(255,255,255,0.1)]'
-        };
-      case 'avoid':
-        return {
-          label: 'AVOID',
-          icon: <TrendingDown className={cn(config.icon)} strokeWidth={2.5} />,
-          bg: 'bg-gradient-to-r from-red-700 via-red-600 to-rose-500',
-          border: 'border-red-400/30',
-          shadow: 'shadow-[0_0_40px_rgba(239,68,68,0.4),inset_0_1px_0_rgba(255,255,255,0.1)]'
-        };
-      default:
-        return {
-          label: 'UNKNOWN',
-          icon: <Minus className={cn(config.icon)} strokeWidth={2.5} />,
-          bg: 'bg-gradient-to-r from-slate-600 to-slate-500',
-          border: 'border-slate-500/30',
-          shadow: ''
-        };
-    }
-  };
-
-  const verdictConfig = getVerdictConfig();
-
-  return (
-    <div className={cn(
-      "relative inline-flex items-center gap-2.5 rounded-2xl font-black text-white border overflow-hidden",
-      config.container,
-      verdictConfig.bg,
-      verdictConfig.border,
-      verdictConfig.shadow
-    )}>
-      {/* Shine effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_3s_infinite]" />
-
-      <span className="relative z-10">{verdictConfig.icon}</span>
-      <span className={cn("relative z-10 tracking-wide", config.text)}>{verdictConfig.label}</span>
+      <span className={cn("text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider", config.labelSize)}>
+        {label}
+      </span>
     </div>
   );
 }
@@ -504,58 +255,31 @@ function RiskIndicator({
   riskLevel: 'low' | 'medium' | 'high';
   size?: 'sm' | 'md' | 'lg';
 }) {
-  const sizeConfig = {
-    sm: { container: 'px-3 py-1.5', icon: 'w-3.5 h-3.5', text: 'text-xs' },
-    md: { container: 'px-4 py-2', icon: 'w-4 h-4', text: 'text-sm' },
-    lg: { container: 'px-5 py-2.5', icon: 'w-5 h-5', text: 'text-base' }
-  };
-
-  const config = sizeConfig[size];
-
   const getRiskConfig = () => {
     switch (riskLevel) {
       case 'low':
-        return {
-          label: 'Low Risk',
-          color: 'text-emerald-400',
-          bg: 'bg-emerald-500/10',
-          border: 'border-emerald-500/30'
-        };
+        return { label: 'Low Risk', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-500/10', border: 'border-green-200 dark:border-green-800' };
       case 'medium':
-        return {
-          label: 'Medium Risk',
-          color: 'text-amber-400',
-          bg: 'bg-amber-500/10',
-          border: 'border-amber-500/30'
-        };
+        return { label: 'Medium Risk', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10', border: 'border-amber-200 dark:border-amber-800' };
       case 'high':
-        return {
-          label: 'High Risk',
-          color: 'text-red-400',
-          bg: 'bg-red-500/10',
-          border: 'border-red-500/30'
-        };
+        return { label: 'High Risk', color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-500/10', border: 'border-red-200 dark:border-red-800' };
     }
   };
 
   const riskConfig = getRiskConfig();
 
   return (
-    <div className={cn(
-      "inline-flex items-center gap-2 rounded-xl border backdrop-blur-sm",
-      config.container,
-      riskConfig.bg,
-      riskConfig.border
+    <span className={cn(
+      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium",
+      riskConfig.bg, riskConfig.border, riskConfig.color
     )}>
-      <Shield className={cn(config.icon, riskConfig.color)} />
-      <span className={cn("font-semibold", config.text, riskConfig.color)}>
-        {riskConfig.label}
-      </span>
-    </div>
+      <Shield className="w-3.5 h-3.5" />
+      {riskConfig.label}
+    </span>
   );
 }
 
-// Main Component - Premium Trade Decision Visual
+// Main Component
 export function TradeDecisionVisual({
   verdict,
   direction,
@@ -573,99 +297,76 @@ export function TradeDecisionVisual({
 
   if (variant === 'compact') {
     return (
-      <div className="flex items-center gap-4 p-3 bg-slate-900/50 rounded-xl border border-slate-700/50 backdrop-blur-sm">
+      <div className="flex items-center gap-3 p-3 border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-[#111111]">
         <VerdictBadge verdict={verdict} recommendation={recommendation} size="sm" />
         {showDirectionArrow && <DirectionIndicator direction={direction || null} size="sm" />}
-        <div className="text-right">
-          <div className={cn(
-            "text-lg font-bold tabular-nums",
-            score >= 70 ? "text-emerald-400" : score >= 50 ? "text-amber-400" : "text-red-400"
+        <div className="text-right ml-auto">
+          <span className={cn(
+            "text-sm font-mono font-bold",
+            score >= 70 ? "text-green-600 dark:text-green-400" : score >= 50 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"
           )}>
             {score.toFixed(1)}
-          </div>
-          <div className="text-[10px] text-slate-500">/ 100</div>
+          </span>
+          <span className="text-[10px] text-gray-500 dark:text-gray-400"> / 100</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="relative">
-      {/* Outer glow */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-teal-500/20 via-transparent to-orange-500/20 rounded-3xl blur-xl opacity-50" />
-
-      {/* Main container */}
-      <div className="relative bg-gradient-to-br from-slate-900/95 via-slate-900/90 to-slate-950/95 backdrop-blur-xl rounded-2xl border border-slate-700/50 overflow-hidden">
-        {/* Header with subtle gradient line */}
-        <div className="relative px-6 pt-5 pb-4 border-b border-slate-700/30">
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
-
-          <div className="flex items-center justify-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-xl border border-amber-500/30">
-              <Activity className="w-5 h-5 text-amber-400" />
-            </div>
-            <div className="text-center">
-              <h3 className="text-lg font-bold text-white tracking-tight">
-                {symbol ? `${symbol} ` : ''}Trade Decision
-              </h3>
-              {isMLIS && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 mt-1 bg-violet-500/20 text-violet-400 text-[10px] font-bold rounded-full border border-violet-500/30">
-                  <BarChart3 className="w-3 h-3" />
-                  MLIS PRO
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Main content grid */}
-        <div className="p-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 items-center justify-items-center">
-            {/* Verdict */}
-            <div className="flex flex-col items-center gap-3">
-              <VerdictBadge verdict={verdict} recommendation={recommendation} size={size} />
-              <span className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">Verdict</span>
-            </div>
-
-            {/* Direction */}
-            {showDirectionArrow && (
-              <div className="flex flex-col items-center gap-3">
-                <DirectionIndicator direction={direction || null} size={size} />
-                <span className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">Direction</span>
-              </div>
-            )}
-
-            {/* Score */}
-            <div className="flex flex-col items-center gap-2">
-              {isMLIS && confidence !== undefined ? (
-                <ScoreGauge
-                  score={confidence}
-                  maxScore={100}
-                  size={size}
-                  label="Confidence"
-                  showPercentage
-                />
-              ) : (
-                <ScoreGauge score={score} maxScore={100} size={size} label="Score" />
-              )}
-            </div>
-
-            {/* Signal Strength */}
-            <div className="flex flex-col items-center gap-3">
-              <SignalBar verdict={verdict} recommendation={recommendation} size={size} />
-            </div>
-          </div>
-
-          {/* Risk Level for MLIS */}
-          {riskLevel && (
-            <div className="flex justify-center mt-6 pt-5 border-t border-slate-700/30">
-              <RiskIndicator riskLevel={riskLevel} size={size} />
-            </div>
+    <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-[#111111]">
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+        <div className="flex items-center justify-center gap-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            {symbol ? `${symbol} ` : ''}Trade Decision
+          </h3>
+          {isMLIS && (
+            <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-violet-100 dark:bg-violet-500/15 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-500/30">
+              MLIS PRO
+            </span>
           )}
         </div>
+      </div>
 
-        {/* Bottom gradient line */}
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-500/50 to-transparent" />
+      {/* Content */}
+      <div className="p-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 items-center justify-items-center">
+          {/* Verdict */}
+          <div className="flex flex-col items-center gap-2">
+            <VerdictBadge verdict={verdict} recommendation={recommendation} size={size} />
+            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Verdict</span>
+          </div>
+
+          {/* Direction */}
+          {showDirectionArrow && (
+            <div className="flex flex-col items-center gap-2">
+              <DirectionIndicator direction={direction || null} size={size} />
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Direction</span>
+            </div>
+          )}
+
+          {/* Score */}
+          <div className="flex flex-col items-center gap-1">
+            {isMLIS && confidence !== undefined ? (
+              <ScoreGauge score={confidence} maxScore={100} size={size} label="Confidence" showPercentage />
+            ) : (
+              <ScoreGauge score={score} maxScore={100} size={size} label="Score" />
+            )}
+          </div>
+
+          {/* Signal Strength */}
+          <div className="flex flex-col items-center gap-2">
+            <SignalBar verdict={verdict} recommendation={recommendation} size={size} />
+          </div>
+        </div>
+
+        {/* Risk Level for MLIS */}
+        {riskLevel && (
+          <div className="flex justify-center mt-5 pt-4 border-t border-gray-200 dark:border-gray-800">
+            <RiskIndicator riskLevel={riskLevel} size={size} />
+          </div>
+        )}
       </div>
     </div>
   );
