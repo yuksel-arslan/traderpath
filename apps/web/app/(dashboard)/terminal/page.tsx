@@ -40,6 +40,7 @@ import {
 } from 'lightweight-charts';
 import { cn, formatNumber, formatPrice, formatPriceValue } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
+import { getLogoUrl, loadLogosCache, isCacheLoaded } from '../../../lib/asset-logos-cache';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -431,6 +432,45 @@ function SignalDot({ signal }: { signal?: 'bullish' | 'bearish' | 'neutral' }) {
       ? 'bg-[#EF4444] dark:bg-[#F87171]'
       : 'bg-neutral-400 dark:bg-neutral-500';
   return <span className={cn('inline-block w-1.5 h-1.5 rounded-full', bg)} />;
+}
+
+function AssetLogo({ symbol, size = 20 }: { symbol: string; size?: number }) {
+  const [url, setUrl] = useState<string>(() => getLogoUrl(symbol));
+  const [err, setErr] = useState(false);
+
+  useEffect(() => {
+    if (!isCacheLoaded()) {
+      loadLogosCache().then(() => setUrl(getLogoUrl(symbol)));
+    } else {
+      setUrl(getLogoUrl(symbol));
+    }
+  }, [symbol]);
+
+  if (err) {
+    // fallback: 2-letter circle
+    return (
+      <span
+        className="inline-flex items-center justify-center rounded-full bg-neutral-200 dark:bg-neutral-700 text-[8px] font-bold text-neutral-500 dark:text-neutral-300 shrink-0"
+        style={{ width: size, height: size }}
+      >
+        {symbol.slice(0, 2)}
+      </span>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt={symbol}
+      width={size}
+      height={size}
+      className="rounded-full object-cover shrink-0"
+      style={{ width: size, height: size }}
+      onError={() => setErr(true)}
+      loading="lazy"
+    />
+  );
 }
 
 function PhaseBadge({ phase }: { phase: string }) {
@@ -1095,7 +1135,8 @@ function L5Screener({
               {asset.rank}
             </span>
 
-            {/* Asset */}
+            {/* Logo + Asset */}
+            <AssetLogo symbol={asset.symbol} size={20} />
             <div className="min-w-0 flex-1">
               <span className="font-sans font-semibold text-xs text-neutral-900 dark:text-white">{asset.symbol}</span>
               <span className="text-[10px] text-neutral-400 dark:text-neutral-500 ml-1.5 truncate hidden sm:inline">{asset.name}</span>
