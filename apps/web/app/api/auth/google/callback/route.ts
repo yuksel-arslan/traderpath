@@ -199,9 +199,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=no_token', baseUrl));
     }
 
-    // Create response with redirect to dashboard
+    // Create response with redirect to terminal
     // If first login, add query params so the frontend can show welcome modal
-    const redirectUrl = new URL('/dashboard', baseUrl);
+    const redirectUrl = new URL('/terminal', baseUrl);
     if (isFirstLogin && firstLoginBonus) {
       redirectUrl.searchParams.set('firstLogin', 'true');
       redirectUrl.searchParams.set('bonus', String(firstLoginBonus));

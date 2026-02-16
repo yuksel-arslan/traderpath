@@ -103,8 +103,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=no_token', baseUrl));
     }
 
-    // Create response with redirect to dashboard
-    const response = NextResponse.redirect(new URL('/dashboard', baseUrl));
+    // Create response with redirect to terminal
+    const response = NextResponse.redirect(new URL('/terminal', baseUrl));
 
     // Set cookies
     response.cookies.set('auth-token', accessToken, {
