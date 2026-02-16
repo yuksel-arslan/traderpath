@@ -113,7 +113,7 @@ export interface AnalysisReportData {
     entries?: Array<{ price: number; percentage: number; source?: string; type?: string }>;
     averageEntry: number;
     stopLoss: { price: number; percentage?: number; reason?: string; safetyAdjusted?: boolean };
-    takeProfits: Array<{ price: number; percentage?: number; reason?: string; source?: string }>;
+    takeProfits: Array<{ price: number; percentage?: number; reason?: string; source?: string; riskReward?: number }>;
     riskReward: number;
     winRateEstimate?: number;
     positionSizePercent?: number;
@@ -946,14 +946,18 @@ function generatePageTradePlan(data: AnalysisReportData, totalPages: number): st
         <td class="text-red">${tp?.stopLoss?.percentage ? `-${tp.stopLoss.percentage.toFixed(2)}%` : ''}</td>
         <td style="font-size: 6px;">${tp?.stopLoss?.reason?.slice(0, 30) || ''}</td>
       </tr>
-      ${(tp?.takeProfits || []).slice(0, 3).map((t, i) => `
+      ${(tp?.takeProfits || []).slice(0, 3).map((t: { price: number; percentage?: number; reason?: string; riskReward?: number }, i: number) => {
+        const tpRR = t.riskReward || (tp?.stopLoss?.price && tp?.averageEntry
+          ? parseFloat((Math.abs(t.price - tp.averageEntry) / Math.abs(tp.averageEntry - tp.stopLoss.price)).toFixed(1))
+          : 0);
+        return `
         <tr>
           <td style="font-weight: 600;">Target ${i + 1}</td>
           <td style="font-weight: 700; font-size: 9px;" class="text-green">${formatPrice(t.price)}</td>
-          <td class="text-green">${t.percentage ? `+${t.percentage.toFixed(1)}%` : ''}</td>
-          <td style="font-size: 6px;">${t.reason?.slice(0, 30) || ''}</td>
+          <td class="text-green">${tpRR > 0 ? `${tpRR.toFixed(1)}R` : ''}</td>
+          <td style="font-size: 6px;">${(t.reason || '').slice(0, 30)}</td>
         </tr>
-      `).join('')}
+      `}).join('')}
     </table>
 
     <!-- Full Page Chart -->

@@ -663,6 +663,8 @@ Kullanıcı Hakları Aktif:
 | 2026-02-16 | mlis.service.ts 1 runtime bug | `thresholds.regimeFactor.toFixed(2)` NaN olabiliyordu, `isNaN` guard eklendi | `mlis.service.ts` |
 | 2026-02-16 | Trade Visualizer her asset için aynı mock grafiği gösteriyordu | API response `{ data: { candles: [...] } }` döndürüyordu ama frontend `json?.data` ile objenin kendisini alıyordu (dizi değil). `Array.isArray(raw)` her zaman `false` olduğu için her seferinde flat synthetic fallback verileri üretiliyordu. Fix: `json?.data?.candles` olarak düzeltildi | `terminal/page.tsx:1908` |
 | 2026-02-16 | Market Pulse HTTP 451 hatası - analiz başlatılamıyordu | **3 katmanlı fix**: 1) `fetch24hTicker()`, `fetchKlines()`, `fetchOrderBook()`, `fetchRecentTrades()` hata durumunda throw ediyordu → try-catch ile fallback döndürüyor, 2) `multi-asset-data-provider.ts`'de crypto için Binance → Yahoo Finance otomatik fallback eklendi: `fetchCandles()` ve `fetchTicker()` Binance başarısız olunca (HTTP 451 geo-block) `cryptoToYahooSymbol()` ile Yahoo Finance'e yönlendiriyor (BTC→BTC-USD), 3) Böylece gerçek fiyat verisi alınıyor (price:0 yerine). `fetchOrderBook()` ve `fetchRecentTrades()` Binance'e özel olduğu için sadece fallback (Yahoo'da eşdeğeri yok) | `analysis.engine.ts`, `multi-asset-data-provider.ts` |
+| 2026-02-16 | Trade Plan R:R hesaplaması yanlış - TP1 ve TP2 aynı R:R gösteriyor (overall weighted), TP1 < 1R olabiliyor | **3 kök neden düzeltildi**: 1) Per-TP R:R hesaplaması yoktu - `takeProfits` interface'ine `riskReward` field eklendi, her TP için `|TP-Entry|/|Entry-SL|` hesaplanıyor. 2) TP1 < 1R olabiliyordu (S/R çok yakınsa 0.3R TP1 kabul ediliyordu) - minimum 1R enforcement eklendi, S/R < 1R ise 2R fallback kullanılıyor. 3) Frontend tüm TP'lere overall R:R gösteriyordu - artık per-TP `riskReward` kullanılıyor | `analysis.engine.ts:2071-2076,5716-5790`, `details/[id]/page.tsx:1189`, `reports/[id]/page.tsx:834`, `concierge/page.tsx:802`, `AnalysisReport.tsx:116,949` |
+| 2026-02-16 | Trade Plan RAG çıktısını (Forecast Bands, Multi-Strategy) dikkate almıyordu | `refineTradePlanWithRAG()` fonksiyonu eklendi: 1) Forecast Bands ile TP refinement - TP1'i short-term P50'ye, TP2'yi P90/P10'a göre ayarlıyor. 2) Validation BLOCK durumunda recommended strategy'nin seviyeleri kullanılıyor. 3) Strategy R:R > %50 daha iyiyse otomatik upgrade. 4) TP ordering (TP1 < TP2) ve overall R:R recalculation. Pipeline: Steps 1-9 → Step 10 (RAG refinement) → DB save | `analysis.engine.ts:6214+`, `analysis.routes.ts:1058-1084` |
 | 2026-02-07 | API timeout - sistem zaman aşımına uğruyordu (6 kök neden) | **1) 3 duplicate PrismaClient instance** connection pool'u tüketiyordu (coin-score-cache, multi-asset-score-cache, asset-logos). **2) Server startup blocking** - `startOutcomeTracker()` ve `initializeAssetLogos()` await ediliyordu, external API'ler yanıt vermezse server hiç başlamıyordu. **3) Binance ticker fetch timeout eksik** - `binance.provider.ts:213`'te AbortSignal.timeout yoktu. **4) Prisma query timeout yok** - hiçbir DB sorgusu timeout'a sahip değildi, tek bir yavaş sorgu tüm pool'u bloke edebilirdi. **5) Polling job'lar overlap** - 30s/15s interval job'lar önceki çalışma bitmeden tekrar tetikleniyordu, DB bağlantıları birikiyordu. **6) Auth middleware P2022 hata yönetimi eksik** - missing column hatası tüm auth'u kırıyordu. **Fix**: 1) Tüm duplicate PrismaClient kaldırıldı → singleton import, 2) Startup non-blocking yapıldı (fire-and-forget + timeout), 3) Binance fetch'e 10s timeout eklendi, 4) Prisma middleware ile 15s query timeout + slow query log eklendi, 5) Overlap guard flag'leri + withTimeout wrapper'ları eklendi, 6) Auth middleware'e P2022 fallback eklendi, duplicate decorator kaldırılıp jwt-middleware'e delege edildi | `database.ts`, `index.ts`, `jwt-middleware.ts`, `binance.provider.ts`, `coin-score-cache.service.ts`, `multi-asset-score-cache.service.ts`, `asset-logos.service.ts`, `schema.prisma` |
 
 ---
@@ -2249,6 +2251,20 @@ Kullanıcı Hakları Aktif:
   - Dosya: `apps/web/app/(dashboard)/layout.tsx`
 
 ### 2026-02-16
+- **Trade Plan R:R Hesaplaması ve RAG Entegrasyonu Düzeltildi**:
+  - **Problem 1**: Tüm TP'ler aynı R:R gösteriyordu (overall weighted R:R her TP'ye atanıyordu)
+  - **Problem 2**: TP1 < 1R olabiliyordu (S/R çok yakın olduğunda 0.3R TP1 kabul ediliyordu)
+  - **Problem 3**: Forecast Bands ve Multi-Strategy üretiliyor ama Trade Plan'a geri beslenmiyor
+  - **Fix 1 - Per-TP R:R**: `takeProfits` interface'ine `riskReward` field eklendi. Her TP'nin bireysel R:R'ı hesaplanıyor: `|TP-Entry|/|Entry-SL|`
+  - **Fix 2 - Minimum 1R Enforcement**: S/R seviyesi < 1R ise otomatik 2R fallback. TP1 asla 1R altında olamaz (pozisyonun %60'ında riskinizden az kazanamazsınız)
+  - **Fix 3 - RAG Trade Plan Refinement**: `refineTradePlanWithRAG()` fonksiyonu eklendi:
+    - Phase 1: Forecast Bands ile TP ayarlama (TP1 → P50, TP2 → P90/P10 cap)
+    - Phase 2: Validation BLOCK → recommended strategy'nin seviyelerini kullan
+    - Phase 3: Strategy R:R >%50 daha iyiyse otomatik upgrade
+    - TP ordering, overall R:R ve gate recalculation
+  - **Pipeline güncellemesi**: Steps 1-9 → Step 10 (RAG refinement) → DB save
+  - **Frontend**: 5 dosyada per-TP R:R kullanılıyor (details, reports, concierge, PDF)
+  - Dosyalar: `analysis.engine.ts`, `analysis.routes.ts`, `details/[id]/page.tsx`, `reports/[id]/page.tsx`, `concierge/page.tsx`, `AnalysisReport.tsx`
 - **Analysis Engine Deep Audit - 15 Runtime Bug Düzeltildi**:
   - **analysis.engine.ts** (10 bug):
     - CRITICAL: `riskAmount=0` → `Infinity` propagation (trade plan R:R)

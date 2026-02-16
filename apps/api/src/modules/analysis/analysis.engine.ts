@@ -2073,8 +2073,9 @@ interface TradePlanResult {
     percentage: number;
     reason: string;
     source: string; // Where this target came from
+    riskReward: number; // Individual TP R:R = |TP - Entry| / |Entry - SL|
   }>;
-  riskReward: number;
+  riskReward: number; // Overall weighted R:R
   winRateEstimate: number;
   positionSizePercent: number;
   riskAmount: number;
@@ -4760,23 +4761,27 @@ export const analysisEngine = {
 
     // Take profit levels (R:R based) - only 2 TPs at 1.5R and 2.5R
     const riskAmount = Math.abs(averageEntry - stopPrice);
+    const safeRiskAmount = riskAmount === 0 ? currentPrice * 0.015 : riskAmount;
+    const tp1Price = roundPrice(direction === 'long' ? averageEntry + safeRiskAmount * 1.5 : averageEntry - safeRiskAmount * 1.5);
+    const tp2Price = roundPrice(direction === 'long' ? averageEntry + safeRiskAmount * 2.5 : averageEntry - safeRiskAmount * 2.5);
     const takeProfits: TradePlanResult['takeProfits'] = [
       {
-        price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 1.5 : averageEntry - riskAmount * 1.5),
+        price: tp1Price,
         percentage: 50,
         reason: '1.5R - First take profit',
         source: '1.5R calculation',
+        riskReward: parseFloat((Math.abs(tp1Price - averageEntry) / safeRiskAmount).toFixed(2)),
       },
       {
-        price: roundPrice(direction === 'long' ? averageEntry + riskAmount * 2.5 : averageEntry - riskAmount * 2.5),
+        price: tp2Price,
         percentage: 50,
         reason: '2.5R - Main target',
         source: '2.5R calculation',
+        riskReward: parseFloat((Math.abs(tp2Price - averageEntry) / safeRiskAmount).toFixed(2)),
       },
     ];
 
     // Risk/Reward calculation (weighted average)
-    const safeRiskAmount = riskAmount === 0 ? currentPrice * 0.015 : riskAmount;
     const avgRR = takeProfits.reduce(
       (sum, tp) => sum + (Math.abs(tp.price - averageEntry) / safeRiskAmount) * (tp.percentage / 100),
       0
@@ -4830,6 +4835,12 @@ export const analysisEngine = {
       type: 'limit',
       entries,
       averageEntry,
+      currentPrice,
+      needsToWaitForEntry: false,
+      entryDistancePercent: 0,
+      entryStatus: 'immediate' as const,
+      tradePlanStatus: 'valid' as const,
+      tradePlanMessage: '',
       stopLoss,
       takeProfits,
       riskReward: parseFloat(avgRR.toFixed(2)),
@@ -5715,55 +5726,118 @@ export const analysisEngine = {
     // SHORT: TP1 = nearest support, TP2 = further support (with 2R/3R fallback)
     const takeProfits: TradePlanResult['takeProfits'] = [];
     const riskAmount = Math.abs(averageEntry - stopPrice);
+    const safeRiskAmount = riskAmount === 0 ? currentPrice * 0.015 : riskAmount;
+
+    // Helper: calculate individual TP R:R
+    const calcTPRR = (tpPrice: number): number =>
+      parseFloat((Math.abs(tpPrice - averageEntry) / safeRiskAmount).toFixed(2));
 
     if (direction === 'long') {
       // TP1: nearest resistance or 2R fallback (60% of position)
-      const tp1Price = nearestResistance && nearestResistance > averageEntry
-        ? nearestResistance
-        : averageEntry + riskAmount * 2;
+      // ENFORCE: TP1 must be at least 1R from entry (never risk more than you gain on 60% of position)
+      let tp1Price: number;
+      let tp1Reason: string;
+      let tp1Source: string;
+
+      if (nearestResistance && nearestResistance > averageEntry) {
+        const tp1RR = (nearestResistance - averageEntry) / safeRiskAmount;
+        if (tp1RR >= 1.0) {
+          tp1Price = nearestResistance;
+          tp1Reason = 'Nearest resistance';
+          tp1Source = 'Resistance level';
+        } else {
+          // S/R level too close (< 1R), use 2R fallback
+          tp1Price = averageEntry + safeRiskAmount * 2;
+          tp1Reason = `2R target (resistance at ${roundPrice(nearestResistance)} only ${tp1RR.toFixed(1)}R)`;
+          tp1Source = '2R calculation (min 1R enforced)';
+        }
+      } else {
+        tp1Price = averageEntry + safeRiskAmount * 2;
+        tp1Reason = '2R target';
+        tp1Source = '2R calculation';
+      }
+      tp1Price = roundPrice(tp1Price);
       takeProfits.push({
-        price: roundPrice(tp1Price),
-        percentage: 60,
-        reason: nearestResistance && nearestResistance > averageEntry ? 'Nearest resistance' : '2R target',
-        source: nearestResistance && nearestResistance > averageEntry ? 'Resistance level' : '2R calculation'
+        price: tp1Price, percentage: 60,
+        reason: tp1Reason, source: tp1Source,
+        riskReward: calcTPRR(tp1Price),
       });
-      sources.targets.push(nearestResistance ? 'Nearest resistance' : '2R');
+      sources.targets.push(tp1Source);
 
       // TP2: further resistance or 3R fallback (40% of position)
-      const tp2Price = furtherResistance && furtherResistance > tp1Price
-        ? furtherResistance
-        : averageEntry + riskAmount * 3;
+      let tp2Price: number;
+      let tp2Reason: string;
+      let tp2Source: string;
+
+      if (furtherResistance && furtherResistance > tp1Price) {
+        tp2Price = furtherResistance;
+        tp2Reason = 'Further resistance';
+        tp2Source = 'Resistance level';
+      } else {
+        tp2Price = averageEntry + safeRiskAmount * 3;
+        tp2Reason = '3R target';
+        tp2Source = '3R calculation';
+      }
+      tp2Price = roundPrice(Math.max(tp2Price, tp1Price + atr * 0.5));
       takeProfits.push({
-        price: roundPrice(Math.max(tp2Price, tp1Price + atr * 0.5)),
-        percentage: 40,
-        reason: furtherResistance && furtherResistance > tp1Price ? 'Further resistance' : '3R target',
-        source: furtherResistance && furtherResistance > tp1Price ? 'Resistance level' : '3R calculation'
+        price: tp2Price, percentage: 40,
+        reason: tp2Reason, source: tp2Source,
+        riskReward: calcTPRR(tp2Price),
       });
-      sources.targets.push(furtherResistance ? 'Further resistance' : '3R');
+      sources.targets.push(tp2Source);
     } else {
       // TP1: nearest support or 2R fallback (60% of position)
-      const tp1Price = nearestSupport && nearestSupport < averageEntry
-        ? nearestSupport
-        : averageEntry - riskAmount * 2;
+      // ENFORCE: TP1 must be at least 1R from entry
+      let tp1Price: number;
+      let tp1Reason: string;
+      let tp1Source: string;
+
+      if (nearestSupport && nearestSupport < averageEntry) {
+        const tp1RR = (averageEntry - nearestSupport) / safeRiskAmount;
+        if (tp1RR >= 1.0) {
+          tp1Price = nearestSupport;
+          tp1Reason = 'Nearest support';
+          tp1Source = 'Support level';
+        } else {
+          // S/R level too close (< 1R), use 2R fallback
+          tp1Price = averageEntry - safeRiskAmount * 2;
+          tp1Reason = `2R target (support at ${roundPrice(nearestSupport)} only ${tp1RR.toFixed(1)}R)`;
+          tp1Source = '2R calculation (min 1R enforced)';
+        }
+      } else {
+        tp1Price = averageEntry - safeRiskAmount * 2;
+        tp1Reason = '2R target';
+        tp1Source = '2R calculation';
+      }
+      tp1Price = roundPrice(tp1Price);
       takeProfits.push({
-        price: roundPrice(tp1Price),
-        percentage: 60,
-        reason: nearestSupport && nearestSupport < averageEntry ? 'Nearest support' : '2R target',
-        source: nearestSupport && nearestSupport < averageEntry ? 'Support level' : '2R calculation'
+        price: tp1Price, percentage: 60,
+        reason: tp1Reason, source: tp1Source,
+        riskReward: calcTPRR(tp1Price),
       });
-      sources.targets.push(nearestSupport ? 'Nearest support' : '2R');
+      sources.targets.push(tp1Source);
 
       // TP2: further support or 3R fallback (40% of position)
-      const tp2Price = furtherSupport && furtherSupport < tp1Price
-        ? furtherSupport
-        : averageEntry - riskAmount * 3;
+      let tp2Price: number;
+      let tp2Reason: string;
+      let tp2Source: string;
+
+      if (furtherSupport && furtherSupport < tp1Price) {
+        tp2Price = furtherSupport;
+        tp2Reason = 'Further support';
+        tp2Source = 'Support level';
+      } else {
+        tp2Price = averageEntry - safeRiskAmount * 3;
+        tp2Reason = '3R target';
+        tp2Source = '3R calculation';
+      }
+      tp2Price = roundPrice(Math.min(tp2Price, tp1Price - atr * 0.5));
       takeProfits.push({
-        price: roundPrice(Math.min(tp2Price, tp1Price - atr * 0.5)),
-        percentage: 40,
-        reason: furtherSupport && furtherSupport < tp1Price ? 'Further support' : '3R target',
-        source: furtherSupport && furtherSupport < tp1Price ? 'Support level' : '3R calculation'
+        price: tp2Price, percentage: 40,
+        reason: tp2Reason, source: tp2Source,
+        riskReward: calcTPRR(tp2Price),
       });
-      sources.targets.push(furtherSupport ? 'Further support' : '3R');
+      sources.targets.push(tp2Source);
     }
 
     // Maximum TP distance cap (20%)
@@ -5777,15 +5851,15 @@ export const analysisEngine = {
           tp.price = roundPrice(averageEntry * (1 - maxTPPercent / 100));
         }
         tp.reason += ` (capped at ${maxTPPercent}%)`;
+        tp.riskReward = calcTPRR(tp.price);
       }
     });
 
-    // ===== RISK/REWARD CALCULATION =====
+    // ===== RISK/REWARD CALCULATION (weighted average of per-TP R:Rs) =====
     const avgTP = takeProfits.reduce(
       (sum, tp) => sum + Math.abs((tp.price ?? averageEntry) - averageEntry) * ((tp.percentage ?? 0) / 100),
       0
     );
-    const safeRiskAmount = riskAmount === 0 ? currentPrice * 0.015 : riskAmount;
     const riskReward = parseFloat((avgTP / safeRiskAmount).toFixed(2));
 
     // ===== POSITION SIZE (from Safety + Confidence) =====
@@ -6141,5 +6215,272 @@ export const analysisEngine = {
     return mapping[timeframe] || 'dayTrade';
   },
 };
+
+// =========================================
+// RAG-Informed Trade Plan Refinement
+// Uses Forecast Bands + Multi-Strategy + Validation to improve the Trade Plan
+// =========================================
+export function refineTradePlanWithRAG(
+  plan: TradePlanResult,
+  ragData: {
+    forecastBands?: Array<{
+      horizon: string;
+      timeframe: string;
+      currentPrice: number;
+      p10: number;
+      p50: number;
+      p90: number;
+      bias: string;
+      drivers: string[];
+      invalidations: string[];
+      bandWidthPercent?: number;
+    }> | null;
+    strategies?: {
+      recommended: string;
+      recommendedReason: string;
+      strategies: Array<{
+        type: string;
+        label: string;
+        applicability: number;
+        direction: string;
+        entry: { price: number; condition: string; type: string };
+        stopLoss: { price: number; percentage: number; reason: string };
+        takeProfits: Array<{ id: string; price: number; sizePct: number; reason: string }>;
+        riskReward: number;
+      }>;
+    } | null;
+    validations?: {
+      enginePlan?: { overallStatus: string; checks: Array<{ passed: boolean; ruleId: string; severity: string; message: string }> } | null;
+      strategies: Array<{ planType: string; overallStatus: string }>;
+    };
+  },
+): TradePlanResult {
+  // If no useful RAG data, return original plan
+  if (!ragData.forecastBands && !ragData.strategies) return plan;
+
+  const refined = { ...plan, takeProfits: plan.takeProfits.map(tp => ({ ...tp })) };
+  const { direction, averageEntry, stopLoss } = plan;
+  const riskAmount = Math.abs(averageEntry - stopLoss.price);
+  const safeRiskAmount = riskAmount === 0 ? averageEntry * 0.015 : riskAmount;
+
+  const calcTPRR = (tpPrice: number): number =>
+    parseFloat((Math.abs(tpPrice - averageEntry) / safeRiskAmount).toFixed(2));
+
+  // Get relevant forecast bands
+  const shortBand = ragData.forecastBands?.find(b => b.horizon === 'short');
+  const mediumBand = ragData.forecastBands?.find(b => b.horizon === 'medium');
+
+  let refinedByForecast = false;
+  let refinedByStrategy = false;
+
+  // ── Phase 1: Refine TPs using Forecast Bands ──────────────────────
+  if (ragData.forecastBands && refined.takeProfits.length >= 2) {
+    if (direction === 'long') {
+      // TP1: If short-term P50 gives better R:R than current TP1 (and >= 1.5R), use it
+      if (shortBand && shortBand.p50 > averageEntry) {
+        const p50RR = calcTPRR(shortBand.p50);
+        if (p50RR > refined.takeProfits[0].riskReward && p50RR >= 1.5) {
+          refined.takeProfits[0] = {
+            ...refined.takeProfits[0],
+            price: roundPrice(shortBand.p50),
+            reason: `Forecast P50 (${shortBand.timeframe})`,
+            source: 'AI Forecast Band',
+            riskReward: p50RR,
+          };
+          refinedByForecast = true;
+        }
+      }
+      // TP2: If beyond medium-term P90 (bullish ceiling), cap it
+      if (mediumBand && refined.takeProfits[1].price > mediumBand.p90 && mediumBand.p90 > averageEntry) {
+        const p90RR = calcTPRR(mediumBand.p90);
+        if (p90RR >= 1.5) {
+          refined.takeProfits[1] = {
+            ...refined.takeProfits[1],
+            price: roundPrice(mediumBand.p90),
+            reason: `Forecast P90 cap (${mediumBand.timeframe})`,
+            source: 'AI Forecast Band',
+            riskReward: p90RR,
+          };
+          refinedByForecast = true;
+        }
+      }
+      // TP2: If short-term P90 would upgrade TP2 (better than current), use it
+      if (shortBand && !refinedByForecast && shortBand.p90 > averageEntry) {
+        const p90RR = calcTPRR(shortBand.p90);
+        if (p90RR > refined.takeProfits[1].riskReward && p90RR >= 2.0) {
+          refined.takeProfits[1] = {
+            ...refined.takeProfits[1],
+            price: roundPrice(shortBand.p90),
+            reason: `Forecast P90 (${shortBand.timeframe})`,
+            source: 'AI Forecast Band',
+            riskReward: p90RR,
+          };
+          refinedByForecast = true;
+        }
+      }
+    } else {
+      // SHORT direction
+      // TP1: If short-term P50 gives better R:R (P50 < entry for shorts)
+      if (shortBand && shortBand.p50 < averageEntry) {
+        const p50RR = calcTPRR(shortBand.p50);
+        if (p50RR > refined.takeProfits[0].riskReward && p50RR >= 1.5) {
+          refined.takeProfits[0] = {
+            ...refined.takeProfits[0],
+            price: roundPrice(shortBand.p50),
+            reason: `Forecast P50 (${shortBand.timeframe})`,
+            source: 'AI Forecast Band',
+            riskReward: p50RR,
+          };
+          refinedByForecast = true;
+        }
+      }
+      // TP2: If beyond medium-term P10 (bearish floor), cap it
+      if (mediumBand && refined.takeProfits[1].price < mediumBand.p10 && mediumBand.p10 < averageEntry) {
+        const p10RR = calcTPRR(mediumBand.p10);
+        if (p10RR >= 1.5) {
+          refined.takeProfits[1] = {
+            ...refined.takeProfits[1],
+            price: roundPrice(mediumBand.p10),
+            reason: `Forecast P10 cap (${mediumBand.timeframe})`,
+            source: 'AI Forecast Band',
+            riskReward: p10RR,
+          };
+          refinedByForecast = true;
+        }
+      }
+      // TP2: If short-term P10 would upgrade TP2
+      if (shortBand && !refinedByForecast && shortBand.p10 < averageEntry) {
+        const p10RR = calcTPRR(shortBand.p10);
+        if (p10RR > refined.takeProfits[1].riskReward && p10RR >= 2.0) {
+          refined.takeProfits[1] = {
+            ...refined.takeProfits[1],
+            price: roundPrice(shortBand.p10),
+            reason: `Forecast P10 (${shortBand.timeframe})`,
+            source: 'AI Forecast Band',
+            riskReward: p10RR,
+          };
+          refinedByForecast = true;
+        }
+      }
+    }
+  }
+
+  // ── Phase 2: If engine plan BLOCKED by validation, adopt recommended strategy ──
+  const engineBlocked = ragData.validations?.enginePlan?.overallStatus === 'block';
+  if (engineBlocked && ragData.strategies?.strategies?.length) {
+    // Find the recommended strategy (or the one with best R:R that passes validation)
+    const recommendedType = ragData.strategies.recommended;
+    const passedValidation = new Set(
+      ragData.validations?.strategies
+        ?.filter(v => v.overallStatus !== 'block')
+        .map(v => v.planType) || []
+    );
+
+    const bestStrategy = ragData.strategies.strategies
+      .filter(s => s.direction === direction && (passedValidation.has(s.type) || s.type === recommendedType))
+      .sort((a, b) => b.riskReward - a.riskReward)[0];
+
+    if (bestStrategy && bestStrategy.takeProfits.length > 0 && bestStrategy.riskReward > plan.riskReward) {
+      // Replace TPs with strategy's TPs
+      refined.takeProfits = bestStrategy.takeProfits.slice(0, 2).map((tp, i) => ({
+        price: roundPrice(tp.price),
+        percentage: i === 0 ? 60 : 40,
+        reason: `${bestStrategy.label} - ${tp.reason}`,
+        source: `Strategy: ${bestStrategy.type}`,
+        riskReward: calcTPRR(tp.price),
+      }));
+
+      // Also adopt strategy's SL if it's more sensible
+      if (bestStrategy.stopLoss && bestStrategy.stopLoss.price > 0) {
+        const stratSLDist = Math.abs((bestStrategy.stopLoss.price - averageEntry) / averageEntry * 100);
+        if (stratSLDist >= 1.5 && stratSLDist <= 10) {
+          refined.stopLoss = {
+            ...refined.stopLoss,
+            price: roundPrice(bestStrategy.stopLoss.price),
+            percentage: parseFloat(stratSLDist.toFixed(2)),
+            reason: `${bestStrategy.label} - ${bestStrategy.stopLoss.reason}`,
+          };
+        }
+      }
+      refinedByStrategy = true;
+    }
+  }
+
+  // ── Phase 3: Even if NOT blocked, if recommended strategy has significantly better R:R ──
+  if (!refinedByStrategy && ragData.strategies?.strategies?.length) {
+    const recommendedType = ragData.strategies.recommended;
+    const recommended = ragData.strategies.strategies.find(
+      s => s.type === recommendedType && s.direction === direction
+    );
+
+    // Only adopt if strategy R:R is >50% better and >= 2.0
+    if (recommended && recommended.riskReward >= 2.0 && recommended.riskReward > plan.riskReward * 1.5) {
+      const stratTPs = recommended.takeProfits.slice(0, 2);
+      if (stratTPs.length > 0) {
+        refined.takeProfits = stratTPs.map((tp, i) => ({
+          price: roundPrice(tp.price),
+          percentage: i === 0 ? 60 : 40,
+          reason: `${recommended.label} - ${tp.reason}`,
+          source: `Strategy: ${recommended.type} (upgraded)`,
+          riskReward: calcTPRR(tp.price),
+        }));
+        refinedByStrategy = true;
+      }
+    }
+  }
+
+  // ── Ensure TP ordering is correct (TP1 closer to entry than TP2) ──
+  if (refined.takeProfits.length >= 2) {
+    const tp1Dist = Math.abs(refined.takeProfits[0].price - averageEntry);
+    const tp2Dist = Math.abs(refined.takeProfits[1].price - averageEntry);
+    if (tp2Dist < tp1Dist) {
+      // Swap them
+      [refined.takeProfits[0], refined.takeProfits[1]] = [refined.takeProfits[1], refined.takeProfits[0]];
+      refined.takeProfits[0].percentage = 60;
+      refined.takeProfits[1].percentage = 40;
+    }
+  }
+
+  // ── Recalculate overall weighted R:R ──
+  const newRiskAmount = Math.abs(averageEntry - refined.stopLoss.price);
+  const newSafeRisk = newRiskAmount === 0 ? averageEntry * 0.015 : newRiskAmount;
+  const avgTP = refined.takeProfits.reduce(
+    (sum, tp) => sum + Math.abs((tp.price ?? averageEntry) - averageEntry) * ((tp.percentage ?? 0) / 100),
+    0
+  );
+  refined.riskReward = parseFloat((avgTP / newSafeRisk).toFixed(2));
+
+  // ── Recalculate per-TP R:R with potentially new SL ──
+  if (refinedByStrategy) {
+    for (const tp of refined.takeProfits) {
+      tp.riskReward = parseFloat((Math.abs(tp.price - averageEntry) / newSafeRisk).toFixed(2));
+    }
+  }
+
+  // ── Update gate ──
+  const winRateEstimate = plan.winRateEstimate || 50;
+  refined.gate = {
+    canProceed: refined.riskReward >= 1.5 && winRateEstimate >= 45,
+    reason: refined.riskReward >= 1.5 && winRateEstimate >= 45
+      ? `RAG-refined plan: R:R ${refined.riskReward.toFixed(1)} with ${winRateEstimate}% win rate${refinedByForecast ? ' (forecast-adjusted)' : ''}${refinedByStrategy ? ' (strategy-upgraded)' : ''}`
+      : `R:R ${refined.riskReward.toFixed(1)} or win rate ${winRateEstimate}% below threshold`,
+    confidence: Math.round((refined.riskReward / 3 + winRateEstimate / 100) * 50),
+    planQuality: refined.riskReward >= 3 && winRateEstimate >= 60 ? 'excellent'
+      : refined.riskReward >= 2 && winRateEstimate >= 50 ? 'good'
+      : refined.riskReward >= 1.5 ? 'acceptable' : 'poor',
+  };
+
+  // ── Update score based on new R:R ──
+  let score = 5;
+  if (refined.riskReward >= 2) score += 1;
+  if (refined.riskReward >= 3) score += 1;
+  if (plan.confidence >= 60) score += 1;
+  if (winRateEstimate >= 60) score += 1;
+  if (refined.stopLoss.percentage <= 5) score += 0.5;
+  score = parseFloat(Math.max(1, Math.min(10, score)).toFixed(1));
+  refined.score = score;
+
+  return refined;
+}
 
 export default analysisEngine;

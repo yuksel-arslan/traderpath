@@ -8,7 +8,7 @@ import { authenticate, optionalAuth } from '../../core/auth/middleware';
 import { creditService } from '../credits/credit.service';
 import { costService } from '../costs/cost.service';
 import { creditCostsService } from '../costs/credit-costs.service';
-import { analysisEngine } from './analysis.engine';
+import { analysisEngine, refineTradePlanWithRAG } from './analysis.engine';
 import { config } from '../../core/config';
 import { callGeminiWithRetry } from '../../core/gemini';
 import { TradeType, getTradeConfig, getStepConfig, getTradeTypeFromInterval } from './config/trade-config';
@@ -1054,6 +1054,33 @@ Warn about potential traps and give protective advice.`;
       } catch (ragError) {
         // RAG enrichment is non-blocking - analysis continues without it
         logger.warn({ error: ragError, symbol: body.symbol }, '[Analysis] RAG enrichment failed, proceeding without');
+      }
+
+      // Step 10: Refine Trade Plan using RAG output (Forecast Bands + Multi-Strategy + Validation)
+      // This feeds RAG intelligence back into the trade plan for better TP/SL placement
+      if (tradePlan && ragEnrichment) {
+        try {
+          const previousRR = tradePlan.riskReward;
+          tradePlan = refineTradePlanWithRAG(tradePlan, {
+            forecastBands: ragEnrichment.forecastBands?.bands || null,
+            strategies: ragEnrichment.strategies || null,
+            validations: {
+              enginePlan: ragEnrichment.validations?.enginePlan || null,
+              strategies: ragEnrichment.validations?.strategies || [],
+            },
+          });
+          if (tradePlan.riskReward !== previousRR) {
+            logger.info({
+              symbol: body.symbol,
+              previousRR,
+              newRR: tradePlan.riskReward,
+              tp1Source: tradePlan.takeProfits[0]?.source,
+              tp2Source: tradePlan.takeProfits[1]?.source,
+            }, '[Analysis] Step 10: Trade plan refined by RAG');
+          }
+        } catch (refineError) {
+          logger.warn({ error: refineError, symbol: body.symbol }, '[Analysis] Trade plan RAG refinement failed, keeping original');
+        }
       }
 
       // Save analysis to database (regardless of verdict)
