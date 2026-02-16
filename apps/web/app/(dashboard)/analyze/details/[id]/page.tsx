@@ -1020,7 +1020,7 @@ export default function AnalysisDetailsPage() {
                   </div>
                   <div className="text-sm text-gray-500 dark:text-slate-400 space-y-1">
                     <div className="flex items-center gap-2">
-                      <span>MLIS: {mlisConfirmationData.mlisRecommendation} ({mlisConfirmationData.mlisDirection})</span>
+                      <span>MLIS: {mlisConfirmationData?.mlisRecommendation ?? 'N/A'} ({mlisConfirmationData?.mlisDirection ?? 'N/A'})</span>
                       {confidenceChange !== 0 && (
                         <span className={cn(
                           "text-xs font-medium px-1.5 py-0.5 rounded",

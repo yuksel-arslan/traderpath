@@ -935,7 +935,7 @@ export class IndicatorsService {
     }
 
     const currentPrice = data[data.length - 1].close;
-    const atrPercent = (atr / currentPrice) * 100;
+    const atrPercent = currentPrice !== 0 ? (atr / currentPrice) * 100 : 0;
 
     return {
       name: 'ATR',

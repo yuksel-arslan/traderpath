@@ -4755,8 +4755,9 @@ export const analysisEngine = {
     ];
 
     // Risk/Reward calculation (weighted average)
+    const safeRiskAmount = riskAmount === 0 ? currentPrice * 0.015 : riskAmount;
     const avgRR = takeProfits.reduce(
-      (sum, tp) => sum + (Math.abs(tp.price - averageEntry) / riskAmount) * (tp.percentage / 100),
+      (sum, tp) => sum + (Math.abs(tp.price - averageEntry) / safeRiskAmount) * (tp.percentage / 100),
       0
     );
 
@@ -5063,7 +5064,7 @@ export const analysisEngine = {
     }
 
     // 3. Asset Scanner 1H Trend (15% weight) - NEW: short-term for early signals
-    const h1Trend = assetScan.timeframes.find(t => t.tf === '1H');
+    const h1Trend = (assetScan.timeframes ?? []).find(t => t.tf === '1H');
     if (h1Trend && h1Trend.strength >= 25) {
       directionSources.push({
         source: 'Asset Scanner (1H)',
@@ -5217,7 +5218,7 @@ export const analysisEngine = {
           factor: warning,
           positive: false,
           impact: 'medium',
-          source: `${ctx.assetClass.charAt(0).toUpperCase() + ctx.assetClass.slice(1)} Warning`
+          source: `${(ctx.assetClass || 'Asset').charAt(0).toUpperCase() + (ctx.assetClass || 'asset').slice(1)} Warning`
         });
       }
     }
