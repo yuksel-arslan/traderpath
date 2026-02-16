@@ -45,6 +45,39 @@ const LOCK_TTL = 1800; // 30 minutes
 let cronJob: cron.ScheduledTask | null = null;
 
 /**
+ * Check if a Prisma error is due to missing table (P2021) or missing column (P2022)
+ */
+function isTableMissing(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const code = (error as any).code;
+  const message = (error as any).message || '';
+  return code === 'P2021' || code === 'P2022' || message.includes('does not exist');
+}
+
+let tableMissingWarningLogged = false;
+
+/**
+ * Quick check if signals table exists by attempting a lightweight count
+ * Returns false if table is missing, true otherwise
+ */
+async function checkSignalsTableExists(): Promise<boolean> {
+  try {
+    await prisma.signal.count({ take: 0 } as any);
+    return true;
+  } catch (error) {
+    if (isTableMissing(error)) {
+      if (!tableMissingWarningLogged) {
+        console.warn('[SignalGenerator] signals table not found in database. Run the migration: apps/api/prisma/migrations/apply_signals_production.sql');
+        tableMissingWarningLogged = true;
+      }
+      return false;
+    }
+    // Other errors (e.g., connection issues) - assume table exists
+    return true;
+  }
+}
+
+/**
  * Main signal generation function
  */
 export async function generateSignals(): Promise<SignalGenerationResult> {
@@ -60,6 +93,13 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
   console.log('[SignalGenerator] Starting signal generation cycle');
 
   try {
+    // Early exit if signals table doesn't exist - avoids wasting API calls
+    const tableExists = await checkSignalsTableExists();
+    if (!tableExists) {
+      console.log('[SignalGenerator] Skipping - signals table not migrated yet');
+      return result;
+    }
+
     // Acquire lock
     if (redis) {
       const acquired = await redis.set(LOCK_KEY, '1', 'EX', LOCK_TTL, 'NX');
