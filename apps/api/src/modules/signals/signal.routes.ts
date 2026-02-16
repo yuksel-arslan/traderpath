@@ -40,32 +40,40 @@ export async function signalRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const query = request.query as any;
+      try {
+        const query = request.query as any;
 
-      const criteria: SignalFilterCriteria = {
-        market: query.market,
-        status: query.status,
-        minConfidence: query.minConfidence,
-        minScore: query.minScore,
-        minQualityScore: query.minQualityScore,
-        direction: query.direction,
-      };
+        const criteria: SignalFilterCriteria = {
+          market: query.market,
+          status: query.status,
+          minConfidence: query.minConfidence,
+          minScore: query.minScore,
+          minQualityScore: query.minQualityScore,
+          direction: query.direction,
+        };
 
-      const { signals, total } = await signalService.getSignals(
-        criteria,
-        query.limit || 20,
-        query.offset || 0
-      );
+        const { signals, total } = await signalService.getSignals(
+          criteria,
+          query.limit || 20,
+          query.offset || 0
+        );
 
-      return reply.send({
-        success: true,
-        data: {
-          signals: signals.map(serializeSignal),
-          total,
-          limit: query.limit || 20,
-          offset: query.offset || 0,
-        },
-      });
+        return reply.send({
+          success: true,
+          data: {
+            signals: signals.map(serializeSignal),
+            total,
+            limit: query.limit || 20,
+            offset: query.offset || 0,
+          },
+        });
+      } catch (error) {
+        console.error('[signals] Error:', error);
+        return reply.send({
+          success: true,
+          data: { signals: [], total: 0, limit: 20, offset: 0 },
+        });
+      }
     }
   );
 
@@ -88,21 +96,29 @@ export async function signalRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const { id } = request.params as { id: string };
+      try {
+        const { id } = request.params as { id: string };
 
-      const signal = await signalService.getSignal(id);
+        const signal = await signalService.getSignal(id);
 
-      if (!signal) {
-        return reply.status(404).send({
+        if (!signal) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Signal not found',
+          });
+        }
+
+        return reply.send({
+          success: true,
+          data: serializeSignal(signal),
+        });
+      } catch (error) {
+        console.error('[signals/:id] Error:', error);
+        return reply.status(500).send({
           success: false,
-          error: 'Signal not found',
+          error: 'Failed to fetch signal',
         });
       }
-
-      return reply.send({
-        success: true,
-        data: serializeSignal(signal),
-      });
     }
   );
 
@@ -131,15 +147,23 @@ export async function signalRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const { market } = request.params as { market: string };
-      const { limit } = request.query as { limit?: number };
+      try {
+        const { market } = request.params as { market: string };
+        const { limit } = request.query as { limit?: number };
 
-      const signals = await signalService.getLatestSignals(market, limit || 10);
+        const signals = await signalService.getLatestSignals(market, limit || 10);
 
-      return reply.send({
-        success: true,
-        data: signals.map(serializeSignal),
-      });
+        return reply.send({
+          success: true,
+          data: signals.map(serializeSignal),
+        });
+      } catch (error) {
+        console.error('[signals/latest] Error:', error);
+        return reply.send({
+          success: true,
+          data: [],
+        });
+      }
     }
   );
 
@@ -208,14 +232,32 @@ export async function signalRoutes(fastify: FastifyInstance) {
       preHandler: [fastify.authenticate],
     },
     async (request, reply) => {
-      const userId = (request.user as any).id;
+      try {
+        const userId = (request.user as any).id;
 
-      const preferences = await signalService.getUserPreferences(userId);
+        const preferences = await signalService.getUserPreferences(userId);
 
-      return reply.send({
-        success: true,
-        data: serializePreferences(preferences),
-      });
+        return reply.send({
+          success: true,
+          data: serializePreferences(preferences),
+        });
+      } catch (error) {
+        console.error('[signals/preferences GET] Error:', error);
+        return reply.send({
+          success: true,
+          data: {
+            enabledMarkets: ['crypto'],
+            minConfidence: 70,
+            minClassicScore: 7,
+            requireMlisConfirm: false,
+            allowedVerdicts: ['GO', 'CONDITIONAL_GO'],
+            telegramEnabled: false,
+            discordEnabled: false,
+            emailEnabled: true,
+            quietHoursEnabled: false,
+          },
+        });
+      }
     }
   );
 
@@ -259,15 +301,23 @@ export async function signalRoutes(fastify: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const userId = (request.user as any).id;
-      const updates = request.body as any;
+      try {
+        const userId = (request.user as any).id;
+        const updates = request.body as any;
 
-      const preferences = await signalService.updateUserPreferences(userId, updates);
+        const preferences = await signalService.updateUserPreferences(userId, updates);
 
-      return reply.send({
-        success: true,
-        data: serializePreferences(preferences),
-      });
+        return reply.send({
+          success: true,
+          data: serializePreferences(preferences),
+        });
+      } catch (error) {
+        console.error('[signals/preferences PATCH] Error:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to update signal preferences',
+        });
+      }
     }
   );
 
