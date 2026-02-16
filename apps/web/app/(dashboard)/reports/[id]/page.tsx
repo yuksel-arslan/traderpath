@@ -189,35 +189,37 @@ function formatPrice(price: number): string {
   return `$${price.toFixed(6)}`;
 }
 
-// Temporarily remove canvas elements before html2canvas capture to prevent createPattern error
-function hideCanvasesForCapture(container: HTMLElement): Array<{ canvas: HTMLCanvasElement; parent: HTMLElement; next: ChildNode | null }> {
-  const saved: Array<{ canvas: HTMLCanvasElement; parent: HTMLElement; next: ChildNode | null }> = [];
+// Snapshot every lightweight-charts canvas to a static <img>, hide originals.
+// Returns a cleanup function that restores originals and removes temp images.
+function replaceCanvasesWithImages(container: HTMLElement): () => void {
+  const ops: Array<() => void> = [];
   const canvases = container.querySelectorAll('canvas');
-  canvases.forEach((canvas) => {
-    if (canvas.parentElement) {
-      saved.push({
-        canvas: canvas as HTMLCanvasElement,
-        parent: canvas.parentElement as HTMLElement,
-        next: canvas.nextSibling,
-      });
-      canvas.parentElement.removeChild(canvas);
-    }
-  });
-  return saved;
-}
 
-function restoreCanvases(saved: Array<{ canvas: HTMLCanvasElement; parent: HTMLElement; next: ChildNode | null }>) {
-  saved.forEach(({ canvas, parent, next }) => {
+  canvases.forEach((canvas) => {
+    const parent = canvas.parentElement;
+    if (!parent) return;
+
     try {
-      if (next && next.parentNode === parent) {
-        parent.insertBefore(canvas, next);
-      } else {
-        parent.appendChild(canvas);
-      }
+      const dataUrl = canvas.toDataURL('image/png');
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.style.cssText = `width:${canvas.offsetWidth}px;height:${canvas.offsetHeight}px;display:block;`;
+      img.setAttribute('data-canvas-replacement', 'true');
+
+      parent.insertBefore(img, canvas);
+      (canvas as HTMLElement).style.display = 'none';
+
+      ops.push(() => {
+        (canvas as HTMLElement).style.display = '';
+        if (img.parentNode) img.parentNode.removeChild(img);
+      });
     } catch {
-      // DOM may have changed (React re-render); silently skip restoration
+      (canvas as HTMLElement).style.display = 'none';
+      ops.push(() => { (canvas as HTMLElement).style.display = ''; });
     }
   });
+
+  return () => ops.forEach((fn) => fn());
 }
 
 export default function ReportViewPage() {
@@ -279,8 +281,8 @@ export default function ReportViewPage() {
       // Wait for chart to render
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
+      // Snapshot canvases to static images so html2canvas can capture them
+      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
 
       let canvas: HTMLCanvasElement;
       try {
@@ -292,14 +294,18 @@ export default function ReportViewPage() {
           allowTaint: true,
           windowWidth: 1200,
           onclone: (clonedDoc) => {
+            clonedDoc.documentElement.classList.remove('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
+              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+              (clonedElement as HTMLElement).style.color = '#111827';
+              clonedElement.classList.remove('dark');
             }
           },
         });
       } finally {
-        restoreCanvases(savedCanvases);
+        restoreCanvases();
       }
 
       const imageBase64 = canvas.toDataURL('image/jpeg', 0.80);
@@ -353,8 +359,8 @@ export default function ReportViewPage() {
     setExporting(true);
     setExportDropdownOpen(false);
     try {
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
+      // Snapshot canvases to static images so html2canvas can capture them
+      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
 
       let canvas: HTMLCanvasElement;
       try {
@@ -366,14 +372,18 @@ export default function ReportViewPage() {
           allowTaint: true,
           windowWidth: 1200,
           onclone: (clonedDoc) => {
+            clonedDoc.documentElement.classList.remove('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
+              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+              (clonedElement as HTMLElement).style.color = '#111827';
+              clonedElement.classList.remove('dark');
             }
           },
         });
       } finally {
-        restoreCanvases(savedCanvases);
+        restoreCanvases();
       }
 
       const imageBase64 = canvas.toDataURL('image/png');
@@ -398,8 +408,8 @@ export default function ReportViewPage() {
     setExporting(true);
     setExportDropdownOpen(false);
     try {
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
+      // Snapshot canvases to static images so html2canvas can capture them
+      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
 
       let canvas: HTMLCanvasElement;
       try {
@@ -411,14 +421,18 @@ export default function ReportViewPage() {
           allowTaint: true,
           windowWidth: 1200,
           onclone: (clonedDoc) => {
+            clonedDoc.documentElement.classList.remove('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
+              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+              (clonedElement as HTMLElement).style.color = '#111827';
+              clonedElement.classList.remove('dark');
             }
           },
         });
       } finally {
-        restoreCanvases(savedCanvases);
+        restoreCanvases();
       }
 
       const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
@@ -443,8 +457,8 @@ export default function ReportViewPage() {
     setExporting(true);
     setExportDropdownOpen(false);
     try {
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
+      // Snapshot canvases to static images so html2canvas can capture them
+      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
 
       let canvas: HTMLCanvasElement;
       try {
@@ -456,14 +470,18 @@ export default function ReportViewPage() {
           allowTaint: true,
           windowWidth: 1200,
           onclone: (clonedDoc) => {
+            clonedDoc.documentElement.classList.remove('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
+              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+              (clonedElement as HTMLElement).style.color = '#111827';
+              clonedElement.classList.remove('dark');
             }
           },
         });
       } finally {
-        restoreCanvases(savedCanvases);
+        restoreCanvases();
       }
 
       const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);

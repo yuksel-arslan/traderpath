@@ -1523,7 +1523,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
 
   fastify.post<{ Body: SendScreenshotEmailBody }>(
     '/api/reports/email-screenshot',
-    { preHandler: [authenticate] },
+    { preHandler: [authenticate], config: { rawBody: true }, bodyLimit: 20 * 1024 * 1024 },
     async (
       request: FastifyRequest<{ Body: SendScreenshotEmailBody }>,
       reply: FastifyReply
@@ -1633,9 +1633,10 @@ export async function reportRoutes(fastify: FastifyInstance) {
           message: `Analysis screenshot sent to ${user.email}`,
         });
       } catch (error) {
-        fastify.log.error(error);
+        fastify.log.error({ error, userId: (request.user as JwtUser)?.id }, 'Screenshot email endpoint error');
+        const msg = error instanceof Error ? error.message : 'Failed to send screenshot email';
         return reply.code(500).send({
-          error: { code: 'SERVER_ERROR', message: 'Failed to send screenshot email' },
+          error: { code: 'SERVER_ERROR', message: msg },
         });
       }
     }
@@ -1656,7 +1657,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
 
   fastify.post<{ Body: SendPdfEmailBody }>(
     '/api/reports/email-pdf-report',
-    { preHandler: [authenticate] },
+    { preHandler: [authenticate], config: { rawBody: true }, bodyLimit: 20 * 1024 * 1024 },
     async (
       request: FastifyRequest<{ Body: SendPdfEmailBody }>,
       reply: FastifyReply
@@ -1775,9 +1776,10 @@ export async function reportRoutes(fastify: FastifyInstance) {
           message: `Analysis PDF sent to ${user.email}`,
         });
       } catch (error) {
-        fastify.log.error(error);
+        fastify.log.error({ error, userId: (request.user as JwtUser)?.id }, 'PDF email endpoint error');
+        const msg = error instanceof Error ? error.message : 'Failed to send PDF email';
         return reply.code(500).send({
-          error: { code: 'SERVER_ERROR', message: 'Failed to send PDF email' },
+          error: { code: 'SERVER_ERROR', message: msg },
         });
       }
     }

@@ -479,13 +479,14 @@ TraderPath - Professional Trading Analysis
 
     const result = await this.sendEmail({
       to: email,
-      subject: `📊 TraderPath ${formatSymbolPair(data.symbol)} Analysis Report - ${data.verdict}`,
+      subject: `TraderPath ${formatSymbolPair(data.symbol)} Analysis Report - ${data.verdict}`,
       html,
       text,
       attachments: [
         {
           filename: data.fileName,
           content: data.pdfBase64,
+          content_type: 'application/pdf',
         },
       ],
     });

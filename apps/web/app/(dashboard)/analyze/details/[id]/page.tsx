@@ -65,38 +65,42 @@ function formatPrice(price: number): string {
   return `$${price.toFixed(6)}`;
 }
 
-// Temporarily hide all canvas elements in container before html2canvas capture.
-// lightweight-charts creates canvases that cause "createPattern" error when html2canvas
-// clones the DOM (canvas elements end up with 0 width/height in the cloned document).
-// We physically remove them from the DOM, run capture, then restore them.
-function hideCanvasesForCapture(container: HTMLElement): Array<{ canvas: HTMLCanvasElement; parent: HTMLElement; next: ChildNode | null }> {
-  const saved: Array<{ canvas: HTMLCanvasElement; parent: HTMLElement; next: ChildNode | null }> = [];
+// Snapshot every lightweight-charts canvas inside `container` to a static <img>,
+// then hide the originals so html2canvas never touches them (avoids the
+// "createPattern on 0×0 canvas" error).  Returns a cleanup function that
+// restores the originals and removes the temporary images.
+function replaceCanvasesWithImages(container: HTMLElement): () => void {
+  const ops: Array<() => void> = [];
   const canvases = container.querySelectorAll('canvas');
-  canvases.forEach((canvas) => {
-    if (canvas.parentElement) {
-      saved.push({
-        canvas: canvas as HTMLCanvasElement,
-        parent: canvas.parentElement as HTMLElement,
-        next: canvas.nextSibling,
-      });
-      canvas.parentElement.removeChild(canvas);
-    }
-  });
-  return saved;
-}
 
-function restoreCanvases(saved: Array<{ canvas: HTMLCanvasElement; parent: HTMLElement; next: ChildNode | null }>) {
-  saved.forEach(({ canvas, parent, next }) => {
+  canvases.forEach((canvas) => {
+    const parent = canvas.parentElement;
+    if (!parent) return;
+
     try {
-      if (next && next.parentNode === parent) {
-        parent.insertBefore(canvas, next);
-      } else {
-        parent.appendChild(canvas);
-      }
+      // Snapshot the visible canvas to a data-URL
+      const dataUrl = canvas.toDataURL('image/png');
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.style.cssText = `width:${canvas.offsetWidth}px;height:${canvas.offsetHeight}px;display:block;`;
+      img.setAttribute('data-canvas-replacement', 'true');
+
+      // Insert the image right before the canvas, then hide the canvas
+      parent.insertBefore(img, canvas);
+      (canvas as HTMLElement).style.display = 'none';
+
+      ops.push(() => {
+        (canvas as HTMLElement).style.display = '';
+        if (img.parentNode) img.parentNode.removeChild(img);
+      });
     } catch {
-      // DOM may have changed (React re-render); silently skip restoration
+      // canvas tainted or not renderable – just hide it
+      (canvas as HTMLElement).style.display = 'none';
+      ops.push(() => { (canvas as HTMLElement).style.display = ''; });
     }
   });
+
+  return () => ops.forEach((fn) => fn());
 }
 
 export default function AnalysisDetailsPage() {
@@ -154,8 +158,8 @@ export default function AnalysisDetailsPage() {
       // Wait for chart to render
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
+      // Snapshot canvases to static images so html2canvas can capture them
+      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
 
       let canvas: HTMLCanvasElement;
       try {
@@ -167,14 +171,19 @@ export default function AnalysisDetailsPage() {
           allowTaint: true,
           windowWidth: 1200,
           onclone: (clonedDoc) => {
+            // Force light mode in the cloned document
+            clonedDoc.documentElement.classList.remove('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
+              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+              (clonedElement as HTMLElement).style.color = '#111827';
+              clonedElement.classList.remove('dark');
             }
           },
         });
       } finally {
-        restoreCanvases(savedCanvases);
+        restoreCanvases();
       }
 
       const imageBase64 = canvas.toDataURL('image/jpeg', 0.80);
@@ -196,19 +205,19 @@ export default function AnalysisDetailsPage() {
       if (response.ok) {
         setAutoEmailDone(true);
         setEmailSent(true);
-        // Redirect back to analyze page after showing success
         setTimeout(() => {
           router.push('/analyze#recent-analyses');
         }, 2000);
       } else {
         const errorData = await response.json().catch(() => ({}));
+        const msg = errorData?.error?.message || errorData?.message || `Email failed (${response.status})`;
         console.error('Auto email send failed:', response.status, errorData);
-        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
+        alert(msg);
         setAutoEmailInProgress(false);
       }
     } catch (err) {
       console.error('Failed to auto send email:', err);
-      alert('Failed to send email. Please try again.');
+      alert('Failed to send email: ' + (err instanceof Error ? err.message : 'Unknown error'));
       setAutoEmailInProgress(false);
     }
   }, [analysis, router]);
@@ -235,8 +244,8 @@ export default function AnalysisDetailsPage() {
       // Dynamic import jsPDF
       const { jsPDF } = await import('jspdf');
 
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
+      // Snapshot canvases to static images so html2canvas can capture them
+      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
 
       let canvas: HTMLCanvasElement;
       try {
@@ -248,16 +257,20 @@ export default function AnalysisDetailsPage() {
           allowTaint: true,
           windowWidth: 1400,
           onclone: (clonedDoc) => {
+            // Force light mode in the cloned document
+            clonedDoc.documentElement.classList.remove('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
               (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+              (clonedElement as HTMLElement).style.color = '#111827';
               (clonedElement as HTMLElement).style.padding = '24px';
+              clonedElement.classList.remove('dark');
             }
           },
         });
       } finally {
-        restoreCanvases(savedCanvases);
+        restoreCanvases();
       }
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
@@ -293,7 +306,7 @@ export default function AnalysisDetailsPage() {
     }
   }, [searchParams, analysis, loading, handleAutoPdf]);
 
-  // Download PDF (dark mode capture)
+  // Download PDF (light mode capture)
   const handleDownloadPdf = async () => {
     if (!pageRef.current || downloadingPdf || !analysis) return;
 
@@ -304,13 +317,13 @@ export default function AnalysisDetailsPage() {
       // Dynamic import jsPDF
       const { jsPDF } = await import('jspdf');
 
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
+      // Snapshot canvases to static images so html2canvas can capture them
+      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
 
       let canvas: HTMLCanvasElement;
       try {
         canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#0f172a',
+          backgroundColor: '#ffffff',
           scale: 2,
           logging: false,
           useCORS: true,
@@ -319,18 +332,19 @@ export default function AnalysisDetailsPage() {
           removeContainer: true,
           imageTimeout: 5000,
           onclone: (clonedDoc) => {
+            // Force light mode in the cloned document
+            clonedDoc.documentElement.classList.remove('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#1e293b';
-              (clonedElement as HTMLElement).style.color = '#ffffff';
-              clonedElement.classList.add('dark');
+              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+              (clonedElement as HTMLElement).style.color = '#111827';
+              clonedElement.classList.remove('dark');
             }
-            clonedDoc.documentElement.classList.add('dark');
           },
         });
       } finally {
-        restoreCanvases(savedCanvases);
+        restoreCanvases();
       }
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
@@ -364,13 +378,13 @@ export default function AnalysisDetailsPage() {
       // Dynamic import jsPDF
       const { jsPDF } = await import('jspdf');
 
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
+      // Snapshot canvases to static images so html2canvas can capture them
+      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
 
       let canvas: HTMLCanvasElement;
       try {
         canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#0f172a',
+          backgroundColor: '#ffffff',
           scale: 2,
           logging: false,
           useCORS: true,
@@ -379,18 +393,19 @@ export default function AnalysisDetailsPage() {
           removeContainer: true,
           imageTimeout: 5000,
           onclone: (clonedDoc) => {
+            // Force light mode in the cloned document
+            clonedDoc.documentElement.classList.remove('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#1e293b';
-              (clonedElement as HTMLElement).style.color = '#ffffff';
-              clonedElement.classList.add('dark');
+              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+              (clonedElement as HTMLElement).style.color = '#111827';
+              clonedElement.classList.remove('dark');
             }
-            clonedDoc.documentElement.classList.add('dark');
           },
         });
       } finally {
-        restoreCanvases(savedCanvases);
+        restoreCanvases();
       }
 
       // Generate PDF
@@ -425,8 +440,9 @@ export default function AnalysisDetailsPage() {
         setTimeout(() => setEmailSent(false), 3000);
       } else {
         const errorData = await response.json().catch(() => ({}));
+        const msg = errorData?.error?.message || errorData?.message || `Email failed (${response.status})`;
         console.error('Email send failed:', response.status, errorData);
-        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
+        alert(msg);
       }
     } catch (err) {
       console.error('Failed to send email:', err);
