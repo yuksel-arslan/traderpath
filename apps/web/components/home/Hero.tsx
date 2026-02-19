@@ -6,16 +6,16 @@ import { TraderPathLogo } from '../common/TraderPathLogo';
 
 export function Hero() {
   return (
-    <section className="py-20 sm:py-28 md:py-36">
+    <section className="py-12 sm:py-16 md:py-24">
       <div className="max-w-[1200px] mx-auto px-4 text-center">
         {/* Large Logo */}
-        <div className="flex justify-center mb-8">
-          <TraderPathLogo size="xl" showText={false} animated />
+        <div className="flex justify-center mb-4">
+          <TraderPathLogo size="sm" showText={false} animated />
         </div>
 
         {/* Brand name */}
-        <div className="mb-6">
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight leading-[1.05]">
+        <div className="mb-4">
+          <h1 className="text-xl sm:text-2xl md:text-4xl font-bold tracking-tight leading-[1.05]">
             <span className="hidden dark:inline">
               <span className="bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-300 bg-clip-text text-transparent">Trader</span>
               <span className="bg-gradient-to-r from-red-400 via-rose-400 to-red-300 bg-clip-text text-transparent">Path</span>
@@ -27,10 +27,19 @@ export function Hero() {
           </h1>
         </div>
 
-        {/* Badge */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 mb-6 text-[10px] font-sans uppercase tracking-wider text-slate-400 border border-black/[0.06] dark:border-white/[0.06] rounded-full">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-[#00f5c4] animate-pulse" />
-          Global Capital Flow Intelligence
+        {/* Badge — styled like the brand above */}
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-[#00f5c4] animate-pulse flex-shrink-0" />
+          <span className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight leading-tight">
+            <span className="hidden dark:inline">
+              <span className="bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-300 bg-clip-text text-transparent">Global Capital Flow </span>
+              <span className="bg-gradient-to-r from-red-400 via-rose-400 to-red-300 bg-clip-text text-transparent">Intelligence</span>
+            </span>
+            <span className="dark:hidden">
+              <span className="text-teal-700">Global Capital Flow </span>
+              <span className="text-red-600">Intelligence</span>
+            </span>
+          </span>
         </div>
 
         {/* Heading */}
