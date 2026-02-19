@@ -350,7 +350,7 @@ export function FlowAccordion() {
         <div className="mt-8 text-center">
           <Link
             href="/register"
-            className="inline-flex items-center gap-2 px-6 py-3 text-xs font-sans font-semibold bg-black dark:bg-white text-white dark:text-[#0B1121] hover:opacity-80 transition-opacity"
+            className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium bg-teal-500 hover:bg-teal-600 text-white rounded-md transition-colors"
           >
             ACCESS FULL TERMINAL
             <ArrowRight className="w-3.5 h-3.5" />
