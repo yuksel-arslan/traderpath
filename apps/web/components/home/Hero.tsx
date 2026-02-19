@@ -27,18 +27,16 @@ export function Hero() {
           </h1>
         </div>
 
-        {/* Badge — styled like the brand above */}
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-[#00f5c4] animate-pulse flex-shrink-0" />
-          <span className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight leading-tight">
-            <span className="hidden dark:inline">
-              <span className="bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-300 bg-clip-text text-transparent">Global Capital Flow </span>
-              <span className="bg-gradient-to-r from-red-400 via-rose-400 to-red-300 bg-clip-text text-transparent">Intelligence</span>
-            </span>
-            <span className="dark:hidden">
-              <span className="text-teal-700">Global Capital Flow </span>
-              <span className="text-red-600">Intelligence</span>
-            </span>
+        {/* Badge — animated gradient, 3× brand size */}
+        <div className="flex items-center justify-center gap-3 mb-6">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-[#00f5c4] animate-pulse flex-shrink-0" />
+          <span
+            className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight bg-clip-text text-transparent bg-[length:200%_auto] animate-[gradient-shift_4s_ease_infinite]"
+            style={{
+              backgroundImage: 'linear-gradient(90deg, #2DD4BF, #34d399, #f87171, #fb923c, #2DD4BF)',
+            }}
+          >
+            Global Capital Flow Intelligence
           </span>
         </div>
 
