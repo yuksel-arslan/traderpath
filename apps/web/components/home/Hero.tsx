@@ -49,14 +49,14 @@ export function Hero() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             href="/register"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm font-semibold bg-black dark:bg-white text-white dark:text-black rounded-sm hover:opacity-80 transition-opacity"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm font-medium bg-teal-500 hover:bg-teal-600 text-white rounded-md transition-colors"
           >
             START FREE ANALYSIS
             <ArrowRight className="w-4 h-4" />
           </Link>
           <Link
             href="/pricing"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm text-slate-500 border border-black/[0.06] dark:border-white/[0.06] rounded-sm hover:text-black dark:hover:text-white transition-colors"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
             VIEW PRICING
           </Link>
