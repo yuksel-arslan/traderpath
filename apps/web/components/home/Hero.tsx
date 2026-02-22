@@ -8,7 +8,6 @@ export function Hero() {
       <div className="max-w-[1200px] mx-auto px-4 text-center">
         {/* Badge — animated gradient, 3× brand size */}
         <div className="flex items-center justify-center gap-3 mb-6">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-[#00f5c4] animate-pulse flex-shrink-0" />
           <span
             className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight leading-tight bg-clip-text text-transparent bg-[length:200%_auto] animate-[gradient-shift_4s_ease_infinite]"
             style={{
