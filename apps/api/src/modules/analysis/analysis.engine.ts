@@ -5437,6 +5437,36 @@ export const analysisEngine = {
     let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
     let shouldGenerateTradePlan = false;
 
+    // ===== MACRO HARD BLOCK (ABSOLUTE HIGHEST PRIORITY) =====
+    // Economic calendar events completely override all other signals.
+    // Per CLAUDE.md: "High-impact event 4 saat içinde → TRADE ÖNERİLMEZ"
+    //                "FOMC günü → TRADE ÖNERİLMEZ (tüm gün)"
+    //                "Event sonrası 2 saat → TRADE ÖNERİLMEZ (volatilite)"
+    //
+    // Market Pulse already caps its own score at 2 when blocked, but the
+    // weighted average across 5 steps can still produce a high enough score
+    // (e.g. 6.5) to trigger conditional_go when 4/5 other gates pass.
+    // This early-return ensures the economic block is never circumvented.
+    if (marketPulse.economicCalendar?.shouldBlockTrade) {
+      const macroBlockReason = marketPulse.economicCalendar.blockReason
+        ?? 'Economic event imminent';
+      reasons.unshift({
+        factor: `⛔ MACRO HARD BLOCK: ${macroBlockReason}`,
+        positive: false,
+        impact: 'high' as const,
+        source: 'Economic Calendar',
+      });
+      return {
+        verdict: 'avoid',
+        direction: null,
+        confidence: 0,
+        score: Math.min(score, 2), // Enforce score cap (≤ 2) on preliminary verdict too
+        reasons,
+        shouldGenerateTradePlan: false,
+        directionSources,
+      };
+    }
+
     // AVOID conditions (highest priority) - includes gate failures
     const criticalGatesFailed = !gateResults.safetyCheck.canProceed || !gateResults.trapCheck.canProceed;
     if (safetyCheck.riskLevel === 'high' ||
