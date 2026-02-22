@@ -15,3 +15,5 @@ export { DayBundle, DAY_INDICATOR_NAMES } from './day.bundle';
 export { SwingBundle, SWING_INDICATOR_NAMES } from './swing.bundle';
 
 export { selectBundle } from './bundle-selector';
+
+export { clearCache, getCacheStats } from './bundle-cache';

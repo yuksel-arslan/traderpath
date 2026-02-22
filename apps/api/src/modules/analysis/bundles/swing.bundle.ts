@@ -8,6 +8,7 @@
 
 import type { IndicatorBundle, BundleRunOptions, BundleResult } from './indicator-bundle.interface';
 import { IndicatorsService } from '../services/indicators.service';
+import { buildCacheKey, getCached, setCached } from './bundle-cache';
 
 const svc = new IndicatorsService();
 
@@ -61,6 +62,12 @@ export class SwingBundle implements IndicatorBundle {
   readonly indicators = SWING_INDICATOR_NAMES;
 
   async run({ ohlcv, timeframe }: BundleRunOptions): Promise<BundleResult> {
+    const cacheKey = buildCacheKey('swing', ohlcv);
+    if (cacheKey) {
+      const cached = getCached(cacheKey);
+      if (cached) return { ...cached, timeframe };
+    }
+
     const start = Date.now();
     const results = new Map<string, import('../services/indicators.service').IndicatorResult>();
 
@@ -75,11 +82,13 @@ export class SwingBundle implements IndicatorBundle {
       }
     }
 
-    return {
+    const bundleResult: BundleResult = {
       indicators: results,
       bundleType: 'swing',
       timeframe,
       calculationMs: Date.now() - start,
     };
+    if (cacheKey) setCached(cacheKey, bundleResult);
+    return bundleResult;
   }
 }
