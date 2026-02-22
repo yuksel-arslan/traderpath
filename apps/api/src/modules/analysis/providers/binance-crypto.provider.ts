@@ -77,7 +77,7 @@ export class BinanceCryptoProvider extends MarketDataProvider {
     hasNews: true,
     hasFutures: true,
     hasRealtime: true,
-    supportedTimeframes: ['5m', '15m', '30m', '1h', '2h', '4h', '1d', '1w'],
+    supportedTimeframes: ['5m', '15m', '30m', '1h', '4h', '1d'],
     maxCandleLimit: 1000,
   };
 

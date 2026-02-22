@@ -79,12 +79,8 @@ const BINANCE_INTERVAL_MAP: Record<string, string> = {
   '15m': '15m',
   '30m': '30m',
   '1h': '1h',
-  '2h': '2h',
   '4h': '4h',
   '1d': '1d',
-  '1D': '1d',
-  '1w': '1w',
-  '1W': '1w',
 };
 
 async function fetchBinanceCandles(symbol: string, interval: string, limit: number = 500): Promise<OHLCV[]> {
@@ -192,12 +188,8 @@ const YAHOO_INTERVAL_MAP: Record<string, string> = {
   '15m': '15m',
   '30m': '30m',
   '1h': '60m',
-  '2h': '60m', // Yahoo doesn't have 2h, use 1h
   '4h': '60m', // Yahoo doesn't have 4h directly, we'll aggregate
   '1d': '1d',
-  '1D': '1d',
-  '1w': '1wk',
-  '1W': '1wk',
 };
 
 const YAHOO_RANGE_MAP: Record<string, string> = {
@@ -205,12 +197,8 @@ const YAHOO_RANGE_MAP: Record<string, string> = {
   '15m': '5d',
   '30m': '1mo',
   '1h': '1mo',
-  '2h': '3mo',
   '4h': '6mo',
   '1d': '1y',
-  '1D': '1y',
-  '1w': '5y',
-  '1W': '5y',
 };
 
 async function fetchYahooCandles(symbol: string, interval: string, limit: number = 500): Promise<OHLCV[]> {
@@ -248,10 +236,10 @@ async function fetchYahooCandles(symbol: string, interval: string, limit: number
     console.log(`[Yahoo] Using daily data fallback for ${yahooSymbol}: ${candles.length} candles`);
   }
 
-  // For 4h or 2h interval, aggregate from 1h candles if we have intraday data
+  // For 4h interval, aggregate from 1h candles if we have intraday data
   let finalCandles = candles;
-  if ((originalInterval === '4h' || originalInterval === '2h') && yahooInterval === '60m' && candles.length >= MIN_CANDLES_REQUIRED) {
-    const factor = originalInterval === '4h' ? 4 : 2;
+  if (originalInterval === '4h' && yahooInterval === '60m' && candles.length >= MIN_CANDLES_REQUIRED) {
+    const factor = 4;
     finalCandles = aggregateCandles(candles, factor);
     console.log(`[Yahoo] Aggregated ${candles.length} 1h candles to ${finalCandles.length} ${originalInterval} candles for ${yahooSymbol}`);
   }

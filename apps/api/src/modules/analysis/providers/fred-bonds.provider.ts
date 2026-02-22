@@ -83,14 +83,12 @@ const YAHOO_INTERVALS: Record<string, string> = {
   '1h': '60m',
   '4h': '60m',
   '1d': '1d',
-  '1w': '1wk',
 };
 
 const YAHOO_RANGES: Record<string, string> = {
   '1h': '1mo',
   '4h': '6mo',
   '1d': '1y',
-  '1w': '5y',
 };
 
 // Cache TTLs
@@ -113,7 +111,7 @@ export class FREDBondsProvider extends MarketDataProvider {
     hasNews: true,
     hasFutures: false,
     hasRealtime: false,
-    supportedTimeframes: ['1h', '4h', '1d', '1w'],
+    supportedTimeframes: ['1h', '4h', '1d'],
     maxCandleLimit: 250,
   };
 

@@ -28,20 +28,14 @@ export class CreditService {
     const cached = await cache.get<CreditBalance>(cacheKeys.userCredits(userId));
     if (cached) return cached;
 
-    // Get from database
-    let balance = await prisma.creditBalance.findUnique({
+    // Get from database; create with welcome bonus on first access.
+    // upsert is used instead of findUnique → create to prevent a unique-constraint
+    // violation when two concurrent requests race on a brand-new user's first login.
+    const balance = await prisma.creditBalance.upsert({
       where: { userId },
+      create: { userId, balance: 20 }, // Welcome bonus
+      update: {},                       // No change if already exists
     });
-
-    // Create if doesn't exist
-    if (!balance) {
-      balance = await prisma.creditBalance.create({
-        data: {
-          userId,
-          balance: 20, // Welcome bonus
-        },
-      });
-    }
 
     const result: CreditBalance = {
       balance: balance.balance,
@@ -72,6 +66,10 @@ export class CreditService {
   /**
    * Charge credits for a service
    * Admins are not charged - they have free access
+   *
+   * RACE CONDITION FIX: Uses atomic SQL UPDATE...WHERE balance >= amount...RETURNING
+   * inside a transaction. This prevents double-spend under concurrent requests —
+   * the database enforces the check at the row level, not at the application level.
    */
   async charge(
     userId: string,
@@ -85,41 +83,52 @@ export class CreditService {
       return { success: true, newBalance: balance.balance };
     }
 
-    const balance = await this.getBalance(userId);
+    const result = await prisma.$transaction(async (tx) => {
+      // Atomic check-and-deduct: only succeeds if balance >= amount at DB level.
+      // No separate read → check → write pattern — eliminates the race window.
+      const rows = await tx.$queryRaw<Array<{ balance: number }>>`
+        UPDATE credit_balances
+        SET balance       = balance - ${amount},
+            lifetime_spent = lifetime_spent + ${amount}
+        WHERE user_id = ${userId}::uuid
+          AND balance >= ${amount}
+        RETURNING balance
+      `;
 
-    if (balance.balance < amount) {
-      return { success: false, newBalance: balance.balance };
-    }
+      if (rows.length === 0) {
+        // Balance was insufficient (or row doesn't exist); return current balance
+        const current = await tx.creditBalance.findUnique({ where: { userId } });
+        return { success: false, newBalance: current?.balance ?? 0 };
+      }
 
-    // Update balance and create transaction
-    const [updated] = await prisma.$transaction([
-      prisma.creditBalance.update({
-        where: { userId },
-        data: {
-          balance: { decrement: amount },
-          lifetimeSpent: { increment: amount },
-        },
-      }),
-      prisma.creditTransaction.create({
+      const newBalance = rows[0].balance;
+
+      await tx.creditTransaction.create({
         data: {
           userId,
           amount: -amount,
-          balanceAfter: balance.balance - amount,
+          balanceAfter: newBalance,
           type: 'SPEND',
           source,
           metadata: (metadata || {}) as object,
         },
-      }),
-    ]);
+      });
 
-    // Invalidate cache
+      return { success: true, newBalance };
+    });
+
+    // Invalidate cache regardless of outcome to prevent stale reads
     await cache.del(cacheKeys.userCredits(userId));
 
-    return { success: true, newBalance: updated.balance };
+    return result;
   }
 
   /**
    * Add credits (reward, purchase, etc.)
+   *
+   * RACE CONDITION FIX: `balanceAfter` is now read from the return value of the
+   * UPDATE operation (the committed new value), not pre-computed before the write.
+   * Concurrent adds can no longer log a stale `balanceAfter`.
    */
   async add(
     userId: string,
@@ -128,38 +137,41 @@ export class CreditService {
     source: string,
     metadata?: Record<string, unknown>
   ): Promise<{ success: boolean; newBalance: number }> {
-    const balance = await this.getBalance(userId);
+    const result = await prisma.$transaction(async (tx) => {
+      const updateData: Parameters<typeof tx.creditBalance.update>[0]['data'] = {
+        balance: { increment: amount },
+        lifetimeEarned: { increment: amount },
+      };
 
-    const updateData: Record<string, unknown> = {
-      balance: { increment: amount },
-      lifetimeEarned: { increment: amount },
-    };
+      if (type === 'PURCHASE') {
+        updateData.lifetimePurchased = { increment: amount };
+      }
 
-    if (type === 'PURCHASE') {
-      updateData.lifetimePurchased = { increment: amount };
-    }
-
-    const [updated] = await prisma.$transaction([
-      prisma.creditBalance.update({
+      // `updated.balance` is the committed value AFTER the increment —
+      // accurate even under concurrent adds on the same user.
+      const updated = await tx.creditBalance.update({
         where: { userId },
         data: updateData,
-      }),
-      prisma.creditTransaction.create({
+      });
+
+      await tx.creditTransaction.create({
         data: {
           userId,
           amount,
-          balanceAfter: balance.balance + amount,
+          balanceAfter: updated.balance,
           type,
           source,
           metadata: (metadata || {}) as object,
         },
-      }),
-    ]);
+      });
+
+      return { success: true, newBalance: updated.balance };
+    });
 
     // Invalidate cache
     await cache.del(cacheKeys.userCredits(userId));
 
-    return { success: true, newBalance: updated.balance };
+    return result;
   }
 
   /**
