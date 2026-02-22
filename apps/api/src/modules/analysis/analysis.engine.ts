@@ -9,6 +9,7 @@ import { callGeminiWithRetry } from '../../core/gemini';
 import { contractSecurityService } from '../security/contract-security.service';
 import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig, getMaxStopLossPercent, getMaxTakeProfitPercent } from './config/trade-config';
 import { selectBundle, getBundleType } from './bundles';
+import { aggregateScores, quickStepScore, STEP_WEIGHTS } from './scoring';
 import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/indicator-interpreter.service';
 import { IndicatorAnalysis } from '../../../types';
 import { IndicatorsService, OHLCV, IndicatorResult } from './services/indicators.service';
@@ -6001,36 +6002,42 @@ export const analysisEngine = {
     const { marketPulse, assetScan, safetyCheck, timing, trapCheck } = allSteps;
     const hasTradePlan = tradePlan !== null;
 
-    // Component scores with weights - adjust if no trade plan
-    let componentScores: FinalVerdictResult['componentScores'];
+    // --- Bundle-aware score aggregation (TASK 2.2) ---
+    // Map TradeType → BundleType so weights shift by trading style.
+    const bundleTypeForScoring =
+      tradeType === 'scalping'   ? 'scalping' :
+      tradeType === 'swingTrade' ? 'swing'    : 'day';
 
-    if (hasTradePlan && tradePlan) {
-      // With trade plan: original weights
-      componentScores = [
-        { step: 'Market Pulse', score: marketPulse.score, weight: 0.15 },
-        { step: 'Asset Scanner', score: assetScan.score, weight: 0.20 },
-        { step: 'Safety Check', score: safetyCheck.score, weight: 0.20 },
-        { step: 'Timing', score: timing.score, weight: 0.15 },
-        { step: 'Trade Plan', score: tradePlan.score, weight: 0.15 },
-        { step: 'Trap Check', score: trapCheck.score, weight: 0.15 },
-      ];
-    } else {
-      // Without trade plan: redistribute weights
-      componentScores = [
-        { step: 'Market Pulse', score: marketPulse.score, weight: 0.20 },
-        { step: 'Asset Scanner', score: assetScan.score, weight: 0.25 },
-        { step: 'Safety Check', score: safetyCheck.score, weight: 0.25 },
-        { step: 'Timing', score: timing.score, weight: 0.15 },
-        { step: 'Trap Check', score: trapCheck.score, weight: 0.15 },
-      ];
-    }
+    const stepScoreInputs = [
+      quickStepScore('marketPulse', marketPulse),
+      quickStepScore('assetScan',   assetScan),
+      quickStepScore('safetyCheck', safetyCheck),
+      quickStepScore('timing',      timing),
+      quickStepScore('trapCheck',   trapCheck),
+      ...(hasTradePlan && tradePlan
+        ? [quickStepScore('tradePlan', tradePlan)]
+        : []),
+    ];
 
-    // Calculate weighted overall score
-    const overallScore = parseFloat(
-      componentScores
-        .reduce((sum, cs) => sum + cs.score * cs.weight, 0)
-        .toFixed(1)
-    );
+    const aggregated = aggregateScores({
+      scores:      stepScoreInputs,
+      bundleType:  bundleTypeForScoring,
+      hasTradePlan,
+    });
+
+    // Map to legacy shape expected by FinalVerdictResult
+    const componentScores: FinalVerdictResult['componentScores'] = aggregated.componentScores.map(cs => ({
+      step:   cs.step === 'marketPulse' ? 'Market Pulse'  :
+              cs.step === 'assetScan'   ? 'Asset Scanner' :
+              cs.step === 'safetyCheck' ? 'Safety Check'  :
+              cs.step === 'timing'      ? 'Timing'        :
+              cs.step === 'trapCheck'   ? 'Trap Check'    :
+              cs.step === 'tradePlan'   ? 'Trade Plan'    : cs.step,
+      score:  cs.score,
+      weight: cs.weight,
+    }));
+
+    const overallScore = aggregated.overallScore;
 
     // Confidence factors - use reasons from preliminary verdict
     const confidenceFactors: FinalVerdictResult['confidenceFactors'] = preliminaryVerdict.reasons.map(r => ({
