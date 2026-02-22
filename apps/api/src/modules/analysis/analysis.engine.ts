@@ -10,6 +10,13 @@ import { contractSecurityService } from '../security/contract-security.service';
 import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig, getMaxStopLossPercent, getMaxTakeProfitPercent } from './config/trade-config';
 import { selectBundle, getBundleType } from './bundles';
 import { aggregateScores, quickStepScore, STEP_WEIGHTS } from './scoring';
+import {
+  calculateStopLoss,
+  calculateTakeProfits,
+  calculatePositionSize,
+  classifyRiskLevel,
+  estimateWinRate,
+} from './risk';
 import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/indicator-interpreter.service';
 import { IndicatorAnalysis } from '../../../types';
 import { IndicatorsService, OHLCV, IndicatorResult } from './services/indicators.service';
@@ -4783,13 +4790,16 @@ export const analysisEngine = {
     const riskAmountUsd = accountSize * (riskPercent / 100);
     const positionSizePercent = (riskAmountUsd / stopDistance) * averageEntry / accountSize * 100;
 
-    // Win rate estimate based on trend strength
-    let winRateEstimate = 50;
-    if (trend.strength >= 70) winRateEstimate += 10;
-    if (trend.strength >= 80) winRateEstimate += 5;
-    if (direction === 'long' && trend.direction === 'bullish') winRateEstimate += 10;
-    if (direction === 'short' && trend.direction === 'bearish') winRateEstimate += 10;
-    winRateEstimate = Math.min(75, winRateEstimate);
+    // Win rate estimate — via RiskEngine (TASK 2.3)
+    const winRateEstimate = estimateWinRate({
+      direction,
+      trendDirection: trend.direction,
+      trendStrength:  trend.strength,
+      confidence:     50, // preliminary confidence not available at this stage
+      safetyScore:    5,  // default; integrated tradePlan overrides this
+      tradeNow:       false,
+      riskReward:     avgRR,
+    });
 
     // Trailing stop
     const trailingStop: TradePlanResult['trailingStop'] = {
@@ -5890,13 +5900,16 @@ export const analysisEngine = {
       ((riskAmountUsd / safeRiskAmount) * averageEntry / accountSize * 100).toFixed(2)
     );
 
-    // ===== WIN RATE ESTIMATE =====
-    let winRateEstimate = 50;
-    if (preliminaryVerdict.confidence >= 70) winRateEstimate += 10;
-    if (safetyCheck.riskLevel === 'low') winRateEstimate += 5;
-    if (timing.tradeNow) winRateEstimate += 5;
-    if (riskReward >= 2) winRateEstimate += 5;
-    winRateEstimate = Math.min(75, Math.max(35, winRateEstimate));
+    // ===== WIN RATE ESTIMATE — via RiskEngine (TASK 2.3) =====
+    const winRateEstimate = estimateWinRate({
+      direction,
+      trendDirection: assetScan.trend?.direction ?? 'neutral',
+      trendStrength:  assetScan.trend?.strength  ?? 50,
+      confidence:     preliminaryVerdict.confidence,
+      safetyScore:    safetyCheck.score,
+      tradeNow:       timing.tradeNow,
+      riskReward,
+    });
 
     // ===== SCORE CALCULATION =====
     let score = 5;
