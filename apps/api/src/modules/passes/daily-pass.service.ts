@@ -278,6 +278,11 @@ class DailyPassService {
 
   /**
    * Use the pass (increment usage count for Asset Analysis)
+   *
+   * RACE CONDITION FIX: The previous read → check → increment pattern allowed
+   * concurrent analyses to both pass the limit guard and push usageCount above
+   * maxUsage. The fix uses a single atomic SQL statement that only increments
+   * when the current count is still below the limit, checked at the DB level.
    */
   async usePass(userId: string, passType: DailyPassType): Promise<{ success: boolean; usageCount?: number; remainingUsage?: number; error?: string }> {
     // Check if admin - admins don't use passes
@@ -289,44 +294,47 @@ class DailyPassService {
     // Regular pass usage
     const today = this.getTodayDate();
 
-    const pass = await prisma.dailyPass.findUnique({
-      where: {
-        unique_daily_pass: {
-          userId,
-          passType,
-          passDate: today,
-        },
-      },
-    });
-
-    if (!pass) {
-      return { success: false, error: 'NO_PASS' };
-    }
-
-    if (new Date() > pass.expiresAt) {
-      return { success: false, error: 'PASS_EXPIRED' };
-    }
-
-    // For Asset Analysis, check and increment usage
-    if (passType === 'ASSET_ANALYSIS') {
-      if (pass.usageCount >= pass.maxUsage) {
-        return { success: false, error: 'USAGE_LIMIT_REACHED' };
-      }
-
-      const updatedPass = await prisma.dailyPass.update({
-        where: { id: pass.id },
-        data: { usageCount: { increment: 1 } },
+    // For Capital Flow L3/L4 there is no usage limit — just verify pass exists
+    if (passType !== 'ASSET_ANALYSIS') {
+      const pass = await prisma.dailyPass.findUnique({
+        where: { unique_daily_pass: { userId, passType, passDate: today } },
       });
-
-      return {
-        success: true,
-        usageCount: updatedPass.usageCount,
-        remainingUsage: updatedPass.maxUsage - updatedPass.usageCount,
-      };
+      if (!pass) return { success: false, error: 'NO_PASS' };
+      if (new Date() > pass.expiresAt) return { success: false, error: 'PASS_EXPIRED' };
+      return { success: true };
     }
 
-    // For Capital Flow L3/L4, no usage limit
-    return { success: true };
+    // ASSET_ANALYSIS: atomic check-and-increment.
+    // Only succeeds when: pass exists, not expired, AND usageCount < maxUsage.
+    // All three conditions are evaluated at the DB level in a single statement.
+    const rows = await prisma.$queryRaw<Array<{ usage_count: number; max_usage: number; expired: boolean }>>`
+      UPDATE daily_passes
+      SET usage_count = usage_count + 1
+      WHERE user_id    = ${userId}::uuid
+        AND pass_type  = ${passType}::"DailyPassType"
+        AND pass_date  = ${today}
+        AND expires_at > NOW()
+        AND usage_count < max_usage
+      RETURNING usage_count, max_usage, (expires_at <= NOW()) AS expired
+    `;
+
+    if (rows.length === 0) {
+      // Could be: no pass, expired, or usage limit reached.
+      // Determine the specific reason for a meaningful error code.
+      const pass = await prisma.dailyPass.findUnique({
+        where: { unique_daily_pass: { userId, passType, passDate: today } },
+      });
+      if (!pass) return { success: false, error: 'NO_PASS' };
+      if (new Date() > pass.expiresAt) return { success: false, error: 'PASS_EXPIRED' };
+      return { success: false, error: 'USAGE_LIMIT_REACHED' };
+    }
+
+    const { usage_count, max_usage } = rows[0];
+    return {
+      success: true,
+      usageCount: usage_count,
+      remainingUsage: max_usage - usage_count,
+    };
   }
 
   /**

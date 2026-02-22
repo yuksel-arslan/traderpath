@@ -28,20 +28,14 @@ export class CreditService {
     const cached = await cache.get<CreditBalance>(cacheKeys.userCredits(userId));
     if (cached) return cached;
 
-    // Get from database
-    let balance = await prisma.creditBalance.findUnique({
+    // Get from database; create with welcome bonus on first access.
+    // upsert is used instead of findUnique → create to prevent a unique-constraint
+    // violation when two concurrent requests race on a brand-new user's first login.
+    const balance = await prisma.creditBalance.upsert({
       where: { userId },
+      create: { userId, balance: 20 }, // Welcome bonus
+      update: {},                       // No change if already exists
     });
-
-    // Create if doesn't exist
-    if (!balance) {
-      balance = await prisma.creditBalance.create({
-        data: {
-          userId,
-          balance: 20, // Welcome bonus
-        },
-      });
-    }
 
     const result: CreditBalance = {
       balance: balance.balance,
