@@ -5,6 +5,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { authenticate, optionalAuth } from '../../core/auth/middleware';
+import { isValidTimeframe, VALID_TIMEFRAMES } from './config/timeframe.enum';
 import { creditService } from '../credits/credit.service';
 import { costService } from '../costs/cost.service';
 import { creditCostsService } from '../costs/credit-costs.service';
@@ -2659,12 +2660,14 @@ Explain the key risks and what conditions would need to change before trading th
       const tradeType = (request.query.tradeType || 'dayTrade') as TradeType;
       const timeframe = request.query.timeframe || '4h';
 
-      // Map timeframe to Binance interval
-      const intervalMap: Record<string, string> = {
-        '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
-        '1h': '1h', '4h': '4h', '1d': '1d', '1w': '1w'
-      };
-      const interval = intervalMap[timeframe] || '4h';
+      // Validate timeframe against the 6 standard values
+      if (!isValidTimeframe(timeframe)) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: 'INVALID_TIMEFRAME', message: `Invalid timeframe '${timeframe}'. Accepted: ${VALID_TIMEFRAMES.join(', ')}` },
+        });
+      }
+      const interval = timeframe; // standard timeframes map 1-to-1 to Binance intervals
 
       // Fetch kline data from Binance (500 candles for good chart data)
       const response = await fetch(
@@ -5195,6 +5198,12 @@ Explain the key risks and what conditions would need to change before trading th
       } else if (tradeType === 'swing') {
         intervalsToCheck = ['1d', '1D'];
       } else if (interval) {
+        if (!isValidTimeframe(interval)) {
+          return reply.status(400).send({
+            success: false,
+            error: { code: 'INVALID_INTERVAL', message: `Invalid interval '${interval}'. Accepted: ${VALID_TIMEFRAMES.join(', ')}` },
+          });
+        }
         intervalsToCheck = [interval];
       } else {
         intervalsToCheck = ['4h']; // Default
