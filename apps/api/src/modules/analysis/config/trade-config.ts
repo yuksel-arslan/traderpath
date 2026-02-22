@@ -78,7 +78,9 @@ export type AnalysisStep =
   | 'trapCheck'      // Step 6: Trap Detection
   | 'verdict';       // Step 7: Final Decision
 
-export type Timeframe = '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '1d' | '1w';
+// Internal timeframe type for multi-TF analysis configs (secondary/confirmation fetches).
+// API-facing validation uses the Timeframe enum in timeframe.enum.ts (6 values, no 1w).
+export type Timeframe = '5m' | '15m' | '30m' | '1h' | '4h' | '1d' | '1w';
 
 export type IndicatorCategory = 'trend' | 'momentum' | 'volatility' | 'volume' | 'pattern' | 'advanced';
 

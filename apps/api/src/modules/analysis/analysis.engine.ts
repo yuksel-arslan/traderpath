@@ -6199,6 +6199,7 @@ export const analysisEngine = {
 
   /**
    * Helper: Map timeframe to trade type
+   * Only the 6 API-accepted timeframes are handled (5m, 15m, 30m, 1h, 4h, 1d).
    */
   getTradeTypeFromTimeframe(timeframe: string): TradeType {
     const mapping: Record<string, TradeType> = {
@@ -6206,11 +6207,8 @@ export const analysisEngine = {
       '15m': 'scalp',
       '30m': 'dayTrade',
       '1h': 'dayTrade',
-      '2h': 'dayTrade',
       '4h': 'dayTrade',
       '1d': 'swing',
-      '1D': 'swing',
-      '1W': 'swing',
     };
     return mapping[timeframe] || 'dayTrade';
   },
