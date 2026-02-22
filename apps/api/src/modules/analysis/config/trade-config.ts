@@ -18,29 +18,24 @@
 export type TradeType = 'scalping' | 'dayTrade' | 'swing';
 
 /**
- * Map timeframe interval to appropriate trade type
- * Used when frontend sends interval instead of tradeType
+ * Map timeframe interval to appropriate trade type.
+ * Only the 6 standardised API timeframes are handled.
  *
  * Mapping:
- * - Scalping (1000 candles): 5m, 15m
- * - Day Trade (500 candles): 30m, 1h, 2h, 4h
- * - Swing Trade (250 candles): 1d, 1W
+ * - Scalping  (1000 candles): 5m, 15m
+ * - Day Trade (500 candles):  30m, 1h, 4h
+ * - Swing     (250 candles):  1d
  */
 export function getTradeTypeFromInterval(interval: string): TradeType {
   switch (interval) {
-    case '1m':
     case '5m':
     case '15m':
       return 'scalping';
     case '30m':
     case '1h':
-    case '2h':
     case '4h':
       return 'dayTrade';
     case '1d':
-    case '1D':
-    case '1w':
-    case '1W':
       return 'swing';
     default:
       return 'dayTrade'; // Default to dayTrade for unknown intervals
