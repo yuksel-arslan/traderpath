@@ -35,7 +35,7 @@ import { cn } from '../../lib/utils';
 
 // Trade types - matches backend
 export type TradeType = 'scalping' | 'dayTrade' | 'swing';
-export type Timeframe = '5m' | '15m' | '30m' | '1h' | '2h' | '4h' | '1d' | '1W';
+export type Timeframe = '5m' | '15m' | '30m' | '1h' | '4h' | '1d';
 
 interface TimeframeConfig {
   id: Timeframe;
@@ -127,23 +127,6 @@ const TIMEFRAMES: TimeframeConfig[] = [
     features: ['500 candles', 'Ichimoku & ADX', 'Moderate stops (1-2%)', 'Trend confirmation'],
   },
   {
-    id: '2h',
-    label: '2 Hour',
-    description: 'Extended intraday with 500 candles analysis',
-    tradeType: 'dayTrade',
-    tradeTypeName: 'Day Trade',
-    holdingPeriod: '4-12 hours',
-    creditCost: 2,
-    icon: Sun,
-    color: 'text-cyan-500',
-    bgLight: 'bg-cyan-50',
-    bgDark: 'dark:bg-cyan-500/10',
-    borderLight: 'border-cyan-200',
-    borderDark: 'dark:border-cyan-500/30',
-    riskLevel: 'medium',
-    features: ['500 candles', 'Extended analysis', 'Moderate stops (1-2%)', 'Multiple TPs'],
-  },
-  {
     id: '4h',
     label: '4 Hour',
     description: 'Day trading with extended timeframe analysis',
@@ -177,23 +160,6 @@ const TIMEFRAMES: TimeframeConfig[] = [
     borderDark: 'dark:border-emerald-500/30',
     riskLevel: 'low',
     features: ['250 candles', 'Deep trend analysis', 'Wider stops (2-5%)', 'Smart money tracking'],
-  },
-  {
-    id: '1W',
-    label: '1 Week',
-    description: 'Long-term swing with 250 candles analysis',
-    tradeType: 'swing',
-    tradeTypeName: 'Swing Trade',
-    holdingPeriod: '1-8 weeks',
-    creditCost: 1,
-    icon: Star,
-    color: 'text-teal-500',
-    bgLight: 'bg-teal-50',
-    bgDark: 'dark:bg-teal-500/10',
-    borderLight: 'border-teal-200',
-    borderDark: 'dark:border-teal-500/30',
-    riskLevel: 'low',
-    features: ['250 candles', 'Macro analysis', 'Wide stops (3-7%)', 'Position sizing'],
   },
 ];
 
@@ -266,7 +232,7 @@ export function TradeTypeSelector({
           </button>
         </div>
 
-        <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
           {TIMEFRAMES.map((tf) => {
             const Icon = tf.icon;
             const isSelected = selected === tf.id;
@@ -400,7 +366,7 @@ export function TradeTypeSelector({
             <span>Auto-selects strategy</span>
           </div>
         </div>
-        <div className="grid grid-cols-4 sm:grid-cols-8 gap-0.5 sm:gap-1 p-1 sm:p-1.5 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/10">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-0.5 sm:gap-1 p-1 sm:p-1.5 bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/10">
           {TIMEFRAMES.map((tf) => {
             const isSelected = selected === tf.id;
 

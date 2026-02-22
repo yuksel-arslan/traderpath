@@ -90,6 +90,7 @@ const app = Fastify({
   trustProxy: true, // Trust reverse proxy headers
   requestIdHeader: 'x-request-id',
   requestIdLogLabel: 'requestId',
+  genReqId: () => crypto.randomUUID(),
 });
 
 // ===========================================
@@ -156,6 +157,8 @@ await app.register(rateLimit as any, {
           retryAfter: Math.ceil(context.ttl / 1000),
         },
       },
+      requestId: request.id,
+      timestamp: new Date().toISOString(),
     };
   },
   keyGenerator: (request) => {
@@ -236,11 +239,6 @@ app.decorate('authenticate', jwtAuthenticate);
 // Request start time tracking
 app.addHook('onRequest', async (request) => {
   request.startTime = Date.now();
-
-  // Add request ID if not present
-  if (!request.headers['x-request-id']) {
-    (request.headers as any)['x-request-id'] = crypto.randomUUID();
-  }
 });
 
 // Response logging and metrics
@@ -269,6 +267,22 @@ app.addHook('onResponse', async (request, reply) => {
   } else {
     logger.info(logData, 'Request completed');
   }
+});
+
+// Inject requestId + timestamp into all API responses
+app.addHook('onSend', async (request, _reply, payload) => {
+  if (typeof payload !== 'string') return payload;
+  try {
+    const parsed = JSON.parse(payload);
+    if (typeof parsed.success === 'boolean' && !parsed.requestId) {
+      parsed.requestId = request.id;
+      parsed.timestamp = new Date().toISOString();
+      return JSON.stringify(parsed);
+    }
+  } catch {
+    // Not JSON or not an API response — return as-is
+  }
+  return payload;
 });
 
 // Error logging and BILGE collection
