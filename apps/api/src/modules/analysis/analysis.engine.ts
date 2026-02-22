@@ -8,6 +8,7 @@ import { config } from '../../core/config';
 import { callGeminiWithRetry } from '../../core/gemini';
 import { contractSecurityService } from '../security/contract-security.service';
 import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig, getMaxStopLossPercent, getMaxTakeProfitPercent } from './config/trade-config';
+import { selectBundle, getBundleType } from './bundles';
 import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/indicator-interpreter.service';
 import { IndicatorAnalysis } from '../../../types';
 import { IndicatorsService, OHLCV, IndicatorResult } from './services/indicators.service';
@@ -4019,8 +4020,9 @@ export const analysisEngine = {
           })),
         },
       },
-      // Build detailed indicator analysis with ALL configured indicators
-      // Uses full 40+ indicators from trade-config.ts for rich analysis
+      // Indicator bundle used for this analysis (timeframe-driven selection)
+      bundleType: getBundleType(tf.primary as Timeframe),
+      // Build detailed indicator analysis using bundle-appropriate indicators
       indicatorDetails: indicatorAnalysis,
       // NEW: Tokenomics analysis (financial structure of the token)
       // Includes: supply metrics, market cap/FDV, whale concentration, distribution
@@ -4426,8 +4428,7 @@ export const analysisEngine = {
       contractSecurity,
       riskLevel,
       warnings,
-      // Build detailed indicator analysis with ALL configured indicators
-      // Uses full 40+ indicators from trade-config.ts for rich analysis
+      // Build detailed indicator analysis using bundle-appropriate indicators
       indicatorDetails: buildIndicatorAnalysis({
         ...indicatorResultsToAnalysisInputs(stepIndicators, currentPrice, ticker.priceChangePercent24h, candlesPrimary.map(c => c.close)),
         // Include traditional indicators as fallback
