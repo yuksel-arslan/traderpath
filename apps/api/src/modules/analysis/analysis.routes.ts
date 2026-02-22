@@ -393,7 +393,7 @@ Be concise and actionable.`;
 
   // Common schema with tradeType and interval support
   const tradeTypeSchema = z.enum(['scalping', 'dayTrade', 'swing']).default('dayTrade');
-  const intervalSchema = z.enum(['5m', '15m', '30m', '1h', '2h', '4h', '1d', '1W']).optional();
+  const intervalSchema = z.enum(['5m', '15m', '30m', '1h', '4h', '1d']).optional();
 
   // Helper to resolve tradeType from interval if provided
   function resolveTradeType(interval?: string, tradeType?: TradeType): TradeType {
@@ -734,7 +734,7 @@ Warn about potential traps and give protective advice.`;
     // Resolve tradeType from interval if provided
     const tradeType = resolveTradeType(body.interval, body.tradeType as TradeType);
     // IMPORTANT: Use the interval exactly as provided by frontend, with fallback for legacy clients
-    // Frontend MUST send interval (5m, 15m, 30m, 1h, 2h, 4h, 1d, 1W)
+    // Frontend MUST send interval (5m, 15m, 30m, 1h, 4h, 1d)
     const interval = body.interval || (tradeType === 'scalping' ? '15m' : tradeType === 'dayTrade' ? '4h' : '1d');
 
     // Debug log to track interval issues
@@ -6140,7 +6140,7 @@ Explain the key risks and what conditions would need to change before trading th
    */
   const chartCandlesSchema = z.object({
     symbol: z.string().min(1),
-    interval: z.enum(['5m', '15m', '30m', '1h', '2h', '4h', '1d', '1D', '1w', '1W']).default('1h'),
+    interval: z.enum(['5m', '15m', '30m', '1h', '4h', '1d']).default('1h'),
     limit: z.coerce.number().min(10).max(500).default(100),
   });
 
