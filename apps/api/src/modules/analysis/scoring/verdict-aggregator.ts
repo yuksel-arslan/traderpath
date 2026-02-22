@@ -71,7 +71,8 @@ function resolveVerdict(
   hasEconomicBlock: boolean,
 ): Verdict {
   if (hasEconomicBlock) return 'avoid';
-  if (hasCriticalSafetyIssue && score < VERDICT_THRESHOLDS.GO) return 'avoid';
+  // Critical safety is an unconditional block — regardless of other scores
+  if (hasCriticalSafetyIssue) return 'avoid';
   if (score >= VERDICT_THRESHOLDS.GO)             return 'go';
   if (score >= VERDICT_THRESHOLDS.CONDITIONAL_GO) return 'conditional_go';
   if (score >= VERDICT_THRESHOLDS.WAIT)           return 'wait';

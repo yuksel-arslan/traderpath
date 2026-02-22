@@ -91,7 +91,7 @@ export function classifyRiskLevel(input: RiskLevelInput): RiskLevelResult {
 
   // ── Contract security (crypto-specific) ───────────────────────────
   if (input.isHoneypot) {
-    riskScore -= 50;
+    riskScore -= 80; // Catastrophic: cannot sell token at all
     warnings.push('HONEYPOT DETECTED — cannot sell token');
   }
   if (input.isVerified === false) {
