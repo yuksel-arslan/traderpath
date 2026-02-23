@@ -2506,7 +2506,7 @@ Respond in this exact JSON format (no markdown, just pure JSON):
 }
 
 /**
- * RAG Layer 1 Fallback - Net Liquidity yorumu
+ * RAG Layer 1 Fallback - Net Liquidity commentary
  */
 function generateFallbackRagLayer1(liquidity: GlobalLiquidity, bias: LiquidityBias): string {
   const netLiq = liquidity.netLiquidity.value.toFixed(2);
@@ -2515,19 +2515,19 @@ function generateFallbackRagLayer1(liquidity: GlobalLiquidity, bias: LiquidityBi
   const tgaTrend = liquidity.treasuryGeneralAccount.trend;
 
   if (trend === 'expanding' && rrpTrend === 'draining') {
-    return `Net Liquidity ${netLiq}T USD artıyor, RRP boşalması piyasalara likidite ekliyor. Risk varlıkları için olumlu ortam.`;
+    return `Net Liquidity rising at ${netLiq}T USD, RRP drainage injecting liquidity into markets. Favorable environment for risk assets.`;
   } else if (trend === 'contracting') {
-    return `Net Liquidity ${netLiq}T USD daralıyor. ${tgaTrend === 'building' ? 'TGA birikiyor, likidite çekiliyor.' : 'Dikkatli olunmalı.'}`;
+    return `Net Liquidity contracting at ${netLiq}T USD. ${tgaTrend === 'building' ? 'TGA accumulating, draining liquidity.' : 'Caution advised.'}`;
   }
-  return `Net Liquidity ${netLiq}T USD seviyesinde, ${bias === 'risk_on' ? 'risk iştahı yüksek' : bias === 'risk_off' ? 'güvenli limanlara yöneliş var' : 'kararsız bir ortam mevcut'}.`;
+  return `Net Liquidity at ${netLiq}T USD, ${bias === 'risk_on' ? 'risk appetite is elevated' : bias === 'risk_off' ? 'capital rotating to safe havens' : 'mixed signals, no clear directional bias'}.`;
 }
 
 /**
- * RAG Layer 2 Fallback - Market rotasyonu yorumu
+ * RAG Layer 2 Fallback - Market rotation commentary
  */
 function generateFallbackRagLayer2(bestMarket: MarketFlow | undefined, worstMarket: MarketFlow | undefined): string {
   if (!bestMarket || !worstMarket) {
-    return 'Market akış verileri analiz ediliyor.';
+    return 'Analyzing market flow data.';
   }
 
   const best = bestMarket.market.toUpperCase();
@@ -2536,27 +2536,27 @@ function generateFallbackRagLayer2(bestMarket: MarketFlow | undefined, worstMark
   const worst = worstMarket.market.toUpperCase();
   const worstFlow = worstMarket.flow7d.toFixed(1);
 
-  return `${best} +${bestFlow}% ile lider, ${bestPhase} fazında. ${worst} (${worstFlow}%) en zayıf performans, rotasyon sinyali olabilir.`;
+  return `${best} leading at +${bestFlow}%, in ${bestPhase} phase. ${worst} (${worstFlow}%) weakest performer, possible rotation signal.`;
 }
 
 /**
- * RAG Layer 3 Fallback - Sektör fırsatı yorumu
+ * RAG Layer 3 Fallback - Sector opportunity commentary
  */
 function generateFallbackRagLayer3(cryptoMarket: MarketFlow | undefined): string {
   const topSector = cryptoMarket?.sectors?.[0];
   if (!topSector) {
-    return 'Sektör verileri yükleniyor.';
+    return 'Loading sector data.';
   }
 
   const sectorName = topSector.name;
   const sectorFlow = topSector.flow7d.toFixed(1);
   const topAssets = topSector.topAssets?.slice(0, 3).join(', ') || '';
 
-  return `${sectorName} sektörü ${sectorFlow > '0' ? '+' : ''}${sectorFlow}% ile öne çıkıyor.${topAssets ? ` Dikkat: ${topAssets}.` : ''}`;
+  return `${sectorName} sector leading at ${sectorFlow > '0' ? '+' : ''}${sectorFlow}%.${topAssets ? ` Notable: ${topAssets}.` : ''}`;
 }
 
 /**
- * RAG Layer 4 Fallback - Aksiyon önerisi yorumu
+ * RAG Layer 4 Fallback - Action recommendation commentary
  */
 function generateFallbackRagLayer4(recommendation: FlowRecommendation): string {
   const market = recommendation.primaryMarket.toUpperCase();
@@ -2565,11 +2565,11 @@ function generateFallbackRagLayer4(recommendation: FlowRecommendation): string {
   const phase = recommendation.phase?.toUpperCase() || 'N/A';
 
   if (action === 'ANALYZE') {
-    return `%${confidence} güvenle ${market}'te fırsat arayın. ${phase} fazı giriş için uygun.`;
+    return `Look for opportunities in ${market} with ${confidence}% confidence. ${phase} phase is favorable for entry.`;
   } else if (action === 'WAIT') {
-    return `${market}'te bekle. Faz ${phase}, daha iyi giriş noktası için sabır gerekiyor.`;
+    return `Wait on ${market}. Phase ${phase}, patience needed for a better entry point.`;
   }
-  return `${market}'te yeni pozisyon açmayın. Risk/ödül oranı olumsuz.`;
+  return `Avoid opening new positions in ${market}. Risk/reward ratio is unfavorable.`;
 }
 
 /**
