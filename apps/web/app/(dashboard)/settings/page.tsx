@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   User,
@@ -91,8 +91,10 @@ interface CreditTransaction {
 
 export default function SettingsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const [activeSection, setActiveSection] = useState('profile');
+  const [subscriptionSuccess, setSubscriptionSuccess] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [notifications, setNotifications] = useState({
@@ -191,6 +193,18 @@ export default function SettingsPage() {
     isSubscribed,
     isPaidTier,
   } = useSubscription();
+
+  // Initialize active section from URL ?tab= param and show subscription success banner
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const success = searchParams.get('success');
+    if (tab) {
+      setActiveSection(tab);
+    }
+    if (success === 'true' && tab === 'billing') {
+      setSubscriptionSuccess(true);
+    }
+  }, [searchParams]);
 
   const handleAvatarButtonClick = useCallback(() => {
     fileInputRef.current?.click();
@@ -2106,6 +2120,23 @@ export default function SettingsPage() {
                 <h2 className="text-xl font-semibold mb-6">Billing & Subscription</h2>
 
                 <div className="space-y-6">
+                  {/* Subscription success banner (shown after successful checkout redirect) */}
+                  {subscriptionSuccess && (
+                    <div className="flex items-start gap-3 border border-gray-200 dark:border-gray-800 rounded-lg p-4 bg-white dark:bg-[#111111]">
+                      <Check className="w-5 h-5 text-teal-500 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Subscription activated</p>
+                        <p className="text-sm text-gray-500 mt-0.5">Your plan is now active. Daily credits will be added to your account.</p>
+                      </div>
+                      <button
+                        onClick={() => setSubscriptionSuccess(false)}
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
                   {/* Current Subscription */}
                   {subscriptionLoading ? (
                     <div className="p-4 bg-background rounded-lg flex items-center justify-center py-8">
