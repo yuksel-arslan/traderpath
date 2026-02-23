@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { Toaster } from 'sonner';
 import { CreditNotificationProvider } from '../contexts/CreditNotificationContext';
 import { InstallPrompt } from '../components/pwa/InstallPrompt';
+import { CapacitorInit } from '../components/mobile/CapacitorInit';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -38,6 +39,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <CreditNotificationProvider>
           {children}
           <InstallPrompt />
+          <CapacitorInit />
         </CreditNotificationProvider>
         <Toaster position="top-right" richColors />
       </QueryClientProvider>

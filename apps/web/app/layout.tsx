@@ -129,9 +129,12 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
+  // viewport-fit=cover: WebView extends to screen edges (notch, Dynamic Island).
+  // CSS env(safe-area-inset-*) in globals.css handles the padding.
+  viewportFit: 'cover',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
+    { media: '(prefers-color-scheme: dark)', color: '#0A0A0A' },
   ],
 };
 

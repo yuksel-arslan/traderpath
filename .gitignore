@@ -44,3 +44,11 @@ apps/web/public/sw.js
 apps/web/public/workbox-*.js
 apps/web/public/fallback-*.js
 apps/web/public/worker-*.js
+
+# Capacitor — native build artifacts (auto-generated; not committed)
+apps/web/ios/App/Pods/
+apps/web/ios/App/.symlinks/
+apps/web/android/.gradle/
+apps/web/android/app/build/
+apps/web/android/build/
+# NOTE: apps/web/ios/ and apps/web/android/ source dirs ARE committed
