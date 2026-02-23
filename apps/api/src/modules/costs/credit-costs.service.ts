@@ -64,7 +64,7 @@ let cachedCosts: CachedCosts | null = null;
 /**
  * Map database fields to CREDIT_COSTS keys
  */
-function mapDbToCosts(dbSettings: any): typeof DEFAULT_CREDIT_COSTS {
+function mapDbToCosts(dbSettings: Record<string, number | null>): typeof DEFAULT_CREDIT_COSTS {
   return {
     // Analysis Steps (Classic 7-Step)
     STEP_MARKET_PULSE: dbSettings.creditCostMarketPulse ?? DEFAULT_CREDIT_COSTS.STEP_MARKET_PULSE,
