@@ -308,27 +308,94 @@ export class AssetAnalyzerOrchestrator {
   }
 
   /**
-   * Basic crypto analysis (placeholder until dedicated crypto analyzer)
+   * Crypto analysis using live Fear & Greed + CoinGecko global data.
    */
   private async analyzeBasicCrypto(symbol: string): Promise<CryptoMetrics> {
-    // This is a placeholder - uses existing crypto sentiment from market pulse
-    // TODO: Implement full CryptoAnalyzerService
+    // Fetch in parallel: Fear & Greed (alternative.me) + CoinGecko global + ETH/BTC price
+    const [fngData, cgGlobal, ethBtcData] = await Promise.allSettled([
+      fetch('https://api.alternative.me/fng/?limit=1').then((r) => r.json()),
+      fetch('https://api.coingecko.com/api/v3/global').then((r) => r.json()),
+      fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,bitcoin&vs_currencies=usd').then((r) => r.json()),
+    ]);
+
+    // ── Fear & Greed ──────────────────────────────────────────────────────────
+    let fearGreedIndex = 50;
+    let fearGreedLabel: string = 'neutral';
+    if (fngData.status === 'fulfilled') {
+      const entry = fngData.value?.data?.[0];
+      if (entry) {
+        fearGreedIndex = parseInt(entry.value, 10) || 50;
+        fearGreedLabel = (entry.value_classification as string)?.toLowerCase() ?? 'neutral';
+      }
+    }
+
+    // ── CoinGecko Global ──────────────────────────────────────────────────────
+    let btcDominance = 50;
+    let stablecoinMcap = 0;
+    let stablecoinMcapChange = 0;
+    if (cgGlobal.status === 'fulfilled') {
+      const gdata = cgGlobal.value?.data || {};
+      btcDominance = gdata.market_cap_percentage?.btc ?? 50;
+      // Stablecoin mcap: sum of USDT + USDC dominance × total mcap
+      const totalMcap: number = gdata.total_market_cap?.usd ?? 0;
+      const stableShare: number =
+        (gdata.market_cap_percentage?.usdt ?? 0) +
+        (gdata.market_cap_percentage?.usdc ?? 0);
+      stablecoinMcap = totalMcap * (stableShare / 100);
+      stablecoinMcapChange = gdata.market_cap_change_percentage_24h_usd ?? 0;
+    }
+
+    // ── ETH/BTC Ratio ─────────────────────────────────────────────────────────
+    let ethBtcRatio = 0;
+    if (ethBtcData.status === 'fulfilled') {
+      const prices = ethBtcData.value || {};
+      const ethUsd: number = prices.ethereum?.usd ?? 0;
+      const btcUsd: number = prices.bitcoin?.usd ?? 1;
+      ethBtcRatio = btcUsd > 0 ? parseFloat((ethUsd / btcUsd).toFixed(6)) : 0;
+    }
+
+    // ── Derived sentiment from Fear & Greed ───────────────────────────────────
+    let sentiment: SignalDirection = 'neutral';
+    let sentimentScore = 50;
+    const keyDrivers: string[] = [];
+
+    if (fearGreedIndex >= 70) {
+      sentiment = 'bullish';
+      sentimentScore = Math.round(50 + (fearGreedIndex - 50) * 0.6);
+      keyDrivers.push(`Fear & Greed: ${fearGreedLabel} (${fearGreedIndex})`);
+    } else if (fearGreedIndex <= 30) {
+      sentiment = 'bearish';
+      sentimentScore = Math.round(50 - (50 - fearGreedIndex) * 0.6);
+      keyDrivers.push(`Fear & Greed: ${fearGreedLabel} (${fearGreedIndex})`);
+    } else {
+      sentimentScore = fearGreedIndex;
+      keyDrivers.push(`Fear & Greed: ${fearGreedLabel} (${fearGreedIndex})`);
+    }
+
+    if (btcDominance > 55) {
+      keyDrivers.push(`BTC dominance high (${btcDominance.toFixed(1)}%) — altcoins weak`);
+    } else if (btcDominance < 45) {
+      keyDrivers.push(`BTC dominance low (${btcDominance.toFixed(1)}%) — altcoin season signal`);
+    }
+
+    const warnings: string[] = [];
+    if (fearGreedIndex >= 80) warnings.push('Extreme greed — elevated reversal risk');
+    if (fearGreedIndex <= 20) warnings.push('Extreme fear — potential capitulation zone');
 
     return {
       assetClass: 'crypto',
       symbol,
       metrics: [],
-      sentiment: 'neutral',
-      sentimentScore: 50,
-      keyDrivers: ['Using legacy crypto analysis'],
-      warnings: [],
+      sentiment,
+      sentimentScore,
+      keyDrivers,
+      warnings,
       analyzedAt: new Date(),
-
-      fearGreedIndex: 50,
-      fearGreedLabel: 'neutral',
-      btcDominance: 50,
-      btcDominanceTrend: 'flat',
-      fundingRate: 0,
+      fearGreedIndex,
+      fearGreedLabel,
+      btcDominance,
+      btcDominanceTrend: 'flat', // Requires historical series — not available here
+      fundingRate: 0,            // Symbol-specific; fetched separately in binance provider
       fundingSignal: 'neutral',
       openInterest: 0,
       openInterestChange24h: 0,
@@ -337,12 +404,12 @@ export class AssetAnalyzerOrchestrator {
       whaleActivity: 'neutral',
       activeAddresses: 0,
       activeAddressesChange: 0,
-      stablecoinMcap: 0,
-      stablecoinMcapChange: 0,
+      stablecoinMcap,
+      stablecoinMcapChange,
       defiTvl: 0,
       defiTvlChange: 0,
-      altcoinSeasonIndex: 50,
-      ethBtcRatio: 0,
+      altcoinSeasonIndex: btcDominance < 50 ? 100 - btcDominance : btcDominance - 50,
+      ethBtcRatio,
       ethBtcTrend: 'flat',
     };
   }
