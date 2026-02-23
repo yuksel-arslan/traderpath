@@ -78,7 +78,7 @@ export function CapitalFlowStrip({ capitalFlow }: CapitalFlowStripProps) {
             <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Capital Flow</span>
           </div>
           <Link
-            href="/capital-flow"
+            href="/flow"
             className="text-xs font-medium text-teal-500 hover:text-teal-600 transition-colors"
           >
             Full Analysis →
@@ -152,7 +152,7 @@ export function CapitalFlowStrip({ capitalFlow }: CapitalFlowStripProps) {
             </span>
           )}
           <Link
-            href="/capital-flow"
+            href="/flow"
             className="text-xs font-medium text-teal-500 hover:text-teal-600 transition-colors whitespace-nowrap"
           >
             Full Analysis →
