@@ -397,14 +397,25 @@ export class FREDBondsProvider extends MarketDataProvider {
    * Fetch Bond ETF fundamentals
    */
   private async fetchBondETFFundamentals(symbol: string): Promise<BondFundamentals> {
-    const marketData = await this.fetchBondETFMarketData(symbol);
+    // Fetch ETF yield from Yahoo Finance quoteSummary
+    let yieldRate = 0;
+    try {
+      const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=summaryDetail`;
+      const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      const data = await response.json();
+      const summaryDetail = data.quoteSummary?.result?.[0]?.summaryDetail || {};
+      yieldRate =
+        summaryDetail.yield?.raw ||
+        summaryDetail.trailingAnnualDividendYield?.raw ||
+        0;
+    } catch {
+      // Ignore Yahoo Finance errors, yield stays 0
+    }
 
-    // ETF-specific yield data would need additional API
-    // For now, return basic fundamentals
     return {
       symbol,
       assetClass: 'bonds',
-      yield: 0, // Would need ETF-specific yield data
+      yield: yieldRate,
       lastUpdated: new Date(),
     };
   }
