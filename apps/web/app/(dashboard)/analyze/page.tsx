@@ -377,7 +377,38 @@ export default function AutomatedAnalysisPage() {
           });
 
           if (!hasPass || !canUse) {
-            // Auto-purchase pass
+            if (!canUse && hasPass) {
+              // Daily limit reached
+              setPipelineError('Daily analysis limit reached (10/10). Your pass will reset at midnight UTC.');
+              setPipelineStep('error');
+              setPipelineRunning(false);
+              return;
+            }
+
+            // No pass - check credits first, then ask user to confirm purchase
+            const creditRes = await authFetch('/api/credits/balance');
+            const creditData = creditRes.ok ? await creditRes.json() : null;
+            const currentBalance = creditData?.data?.balance ?? 0;
+
+            if (currentBalance < 100) {
+              setPipelineError(`Insufficient credits. You need 100 credits for a Daily Analysis Pass but you have ${currentBalance} credits. Please purchase credits first.`);
+              setPipelineStep('error');
+              setPipelineRunning(false);
+              return;
+            }
+
+            // Ask user for confirmation before spending 100 credits
+            const confirmed = window.confirm(
+              `Daily Analysis Pass Required\n\nCost: 100 credits (10 analyses today)\nYour balance: ${currentBalance} credits\nRemaining after purchase: ${currentBalance - 100} credits\n\nPurchase now?`
+            );
+
+            if (!confirmed) {
+              setPipelineError('Analysis cancelled. A Daily Analysis Pass is required to run analyses.');
+              setPipelineStep('error');
+              setPipelineRunning(false);
+              return;
+            }
+
             const purchaseRes = await authFetch('/api/passes/purchase', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -385,15 +416,21 @@ export default function AutomatedAnalysisPage() {
             });
             const purchaseData = await purchaseRes.json();
             if (!purchaseData.success) {
-              setPipelineError('Insufficient credits for Daily Analysis Pass (100 credits). Please purchase credits first.');
+              setPipelineError(purchaseData.error?.message || 'Failed to purchase Daily Analysis Pass. Please try again.');
               setPipelineStep('error');
               setPipelineRunning(false);
               return;
             }
-            toast.success('Daily Analysis Pass purchased!');
+            toast.success('Daily Analysis Pass purchased! (100 credits)');
             await fetchDailyPassStatus();
           }
         }
+      } else {
+        // Pass check API failed - block analysis
+        setPipelineError('Could not verify Daily Analysis Pass. Please try again.');
+        setPipelineStep('error');
+        setPipelineRunning(false);
+        return;
       }
 
       // Open analysis dialog - this triggers the actual 7-step analysis
@@ -445,6 +482,36 @@ export default function AutomatedAnalysisPage() {
             maxUsage: passData.data.pass?.maxUsage ?? 10,
           });
           if (!hasPass || !canUse) {
+            if (!canUse && hasPass) {
+              setPipelineError('Daily analysis limit reached (10/10). Your pass will reset at midnight UTC.');
+              setPipelineStep('error');
+              setPipelineRunning(false);
+              return;
+            }
+
+            // Check credits first
+            const creditRes = await authFetch('/api/credits/balance');
+            const creditData = creditRes.ok ? await creditRes.json() : null;
+            const currentBalance = creditData?.data?.balance ?? 0;
+
+            if (currentBalance < 100) {
+              setPipelineError(`Insufficient credits. You need 100 credits for a Daily Analysis Pass but you have ${currentBalance} credits. Please purchase credits first.`);
+              setPipelineStep('error');
+              setPipelineRunning(false);
+              return;
+            }
+
+            const confirmed = window.confirm(
+              `Daily Analysis Pass Required\n\nCost: 100 credits (10 analyses today)\nYour balance: ${currentBalance} credits\nRemaining after purchase: ${currentBalance - 100} credits\n\nPurchase now?`
+            );
+
+            if (!confirmed) {
+              setPipelineError('Analysis cancelled. A Daily Analysis Pass is required to run analyses.');
+              setPipelineStep('error');
+              setPipelineRunning(false);
+              return;
+            }
+
             const purchaseRes = await authFetch('/api/passes/purchase', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -452,15 +519,20 @@ export default function AutomatedAnalysisPage() {
             });
             const purchaseData = await purchaseRes.json();
             if (!purchaseData.success) {
-              setPipelineError('Insufficient credits for Daily Analysis Pass (100 credits). Please purchase credits first.');
+              setPipelineError(purchaseData.error?.message || 'Failed to purchase Daily Analysis Pass.');
               setPipelineStep('error');
               setPipelineRunning(false);
               return;
             }
-            toast.success('Daily Analysis Pass purchased!');
+            toast.success('Daily Analysis Pass purchased! (100 credits)');
             await fetchDailyPassStatus();
           }
         }
+      } else {
+        setPipelineError('Could not verify Daily Analysis Pass. Please try again.');
+        setPipelineStep('error');
+        setPipelineRunning(false);
+        return;
       }
       setShowAnalysisDialog(true);
     } catch (error: unknown) {

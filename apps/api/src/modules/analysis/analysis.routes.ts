@@ -749,13 +749,16 @@ Warn about potential traps and give protective advice.`;
       const passCheck = await dailyPassService.checkPass(userId, 'ASSET_ANALYSIS');
 
       if (!passCheck.hasPass) {
-        // User doesn't have a daily pass - they need to purchase one
+        // User doesn't have a daily pass - include current balance for UI
+        const { creditService: cs } = await import('../credits/credit.service');
+        const balance = await cs.getBalance(userId);
         return reply.status(402).send({
           success: false,
           error: {
             code: 'DAILY_PASS_REQUIRED',
             message: 'A Daily Analysis Pass is required. Purchase for 100 credits to get 10 analyses today.',
             required: 100,
+            currentBalance: balance.balance,
             passType: 'ASSET_ANALYSIS',
             purchaseUrl: '/api/passes/purchase',
           },
