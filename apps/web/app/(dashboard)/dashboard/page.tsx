@@ -26,6 +26,7 @@ import { HeroStats } from '@/components/dashboard/HeroStats';
 import { OpportunityRadar } from '@/components/dashboard/OpportunityRadar';
 import { AIBriefing } from '@/components/dashboard/AIBriefing';
 import { BehavioralScore } from '@/components/dashboard/BehavioralScore';
+import { TradingAssistant } from '@/components/dashboard/TradingAssistant';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
 import type { MarketType } from '@/components/dashboard/CategoryBar';
 
@@ -849,6 +850,20 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Trading Assistant */}
+                <TradingAssistant
+                  userContext={{
+                    winRate,
+                    accuracy: userStats?.accuracy ?? 0,
+                    activeCount: userStats?.activeCount ?? 0,
+                    totalAnalyses: userStats?.totalAnalyses ?? 0,
+                    capitalFlowAction: capitalFlow?.recommendation?.action ?? 'wait',
+                    topMarket: capitalFlow?.markets?.slice().sort((a, b) => b.flow7d - a.flow7d)[0]?.market ?? 'BTC',
+                    phase: capitalFlow?.markets?.slice().sort((a, b) => b.flow7d - a.flow7d)[0]?.phase ?? 'mid',
+                    credits,
+                  }}
+                />
 
                 {/* Quick Actions */}
                 <div className="border border-gray-200 dark:border-gray-800 rounded-lg p-5 bg-white dark:bg-[#111111]">
