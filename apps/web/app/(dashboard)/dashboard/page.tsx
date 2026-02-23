@@ -829,6 +829,23 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Trading Assistant */}
+                <TradingAssistant
+                  userContext={{
+                    winRate,
+                    accuracy: userStats?.accuracy ?? 0,
+                    activeCount: userStats?.activeCount ?? 0,
+                    totalAnalyses: userStats?.totalAnalyses ?? 0,
+                    capitalFlowAction: capitalFlow?.recommendation?.action ?? 'wait',
+                    topMarket: capitalFlow?.markets?.slice().sort((a, b) => b.flow7d - a.flow7d)[0]?.market ?? 'BTC',
+                    phase: capitalFlow?.markets?.slice().sort((a, b) => b.flow7d - a.flow7d)[0]?.phase ?? 'mid',
+                    credits,
+                  }}
+                />
+
+                {/* Trader Profile */}
+                <ProfileCard />
               </div>
 
               {/* Right column */}
@@ -874,22 +891,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Trading Assistant — full width below grid */}
-            <TradingAssistant
-              userContext={{
-                winRate,
-                accuracy: userStats?.accuracy ?? 0,
-                activeCount: userStats?.activeCount ?? 0,
-                totalAnalyses: userStats?.totalAnalyses ?? 0,
-                capitalFlowAction: capitalFlow?.recommendation?.action ?? 'wait',
-                topMarket: capitalFlow?.markets?.slice().sort((a, b) => b.flow7d - a.flow7d)[0]?.market ?? 'BTC',
-                phase: capitalFlow?.markets?.slice().sort((a, b) => b.flow7d - a.flow7d)[0]?.phase ?? 'mid',
-                credits,
-              }}
-            />
-
-            {/* Trader Profile */}
-            <ProfileCard />
           </>
         )}
 
