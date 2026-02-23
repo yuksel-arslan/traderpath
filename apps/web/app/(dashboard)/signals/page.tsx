@@ -265,7 +265,7 @@ export default function SignalsPage() {
               {/* Min Quality Score Slider */}
               <div>
                 <label className="text-[10px] text-neutral-400 dark:text-neutral-500 mb-1 block font-sans">
-                  Min Quality Score: <span className="font-semibold text-slate-900 dark:text-white">{minQualityScore}</span>
+                  Min Quality Score: <span className="font-semibold text-gray-900 dark:text-gray-100">{minQualityScore}</span>
                 </label>
                 <div className="flex items-center gap-3">
                   <input
