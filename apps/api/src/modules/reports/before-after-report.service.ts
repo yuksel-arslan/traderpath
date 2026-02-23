@@ -5,7 +5,7 @@
 
 import { prisma } from '../../core/database';
 import { emailService } from '../email/email.service';
-import { generateCandlestickSVG, svgToBase64DataUrl } from './svg-chart-generator';
+import { generateCandlestickSVG } from './svg-chart-generator';
 import { fetchCandles } from '../analysis/providers/multi-asset-data-provider';
 
 // Known non-crypto symbols
@@ -136,9 +136,6 @@ export async function sendBeforeAfterReport(data: OutcomeData): Promise<void> {
         : ((entry - data.outcomePrice) / entry) * 100;
     }
 
-    const beforeBase64 = svgToBase64DataUrl(beforeSvg);
-    const afterBase64 = svgToBase64DataUrl(afterSvg);
-
     // Calculate trade duration
     const durationMs = data.outcomeAt.getTime() - analysis.createdAt.getTime();
     const durationHrs = Math.floor(durationMs / (1000 * 60 * 60));
@@ -159,8 +156,8 @@ export async function sendBeforeAfterReport(data: OutcomeData): Promise<void> {
       outcomePrice: data.outcomePrice,
       pnlPercent,
       duration: durationStr,
-      beforeChartBase64: beforeBase64,
-      afterChartBase64: afterBase64,
+      beforeChartSvg: beforeSvg,
+      afterChartSvg: afterSvg,
       analysisId: data.analysisId,
       analysisDate: analysis.createdAt,
       outcomeDate: data.outcomeAt,

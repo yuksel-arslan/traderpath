@@ -463,6 +463,15 @@ const styles = `
   .footer { position: absolute; bottom: 8px; left: 24px; right: 24px; font-size: 6px; color: #6b7280; border-top: 1px solid #374151; padding-top: 4px; }
   .footer-row { display: flex; justify-content: space-between; align-items: center; }
   .footer-disclaimer { font-size: 5px; color: #f87171; margin-top: 2px; line-height: 1.3; }
+  .step-box { page-break-inside: avoid; break-inside: avoid; }
+  .step-box-expanded { page-break-inside: avoid; break-inside: avoid; }
+  .row { page-break-inside: avoid; break-inside: avoid; }
+  .table { page-break-inside: avoid; break-inside: avoid; }
+  .section { page-break-inside: avoid; break-inside: avoid; }
+  .metric-value { word-break: break-word; overflow-wrap: break-word; }
+  .summary-text { word-break: break-word; overflow-wrap: break-word; }
+  .step-summary { word-break: break-word; overflow-wrap: break-word; }
+  td, th { word-break: break-word; overflow-wrap: break-word; max-width: 200px; }
 `;
 
 const DISCLAIMER_TEXT = 'IMPORTANT DISCLAIMER: This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. All investments carry risk, including the potential loss of principal. Past performance does not guarantee future results. Conduct your own research and consult with a licensed financial advisor before making any investment decisions. TraderPath is not responsible for any losses resulting from the use of this report.';
