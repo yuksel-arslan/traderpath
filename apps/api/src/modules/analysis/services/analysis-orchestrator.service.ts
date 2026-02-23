@@ -11,13 +11,7 @@
  * - Swing: 2-14 days holding, conservative indicators, 1 credit
  */
 
-// Simple logger replacement for NestJS Logger
-const Logger = {
-  log: (message: string, context?: string) => console.log(`[${context || 'Analysis'}] ${message}`),
-  error: (message: string, trace?: string, context?: string) => console.error(`[${context || 'Analysis'}] ${message}`, trace),
-  warn: (message: string, context?: string) => console.warn(`[${context || 'Analysis'}] ${message}`),
-  debug: (message: string, context?: string) => console.debug(`[${context || 'Analysis'}] ${message}`),
-};
+import { logger as Logger } from '../../../core/logger';
 import {
   TradeType,
   AnalysisStep,
@@ -223,7 +217,7 @@ async function fetchKlines(
       volume: parseFloat(k[5]),
     }));
   } catch (error) {
-    console.error(`Failed to fetch klines for ${symbol} ${interval}:`, error);
+    Logger.error(`Failed to fetch klines for ${symbol} ${interval}:`, error);
     return [];
   }
 }

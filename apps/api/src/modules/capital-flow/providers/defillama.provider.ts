@@ -11,6 +11,7 @@
  */
 
 import { SectorFlow, CryptoSector } from '../types';
+import { logger } from '../../../core/logger';
 
 const DEFILLAMA_BASE_URL = process.env['DEFILLAMA_API_URL'] || 'https://api.llama.fi';
 
@@ -93,7 +94,7 @@ export async function getDeFiTvl(): Promise<{
       history,
     };
   } catch (error) {
-    console.error('[DefiLlama] Error fetching TVL:', error);
+    logger.error('[DefiLlama] Error fetching TVL:', error);
     return getFallbackTvlData();
   }
 }
@@ -133,7 +134,7 @@ export async function getChainTvl(): Promise<Array<{
 
     return topChains;
   } catch (error) {
-    console.error('[DefiLlama] Error fetching chain TVL:', error);
+    logger.error('[DefiLlama] Error fetching chain TVL:', error);
     return [];
   }
 }
@@ -174,7 +175,7 @@ export async function getStablecoinMarketCap(): Promise<{
       change7d: parseFloat(change7d.toFixed(2)),
     };
   } catch (error) {
-    console.error('[DefiLlama] Error fetching stablecoin data:', error);
+    logger.error('[DefiLlama] Error fetching stablecoin data:', error);
     return { total: 130, change7d: 0 };
   }
 }
@@ -238,7 +239,7 @@ export async function getCryptoSectors(): Promise<SectorFlow[]> {
 
     return sectors;
   } catch (error) {
-    console.error('[DefiLlama] Error fetching crypto sectors:', error);
+    logger.error('[DefiLlama] Error fetching crypto sectors:', error);
     return getFallbackSectors();
   }
 }

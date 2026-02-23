@@ -39,7 +39,7 @@ let redisClient: Redis | null = null;
  */
 export function initializeBilgeService(redis: Redis): void {
   redisClient = redis;
-  console.log('[BILGE] Guardian service initialized');
+  logger.info('[BILGE] Guardian service initialized');
 
   // Load initial patterns into Redis if not exists
   loadInitialPatterns();
@@ -55,10 +55,10 @@ async function loadInitialPatterns(): Promise<void> {
     const existingPatterns = await redisClient.get(BILGE_REDIS_KEYS.PATTERNS);
     if (!existingPatterns) {
       await redisClient.set(BILGE_REDIS_KEYS.PATTERNS, JSON.stringify(INITIAL_PATTERNS));
-      console.log('[BILGE] Initial patterns loaded');
+      logger.info('[BILGE] Initial patterns loaded');
     }
   } catch (error) {
-    console.error('[BILGE] Error loading patterns:', error);
+    logger.error('[BILGE] Error loading patterns:', error);
   }
 }
 
@@ -72,7 +72,7 @@ export async function getPatterns(): Promise<ErrorPattern[]> {
     const data = await redisClient.get(BILGE_REDIS_KEYS.PATTERNS);
     return data ? JSON.parse(data) : INITIAL_PATTERNS;
   } catch (error) {
-    console.error('[BILGE] Error getting patterns:', error);
+    logger.error('[BILGE] Error getting patterns:', error);
     return INITIAL_PATTERNS;
   }
 }
@@ -154,7 +154,7 @@ export async function collectError(params: {
     }
   }
 
-  console.log(`[BILGE] Error collected: ${error.id} (${severity})`);
+  logger.info(`[BILGE] Error collected: ${error.id} (${severity})`);
 
   return error;
 }
@@ -185,7 +185,7 @@ async function findExistingError(
       ) || null
     );
   } catch (error) {
-    console.error('[BILGE] Error finding existing error:', error);
+    logger.error('[BILGE] Error finding existing error:', error);
     return null;
   }
 }
@@ -219,7 +219,7 @@ async function storeError(error: CollectedError): Promise<void> {
     // Update metrics
     await updateMetrics(error);
   } catch (err) {
-    console.error('[BILGE] Error storing error:', err);
+    logger.error('[BILGE] Error storing error:', err);
   }
 }
 
@@ -242,7 +242,7 @@ async function updatePatternMatchCount(patternId: string): Promise<void> {
       await redisClient.set(BILGE_REDIS_KEYS.PATTERNS, JSON.stringify(patterns));
     }
   } catch (error) {
-    console.error('[BILGE] Error updating pattern count:', error);
+    logger.error('[BILGE] Error updating pattern count:', error);
   }
 }
 
@@ -360,7 +360,7 @@ async function updateMetrics(error: CollectedError): Promise<void> {
     await redisClient.incr(categoryKey);
     await redisClient.expire(categoryKey, 86400 * 30);
   } catch (err) {
-    console.error('[BILGE] Error updating metrics:', err);
+    logger.error('[BILGE] Error updating metrics:', err);
   }
 }
 
@@ -405,7 +405,7 @@ export async function getErrors(
 
     return errors;
   } catch (error) {
-    console.error('[BILGE] Error getting errors:', error);
+    logger.error('[BILGE] Error getting errors:', error);
     return [];
   }
 }
@@ -612,7 +612,7 @@ Provide brief, actionable recommendations to improve system stability. Format as
       .filter((l) => l.length > 10)
       .slice(0, 5);
   } catch (error) {
-    console.error('[BILGE] Error generating recommendations:', error);
+    logger.error('[BILGE] Error generating recommendations:', error);
     return ['Monitor error patterns closely', 'Review critical error responses'];
   }
 }
@@ -656,7 +656,7 @@ export async function submitFeedback(params: {
     await redisClient.set(key, JSON.stringify(feedbacks));
   }
 
-  console.log(`[BILGE] Feedback submitted: ${feedback.id}`);
+  logger.info(`[BILGE] Feedback submitted: ${feedback.id}`);
 
   return feedback;
 }
@@ -722,7 +722,7 @@ Respond in JSON format:
       return { ...analysis, similarFeedbackCount };
     }
   } catch (error) {
-    console.error('[BILGE] Error analyzing feedback:', error);
+    logger.error('[BILGE] Error analyzing feedback:', error);
   }
 
   return {
@@ -768,7 +768,7 @@ export async function getFeedbacks(
 
     return feedbacks;
   } catch (error) {
-    console.error('[BILGE] Error getting feedbacks:', error);
+    logger.error('[BILGE] Error getting feedbacks:', error);
     return [];
   }
 }
@@ -812,7 +812,7 @@ export async function updateFeedbackStatus(
 
     return feedback;
   } catch (error) {
-    console.error('[BILGE] Error updating feedback:', error);
+    logger.error('[BILGE] Error updating feedback:', error);
     return null;
   }
 }
@@ -887,11 +887,11 @@ Respond in JSON format:
       await redisClient.set(key, JSON.stringify(ideas));
     }
 
-    console.log(`[BILGE] Innovation idea generated: ${idea.id}`);
+    logger.info(`[BILGE] Innovation idea generated: ${idea.id}`);
 
     return idea;
   } catch (error) {
-    console.error('[BILGE] Error generating innovation idea:', error);
+    logger.error('[BILGE] Error generating innovation idea:', error);
     return null;
   }
 }
@@ -925,7 +925,7 @@ export async function getInnovationIdeas(
 
     return ideas;
   } catch (error) {
-    console.error('[BILGE] Error getting ideas:', error);
+    logger.error('[BILGE] Error getting ideas:', error);
     return [];
   }
 }
@@ -958,11 +958,11 @@ export async function resolveError(
 
     await redisClient.set(key, JSON.stringify(errors));
 
-    console.log(`[BILGE] Error resolved: ${errorId}`);
+    logger.info(`[BILGE] Error resolved: ${errorId}`);
 
     return error;
   } catch (err) {
-    console.error('[BILGE] Error resolving error:', err);
+    logger.error('[BILGE] Error resolving error:', err);
     return null;
   }
 }

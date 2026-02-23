@@ -6,6 +6,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { creditService } from './credit.service';
 import { authenticate } from '../../core/auth/middleware';
+import { logger } from '../../core/logger';
 
 // User type from JWT
 interface JwtUser {
@@ -39,7 +40,7 @@ export default async function creditRoutes(app: FastifyInstance) {
         data: balance,
       });
     } catch (error) {
-      console.error('GET /api/credits/balance error:', error);
+      logger.error('GET /api/credits/balance error:', error);
       return reply.status(500).send({ success: false, error: 'Failed to fetch balance' });
     }
   });
@@ -57,7 +58,7 @@ export default async function creditRoutes(app: FastifyInstance) {
         data: { packages },
       });
     } catch (error) {
-      console.error('GET /api/credits/packages error:', error);
+      logger.error('GET /api/credits/packages error:', error);
       return reply.status(500).send({ success: false, error: 'Failed to fetch packages' });
     }
   });
@@ -105,7 +106,7 @@ export default async function creditRoutes(app: FastifyInstance) {
         data: history,
       });
     } catch (error) {
-      console.error('GET /api/credits/history error:', error);
+      logger.error('GET /api/credits/history error:', error);
       return reply.status(500).send({ success: false, error: 'Failed to fetch credit history' });
     }
   });
@@ -123,7 +124,7 @@ export default async function creditRoutes(app: FastifyInstance) {
         data: { costs: CREDIT_COSTS },
       });
     } catch (error) {
-      console.error('GET /api/credits/costs error:', error);
+      logger.error('GET /api/credits/costs error:', error);
       return reply.status(500).send({ success: false, error: 'Failed to fetch credit costs' });
     }
   });
@@ -171,7 +172,7 @@ export default async function creditRoutes(app: FastifyInstance) {
       if (error?.name === 'ZodError') {
         return reply.status(400).send({ success: false, error: 'Invalid deduction parameters' });
       }
-      console.error('POST /api/credits/deduct error:', error);
+      logger.error('POST /api/credits/deduct error:', error);
       return reply.status(500).send({ success: false, error: 'Failed to deduct credits' });
     }
   });

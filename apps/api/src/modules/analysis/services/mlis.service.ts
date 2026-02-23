@@ -16,6 +16,7 @@
 
 import { OHLCV, IndicatorsService } from './indicators.service';
 import { callGeminiWithRetry } from '../../../core/gemini';
+import { logger } from '../../../core/logger';
 import {
   fetchCandles as fetchMultiAssetCandles,
   getAssetClass,
@@ -270,7 +271,7 @@ export class MLISService {
         analysisVersion: '2.0.0',
       };
     } catch (error) {
-      console.error(`[MLIS] Analysis failed for ${symbol}:`, error);
+      logger.error(`[MLIS] Analysis failed for ${symbol}:`, error);
       return this.createEmptyResult(symbol, timeframe, timestamp, 'Analysis failed');
     }
   }
@@ -282,7 +283,7 @@ export class MLISService {
   private async fetchCandles(symbol: string, timeframe: string): Promise<OHLCV[]> {
     try {
       const assetClass = getAssetClass(symbol);
-      console.log(`[MLIS] Fetching candles for ${symbol} (${assetClass}) - timeframe: ${timeframe}`);
+      logger.info(`[MLIS] Fetching candles for ${symbol} (${assetClass}) - timeframe: ${timeframe}`);
 
       // Use multi-asset provider which routes to correct API based on asset class
       const candles = await fetchMultiAssetCandles(symbol, timeframe, 500);
@@ -296,7 +297,7 @@ export class MLISService {
         volume: c.volume,
       }));
     } catch (error) {
-      console.warn(`[MLIS] Failed to fetch candles for ${symbol}:`, error);
+      logger.warn(`[MLIS] Failed to fetch candles for ${symbol}:`, error);
       return [];
     }
   }
@@ -674,7 +675,7 @@ export class MLISService {
         weight: 0.05,
       };
     } catch (error) {
-      console.warn('[MLIS] Sentiment analysis failed:', error);
+      logger.warn('[MLIS] Sentiment analysis failed:', error);
       return null;
     }
   }
