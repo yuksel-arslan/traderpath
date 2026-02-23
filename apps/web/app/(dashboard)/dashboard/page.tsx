@@ -726,7 +726,7 @@ export default function DashboardPage() {
                   />
                 </div>
 
-                {/* P&L Chart */}
+                {/* Performance Chart */}
                 <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-[#111111]">
                   <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
                     <div>
@@ -738,11 +738,9 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      {/* Period P&L badge */}
                       <span className={`text-sm font-semibold font-mono ${periodPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                         {periodPnL === 0 ? '—' : `${periodPnL >= 0 ? '+' : ''}${Math.abs(periodPnL).toFixed(1)}%`}
                       </span>
-                      {/* Refresh */}
                       <button
                         onClick={() => { setRefreshing(true); fetchData(true); }}
                         className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -756,6 +754,50 @@ export default function DashboardPage() {
                     <PnLChart chartData={chartData} />
                   </div>
                 </div>
+
+                {/* Platform Stats — moved here to balance columns */}
+                {platformStats && (
+                  <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-[#111111]">
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                        Platform Stats
+                      </h3>
+                    </div>
+                    <div className="grid grid-cols-3 divide-x divide-gray-100 dark:divide-gray-800">
+                      {[
+                        {
+                          label: 'Platform Accuracy',
+                          value: `${platformStats.accuracy.overall.toFixed(0)}%`,
+                          sub: platformStats.accuracy.sampleSize
+                            ? `${platformStats.accuracy.sampleSize} verified`
+                            : 'verified trades',
+                          valueColor:
+                            platformStats.accuracy.overall >= 60
+                              ? 'text-green-500'
+                              : 'text-yellow-500',
+                        },
+                        {
+                          label: 'Total Analyses',
+                          value: platformStats.platform.totalAnalyses.toLocaleString(),
+                          sub: `${platformStats.platform.weeklyAnalyses} this week`,
+                          valueColor: 'text-gray-900 dark:text-gray-100',
+                        },
+                        {
+                          label: 'Active Users',
+                          value: platformStats.platform.totalUsers.toLocaleString(),
+                          sub: 'on platform',
+                          valueColor: 'text-gray-900 dark:text-gray-100',
+                        },
+                      ].map((item) => (
+                        <div key={item.label} className="px-6 py-4">
+                          <p className="text-xs font-medium text-gray-500 mb-1">{item.label}</p>
+                          <p className={`text-xl font-semibold font-mono ${item.valueColor}`}>{item.value}</p>
+                          {item.sub && <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Active Trades */}
                 {activeTrades.length > 0 && (
@@ -804,70 +846,8 @@ export default function DashboardPage() {
                   performanceData={performanceData}
                 />
 
-                {/* Platform Stats card */}
-                {platformStats && (
-                  <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-[#111111]">
-                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                        Platform Stats
-                      </h3>
-                    </div>
-                    <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                      {[
-                        {
-                          label: 'Platform Accuracy',
-                          value: `${platformStats.accuracy.overall.toFixed(0)}%`,
-                          sub: platformStats.accuracy.sampleSize
-                            ? `${platformStats.accuracy.sampleSize} verified`
-                            : undefined,
-                          valueColor:
-                            platformStats.accuracy.overall >= 60
-                              ? 'text-green-500'
-                              : 'text-yellow-500',
-                        },
-                        {
-                          label: 'Total Analyses',
-                          value: platformStats.platform.totalAnalyses.toLocaleString(),
-                          sub: `${platformStats.platform.weeklyAnalyses} this week`,
-                          valueColor: 'text-gray-900 dark:text-gray-100',
-                        },
-                        {
-                          label: 'Active Users',
-                          value: platformStats.platform.totalUsers.toLocaleString(),
-                          sub: undefined,
-                          valueColor: 'text-gray-900 dark:text-gray-100',
-                        },
-                      ].map((item) => (
-                        <div key={item.label} className="flex items-center justify-between px-6 py-3">
-                          <div>
-                            <p className="text-sm text-gray-700 dark:text-gray-300">{item.label}</p>
-                            {item.sub && <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>}
-                          </div>
-                          <span className={`text-sm font-semibold font-mono ${item.valueColor}`}>
-                            {item.value}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* Smart Alerts */}
                 <SmartAlertsWidget />
-
-                {/* Trading Assistant */}
-                <TradingAssistant
-                  userContext={{
-                    winRate,
-                    accuracy: userStats?.accuracy ?? 0,
-                    activeCount: userStats?.activeCount ?? 0,
-                    totalAnalyses: userStats?.totalAnalyses ?? 0,
-                    capitalFlowAction: capitalFlow?.recommendation?.action ?? 'wait',
-                    topMarket: capitalFlow?.markets?.slice().sort((a, b) => b.flow7d - a.flow7d)[0]?.market ?? 'BTC',
-                    phase: capitalFlow?.markets?.slice().sort((a, b) => b.flow7d - a.flow7d)[0]?.phase ?? 'mid',
-                    credits,
-                  }}
-                />
 
                 {/* Quick Actions */}
                 <div className="border border-gray-200 dark:border-gray-800 rounded-lg p-5 bg-white dark:bg-[#111111]">
@@ -893,6 +873,20 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+
+            {/* Trading Assistant — full width below grid */}
+            <TradingAssistant
+              userContext={{
+                winRate,
+                accuracy: userStats?.accuracy ?? 0,
+                activeCount: userStats?.activeCount ?? 0,
+                totalAnalyses: userStats?.totalAnalyses ?? 0,
+                capitalFlowAction: capitalFlow?.recommendation?.action ?? 'wait',
+                topMarket: capitalFlow?.markets?.slice().sort((a, b) => b.flow7d - a.flow7d)[0]?.market ?? 'BTC',
+                phase: capitalFlow?.markets?.slice().sort((a, b) => b.flow7d - a.flow7d)[0]?.phase ?? 'mid',
+                credits,
+              }}
+            />
 
             {/* Trader Profile */}
             <ProfileCard />
