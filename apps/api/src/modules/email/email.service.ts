@@ -1524,8 +1524,6 @@ TraderPath - Professional Trading Analysis
       outcomePrice: number;
       pnlPercent: number;
       duration: string;
-      beforeChartSvg: string;
-      afterChartSvg: string;
       analysisId: string;
       analysisDate: Date;
       outcomeDate: Date;
@@ -1644,23 +1642,12 @@ TraderPath - Professional Trading Analysis
             </td>
           </tr>
 
-          <!-- Before Chart (inline SVG - works in Gmail, Apple Mail) -->
+          <!-- Charts notice -->
           <tr>
-            <td style="padding: 20px 20px 10px;">
-              <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1px;">Before - Analysis Time (${fmtDate(data.analysisDate)})</p>
-              <div style="width: 100%; border-radius: 8px; border: 1px solid #334155; overflow: hidden; background: #1e293b;">
-                ${data.beforeChartSvg.replace(/<svg /, '<svg style="display:block;width:100%;height:auto;" ')}
-              </div>
-            </td>
-          </tr>
-
-          <!-- After Chart (inline SVG - works in Gmail, Apple Mail) -->
-          <tr>
-            <td style="padding: 10px 20px 20px;">
-              <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1px;">After - ${resultLabel} (${fmtDate(data.outcomeDate)})</p>
-              <div style="width: 100%; border-radius: 8px; border: 1px solid #334155; overflow: hidden; background: #1e293b;">
-                ${data.afterChartSvg.replace(/<svg /, '<svg style="display:block;width:100%;height:auto;" ')}
-              </div>
+            <td style="padding: 16px 20px; border-bottom: 1px solid #334155;">
+              <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center;">
+                Before / After charts are available in the full analysis view.
+              </p>
             </td>
           </tr>
 
