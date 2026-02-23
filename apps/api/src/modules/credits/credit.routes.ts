@@ -64,39 +64,18 @@ export default async function creditRoutes(app: FastifyInstance) {
 
   /**
    * POST /api/credits/purchase
-   * Purchase a credit package
+   * Deprecated: credit purchases are processed via Lemon Squeezy webhooks.
+   * Clients should use the /api/payments/checkout endpoint to initiate payment.
    */
-  const purchaseSchema = z.object({
-    packageId: z.string().uuid(),
-    paymentMethod: z.enum(['stripe', 'crypto']),
-  });
-
-  app.post('/purchase', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const userId = getUser(request).id;
-      const body = purchaseSchema.parse(request.body);
-
-      // TODO: Process payment with Stripe/Crypto
-      // For now, simulate successful payment
-      const paymentId = `pay_${Date.now()}`;
-
-      const result = await creditService.purchasePackage(
-        userId,
-        body.packageId,
-        paymentId
-      );
-
-      return reply.send({
-        success: true,
-        data: result,
-      });
-    } catch (error: any) {
-      if (error?.name === 'ZodError') {
-        return reply.status(400).send({ success: false, error: 'Invalid purchase parameters' });
-      }
-      console.error('POST /api/credits/purchase error:', error);
-      return reply.status(500).send({ success: false, error: 'Failed to process purchase' });
-    }
+  app.post('/purchase', async (_request: FastifyRequest, reply: FastifyReply) => {
+    return reply.status(410).send({
+      success: false,
+      error: {
+        code: 'DEPRECATED_ENDPOINT',
+        message:
+          'Direct credit purchases are not supported. Use POST /api/payments/checkout to start a Lemon Squeezy checkout session.',
+      },
+    });
   });
 
   /**
