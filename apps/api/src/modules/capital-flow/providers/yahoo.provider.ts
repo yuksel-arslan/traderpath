@@ -996,7 +996,7 @@ async function getBistSectors(indexFlow7d: number, indexFlow30d: number): Promis
 
   const sectors: SectorFlow[] = [
     {
-      name: 'Bankacılık',  // Banking
+      name: 'Banking',
       flow7d: bankingFlow.flow7d,
       flow30d: bankingFlow.flow30d,
       dominance: 35, // Banks dominate BIST
@@ -1004,7 +1004,7 @@ async function getBistSectors(indexFlow7d: number, indexFlow30d: number): Promis
       topAssets: ['GARAN', 'AKBNK', 'YKBNK', 'ISCTR', 'HALKB'],
     },
     {
-      name: 'Holding',
+      name: 'Holdings',
       flow7d: (bankingFlow.flow7d + industrialFlow.flow7d) / 2, // Holdings are diversified
       flow30d: indexFlow30d,
       dominance: 15,
@@ -1012,7 +1012,7 @@ async function getBistSectors(indexFlow7d: number, indexFlow30d: number): Promis
       topAssets: ['KCHOL', 'SAHOL', 'TAVHL', 'TKFEN', 'DOHOL'],
     },
     {
-      name: 'Sanayi',  // Industrial
+      name: 'Industrial',
       flow7d: industrialFlow.flow7d,
       flow30d: industrialFlow.flow30d,
       dominance: 20,
@@ -1020,7 +1020,7 @@ async function getBistSectors(indexFlow7d: number, indexFlow30d: number): Promis
       topAssets: ['EREGL', 'SISE', 'TOASO', 'FROTO', 'TUPRS'],
     },
     {
-      name: 'Havacılık',  // Aviation
+      name: 'Aviation',
       flow7d: aviationFlow.flow7d,
       flow30d: aviationFlow.flow30d,
       dominance: 10,
@@ -1028,7 +1028,7 @@ async function getBistSectors(indexFlow7d: number, indexFlow30d: number): Promis
       topAssets: ['THYAO', 'PGSUS'],
     },
     {
-      name: 'Telekom',  // Telecom
+      name: 'Telecom',
       flow7d: telecomFlow.flow7d,
       flow30d: telecomFlow.flow30d,
       dominance: 8,
@@ -1036,7 +1036,7 @@ async function getBistSectors(indexFlow7d: number, indexFlow30d: number): Promis
       topAssets: ['TCELL', 'TTKOM'],
     },
     {
-      name: 'Perakende',  // Retail
+      name: 'Retail',
       flow7d: retailFlow.flow7d,
       flow30d: retailFlow.flow30d,
       dominance: 7,
@@ -1044,7 +1044,7 @@ async function getBistSectors(indexFlow7d: number, indexFlow30d: number): Promis
       topAssets: ['BIMAS', 'MGROS', 'SOKM'],
     },
     {
-      name: 'Teknoloji',  // Technology
+      name: 'Technology',
       flow7d: (industrialFlow.flow7d + telecomFlow.flow7d) / 2, // No pure tech sector, use proxy
       flow30d: indexFlow30d,
       dominance: 5,

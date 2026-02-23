@@ -1146,7 +1146,7 @@ function getFallbackMarketFlows(): MarketFlow[] {
       rotationConfidence: 55,
       sectors: [
         {
-          name: 'Bankacılık',
+          name: 'Banking',
           flow7d: 1.5,
           flow30d: 5.0,
           dominance: 35,
@@ -1154,7 +1154,7 @@ function getFallbackMarketFlows(): MarketFlow[] {
           topAssets: ['GARAN', 'AKBNK', 'YKBNK', 'ISCTR', 'HALKB'],
         },
         {
-          name: 'Holding',
+          name: 'Holdings',
           flow7d: 1.0,
           flow30d: 3.5,
           dominance: 15,
@@ -1162,7 +1162,7 @@ function getFallbackMarketFlows(): MarketFlow[] {
           topAssets: ['KCHOL', 'SAHOL', 'TAVHL', 'TKFEN'],
         },
         {
-          name: 'Sanayi',
+          name: 'Industrial',
           flow7d: 0.8,
           flow30d: 3.0,
           dominance: 20,
@@ -1471,34 +1471,34 @@ const ASSET_DATABASE: Record<MarketType, Record<string, Array<{
     ],
   },
   bist: {
-    Bankacılık: [
+    Banking: [
       { symbol: 'GARAN', name: 'Garanti BBVA', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
       { symbol: 'AKBNK', name: 'Akbank', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
-      { symbol: 'YKBNK', name: 'Yapı Kredi', riskLevel: 'medium', phases: ['early', 'mid'] },
-      { symbol: 'ISCTR', name: 'İş Bankası', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'YKBNK', name: 'Yapi Kredi', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'ISCTR', name: 'Is Bankasi', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
       { symbol: 'HALKB', name: 'Halkbank', riskLevel: 'medium', phases: ['early', 'mid'] },
     ],
-    Holding: [
-      { symbol: 'KCHOL', name: 'Koç Holding', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
-      { symbol: 'SAHOL', name: 'Sabancı Holding', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
-      { symbol: 'TAVHL', name: 'TAV Havalimanları', riskLevel: 'medium', phases: ['early', 'mid'] },
+    Holdings: [
+      { symbol: 'KCHOL', name: 'Koc Holding', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'SAHOL', name: 'Sabanci Holding', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'TAVHL', name: 'TAV Airports', riskLevel: 'medium', phases: ['early', 'mid'] },
       { symbol: 'TKFEN', name: 'Tekfen Holding', riskLevel: 'medium', phases: ['early', 'mid'] },
     ],
-    Sanayi: [
-      { symbol: 'EREGL', name: 'Ereğli Demir Çelik', riskLevel: 'medium', phases: ['early', 'mid'] },
-      { symbol: 'SISE', name: 'Şişecam', riskLevel: 'medium', phases: ['early', 'mid'] },
-      { symbol: 'TOASO', name: 'Tofaş Oto', riskLevel: 'medium', phases: ['early', 'mid'] },
+    Industrial: [
+      { symbol: 'EREGL', name: 'Eregli Iron Steel', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'SISE', name: 'Sisecam', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'TOASO', name: 'Tofas Auto', riskLevel: 'medium', phases: ['early', 'mid'] },
       { symbol: 'FROTO', name: 'Ford Otosan', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
     ],
-    Havacılık: [
-      { symbol: 'THYAO', name: 'Türk Hava Yolları', riskLevel: 'medium', phases: ['early', 'mid'] },
+    Aviation: [
+      { symbol: 'THYAO', name: 'Turkish Airlines', riskLevel: 'medium', phases: ['early', 'mid'] },
       { symbol: 'PGSUS', name: 'Pegasus', riskLevel: 'high', phases: ['early'] },
     ],
     default: [
-      { symbol: 'THYAO', name: 'Türk Hava Yolları', riskLevel: 'medium', phases: ['early', 'mid', 'late'] },
+      { symbol: 'THYAO', name: 'Turkish Airlines', riskLevel: 'medium', phases: ['early', 'mid', 'late'] },
       { symbol: 'GARAN', name: 'Garanti BBVA', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
-      { symbol: 'KCHOL', name: 'Koç Holding', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
-      { symbol: 'EREGL', name: 'Ereğli Demir Çelik', riskLevel: 'medium', phases: ['early', 'mid'] },
+      { symbol: 'KCHOL', name: 'Koc Holding', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
+      { symbol: 'EREGL', name: 'Eregli Iron Steel', riskLevel: 'medium', phases: ['early', 'mid'] },
       { symbol: 'AKBNK', name: 'Akbank', riskLevel: 'low', phases: ['early', 'mid', 'late'] },
     ],
   },
@@ -2470,7 +2470,7 @@ Respond in this exact JSON format (no markdown, just pure JSON):
           layer2: parsed.layer2 || 'Market flow data is being analyzed.',
           layer3: parsed.layer3 || 'Sector data is being analyzed.',
           layer4: parsed.layer4 || 'Overall analysis is in progress.',
-          // RAG Yorumları
+          // RAG Insights
           ragLayer1: parsed.ragLayer1 || generateFallbackRagLayer1(liquidity, bias),
           ragLayer2: parsed.ragLayer2 || generateFallbackRagLayer2(bestMarket, worstMarket),
           ragLayer3: parsed.ragLayer3 || generateFallbackRagLayer3(cryptoMarket),
@@ -2496,7 +2496,7 @@ Respond in this exact JSON format (no markdown, just pure JSON):
     layer2: `${recommendation.primaryMarket.toUpperCase()} market is in ${recommendation.phase} phase with ${recommendation.confidence}% confidence.`,
     layer3: cryptoMarket?.sectors?.[0] ? `${cryptoMarket.sectors[0].name} is the leading sector with ${cryptoMarket.sectors[0].flow7d.toFixed(1)}% 7-day flow.` : 'Sector analysis pending.',
     layer4: `${recommendation.action === 'analyze' ? 'Good conditions to analyze opportunities.' : recommendation.action === 'wait' ? 'Wait for better entry conditions.' : 'Avoid new positions in current conditions.'}`,
-    // RAG Yorumları - Fallback
+    // RAG Insights - Fallback
     ragLayer1: generateFallbackRagLayer1(liquidity, bias),
     ragLayer2: generateFallbackRagLayer2(bestMarket, worstMarket),
     ragLayer3: generateFallbackRagLayer3(cryptoMarket),
@@ -2515,19 +2515,19 @@ function generateFallbackRagLayer1(liquidity: GlobalLiquidity, bias: LiquidityBi
   const tgaTrend = liquidity.treasuryGeneralAccount.trend;
 
   if (trend === 'expanding' && rrpTrend === 'draining') {
-    return `Net Liquidity ${netLiq}T USD artıyor, RRP boşalması piyasalara likidite ekliyor. Risk varlıkları için olumlu ortam.`;
+    return `Net Liquidity ${netLiq}T USD expanding, RRP draining is adding liquidity to markets. Favorable environment for risk assets.`;
   } else if (trend === 'contracting') {
-    return `Net Liquidity ${netLiq}T USD daralıyor. ${tgaTrend === 'building' ? 'TGA birikiyor, likidite çekiliyor.' : 'Dikkatli olunmalı.'}`;
+    return `Net Liquidity ${netLiq}T USD contracting. ${tgaTrend === 'building' ? 'TGA is building, liquidity being withdrawn.' : 'Caution advised.'}`;
   }
-  return `Net Liquidity ${netLiq}T USD seviyesinde, ${bias === 'risk_on' ? 'risk iştahı yüksek' : bias === 'risk_off' ? 'güvenli limanlara yöneliş var' : 'kararsız bir ortam mevcut'}.`;
+  return `Net Liquidity at ${netLiq}T USD, ${bias === 'risk_on' ? 'risk appetite is high' : bias === 'risk_off' ? 'flight to safe havens underway' : 'indecisive environment'}.`;
 }
 
 /**
- * RAG Layer 2 Fallback - Market rotasyonu yorumu
+ * RAG Layer 2 Fallback - Market rotation insight
  */
 function generateFallbackRagLayer2(bestMarket: MarketFlow | undefined, worstMarket: MarketFlow | undefined): string {
   if (!bestMarket || !worstMarket) {
-    return 'Market akış verileri analiz ediliyor.';
+    return 'Market flow data is being analyzed.';
   }
 
   const best = bestMarket.market.toUpperCase();
@@ -2536,27 +2536,27 @@ function generateFallbackRagLayer2(bestMarket: MarketFlow | undefined, worstMark
   const worst = worstMarket.market.toUpperCase();
   const worstFlow = worstMarket.flow7d.toFixed(1);
 
-  return `${best} +${bestFlow}% ile lider, ${bestPhase} fazında. ${worst} (${worstFlow}%) en zayıf performans, rotasyon sinyali olabilir.`;
+  return `${best} leading with +${bestFlow}%, in ${bestPhase} phase. ${worst} (${worstFlow}%) weakest performance, possible rotation signal.`;
 }
 
 /**
- * RAG Layer 3 Fallback - Sektör fırsatı yorumu
+ * RAG Layer 3 Fallback - Sector opportunity insight
  */
 function generateFallbackRagLayer3(cryptoMarket: MarketFlow | undefined): string {
   const topSector = cryptoMarket?.sectors?.[0];
   if (!topSector) {
-    return 'Sektör verileri yükleniyor.';
+    return 'Sector data is loading.';
   }
 
   const sectorName = topSector.name;
   const sectorFlow = topSector.flow7d.toFixed(1);
   const topAssets = topSector.topAssets?.slice(0, 3).join(', ') || '';
 
-  return `${sectorName} sektörü ${sectorFlow > '0' ? '+' : ''}${sectorFlow}% ile öne çıkıyor.${topAssets ? ` Dikkat: ${topAssets}.` : ''}`;
+  return `${sectorName} sector leading with ${sectorFlow > '0' ? '+' : ''}${sectorFlow}% flow.${topAssets ? ` Watch: ${topAssets}.` : ''}`;
 }
 
 /**
- * RAG Layer 4 Fallback - Aksiyon önerisi yorumu
+ * RAG Layer 4 Fallback - Action recommendation insight
  */
 function generateFallbackRagLayer4(recommendation: FlowRecommendation): string {
   const market = recommendation.primaryMarket.toUpperCase();
@@ -2565,11 +2565,11 @@ function generateFallbackRagLayer4(recommendation: FlowRecommendation): string {
   const phase = recommendation.phase?.toUpperCase() || 'N/A';
 
   if (action === 'ANALYZE') {
-    return `%${confidence} güvenle ${market}'te fırsat arayın. ${phase} fazı giriş için uygun.`;
+    return `With ${confidence}% confidence, look for opportunities in ${market}. ${phase} phase is suitable for entry.`;
   } else if (action === 'WAIT') {
-    return `${market}'te bekle. Faz ${phase}, daha iyi giriş noktası için sabır gerekiyor.`;
+    return `Wait on ${market}. Phase ${phase}, patience needed for a better entry point.`;
   }
-  return `${market}'te yeni pozisyon açmayın. Risk/ödül oranı olumsuz.`;
+  return `Avoid new positions in ${market}. Risk/reward ratio is unfavorable.`;
 }
 
 /**
