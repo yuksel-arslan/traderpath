@@ -513,24 +513,61 @@ TraderPath - Professional Trading Analysis
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TraderPath Analysis Report</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; padding: 40px 20px;">
+<body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 20px;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        <table width="650" cellpadding="0" cellspacing="0" style="background: #1e293b; border-radius: 16px; overflow: hidden; border: 1px solid #334155;">
 
-          <!-- Header with gradient -->
+          <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #dc2626 0%, #f59e0b 50%, #22c55e 100%); padding: 30px; text-align: center;">
+            <td style="background: linear-gradient(135deg, #14b8a6 0%, #0f172a 50%, #ef4444 100%); padding: 20px; text-align: center;">
+              <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
+                Trader<span style="color: #fef3c7;">Path</span>
+              </h1>
+              <p style="margin: 6px 0 0; color: rgba(255,255,255,0.8); font-size: 12px; letter-spacing: 1px;">
+                Analysis Report
+              </p>
+            </td>
+          </tr>
+
+          <!-- Symbol & Direction Banner -->
+          <tr>
+            <td style="background: ${directionColor}15; padding: 18px 20px; border-bottom: 1px solid #334155;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="text-align: center;">
-                    <h1 style="margin: 0; color: white; font-size: 32px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                      Trade<span style="color: #fef3c7;">Path</span>
-                    </h1>
-                    <p style="margin: 8px 0 0; color: rgba(255,255,255,0.95); font-size: 14px; letter-spacing: 1px;">
-                      From Charts to Clarity
-                    </p>
+                  <td>
+                    <span style="color: white; font-size: 22px; font-weight: bold;">${formatSymbolPair(data.symbol)}</span>
+                    <span style="font-size: 12px; color: ${directionColor}; margin-left: 10px; padding: 3px 8px; background: ${directionColor}20; border-radius: 4px;">
+                      ${directionIcon} ${directionText}
+                    </span>
+                  </td>
+                  <td style="text-align: right;">
+                    <span style="display: inline-block; background: ${verdictColor}; color: white; padding: 6px 14px; border-radius: 6px; font-weight: bold; font-size: 14px;">
+                      ${data.verdict}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Score Summary -->
+          <tr>
+            <td style="padding: 20px; border-bottom: 1px solid #334155;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="33%" style="text-align: center;">
+                    <p style="color: #64748b; font-size: 11px; margin: 0 0 4px; text-transform: uppercase;">Score</p>
+                    <p style="color: #f1f5f9; font-size: 24px; font-weight: bold; margin: 0;">${data.score}<span style="color: #64748b; font-size: 14px;">/100</span></p>
+                  </td>
+                  <td width="33%" style="text-align: center; border-left: 1px solid #334155; border-right: 1px solid #334155;">
+                    <p style="color: #64748b; font-size: 11px; margin: 0 0 4px; text-transform: uppercase;">Verdict</p>
+                    <p style="color: ${verdictColor}; font-size: 18px; font-weight: bold; margin: 0;">${data.verdict}</p>
+                  </td>
+                  <td width="33%" style="text-align: center;">
+                    <p style="color: #64748b; font-size: 11px; margin: 0 0 4px; text-transform: uppercase;">Direction</p>
+                    <p style="color: ${directionColor}; font-size: 14px; font-weight: bold; margin: 0;">${directionIcon} ${directionText}</p>
                   </td>
                 </tr>
               </table>
@@ -539,58 +576,15 @@ TraderPath - Professional Trading Analysis
 
           <!-- Content -->
           <tr>
-            <td style="padding: 35px;">
-              <p style="color: #475569; font-size: 16px; margin: 0 0 25px; line-height: 1.6;">
-                Hello <strong style="color: #1e293b;">${data.userName}</strong>,
+            <td style="padding: 20px;">
+              <p style="color: #94a3b8; font-size: 14px; margin: 0 0 20px; line-height: 1.6;">
+                Hello <strong style="color: #f1f5f9;">${data.userName}</strong>, your <strong style="color: #f1f5f9;">${formatSymbolPair(data.symbol)}</strong> analysis report has been prepared and attached to this email.
               </p>
-
-              <p style="color: #64748b; font-size: 15px; margin: 0 0 30px; line-height: 1.6;">
-                Your requested <strong style="color: #1e293b;">${formatSymbolPair(data.symbol)}</strong> analysis report has been prepared and attached to this email.
-              </p>
-
-              <!-- Report Summary Card -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; margin-bottom: 25px;">
-                <tr>
-                  <td style="padding: 25px;">
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td width="50%" style="vertical-align: top;">
-                          <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Analyzed</p>
-                          <p style="margin: 0; color: #1e293b; font-size: 28px; font-weight: bold;">${formatSymbolPair(data.symbol)}</p>
-                        </td>
-                        <td width="50%" style="text-align: right; vertical-align: top;">
-                          <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Direction</p>
-                          <p style="margin: 0; color: ${directionColor}; font-size: 20px; font-weight: bold;">
-                            ${directionIcon} ${directionText}
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <div style="border-top: 1px solid #e2e8f0; margin: 20px 0; padding-top: 20px;">
-                      <table width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td width="50%">
-                            <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Verdict</p>
-                            <span style="display: inline-block; background: ${verdictColor}20; color: ${verdictColor}; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 14px;">
-                              ${data.verdict}
-                            </span>
-                          </td>
-                          <td width="50%" style="text-align: right;">
-                            <p style="margin: 0 0 8px; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Confidence Score</p>
-                            <p style="margin: 0; color: #1e293b; font-size: 24px; font-weight: bold;">${data.score}<span style="color: #94a3b8; font-size: 16px;">/100</span></p>
-                          </td>
-                        </tr>
-                      </table>
-                    </div>
-                  </td>
-                </tr>
-              </table>
 
               <!-- Attachment Notice -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background: #f0fdf4; border-radius: 12px; border: 1px solid #bbf7d0; margin-bottom: 25px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: #22c55e15; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px;">
                 <tr>
-                  <td style="padding: 20px;">
+                  <td style="padding: 16px 20px;">
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td width="40" style="vertical-align: top;">
@@ -599,8 +593,8 @@ TraderPath - Professional Trading Analysis
                           </div>
                         </td>
                         <td style="padding-left: 15px;">
-                          <p style="margin: 0 0 4px; color: #166534; font-weight: 600; font-size: 15px;">PDF Report Attached</p>
-                          <p style="margin: 0; color: #15803d; font-size: 13px;">${data.fileName}</p>
+                          <p style="margin: 0 0 4px; color: #22c55e; font-weight: 600; font-size: 14px;">PDF Report Attached</p>
+                          <p style="margin: 0; color: #64748b; font-size: 12px;">${data.fileName}</p>
                         </td>
                       </tr>
                     </table>
@@ -609,69 +603,57 @@ TraderPath - Professional Trading Analysis
               </table>
 
               <!-- Report Contents -->
-              <p style="color: #64748b; font-size: 14px; margin: 0 0 15px; font-weight: 600;">Report Contents:</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 20px; font-size: 13px;">
                 <tr>
-                  <td style="padding: 8px 0; color: #475569; font-size: 14px;">
-                    <span style="color: #22c55e; margin-right: 10px;">✓</span> 7-Step Analysis (Market Pulse, Asset Scan, Safety Check...)
+                  <td style="padding: 6px 0; color: #94a3b8;">
+                    <span style="color: #14b8a6; margin-right: 10px;">✓</span> 7-Step Analysis (Market Pulse, Asset Scan, Safety Check...)
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 0; color: #475569; font-size: 14px;">
-                    <span style="color: #22c55e; margin-right: 10px;">✓</span> Trade Plan (Entry, Stop Loss, Take Profit levels)
+                  <td style="padding: 6px 0; color: #94a3b8;">
+                    <span style="color: #14b8a6; margin-right: 10px;">✓</span> Trade Plan (Entry, Stop Loss, Take Profit levels)
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 0; color: #475569; font-size: 14px;">
-                    <span style="color: #22c55e; margin-right: 10px;">✓</span> Price Chart
+                  <td style="padding: 6px 0; color: #94a3b8;">
+                    <span style="color: #14b8a6; margin-right: 10px;">✓</span> Price Chart
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding: 8px 0; color: #475569; font-size: 14px;">
-                    <span style="color: #22c55e; margin-right: 10px;">✓</span> AI Expert Commentary
+                  <td style="padding: 6px 0; color: #94a3b8;">
+                    <span style="color: #14b8a6; margin-right: 10px;">✓</span> AI Expert Commentary
                   </td>
                 </tr>
               </table>
 
               ${data.analysisId ? `
               <!-- View Interactive Chart Button -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 15px;">
                 <tr>
                   <td align="center">
-                    <table cellpadding="0" cellspacing="0" style="border-radius: 12px; overflow: hidden;">
+                    <table cellpadding="0" cellspacing="0" style="border-radius: 10px; overflow: hidden;">
                       <tr>
-                        <td style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); padding: 16px 40px; text-align: center;">
-                          <a href="${process.env['APP_URL'] || 'https://traderpath.io'}/analyze/details/${data.analysisId}" style="color: white; text-decoration: none; font-size: 16px; font-weight: 600; display: inline-block;">
+                        <td style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); padding: 14px 32px; text-align: center;">
+                          <a href="${process.env['APP_URL'] || 'https://traderpath.io'}/analyze/details/${data.analysisId}" style="color: white; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-block;">
                             View Interactive Chart
                           </a>
                         </td>
                       </tr>
                     </table>
-                    <p style="color: #94a3b8; font-size: 11px; margin: 8px 0 0;">
-                      View live candlestick chart with trade levels on TraderPath
-                    </p>
                   </td>
                 </tr>
               </table>
               ` : ''}
-
-              <!-- Footer Note -->
-              <p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 30px 0 0; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-                This report was generated on ${data.generatedAt}.
-              </p>
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="background: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
-              <p style="color: #64748b; font-size: 13px; margin: 0 0 10px; font-weight: 600;">
-                TraderPath - Professional Trading Analysis
+            <td style="background: #0f172a; padding: 15px 20px; text-align: center; border-top: 1px solid #334155;">
+              <p style="color: #64748b; font-size: 11px; margin: 0;">
+                Generated on ${data.generatedAt}
               </p>
-              <p style="color: #94a3b8; font-size: 11px; margin: 0;">
-                This email was automatically sent for your requested analysis report.
-              </p>
-              <p style="color: #cbd5e1; font-size: 10px; margin: 15px 0 0;">
+              <p style="color: #475569; font-size: 10px; margin: 8px 0 0;">
                 This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. Past performance does not guarantee future results.
               </p>
             </td>
@@ -1542,8 +1524,6 @@ TraderPath - Professional Trading Analysis
       outcomePrice: number;
       pnlPercent: number;
       duration: string;
-      beforeChartSvg: string;
-      afterChartSvg: string;
       analysisId: string;
       analysisDate: Date;
       outcomeDate: Date;
@@ -1662,23 +1642,12 @@ TraderPath - Professional Trading Analysis
             </td>
           </tr>
 
-          <!-- Before Chart (inline SVG - works in Gmail, Apple Mail) -->
+          <!-- Charts notice -->
           <tr>
-            <td style="padding: 20px 20px 10px;">
-              <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1px;">Before - Analysis Time (${fmtDate(data.analysisDate)})</p>
-              <div style="width: 100%; border-radius: 8px; border: 1px solid #334155; overflow: hidden; background: #1e293b;">
-                ${data.beforeChartSvg.replace(/<svg /, '<svg style="display:block;width:100%;height:auto;" ')}
-              </div>
-            </td>
-          </tr>
-
-          <!-- After Chart (inline SVG - works in Gmail, Apple Mail) -->
-          <tr>
-            <td style="padding: 10px 20px 20px;">
-              <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1px;">After - ${resultLabel} (${fmtDate(data.outcomeDate)})</p>
-              <div style="width: 100%; border-radius: 8px; border: 1px solid #334155; overflow: hidden; background: #1e293b;">
-                ${data.afterChartSvg.replace(/<svg /, '<svg style="display:block;width:100%;height:auto;" ')}
-              </div>
+            <td style="padding: 16px 20px; border-bottom: 1px solid #334155;">
+              <p style="color: #64748b; font-size: 12px; margin: 0; text-align: center;">
+                Before / After charts are available in the full analysis view.
+              </p>
             </td>
           </tr>
 
