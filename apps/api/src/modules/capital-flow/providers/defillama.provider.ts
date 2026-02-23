@@ -208,11 +208,14 @@ export async function getCryptoSectors(): Promise<SectorFlow[]> {
     for (const protocol of protocols) {
       const category = mapProtocolCategory(protocol.category);
       if (category && categories[category]) {
-        categories[category].tvl += protocol.tvl || 0;
-        // Cap per-protocol change to ±500% to prevent new/micro protocols from skewing the weighted average
-        const cappedChange = Math.max(-500, Math.min(500, protocol.change_7d || 0));
-        categories[category].change7d += (protocol.tvl || 0) * cappedChange;
-        if (categories[category].protocols.length < 5) {
+        // Only use positive TVL — negative TVL (leveraged/debt protocols) causes
+        // near-zero net TVL while change7d accumulates large values → absurd %.
+        const protocolTvl = Math.max(0, protocol.tvl || 0);
+        categories[category].tvl += protocolTvl;
+        // Cap per-protocol change to ±200% to prevent outlier protocols from skewing
+        const cappedChange = Math.max(-200, Math.min(200, protocol.change_7d || 0));
+        categories[category].change7d += protocolTvl * cappedChange;
+        if (categories[category].protocols.length < 5 && protocolTvl > 0) {
           categories[category].protocols.push(protocol.symbol || protocol.name);
         }
       }
@@ -225,7 +228,9 @@ export async function getCryptoSectors(): Promise<SectorFlow[]> {
     const sectors: SectorFlow[] = Object.entries(categories)
       .filter(([_, data]) => data.tvl > 0)
       .map(([name, data]) => {
-        const weightedChange = data.tvl > 0 ? data.change7d / data.tvl : 0;
+        const raw = data.tvl > 0 ? data.change7d / data.tvl : 0;
+        // Final safety clamp — NaN/Infinity from edge cases become 0
+        const weightedChange = Number.isFinite(raw) ? Math.max(-200, Math.min(200, raw)) : 0;
         const trending: 'up' | 'down' | 'stable' = weightedChange > 3 ? 'up' : weightedChange < -3 ? 'down' : 'stable';
         return {
           name,
