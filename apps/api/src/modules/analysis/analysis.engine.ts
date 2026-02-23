@@ -3740,6 +3740,8 @@ export const analysisEngine = {
           title: n.title,
           source: n.source,
           sentiment: n.sentiment,
+          url: n.url || '',
+          publishedAt: n.publishedAt || new Date().toISOString(),
         })),
       },
       macroEvents: economicCalendar?.todayHighImpact.map(e => ({
@@ -4414,6 +4416,8 @@ export const analysisEngine = {
           title: n.title,
           source: n.source,
           sentiment: n.sentiment,
+          url: n.url || '',
+          publishedAt: n.publishedAt || new Date().toISOString(),
         })),
       },
       exchangeFlows: [

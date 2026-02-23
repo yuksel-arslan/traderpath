@@ -1017,15 +1017,15 @@ Warn about potential traps and give protective advice.`;
             takeProfits: tradePlan.takeProfits,
             riskReward: tradePlan.riskReward,
           } : null,
-          news: marketPulse.news ? {
-            items: (marketPulse.news?.items || []).map((n: Record<string, unknown>) => ({
+          news: marketPulse.newsSentiment?.topHeadlines?.length ? {
+            items: marketPulse.newsSentiment.topHeadlines.map((n: Record<string, unknown>) => ({
               title: String(n.title || ''),
               url: String(n.url || ''),
               source: String(n.source || ''),
-              publishedAt: n.publishedAt as Date || new Date(),
+              publishedAt: n.publishedAt ? new Date(String(n.publishedAt)) : new Date(),
               sentiment: String(n.sentiment || 'neutral'),
             })),
-            sentiment: marketPulse.news.sentiment || { overall: 'neutral', score: 50 },
+            sentiment: { overall: marketPulse.newsSentiment.overall || 'neutral', score: marketPulse.newsSentiment.score || 0 },
           } : undefined,
           economicCalendar: timing.economicCalendar || undefined,
         };
