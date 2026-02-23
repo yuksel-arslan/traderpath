@@ -60,7 +60,7 @@ type Phase = 'early' | 'mid' | 'late' | 'exit';
 type LiquidityBias = 'risk_on' | 'risk_off' | 'neutral';
 
 // Pipeline steps
-type PipelineStep = 'idle' | 'capital_flow' | 'ai_recommendation' | 'asset_analysis' | 'complete' | 'error';
+type PipelineStep = 'idle' | 'capital_flow' | 'ai_recommendation' | 'asset_analysis' | 'complete' | 'error' | 'warning';
 
 interface GlobalLiquidity {
   fedBalanceSheet: { value: number; change30d: number; trend: 'expanding' | 'contracting' | 'stable' };
@@ -227,6 +227,9 @@ export default function AutomatedAnalysisPage() {
   // Error state
   const [pipelineError, setPipelineError] = useState<string | null>(null);
 
+  // Manual symbol override (used when CF conditions are unfavorable)
+  const [manualSymbol, setManualSymbol] = useState('');
+
   // Scroll ref for pipeline visual
   const pipelineRef = useRef<HTMLDivElement>(null);
 
@@ -345,8 +348,7 @@ export default function AutomatedAnalysisPage() {
       setAiRecommendation(recommendation);
 
       if (!recommendation.canProceed || recommendation.recommendedAssets.length === 0) {
-        setPipelineError('Capital Flow conditions are unfavorable. No assets recommended for analysis at this time.');
-        setPipelineStep('error');
+        setPipelineStep('warning');
         setPipelineRunning(false);
         return;
       }
@@ -406,6 +408,65 @@ export default function AutomatedAnalysisPage() {
       if (pipelineStep !== 'error') {
         // Don't stop running flag - AnalysisDialog handles completion
       }
+      setPipelineRunning(false);
+    }
+  };
+
+  // Manual symbol override - used when CF conditions are unfavorable
+  const continueWithSymbol = async (sym: string) => {
+    const symbol = sym.trim().toUpperCase();
+    if (!symbol) return;
+
+    const overrideAsset: AIRecommendedAsset = {
+      symbol,
+      name: symbol,
+      market: 'crypto',
+      direction: 'BUY',
+      confidence: 0,
+      alignmentScore: 0,
+      riskTag: 'high',
+      reason: 'Manual override — Capital Flow conditions unfavorable',
+    };
+    setSelectedAsset(overrideAsset);
+    setPipelineStep('asset_analysis');
+    setPipelineRunning(true);
+
+    try {
+      const passRes = await authFetch('/api/passes/check/ASSET_ANALYSIS');
+      if (passRes.ok) {
+        const passData = await passRes.json();
+        if (passData.success) {
+          const hasPass = passData.data.hasPass;
+          const canUse = passData.data.canUse;
+          setDailyPassStatus({
+            hasPass,
+            canUse,
+            usageCount: passData.data.pass?.usageCount ?? 0,
+            maxUsage: passData.data.pass?.maxUsage ?? 10,
+          });
+          if (!hasPass || !canUse) {
+            const purchaseRes = await authFetch('/api/passes/purchase', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ passType: 'ASSET_ANALYSIS' }),
+            });
+            const purchaseData = await purchaseRes.json();
+            if (!purchaseData.success) {
+              setPipelineError('Insufficient credits for Daily Analysis Pass (100 credits). Please purchase credits first.');
+              setPipelineStep('error');
+              setPipelineRunning(false);
+              return;
+            }
+            toast.success('Daily Analysis Pass purchased!');
+            await fetchDailyPassStatus();
+          }
+        }
+      }
+      setShowAnalysisDialog(true);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      setPipelineError(message);
+      setPipelineStep('error');
       setPipelineRunning(false);
     }
   };
@@ -724,6 +785,57 @@ export default function AutomatedAnalysisPage() {
                   <span className="text-sm text-slate-500">
                     Launching 7-Step + ML Confirmation analysis on <span className="font-bold text-neutral-900 dark:text-white">{selectedAsset.symbol}</span>...
                   </span>
+                </div>
+              </div>
+            )}
+
+            {/* WARNING STATE — CF unfavorable, allow manual symbol entry */}
+            {pipelineStep === 'warning' && (
+              <div className="p-5 rounded-lg border border-amber-200 dark:border-amber-500/30 bg-white dark:bg-[#111111]">
+                <div className="flex items-start gap-3 mb-4">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Unfavorable Market Conditions</h3>
+                    <p className="text-sm text-gray-500">Capital Flow analysis indicates unfavorable conditions. New positions are not recommended by the system.</p>
+                  </div>
+                </div>
+
+                {aiRecommendation && aiRecommendation.warnings.length > 0 && (
+                  <div className="mb-4 pl-8 space-y-1.5">
+                    {aiRecommendation.warnings.map((w, i) => (
+                      <div key={i} className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400">
+                        <ChevronRight className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                        <span>{w}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="pl-8 border-t border-gray-200 dark:border-gray-800 pt-4">
+                  <p className="text-xs text-gray-500 mb-3">You can still analyze any asset manually. The report will include a counter-trend warning.</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Symbol (e.g. BTC, AAPL, GLD)"
+                      value={manualSymbol}
+                      onChange={e => setManualSymbol(e.target.value.toUpperCase())}
+                      onKeyDown={e => { if (e.key === 'Enter' && manualSymbol.trim()) continueWithSymbol(manualSymbol); }}
+                      className="flex-1 border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-[#111111] text-gray-900 dark:text-gray-100 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition-colors"
+                    />
+                    <button
+                      onClick={() => continueWithSymbol(manualSymbol)}
+                      disabled={!manualSymbol.trim()}
+                      className="bg-teal-500 hover:bg-teal-600 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors disabled:opacity-40"
+                    >
+                      Analyze
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => { setPipelineStep('idle'); setAiRecommendation(null); setCapitalFlow(null); setManualSymbol(''); }}
+                    className="mt-3 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  >
+                    Dismiss
+                  </button>
                 </div>
               </div>
             )}
