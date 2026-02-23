@@ -643,8 +643,8 @@ export async function submitFeedback(params: {
     updatedAt: new Date(),
   };
 
-  // Analyze feedback with BILGE
-  feedback.bilgeAnalysis = await analyzeFeedback(params.message, params.category);
+  // Analyze feedback with BILGE (pass project for similarity check)
+  feedback.bilgeAnalysis = await analyzeFeedback(params.message, params.category, params.project);
 
   // Store in Redis
   if (redisClient) {
@@ -662,12 +662,41 @@ export async function submitFeedback(params: {
 }
 
 /**
+ * Jaccard word-set similarity between two strings (0–1).
+ * Normalises to lowercase, strips punctuation, splits on whitespace.
+ */
+function textSimilarity(a: string, b: string): number {
+  const words = (s: string) =>
+    new Set(s.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean));
+  const wA = words(a);
+  const wB = words(b);
+  const intersection = [...wA].filter((w) => wB.has(w)).length;
+  const union = new Set([...wA, ...wB]).size;
+  return union === 0 ? 0 : intersection / union;
+}
+
+/**
+ * Count existing feedbacks whose message is similar to the new one (Jaccard ≥ 0.4).
+ */
+async function countSimilarFeedbacks(project: string, message: string): Promise<number> {
+  try {
+    const existing = await getFeedbacks(project);
+    return existing.filter((f) => textSimilarity(f.message, message) >= 0.4).length;
+  } catch {
+    return 0;
+  }
+}
+
+/**
  * Analyze feedback with Gemini
  */
 async function analyzeFeedback(
   message: string,
-  category: FeedbackCategory
+  category: FeedbackCategory,
+  project: string
 ): Promise<UserFeedback['bilgeAnalysis']> {
+  const similarFeedbackCount = await countSimilarFeedbacks(project, message);
+
   try {
     const prompt = `As BILGE, analyze this user feedback:
 
@@ -690,10 +719,7 @@ Respond in JSON format:
     const jsonMatch = result.text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const analysis = JSON.parse(jsonMatch[0]);
-      return {
-        ...analysis,
-        similarFeedbackCount: 0, // TODO: Implement similarity check
-      };
+      return { ...analysis, similarFeedbackCount };
     }
   } catch (error) {
     console.error('[BILGE] Error analyzing feedback:', error);
@@ -702,7 +728,7 @@ Respond in JSON format:
   return {
     sentiment: 'neutral',
     priority: 'medium',
-    similarFeedbackCount: 0,
+    similarFeedbackCount,
     suggestedAction: 'Review feedback manually',
     suggestedResponse: 'Thank you for your feedback!',
   };
