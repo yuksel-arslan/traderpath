@@ -323,7 +323,7 @@ export const VERDICT_TO_MLIS_MAP: Record<string, string[]> = {
   'GO': ['STRONG_BUY', 'BUY'],
   'CONDITIONAL_GO': ['BUY', 'HOLD'],
   'WAIT': ['HOLD'],
-  'AVOID': ['SELL', 'STRONG_SELL', 'HOLD'],
+  'AVOID': ['SELL', 'STRONG_SELL'],
 } as const;
 
 // Suggested Asset for Layer 4 → Asset Analysis connection

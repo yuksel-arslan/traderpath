@@ -287,20 +287,19 @@ export default function ReportViewPage() {
       let canvas: HTMLCanvasElement;
       try {
         canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#0A0A0A',
           scale: 1.5,
           logging: false,
           useCORS: true,
           allowTaint: true,
           windowWidth: 1200,
           onclone: (clonedDoc) => {
-            clonedDoc.documentElement.classList.remove('dark');
+            clonedDoc.documentElement.classList.add('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-              (clonedElement as HTMLElement).style.color = '#111827';
-              clonedElement.classList.remove('dark');
+              (clonedElement as HTMLElement).style.backgroundColor = '#0A0A0A';
+              (clonedElement as HTMLElement).style.color = '#e5e7eb';
             }
           },
         });
@@ -365,20 +364,19 @@ export default function ReportViewPage() {
       let canvas: HTMLCanvasElement;
       try {
         canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#0A0A0A',
           scale: 2,
           logging: false,
           useCORS: true,
           allowTaint: true,
           windowWidth: 1200,
           onclone: (clonedDoc) => {
-            clonedDoc.documentElement.classList.remove('dark');
+            clonedDoc.documentElement.classList.add('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-              (clonedElement as HTMLElement).style.color = '#111827';
-              clonedElement.classList.remove('dark');
+              (clonedElement as HTMLElement).style.backgroundColor = '#0A0A0A';
+              (clonedElement as HTMLElement).style.color = '#e5e7eb';
             }
           },
         });
@@ -414,20 +412,19 @@ export default function ReportViewPage() {
       let canvas: HTMLCanvasElement;
       try {
         canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#0A0A0A',
           scale: 2,
           logging: false,
           useCORS: true,
           allowTaint: true,
           windowWidth: 1200,
           onclone: (clonedDoc) => {
-            clonedDoc.documentElement.classList.remove('dark');
+            clonedDoc.documentElement.classList.add('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-              (clonedElement as HTMLElement).style.color = '#111827';
-              clonedElement.classList.remove('dark');
+              (clonedElement as HTMLElement).style.backgroundColor = '#0A0A0A';
+              (clonedElement as HTMLElement).style.color = '#e5e7eb';
             }
           },
         });
@@ -463,20 +460,19 @@ export default function ReportViewPage() {
       let canvas: HTMLCanvasElement;
       try {
         canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#0A0A0A',
           scale: 2,
           logging: false,
           useCORS: true,
           allowTaint: true,
           windowWidth: 1200,
           onclone: (clonedDoc) => {
-            clonedDoc.documentElement.classList.remove('dark');
+            clonedDoc.documentElement.classList.add('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-              (clonedElement as HTMLElement).style.color = '#111827';
-              clonedElement.classList.remove('dark');
+              (clonedElement as HTMLElement).style.backgroundColor = '#0A0A0A';
+              (clonedElement as HTMLElement).style.color = '#e5e7eb';
             }
           },
         });
@@ -608,7 +604,7 @@ export default function ReportViewPage() {
           <div
             ref={pageRef}
             data-export-container
-            className="bg-white dark:bg-slate-800/80 rounded-2xl p-4 sm:p-6 shadow-xl border border-gray-200 dark:border-transparent">
+            className="bg-[#0A0A0A] rounded-2xl p-4 sm:p-6 border border-gray-800">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">

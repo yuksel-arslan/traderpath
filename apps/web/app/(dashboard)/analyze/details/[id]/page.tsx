@@ -32,8 +32,6 @@ import { cn } from '../../../../../lib/utils';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../../lib/coin-icons';
 import { TradePlanChart } from '../../../../../components/analysis/TradePlanChart';
 import { TradeDecisionVisual } from '../../../../../components/analysis/TradeDecisionVisual';
-import { ForecastBandOverlay } from '../../../../../components/analysis/ForecastBandOverlay';
-import { MultiStrategyCards } from '../../../../../components/analysis/MultiStrategyCards';
 import { WebResearchPanel } from '../../../../../components/analysis/WebResearchPanel';
 import { PlanValidationBadge } from '../../../../../components/analysis/PlanValidationBadge';
 import { StarLogo } from '../../../../../components/common/TraderPathLogo';
@@ -686,9 +684,19 @@ export default function AnalysisDetailsPage() {
                   <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-full uppercase">
                     {analysis.interval || '4H'}
                   </span>
-                  {mlisConfirmationData && (
+                  {mlisConfirmationData && confirmationStatus === 'CONFIRMED' && (
                     <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-full">
                       ML Confirmed
+                    </span>
+                  )}
+                  {mlisConfirmationData && confirmationStatus === 'PARTIALLY_CONFIRMED' && (
+                    <span className="px-2 py-0.5 text-xs font-bold bg-blue-500 text-white rounded-full">
+                      ML Partial
+                    </span>
+                  )}
+                  {mlisConfirmationData && confirmationStatus === 'CONTRADICTED' && (
+                    <span className="px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full">
+                      ML Warning
                     </span>
                   )}
                 </div>
@@ -1208,6 +1216,7 @@ export default function AnalysisDetailsPage() {
                   currentPrice={step2.currentPrice || entryPrice}
                   support={step2.levels?.support}
                   resistance={step2.levels?.resistance}
+                  forecastBands={step7?.ragEnrichment?.forecastBands || []}
                   tradeType={getTradeType(analysis.interval)}
                   chartId="trade-plan-chart"
                   analysisTime={analysis.createdAt}
@@ -1242,23 +1251,8 @@ export default function AnalysisDetailsPage() {
               {/* Web Research */}
               <WebResearchPanel research={step7.ragEnrichment.research} />
 
-              {/* Forecast Bands */}
-              {step7.ragEnrichment.forecastBands && step7.ragEnrichment.forecastBands.length > 0 && (
-                <ForecastBandOverlay
-                  bands={step7.ragEnrichment.forecastBands}
-                  currentPrice={step2?.currentPrice || entryPrice || 0}
-                  symbol={analysis.symbol}
-                />
-              )}
-
-              {/* Multi-Strategy Plans */}
-              {step7.ragEnrichment.strategies && step7.ragEnrichment.strategies.strategies?.length > 0 && (
-                <MultiStrategyCards
-                  strategies={step7.ragEnrichment.strategies.strategies}
-                  recommended={step7.ragEnrichment.strategies.recommended}
-                  currentPrice={step2?.currentPrice || entryPrice || 0}
-                />
-              )}
+              {/* Multi-Strategy Plans → Detaylı Rapor'da gösterilir */}
+              {/* Forecast Bands → TradePlanChart overlay olarak gösterilir (P10/P50/P90 çizgiler) */}
             </div>
           )}
 

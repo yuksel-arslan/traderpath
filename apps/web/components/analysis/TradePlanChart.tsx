@@ -78,6 +78,13 @@ function formatPrice(price: number): string {
   });
 }
 
+interface ForecastBand {
+  horizon: 'short' | 'medium' | 'long';
+  p10: number;
+  p50: number;
+  p90: number;
+}
+
 interface TradePlanChartProps {
   symbol: string;
   direction: 'long' | 'short';
@@ -87,6 +94,7 @@ interface TradePlanChartProps {
   currentPrice: number;
   support?: number[];
   resistance?: number[];
+  forecastBands?: ForecastBand[]; // AI forecast bands to overlay on chart
   onChartReady?: () => void; // Callback when chart is fully rendered with data
   chartId?: string; // Optional custom ID for the chart container (default: 'trade-plan-chart')
   tradeType?: 'scalping' | 'dayTrade' | 'swing'; // Trade type to determine chart interval
@@ -127,6 +135,7 @@ export function TradePlanChart({
   currentPrice,
   support = [],
   resistance = [],
+  forecastBands = [],
   onChartReady,
   chartId = 'trade-plan-chart',
   tradeType = 'dayTrade',
@@ -384,7 +393,42 @@ export function TradePlanChart({
       });
     });
 
-  }, [loading, entries, stopLoss, takeProfits, currentPrice, livePrice, support, resistance]);
+    // Forecast Band overlay — only short-term band, subtle dashed lines
+    const shortBand = forecastBands.find(b => b.horizon === 'short');
+    if (shortBand) {
+      if (shortBand.p90 > 0) {
+        addPriceLine({
+          price: shortBand.p90,
+          color: 'rgba(34, 197, 94, 0.35)',
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: 'P90',
+        });
+      }
+      if (shortBand.p50 > 0) {
+        addPriceLine({
+          price: shortBand.p50,
+          color: 'rgba(99, 102, 241, 0.35)',
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: 'P50',
+        });
+      }
+      if (shortBand.p10 > 0) {
+        addPriceLine({
+          price: shortBand.p10,
+          color: 'rgba(239, 68, 68, 0.35)',
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: 'P10',
+        });
+      }
+    }
+
+  }, [loading, entries, stopLoss, takeProfits, currentPrice, livePrice, support, resistance, forecastBands]);
 
   const fetchKlineData = async (
     sym: string,
