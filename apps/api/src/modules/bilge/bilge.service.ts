@@ -29,6 +29,7 @@ import {
   sendCriticalAlert,
 } from './notification.service';
 import { callGeminiWithRetry } from '../../core/gemini';
+import { getApiMetrics } from '../../core/health';
 
 // Redis client will be injected
 let redisClient: Redis | null = null;
@@ -443,8 +444,7 @@ export async function getHealthStatus(project: string): Promise<GuardianHealthSt
     metrics: {
       errorsLast24h,
       criticalErrorsLast24h,
-      avgResponseTime: 0, // Requires request timing middleware (future work)
-      uptime: 99.9, // Requires total request count tracking (future work)
+      ...getApiMetrics(),
       pendingFeedback: pendingFeedbacks.length,
     },
     activeIssues: errors.filter((e) => e.status === 'new' || e.status === 'investigating')

@@ -79,6 +79,17 @@ export function trackRequest(latency: number, isError: boolean) {
   if (isError) errorCount++;
 }
 
+export function getApiMetrics(): { avgResponseTime: number; uptime: number } {
+  const avgResponseTime =
+    requestCount > 0 ? Math.round(totalLatency / requestCount) : 0;
+  const uptimeMs = Date.now() - startTime;
+  const uptimeHours = uptimeMs / (1000 * 60 * 60);
+  // Approximate uptime %: subtract 1h per critical-error window (best effort)
+  const errorRatio = requestCount > 0 ? errorCount / requestCount : 0;
+  const uptime = Math.max(0, Math.round((1 - errorRatio) * 1000) / 10); // one decimal
+  return { avgResponseTime, uptime };
+}
+
 async function checkDatabase(): Promise<ComponentHealth> {
   const start = Date.now();
   try {
