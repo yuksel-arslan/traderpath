@@ -115,6 +115,10 @@ export default function AnalysisDetailsPage() {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [whatsappSent, setWhatsappSent] = useState(false);
+  const [whatsappPhoneModal, setWhatsappPhoneModal] = useState(false);
+  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [whatsappSending, setWhatsappSending] = useState(false);
   const [autoEmailInProgress, setAutoEmailInProgress] = useState(false);
   const [autoEmailDone, setAutoEmailDone] = useState(false);
   const autoEmailTriggered = useRef(false);
@@ -450,6 +454,70 @@ export default function AnalysisDetailsPage() {
     }
   };
 
+  // Send via WhatsApp - captures screenshot and sends via Twilio
+  const handleWhatsAppReport = async (phoneNumber: string) => {
+    if (!pageRef.current || whatsappSending || !analysis || !phoneNumber) return;
+
+    setWhatsappSending(true);
+    setWhatsappPhoneModal(false);
+    try {
+      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
+
+      let canvas: HTMLCanvasElement;
+      try {
+        canvas = await html2canvas(pageRef.current, {
+          backgroundColor: '#0A0A0A',
+          scale: 2,
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+          windowWidth: 1200,
+          onclone: (clonedDoc) => {
+            clonedDoc.documentElement.classList.add('dark');
+            const clonedElement = clonedDoc.querySelector('[data-export-container]');
+            if (clonedElement) {
+              (clonedElement as HTMLElement).style.overflow = 'visible';
+              (clonedElement as HTMLElement).style.backgroundColor = '#0A0A0A';
+              (clonedElement as HTMLElement).style.color = '#e5e7eb';
+            }
+          },
+        });
+      } finally {
+        restoreCanvases();
+      }
+
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
+
+      const response = await authFetch('/api/reports/whatsapp-screenshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          analysisId: analysis.id,
+          symbol: analysis.symbol,
+          interval: analysis.interval || '4h',
+          screenshot: imageBase64,
+          score: analysis.totalScore || 0,
+          direction: analysis.step5Result?.direction || analysis.step7Result?.direction || 'long',
+          phoneNumber,
+        }),
+      });
+
+      if (response.ok) {
+        setWhatsappSent(true);
+        setTimeout(() => setWhatsappSent(false), 3000);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('WhatsApp send failed:', response.status, errorData);
+        alert(errorData?.error?.message || 'Failed to send WhatsApp message. Please try again.');
+      }
+    } catch (err) {
+      console.error('Failed to send WhatsApp:', err);
+      alert('Failed to send WhatsApp message');
+    } finally {
+      setWhatsappSending(false);
+    }
+  };
+
   const getTradeType = (interval: string): 'scalping' | 'dayTrade' | 'swing' => {
     if (interval === '5m' || interval === '15m') return 'scalping';
     if (interval === '1h' || interval === '4h') return 'dayTrade';
@@ -551,6 +619,66 @@ export default function AnalysisDetailsPage() {
 
   return (
     <>
+      {/* WhatsApp phone number modal */}
+      {whatsappPhoneModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setWhatsappPhoneModal(false)}>
+          <div className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-gray-800 rounded-lg p-6 shadow-sm max-w-sm mx-4 w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-[#25D366]/10 flex items-center justify-center">
+                <svg className="w-5 h-5 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Send via WhatsApp</h3>
+                <p className="text-sm text-gray-500">Report screenshot will be sent</p>
+              </div>
+            </div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              value={whatsappPhone}
+              onChange={(e) => setWhatsappPhone(e.target.value)}
+              placeholder="+905551234567"
+              className="w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-[#111111] text-gray-900 dark:text-gray-100 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition-colors mb-1"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && whatsappPhone.trim()) {
+                  handleWhatsAppReport(whatsappPhone.trim());
+                }
+              }}
+            />
+            <p className="text-xs text-gray-400 mb-4">Include country code (e.g., +90 for Turkey)</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setWhatsappPhoneModal(false)}
+                className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium px-4 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleWhatsAppReport(whatsappPhone.trim())}
+                disabled={!whatsappPhone.trim()}
+                className="bg-[#25D366] hover:bg-[#20bd5a] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-md transition-colors"
+              >
+                Send Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp sending overlay */}
+      {whatsappSending && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-gray-800 rounded-lg p-8 shadow-sm text-center max-w-md mx-4">
+            <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-[#25D366]" />
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Sending via WhatsApp...</h2>
+            <p className="text-sm text-gray-500">Capturing report screenshot and sending to WhatsApp...</p>
+          </div>
+        </div>
+      )}
+
       {/* Auto-email overlay - shows on top of page content */}
       {autoEmailInProgress && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -642,15 +770,12 @@ export default function AnalysisDetailsPage() {
 
               {/* WhatsApp Share Button */}
               <button
-                onClick={() => {
-                  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://traderpath.io';
-                  const msg = `TraderPath Analysis: ${analysis.symbol} ${isLong ? 'LONG' : 'SHORT'}\nScore: ${step7.overallScore?.toFixed(1) || '-'}/10 | ${verdict}\n${appUrl}/analyze/details/${analysis.id}`;
-                  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-                }}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition bg-[#25D366] hover:bg-[#1ebe5a] text-white"
+                onClick={() => setWhatsappPhoneModal(true)}
+                disabled={whatsappSending}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition bg-[#25D366] hover:bg-[#1ebe5a] disabled:opacity-50 text-white"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                <span>WhatsApp</span>
+                <span>{whatsappSending ? 'Sending...' : whatsappSent ? 'Sent!' : 'WhatsApp'}</span>
               </button>
             </div>
           </div>
