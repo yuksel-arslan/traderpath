@@ -18,6 +18,7 @@ import { redis } from './core/cache';
 import { logger } from './core/logger';
 import { errorHandler, TradepathError } from './core/errors';
 import { healthRoutes, trackRequest } from './core/health';
+import { runStartupMigrations } from './core/startup-migrations';
 
 // Import routes
 import authRoutes from './modules/users/auth.routes';
@@ -654,6 +655,9 @@ const start = async () => {
         ),
       ]);
       logger.info('✓ Database connected');
+
+      // Apply idempotent startup migrations (safe to run every boot)
+      await runStartupMigrations(prisma);
     } catch (dbError: any) {
       logger.error({ error: dbError?.message }, 'Database connection failed - starting without DB');
     }
