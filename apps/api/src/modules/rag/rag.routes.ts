@@ -125,6 +125,7 @@ export async function ragRoutes(app: FastifyInstance) {
     symbol: z.string().toUpperCase(),
     currentPrice: z.number().positive(),
     atr: z.number().positive(),
+    volume24h: z.number().nonnegative().optional(),
   });
 
   app.post('/validate', {
@@ -148,7 +149,7 @@ export async function ragRoutes(app: FastifyInstance) {
           assetClass,
           currentPrice: body.currentPrice,
           atr: body.atr,
-          volume24h: 0,
+          volume24h: body.volume24h ?? 0,
           marketRegime: '',
           capitalFlowPhase: null,
           capitalFlowBias: null,
