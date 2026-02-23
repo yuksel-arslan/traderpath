@@ -209,7 +209,9 @@ export async function getCryptoSectors(): Promise<SectorFlow[]> {
       const category = mapProtocolCategory(protocol.category);
       if (category && categories[category]) {
         categories[category].tvl += protocol.tvl || 0;
-        categories[category].change7d += (protocol.tvl || 0) * (protocol.change_7d || 0);
+        // Cap per-protocol change to ±500% to prevent new/micro protocols from skewing the weighted average
+        const cappedChange = Math.max(-500, Math.min(500, protocol.change_7d || 0));
+        categories[category].change7d += (protocol.tvl || 0) * cappedChange;
         if (categories[category].protocols.length < 5) {
           categories[category].protocols.push(protocol.symbol || protocol.name);
         }
