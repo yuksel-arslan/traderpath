@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest",
-    "clean": "rm -rf .next node_modules"
+    "clean": "rm -rf .next node_modules",
+    "cap:sync": "cap sync",
+    "cap:ios": "cap open ios",
+    "cap:android": "cap open android",
+    "generate:icons": "capacitor-assets generate"
   },
   "dependencies": {
     "@auth/neon-adapter": "^1.11.1",
@@ -35,6 +39,11 @@
     "@traderpath/types": "workspace:*",
     "@types/bcryptjs": "^2.4.6",
     "@types/uuid": "^11.0.0",
+    "@capacitor/app": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/keyboard": "^6.0.0",
+    "@capacitor/splash-screen": "^6.0.0",
+    "@capacitor/status-bar": "^6.0.0",
     "axios": "^1.6.2",
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.0",
@@ -63,6 +72,10 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
     "@babel/core": "^7.23.0",
     "@types/file-saver": "^2.0.7",
     "@types/node": "^20.10.0",

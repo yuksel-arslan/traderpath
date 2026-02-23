@@ -7,6 +7,40 @@
    Using Trader AI Color Scheme
    =========================================== */
 
+/* ===========================================
+   Capacitor / PWA Native Safe Areas
+   Handles iPhone notch, Dynamic Island,
+   Android status bar, home indicator
+   =========================================== */
+:root {
+  --safe-top:    env(safe-area-inset-top,    0px);
+  --safe-right:  env(safe-area-inset-right,  0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left,   0px);
+}
+
+/* Utility classes for safe area padding */
+.pt-safe  { padding-top:    env(safe-area-inset-top,    0px); }
+.pb-safe  { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.pl-safe  { padding-left:   env(safe-area-inset-left,   0px); }
+.pr-safe  { padding-right:  env(safe-area-inset-right,  0px); }
+
+/* Prevent iOS overscroll rubber-banding on the root — feels more native */
+html, body {
+  overscroll-behavior: none;
+}
+
+/* Prevent iOS text size adjustment when device orientation changes */
+body {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Prevent tap highlight flash on mobile taps */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 @layer base {
   /* Light Mode - Clean and Professional */
   :root {
