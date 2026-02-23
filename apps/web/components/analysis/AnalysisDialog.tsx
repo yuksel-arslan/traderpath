@@ -21,7 +21,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { getAuthToken, getApiUrl } from '../../lib/api';
+import { getAuthToken, getApiUrl, authFetch } from '../../lib/api';
 import { CREDIT_COSTS } from '@/lib/types';
 import { useCreditNotification } from '../../contexts/CreditNotificationContext';
 import { CoinIcon } from '../common/CoinIcon';
@@ -586,10 +586,48 @@ export function AnalysisDialog({
 
       if (!response.ok) {
         if (response.status === 402) {
-          notifyInsufficientCredits(25, data.data?.currentBalance || 0);
-          throw new Error('Insufficient credits (25 required). Please purchase more credits.');
+          const errorCode = data.error?.code;
+
+          if (errorCode === 'DAILY_PASS_REQUIRED') {
+            // Auto-purchase daily pass and retry
+            const purchaseRes = await authFetch('/api/passes/purchase', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ passType: 'ASSET_ANALYSIS' }),
+            });
+            const purchaseData = await purchaseRes.json();
+            if (purchaseData.success) {
+              // Retry the analysis after purchasing the pass
+              const retryResponse = await fetch(getApiUrl('/api/analysis/full'), {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                  symbol,
+                  accountSize: 10000,
+                  interval: timeframe,
+                  tradeType,
+                  ...(capitalFlowContext ? { capitalFlowContext } : {}),
+                }),
+              });
+              const retryText = await retryResponse.text();
+              data = retryText ? JSON.parse(retryText) : {};
+              if (!retryResponse.ok) {
+                throw new Error(data.error?.message || 'Analysis failed after purchasing pass');
+              }
+              // Fall through to success handling below
+            } else {
+              notifyInsufficientCredits(100, purchaseData.error?.currentBalance || 0);
+              throw new Error('Insufficient credits for Daily Analysis Pass (100 credits required).');
+            }
+          } else if (errorCode === 'DAILY_LIMIT_REACHED') {
+            throw new Error('Daily analysis limit reached (10/10). Your pass will reset at midnight UTC.');
+          } else {
+            notifyInsufficientCredits(100, data.data?.currentBalance || 0);
+            throw new Error(data.error?.message || 'Insufficient credits. Please purchase more credits.');
+          }
+        } else {
+          throw new Error(data.error?.message || 'Full analysis failed');
         }
-        throw new Error(data.error?.message || 'Full analysis failed');
       }
 
       const analysisData = data.data;

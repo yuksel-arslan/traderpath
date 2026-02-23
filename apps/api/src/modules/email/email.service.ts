@@ -958,7 +958,7 @@ TraderPath - Professional Trading Analysis
                 TraderPath
               </h1>
               <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
-                🛡️ Güvenlik Bildirimi
+                🛡️ Security Notification
               </p>
             </td>
           </tr>
