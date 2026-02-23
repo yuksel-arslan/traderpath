@@ -6131,8 +6131,8 @@ export const analysisEngine = {
   },
 
   // =========================================
-  // Legacy: Old finalVerdict for backwards compatibility
-  // TODO: Remove after migrating all callers
+  // Convenience wrapper: finalVerdict → getFinalVerdict
+  // Kept for ai-expert callers that pass all 6 steps at once.
   // =========================================
   async finalVerdict(
     symbol: string,
