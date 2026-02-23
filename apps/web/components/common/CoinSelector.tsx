@@ -90,23 +90,21 @@ const ALL_COINS = [
 
 const POPULAR_COINS = ALL_COINS.filter(c => c.popular);
 
-// Timeframe type (matches TradeTypeSelector)
-type Timeframe = '5m' | '15m' | '30m' | '1h' | '2h' | '4h' | '1d' | '1W';
+// Timeframe type — 6 standard values, 2h and 1W removed per backend enum standardization
+type Timeframe = '5m' | '15m' | '30m' | '1h' | '4h' | '1d';
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
 
 // Timeframe to trade type mapping
 // - Scalping (1000 candles): 5m, 15m
-// - Day Trade (500 candles): 30m, 1h, 2h, 4h
-// - Swing Trade (250 candles): 1d, 1W
+// - Day Trade (500 candles): 30m, 1h, 4h
+// - Swing Trade (250 candles): 1d
 const TIMEFRAME_TO_TRADE_TYPE: Record<Timeframe, TradeType> = {
   '5m': 'scalping',
   '15m': 'scalping',
   '30m': 'dayTrade',
   '1h': 'dayTrade',
-  '2h': 'dayTrade',
   '4h': 'dayTrade',
   '1d': 'swing',
-  '1W': 'swing',
 };
 
 // Trade type labels
@@ -119,8 +117,8 @@ const TRADE_TYPE_LABELS: Record<TradeType, string> = {
 // Get trade type from interval (for existing analyses)
 function getTradeTypeFromInterval(interval: string): TradeType | null {
   if (interval === '5m' || interval === '15m') return 'scalping';
-  if (interval === '30m' || interval === '1h' || interval === '2h' || interval === '4h') return 'dayTrade';
-  if (interval === '1d' || interval === '1D' || interval === '1w' || interval === '1W') return 'swing';
+  if (interval === '30m' || interval === '1h' || interval === '4h') return 'dayTrade';
+  if (interval === '1d') return 'swing';
   return null;
 }
 

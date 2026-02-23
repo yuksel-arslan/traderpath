@@ -50,22 +50,26 @@ export interface IndicatorAnalysis {
 
 // ===== CREDIT TYPES =====
 export interface CreditBalance {
-  userId: string;
   balance: number;
   lifetimeEarned: number;
   lifetimeSpent: number;
-  lastUpdated: Date;
+  lifetimePurchased: number;
+  // Optional fields returned by some endpoints
+  userId?: string;
+  lastUpdated?: Date;
 }
 
 export interface CreditTransaction {
   id: string;
-  userId: string;
   amount: number;
-  type: 'PURCHASE' | 'BONUS' | 'USAGE' | 'REFUND';
-  description: string;
   balanceAfter: number;
-  createdAt: Date;
+  type: string;
+  source: string;
   metadata?: Record<string, unknown>;
+  createdAt: Date;
+  // Legacy compat
+  userId?: string;
+  description?: string;
 }
 
 // Credit costs per operation

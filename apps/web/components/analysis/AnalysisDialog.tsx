@@ -289,23 +289,22 @@ function MLConfirmationResult({ data }: { data: MLConfirmationData }) {
   );
 }
 
-type Timeframe = '5m' | '15m' | '30m' | '1h' | '2h' | '4h' | '1d' | '1W';
+// 6 standard timeframes — 2h and 1W removed per backend enum standardization
+type Timeframe = '5m' | '15m' | '30m' | '1h' | '4h' | '1d';
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
 type DialogStep = 'analyzing' | 'results';
 
 // Timeframe to trade type mapping
 // - Scalping (1000 candles): 5m, 15m
-// - Day Trade (500 candles): 30m, 1h, 2h, 4h
-// - Swing Trade (250 candles): 1d, 1W
+// - Day Trade (500 candles): 30m, 1h, 4h
+// - Swing Trade (250 candles): 1d
 const TIMEFRAME_TO_TRADE_TYPE: Record<Timeframe, TradeType> = {
   '5m': 'scalping',
   '15m': 'scalping',
   '30m': 'dayTrade',
   '1h': 'dayTrade',
-  '2h': 'dayTrade',
   '4h': 'dayTrade',
   '1d': 'swing',
-  '1W': 'swing',
 };
 
 interface CapitalFlowContextPayload {

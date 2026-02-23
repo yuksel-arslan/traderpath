@@ -8,6 +8,15 @@ import { config } from '../../core/config';
 import { callGeminiWithRetry } from '../../core/gemini';
 import { contractSecurityService } from '../security/contract-security.service';
 import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig, getMaxStopLossPercent, getMaxTakeProfitPercent } from './config/trade-config';
+import { selectBundle, getBundleType } from './bundles';
+import { aggregateScores, quickStepScore, STEP_WEIGHTS } from './scoring';
+import {
+  calculateStopLoss,
+  calculateTakeProfits,
+  calculatePositionSize,
+  classifyRiskLevel,
+  estimateWinRate,
+} from './risk';
 import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/indicator-interpreter.service';
 import { IndicatorAnalysis } from '../../../types';
 import { IndicatorsService, OHLCV, IndicatorResult } from './services/indicators.service';
@@ -1835,8 +1844,8 @@ interface MarketPulseResult {
     todayEvents: EconomicEvent[];
     next24hEvents: EconomicEvent[];
     weekEvents: EconomicEvent[];
-    shouldBlockTrade: boolean;
-    blockReason?: string;
+    macroPenalty: number;      // 0 = no penalty, -2 = high-impact event, -3 = FOMC day
+    penaltyReason?: string;    // Human-readable reason logged in analysis
   };
   newsSentiment?: {
     overall: 'bullish' | 'bearish' | 'neutral';
@@ -3597,10 +3606,13 @@ export const analysisEngine = {
     else fearGreedLabel = 'extreme_greed';
 
     // ===========================================
-    // ECONOMIC CALENDAR CHECK - CRITICAL FOR TRADE BLOCKING
+    // ECONOMIC CALENDAR — MACRO PENALTY SYSTEM
+    // High-impact event (4h window): -2 penalty
+    // FOMC day (all day):            -3 penalty
+    // Penalty is applied to the score; verdict is never auto-forced to 'avoid'.
     // ===========================================
-    let shouldBlockTrade = false;
-    let blockReason: string | undefined;
+    let macroPenalty = 0;
+    let penaltyReason: string | undefined;
     let economicRiskLevel: 'high' | 'medium' | 'low' = 'low';
     let economicTradingAdvice = 'Normal trading conditions.';
 
@@ -3608,34 +3620,27 @@ export const analysisEngine = {
       economicRiskLevel = economicCalendar.riskLevel;
       economicTradingAdvice = economicCalendar.tradingAdvice;
 
-      // Check if any high-impact event is within next 4 hours
-      const now = new Date();
-      const fourHoursFromNow = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+      // FOMC takes priority (highest penalty, all-day)
+      const fomcToday = economicCalendar.todayHighImpact.find(e =>
+        (e.title || '').toLowerCase().includes('fomc')
+      );
+      if (fomcToday) {
+        macroPenalty = -3;
+        penaltyReason = 'FOMC decision day. Extreme volatility expected.';
+      } else {
+        // High-impact event within ±4h window
+        const now = new Date();
+        for (const event of economicCalendar.todayHighImpact) {
+          const eventDateTime = new Date(`${event.date}T${event.time}:00Z`);
+          const hoursUntilEvent = (eventDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-      for (const event of economicCalendar.todayHighImpact) {
-        const eventDateTime = new Date(`${event.date}T${event.time}:00Z`);
-        const hoursUntilEvent = (eventDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-        // Block trades 4 hours before AND 2 hours after high-impact events
-        if (hoursUntilEvent > -2 && hoursUntilEvent < 4) {
-          shouldBlockTrade = true;
-          if (hoursUntilEvent > 0) {
-            blockReason = `High-impact event "${event.title || 'Unknown'}" in ${hoursUntilEvent.toFixed(1)} hours. DO NOT TRADE.`;
-          } else {
-            blockReason = `High-impact event "${event.title || 'Unknown'}" occurred ${Math.abs(hoursUntilEvent).toFixed(1)} hours ago. Wait for market to stabilize.`;
+          if (hoursUntilEvent > -2 && hoursUntilEvent < 4) {
+            macroPenalty = -2;
+            penaltyReason = hoursUntilEvent > 0
+              ? `High-impact event "${event.title || 'Unknown'}" in ${hoursUntilEvent.toFixed(1)} hours.`
+              : `High-impact event "${event.title || 'Unknown'}" occurred ${Math.abs(hoursUntilEvent).toFixed(1)} hours ago.`;
+            break;
           }
-          break;
-        }
-      }
-
-      // Also block if FOMC is today (regardless of time)
-      if (!shouldBlockTrade) {
-        const fomcToday = economicCalendar.todayHighImpact.find(e =>
-          (e.title || '').toLowerCase().includes('fomc')
-        );
-        if (fomcToday) {
-          shouldBlockTrade = true;
-          blockReason = 'FOMC decision day. Extreme volatility expected. DO NOT TRADE.';
         }
       }
     }
@@ -3659,13 +3664,6 @@ export const analysisEngine = {
     };
 
     const gateResult = await evaluateMarketGateWithRAG(gateInput);
-
-    // OVERRIDE gate result if economic calendar blocks trade
-    if (shouldBlockTrade) {
-      gateResult.canProceed = false;
-      gateResult.reason = blockReason || 'Economic event imminent';
-      gateResult.confidence = 10; // Very low confidence during economic events
-    }
 
     // Calculate verdict based on gate result
     let verdict: 'suitable' | 'caution' | 'avoid' = 'caution';
@@ -3757,14 +3755,14 @@ export const analysisEngine = {
         todayEvents: economicCalendar.todayHighImpact,
         next24hEvents: economicCalendar.next24hHighImpact,
         weekEvents: economicCalendar.weekHighImpact,
-        shouldBlockTrade,
-        blockReason,
+        macroPenalty,
+        penaltyReason,
       } : undefined,
-      summary: shouldBlockTrade
-        ? `⚠️ TRADE BLOCKED: ${blockReason} ${summary}`
+      summary: macroPenalty < 0
+        ? `⚠️ MACRO PENALTY (${macroPenalty}): ${penaltyReason} ${summary}`
         : summary,
-      verdict: shouldBlockTrade ? 'avoid' : verdict,
-      score: shouldBlockTrade ? Math.min(score, 2) : score,
+      verdict,
+      score: Math.max(0, score + macroPenalty),
       gate: {
         canProceed: gateResult.canProceed,
         reason: gateResult.reason,
@@ -4030,8 +4028,9 @@ export const analysisEngine = {
           })),
         },
       },
-      // Build detailed indicator analysis with ALL configured indicators
-      // Uses full 40+ indicators from trade-config.ts for rich analysis
+      // Indicator bundle used for this analysis (timeframe-driven selection)
+      bundleType: getBundleType(tf.primary as Timeframe),
+      // Build detailed indicator analysis using bundle-appropriate indicators
       indicatorDetails: indicatorAnalysis,
       // NEW: Tokenomics analysis (financial structure of the token)
       // Includes: supply metrics, market cap/FDV, whale concentration, distribution
@@ -4437,8 +4436,7 @@ export const analysisEngine = {
       contractSecurity,
       riskLevel,
       warnings,
-      // Build detailed indicator analysis with ALL configured indicators
-      // Uses full 40+ indicators from trade-config.ts for rich analysis
+      // Build detailed indicator analysis using bundle-appropriate indicators
       indicatorDetails: buildIndicatorAnalysis({
         ...indicatorResultsToAnalysisInputs(stepIndicators, currentPrice, ticker.priceChangePercent24h, candlesPrimary.map(c => c.close)),
         // Include traditional indicators as fallback
@@ -4792,13 +4790,16 @@ export const analysisEngine = {
     const riskAmountUsd = accountSize * (riskPercent / 100);
     const positionSizePercent = (riskAmountUsd / stopDistance) * averageEntry / accountSize * 100;
 
-    // Win rate estimate based on trend strength
-    let winRateEstimate = 50;
-    if (trend.strength >= 70) winRateEstimate += 10;
-    if (trend.strength >= 80) winRateEstimate += 5;
-    if (direction === 'long' && trend.direction === 'bullish') winRateEstimate += 10;
-    if (direction === 'short' && trend.direction === 'bearish') winRateEstimate += 10;
-    winRateEstimate = Math.min(75, winRateEstimate);
+    // Win rate estimate — via RiskEngine (TASK 2.3)
+    const winRateEstimate = estimateWinRate({
+      direction,
+      trendDirection: trend.direction,
+      trendStrength:  trend.strength,
+      confidence:     50, // preliminary confidence not available at this stage
+      safetyScore:    5,  // default; integrated tradePlan overrides this
+      tradeNow:       false,
+      riskReward:     avgRR,
+    });
 
     // Trailing stop
     const trailingStop: TradePlanResult['trailingStop'] = {
@@ -5293,7 +5294,7 @@ export const analysisEngine = {
 
     // ===== SCORE CALCULATION (without trade plan) =====
     // Weights: Market Pulse 20%, Asset Scanner 25%, Safety 25%, Timing 15%, Trap 15%
-    const score = parseFloat((
+    let score = parseFloat((
       marketPulse.score * 0.20 +
       assetScan.score * 0.25 +
       safetyCheck.score * 0.25 +
@@ -5437,34 +5438,19 @@ export const analysisEngine = {
     let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
     let shouldGenerateTradePlan = false;
 
-    // ===== MACRO HARD BLOCK (ABSOLUTE HIGHEST PRIORITY) =====
-    // Economic calendar events completely override all other signals.
-    // Per CLAUDE.md: "High-impact event 4 saat içinde → TRADE ÖNERİLMEZ"
-    //                "FOMC günü → TRADE ÖNERİLMEZ (tüm gün)"
-    //                "Event sonrası 2 saat → TRADE ÖNERİLMEZ (volatilite)"
-    //
-    // Market Pulse already caps its own score at 2 when blocked, but the
-    // weighted average across 5 steps can still produce a high enough score
-    // (e.g. 6.5) to trigger conditional_go when 4/5 other gates pass.
-    // This early-return ensures the economic block is never circumvented.
-    if (marketPulse.economicCalendar?.shouldBlockTrade) {
-      const macroBlockReason = marketPulse.economicCalendar.blockReason
-        ?? 'Economic event imminent';
+    // ===== MACRO PENALTY =====
+    // Economic events reduce score but never auto-force verdict to 'avoid'.
+    // High-impact event (±4h): -2 penalty | FOMC day: -3 penalty
+    const macroPenalty = marketPulse.economicCalendar?.macroPenalty ?? 0;
+    if (macroPenalty < 0) {
+      const penaltyReason = marketPulse.economicCalendar?.penaltyReason ?? 'Economic event imminent';
       reasons.unshift({
-        factor: `⛔ MACRO HARD BLOCK: ${macroBlockReason}`,
+        factor: `⚠️ MACRO PENALTY (${macroPenalty}): ${penaltyReason}`,
         positive: false,
         impact: 'high' as const,
         source: 'Economic Calendar',
       });
-      return {
-        verdict: 'avoid',
-        direction: null,
-        confidence: 0,
-        score: Math.min(score, 2), // Enforce score cap (≤ 2) on preliminary verdict too
-        reasons,
-        shouldGenerateTradePlan: false,
-        directionSources,
-      };
+      score = Math.max(0, score + macroPenalty);
     }
 
     // AVOID conditions (highest priority) - includes gate failures
@@ -5914,13 +5900,16 @@ export const analysisEngine = {
       ((riskAmountUsd / safeRiskAmount) * averageEntry / accountSize * 100).toFixed(2)
     );
 
-    // ===== WIN RATE ESTIMATE =====
-    let winRateEstimate = 50;
-    if (preliminaryVerdict.confidence >= 70) winRateEstimate += 10;
-    if (safetyCheck.riskLevel === 'low') winRateEstimate += 5;
-    if (timing.tradeNow) winRateEstimate += 5;
-    if (riskReward >= 2) winRateEstimate += 5;
-    winRateEstimate = Math.min(75, Math.max(35, winRateEstimate));
+    // ===== WIN RATE ESTIMATE — via RiskEngine (TASK 2.3) =====
+    const winRateEstimate = estimateWinRate({
+      direction,
+      trendDirection: assetScan.trend?.direction ?? 'neutral',
+      trendStrength:  assetScan.trend?.strength  ?? 50,
+      confidence:     preliminaryVerdict.confidence,
+      safetyScore:    safetyCheck.score,
+      tradeNow:       timing.tradeNow,
+      riskReward,
+    });
 
     // ===== SCORE CALCULATION =====
     let score = 5;
@@ -6026,36 +6015,42 @@ export const analysisEngine = {
     const { marketPulse, assetScan, safetyCheck, timing, trapCheck } = allSteps;
     const hasTradePlan = tradePlan !== null;
 
-    // Component scores with weights - adjust if no trade plan
-    let componentScores: FinalVerdictResult['componentScores'];
+    // --- Bundle-aware score aggregation (TASK 2.2) ---
+    // Map TradeType → BundleType so weights shift by trading style.
+    const bundleTypeForScoring =
+      tradeType === 'scalping'   ? 'scalping' :
+      tradeType === 'swingTrade' ? 'swing'    : 'day';
 
-    if (hasTradePlan && tradePlan) {
-      // With trade plan: original weights
-      componentScores = [
-        { step: 'Market Pulse', score: marketPulse.score, weight: 0.15 },
-        { step: 'Asset Scanner', score: assetScan.score, weight: 0.20 },
-        { step: 'Safety Check', score: safetyCheck.score, weight: 0.20 },
-        { step: 'Timing', score: timing.score, weight: 0.15 },
-        { step: 'Trade Plan', score: tradePlan.score, weight: 0.15 },
-        { step: 'Trap Check', score: trapCheck.score, weight: 0.15 },
-      ];
-    } else {
-      // Without trade plan: redistribute weights
-      componentScores = [
-        { step: 'Market Pulse', score: marketPulse.score, weight: 0.20 },
-        { step: 'Asset Scanner', score: assetScan.score, weight: 0.25 },
-        { step: 'Safety Check', score: safetyCheck.score, weight: 0.25 },
-        { step: 'Timing', score: timing.score, weight: 0.15 },
-        { step: 'Trap Check', score: trapCheck.score, weight: 0.15 },
-      ];
-    }
+    const stepScoreInputs = [
+      quickStepScore('marketPulse', marketPulse),
+      quickStepScore('assetScan',   assetScan),
+      quickStepScore('safetyCheck', safetyCheck),
+      quickStepScore('timing',      timing),
+      quickStepScore('trapCheck',   trapCheck),
+      ...(hasTradePlan && tradePlan
+        ? [quickStepScore('tradePlan', tradePlan)]
+        : []),
+    ];
 
-    // Calculate weighted overall score
-    const overallScore = parseFloat(
-      componentScores
-        .reduce((sum, cs) => sum + cs.score * cs.weight, 0)
-        .toFixed(1)
-    );
+    const aggregated = aggregateScores({
+      scores:      stepScoreInputs,
+      bundleType:  bundleTypeForScoring,
+      hasTradePlan,
+    });
+
+    // Map to legacy shape expected by FinalVerdictResult
+    const componentScores: FinalVerdictResult['componentScores'] = aggregated.componentScores.map(cs => ({
+      step:   cs.step === 'marketPulse' ? 'Market Pulse'  :
+              cs.step === 'assetScan'   ? 'Asset Scanner' :
+              cs.step === 'safetyCheck' ? 'Safety Check'  :
+              cs.step === 'timing'      ? 'Timing'        :
+              cs.step === 'trapCheck'   ? 'Trap Check'    :
+              cs.step === 'tradePlan'   ? 'Trade Plan'    : cs.step,
+      score:  cs.score,
+      weight: cs.weight,
+    }));
+
+    const overallScore = aggregated.overallScore;
 
     // Confidence factors - use reasons from preliminary verdict
     const confidenceFactors: FinalVerdictResult['confidenceFactors'] = preliminaryVerdict.reasons.map(r => ({

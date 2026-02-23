@@ -266,8 +266,8 @@ model CreditTransaction {
   createdAt    DateTime @default(now()) @map("created_at")
 
   @@index([userId])
-  @@index([createdAt(sort: Desc)])
-  @@map("credit_transactions")
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("credits_ledger")
 }
 
 enum TransactionType {
@@ -277,6 +277,7 @@ enum TransactionType {
   REFUND
   REFERRAL
   BONUS
+  ADJUSTMENT
 }
 
 model CreditPackage {

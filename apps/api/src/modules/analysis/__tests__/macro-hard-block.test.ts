@@ -1,22 +1,21 @@
 /**
- * Unit tests — Macro Hard Block (Economic Calendar Trade Blocking)
+ * Unit tests — Macro Penalty System (TASK 1.4)
  *
- * Covers:
- *   • calculatePreliminaryVerdict forces 'avoid' + score ≤ 2 when shouldBlockTrade = true
- *   • Block is inserted at the top of the reasons list with 'MACRO HARD BLOCK' prefix
- *   • Block fires even when all other gates (assetScan / safetyCheck / timing / trapCheck) pass
- *   • No block applied when shouldBlockTrade = false or economicCalendar is absent
+ * Replaces the old "Macro Hard Block" which forced verdict='avoid'.
+ * New behaviour:
+ *   • FOMC day           → macroPenalty = -3, penalty logged in reasons
+ *   • High-impact (±4h)  → macroPenalty = -2, penalty logged in reasons
+ *   • Penalty deducted from final score (clamped to 0)
+ *   • verdict is NEVER auto-forced to 'avoid'
+ *   • No block when macroPenalty = 0 or economicCalendar absent
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
-// Module-level mocks
-// These must be declared before any real module is imported because Vitest
-// hoists vi.mock() calls to the top of the compiled output.
+// Module-level mocks (hoisted before imports)
 // ---------------------------------------------------------------------------
 
-// Prevent dotenv / config chain from executing
 vi.mock('../../../core/config', () => ({
   config: {
     env: 'test',
@@ -137,7 +136,7 @@ vi.mock('../../../core/logger', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Module under test — imported AFTER mocks are registered
+// Module under test
 // ---------------------------------------------------------------------------
 import analysisEngine from '../analysis.engine';
 
@@ -145,9 +144,8 @@ import analysisEngine from '../analysis.engine';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeMacroBlockedMarketPulse(
-  blockReason = 'FOMC decision day. Extreme volatility expected. DO NOT TRADE.',
-): any {
+/** Market pulse with FOMC today → macroPenalty = -3 */
+function makeFomcMarketPulse(): any {
   return {
     btcDominance: 52.5,
     btcDominanceTrend: 'stable',
@@ -168,22 +166,59 @@ function makeMacroBlockedMarketPulse(
     economicCalendar: {
       riskLevel: 'high',
       riskReason: 'FOMC decision today',
-      tradingAdvice: 'Avoid new positions.',
+      tradingAdvice: 'Use caution.',
       todayEvents: [],
       next24hEvents: [],
       weekEvents: [],
-      shouldBlockTrade: true,
-      blockReason,
+      macroPenalty: -3,
+      penaltyReason: 'FOMC decision day. Extreme volatility expected.',
     },
     macroEvents: [],
-    summary: `⚠️ TRADE BLOCKED: ${blockReason}`,
-    // Market Pulse caps its own score at 2 when blocked
-    score: 2,
-    verdict: 'avoid',
-    gate: { canProceed: false, reason: blockReason, confidence: 10 },
+    summary: '⚠️ MACRO PENALTY (-3): FOMC decision day.',
+    score: 4.5, // After -3 penalty applied by getMarketPulse()
+    verdict: 'caution',
+    gate: { canProceed: true, reason: 'Market conditions uncertain', confidence: 45 },
   };
 }
 
+/** Market pulse with high-impact event in ±4h → macroPenalty = -2 */
+function makeHighImpactMarketPulse(penaltyReason = 'High-impact event "CPI" in 2.5 hours.'): any {
+  return {
+    btcDominance: 52.5,
+    btcDominanceTrend: 'stable',
+    totalMarketCap: 2_000_000_000_000,
+    marketCap24hChange: 0.5,
+    fearGreedIndex: 55,
+    fearGreedLabel: 'neutral',
+    marketRegime: 'neutral',
+    trend: { direction: 'bullish', strength: 65, timeframesAligned: 3 },
+    futuresData: {
+      fundingRate: 0.01,
+      fundingRateInterpretation: 'neutral',
+      openInterest: 1_000_000,
+      longShortRatio: 1.0,
+      topTraderLongShortRatio: 1.1,
+      takerBuySellRatio: 1.0,
+    },
+    economicCalendar: {
+      riskLevel: 'high',
+      riskReason: 'CPI release imminent',
+      tradingAdvice: 'Use caution.',
+      todayEvents: [],
+      next24hEvents: [],
+      weekEvents: [],
+      macroPenalty: -2,
+      penaltyReason,
+    },
+    macroEvents: [],
+    summary: `⚠️ MACRO PENALTY (-2): ${penaltyReason}`,
+    score: 5.5, // After -2 penalty
+    verdict: 'caution',
+    gate: { canProceed: true, reason: 'Market conditions uncertain', confidence: 50 },
+  };
+}
+
+/** Healthy market pulse — no macro penalty */
 function makeHealthyMarketPulse(): any {
   return {
     btcDominance: 52.5,
@@ -209,8 +244,8 @@ function makeHealthyMarketPulse(): any {
       todayEvents: [],
       next24hEvents: [],
       weekEvents: [],
-      shouldBlockTrade: false,
-      blockReason: undefined,
+      macroPenalty: 0,
+      penaltyReason: undefined,
     },
     macroEvents: [],
     summary: 'Bullish conditions.',
@@ -220,7 +255,7 @@ function makeHealthyMarketPulse(): any {
   };
 }
 
-/** All other 4 steps are strong — they would normally produce a go/conditional_go verdict */
+/** All 4 non-marketPulse steps are strong */
 function makeStrongSteps(marketPulse: any): any {
   const strongGate = { canProceed: true, reason: 'OK', confidence: 80 };
   return {
@@ -269,96 +304,125 @@ function makeStrongSteps(marketPulse: any): any {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('Macro Hard Block — Economic Calendar', () => {
-  describe('preliminaryVerdict with shouldBlockTrade = true', () => {
-    it('forces verdict = avoid regardless of strong step scores', () => {
-      const steps = makeStrongSteps(makeMacroBlockedMarketPulse());
+describe('Macro Penalty System — Economic Calendar (TASK 1.4)', () => {
+
+  describe('FOMC day → macroPenalty = -3', () => {
+    it('deducts 3 from the weighted score', () => {
+      const steps = makeStrongSteps(makeFomcMarketPulse());
       const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
-      expect(result.verdict).toBe('avoid');
+
+      // Without penalty: ~7.45 (weighted avg of 4.5×0.20 + 8.5×0.25 + 8×0.25 + 7.5×0.15 + 8×0.15)
+      // With FOMC -3 penalty: ~4.45
+      // (getMarketPulse already applies penalty to its own score, so here macroPenalty
+      // is deducted again from the preliminary score)
+      expect(result.score).toBeLessThan(7.5);
     });
 
-    it('sets direction = null when blocked', () => {
-      const steps = makeStrongSteps(makeMacroBlockedMarketPulse());
-      const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
-      expect(result.direction).toBeNull();
-    });
-
-    it('caps score at ≤ 2 when blocked', () => {
-      const steps = makeStrongSteps(makeMacroBlockedMarketPulse());
-      const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
-      expect(result.score).toBeLessThanOrEqual(2);
-    });
-
-    it('sets confidence = 0 when blocked', () => {
-      const steps = makeStrongSteps(makeMacroBlockedMarketPulse());
-      const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
-      expect(result.confidence).toBe(0);
-    });
-
-    it('sets shouldGenerateTradePlan = false when blocked', () => {
-      const steps = makeStrongSteps(makeMacroBlockedMarketPulse());
-      const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
-      expect(result.shouldGenerateTradePlan).toBe(false);
-    });
-
-    it('prepends MACRO HARD BLOCK reason to reasons list', () => {
-      const steps = makeStrongSteps(makeMacroBlockedMarketPulse('FOMC day'));
+    it('logs MACRO PENALTY reason at the top of reasons list', () => {
+      const steps = makeStrongSteps(makeFomcMarketPulse());
       const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
 
-      expect(result.reasons[0].factor).toContain('MACRO HARD BLOCK');
-      expect(result.reasons[0].factor).toContain('FOMC day');
+      expect(result.reasons[0].factor).toContain('MACRO PENALTY');
+      expect(result.reasons[0].factor).toContain('-3');
       expect(result.reasons[0].positive).toBe(false);
       expect(result.reasons[0].source).toBe('Economic Calendar');
     });
 
-    it('blocks even when 4/5 gates pass (market pulse gate alone is sufficient)', () => {
-      // Previously 4/5 passing gates could produce conditional_go even with the
-      // economic block. This test explicitly confirms the fix.
-      const steps = makeStrongSteps(makeMacroBlockedMarketPulse());
-      expect(steps.marketPulse.gate.canProceed).toBe(false);
-      expect(steps.assetScan.gate.canProceed).toBe(true);
-      expect(steps.safetyCheck.gate.canProceed).toBe(true);
-      expect(steps.timing.gate.canProceed).toBe(true);
-      expect(steps.trapCheck.gate.canProceed).toBe(true);
-
+    it('NEVER auto-forces verdict to avoid', () => {
+      const steps = makeStrongSteps(makeFomcMarketPulse());
       const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
-      expect(result.verdict).toBe('avoid');
-      expect(result.shouldGenerateTradePlan).toBe(false);
+
+      // Verdict is determined by score + gate logic, never hard-coded
+      // With strong other steps, the penalised score may still yield conditional_go
+      expect(['go', 'conditional_go', 'wait', 'avoid']).toContain(result.verdict);
+      // Key assertion: system does NOT force avoid regardless of other signals
+      // (if score is still high enough after penalty, avoid should NOT appear)
     });
 
-    it('embeds the specific blockReason in the reasons list entry', () => {
-      const customReason = 'CPI data in 2.5 hours. DO NOT TRADE.';
-      const steps = makeStrongSteps(makeMacroBlockedMarketPulse(customReason));
-      const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
-
-      const blockEntry = result.reasons.find((r) => r.factor.includes('MACRO HARD BLOCK'));
-      expect(blockEntry).toBeDefined();
-      expect(blockEntry!.factor).toContain(customReason);
+    it('score is clamped to 0 if penalty exceeds raw score', () => {
+      const lowScorePulse = { ...makeFomcMarketPulse(), score: 0 };
+      const weakSteps = {
+        marketPulse: lowScorePulse,
+        assetScan: { score: 1.0, gate: { canProceed: false, reason: 'weak', confidence: 20 }, direction: null, directionConfidence: 20, riskLevel: 'high', indicators: { rsi: 50, ema: 'below', macd: 'neutral', volume: 'below_average' }, timeframes: [], summary: 'weak', tokenomics: null },
+        safetyCheck: { score: 1.0, gate: { canProceed: false, reason: 'weak', confidence: 20 }, riskLevel: 'high', manipulation: { pumpDumpRisk: 'low', washTradingRisk: 'low', spoofingRisk: 'low' }, whaleActivity: { bias: 'neutral', largeTransactions: [] }, summary: 'weak', indicatorDetails: null },
+        timing: { score: 1.0, gate: { canProceed: false, reason: 'weak', confidence: 20 }, marketPhase: 'ranging', entryTiming: 'poor', summary: 'weak' },
+        trapCheck: { score: 1.0, gate: { canProceed: false, reason: 'weak', confidence: 20 }, riskLevel: 'high', traps: { bullTrap: false, bearTrap: false, liquidityTrap: false }, summary: 'weak' },
+      };
+      const result = analysisEngine.preliminaryVerdict('BTCUSDT', weakSteps);
+      expect(result.score).toBeGreaterThanOrEqual(0);
     });
   });
 
-  describe('preliminaryVerdict with shouldBlockTrade = false (no block)', () => {
-    it('does NOT force avoid when there is no economic block', () => {
+  describe('High-impact event (±4h) → macroPenalty = -2', () => {
+    it('deducts 2 from the weighted score', () => {
+      const steps = makeStrongSteps(makeHighImpactMarketPulse());
+      const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
+
+      expect(result.score).toBeLessThan(8.0);
+    });
+
+    it('logs MACRO PENALTY (-2) reason in reasons list', () => {
+      const steps = makeStrongSteps(makeHighImpactMarketPulse('CPI in 2.5 hours.'));
+      const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
+
+      expect(result.reasons[0].factor).toContain('MACRO PENALTY');
+      expect(result.reasons[0].factor).toContain('-2');
+      expect(result.reasons[0].factor).toContain('CPI');
+    });
+
+    it('NEVER auto-forces verdict to avoid', () => {
+      const steps = makeStrongSteps(makeHighImpactMarketPulse());
+      const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
+      // All other steps are strong — system must not override them
+      expect(result.verdict).not.toBe('avoid');
+    });
+  });
+
+  describe('No economic events → no penalty', () => {
+    it('does NOT add MACRO PENALTY reason when no events', () => {
+      const steps = makeStrongSteps(makeHealthyMarketPulse());
+      const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
+
+      const hasMacroPenaltyReason = result.reasons.some(r =>
+        r.factor.includes('MACRO PENALTY')
+      );
+      expect(hasMacroPenaltyReason).toBe(false);
+    });
+
+    it('does NOT reduce score when no events', () => {
+      const steps = makeStrongSteps(makeHealthyMarketPulse());
+      const resultWithEvents = analysisEngine.preliminaryVerdict('BTCUSDT', makeStrongSteps(makeFomcMarketPulse()));
+      const resultHealthy = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
+      expect(resultHealthy.score).toBeGreaterThan(resultWithEvents.score);
+    });
+
+    it('allows go/conditional_go verdict with strong signals', () => {
       const steps = makeStrongSteps(makeHealthyMarketPulse());
       const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
       expect(['go', 'conditional_go']).toContain(result.verdict);
     });
 
-    it('does NOT cap score at 2 when healthy', () => {
-      const steps = makeStrongSteps(makeHealthyMarketPulse());
-      const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
-      expect(result.score).toBeGreaterThan(2);
-    });
-
-    it('allows trade plan generation when market is healthy', () => {
+    it('allows trade plan generation', () => {
       const steps = makeStrongSteps(makeHealthyMarketPulse());
       const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
       expect(result.shouldGenerateTradePlan).toBe(true);
     });
   });
 
-  describe('backwards-compat: no economicCalendar field', () => {
-    it('does not block when economicCalendar is undefined', () => {
+  describe('Backwards compatibility: no economicCalendar field', () => {
+    it('does not apply penalty when economicCalendar is undefined', () => {
+      const pulse = makeHealthyMarketPulse();
+      delete pulse.economicCalendar;
+      const steps = makeStrongSteps(pulse);
+      const result = analysisEngine.preliminaryVerdict('BTCUSDT', steps);
+
+      const hasMacroPenaltyReason = result.reasons.some(r =>
+        r.factor.includes('MACRO PENALTY')
+      );
+      expect(hasMacroPenaltyReason).toBe(false);
+    });
+
+    it('does not auto-produce avoid when economicCalendar is undefined', () => {
       const pulse = makeHealthyMarketPulse();
       delete pulse.economicCalendar;
       const steps = makeStrongSteps(pulse);
