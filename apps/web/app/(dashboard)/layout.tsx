@@ -648,7 +648,9 @@ export default function DashboardLayout({
 
       {/* Page content */}
       <main className="min-h-[calc(100vh-4rem)]">
-        {children}
+        <div key={pathname} className="animate-in fade-in slide-in-from-bottom-3 duration-200 ease-out">
+          {children}
+        </div>
       </main>
 
       {/* Footer */}

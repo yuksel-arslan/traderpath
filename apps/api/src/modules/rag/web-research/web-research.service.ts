@@ -116,7 +116,7 @@ class WebResearchService {
     existingNews?: { items: Array<{ title: string; url: string; source: string; publishedAt: Date; sentiment: string }>; sentiment: { overall: string; score: number } },
     existingCalendar?: { events: Array<{ title: string; impact: string }>; shouldBlockTrade: boolean },
   ): Promise<WebResearchResult> {
-    const cacheKey = `${CACHE_PREFIX}:fast:${symbol}`;
+    const cacheKey = `${CACHE_PREFIX}:fast:${symbol}:${assetClass}`;
     const cached = await this.getFromCache<WebResearchResult>(cacheKey);
     if (cached) return cached;
 
@@ -192,7 +192,7 @@ class WebResearchService {
     existingNews?: { items: Array<{ title: string; url: string; source: string; publishedAt: Date; sentiment: string }>; sentiment: { overall: string; score: number } },
     existingCalendar?: { events: Array<{ title: string; impact: string }>; shouldBlockTrade: boolean },
   ): Promise<WebResearchResult> {
-    const cacheKey = `${CACHE_PREFIX}:news:${symbol}`;
+    const cacheKey = `${CACHE_PREFIX}:news:${symbol}:${assetClass}`;
     const cached = await this.getFromCache<WebResearchResult>(cacheKey);
     if (cached) return cached;
 
@@ -248,7 +248,7 @@ class WebResearchService {
     existingCalendar?: { events: Array<{ title: string; impact: string }>; shouldBlockTrade: boolean },
     technicalSummary?: string,
   ): Promise<WebResearchResult> {
-    const cacheKey = `${CACHE_PREFIX}:deep:${symbol}`;
+    const cacheKey = `${CACHE_PREFIX}:deep:${symbol}:${assetClass}`;
     const cached = await this.getFromCache<WebResearchResult>(cacheKey);
     if (cached) return cached;
 

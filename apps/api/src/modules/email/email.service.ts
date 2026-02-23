@@ -1542,8 +1542,8 @@ TraderPath - Professional Trading Analysis
       outcomePrice: number;
       pnlPercent: number;
       duration: string;
-      beforeChartBase64: string;
-      afterChartBase64: string;
+      beforeChartSvg: string;
+      afterChartSvg: string;
       analysisId: string;
       analysisDate: Date;
       outcomeDate: Date;
@@ -1662,19 +1662,23 @@ TraderPath - Professional Trading Analysis
             </td>
           </tr>
 
-          <!-- Before Chart -->
+          <!-- Before Chart (inline SVG - works in Gmail, Apple Mail) -->
           <tr>
             <td style="padding: 20px 20px 10px;">
               <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1px;">Before - Analysis Time (${fmtDate(data.analysisDate)})</p>
-              <img src="${data.beforeChartBase64}" width="100%" style="display: block; border-radius: 8px; border: 1px solid #334155;" alt="Before chart" />
+              <div style="width: 100%; border-radius: 8px; border: 1px solid #334155; overflow: hidden; background: #1e293b;">
+                ${data.beforeChartSvg.replace(/<svg /, '<svg style="display:block;width:100%;height:auto;" ')}
+              </div>
             </td>
           </tr>
 
-          <!-- After Chart -->
+          <!-- After Chart (inline SVG - works in Gmail, Apple Mail) -->
           <tr>
             <td style="padding: 10px 20px 20px;">
               <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1px;">After - ${resultLabel} (${fmtDate(data.outcomeDate)})</p>
-              <img src="${data.afterChartBase64}" width="100%" style="display: block; border-radius: 8px; border: 1px solid #334155;" alt="After chart" />
+              <div style="width: 100%; border-radius: 8px; border: 1px solid #334155; overflow: hidden; background: #1e293b;">
+                ${data.afterChartSvg.replace(/<svg /, '<svg style="display:block;width:100%;height:auto;" ')}
+              </div>
             </td>
           </tr>
 

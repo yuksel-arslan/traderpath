@@ -353,7 +353,7 @@ function renderIndicatorTable(indicators: Record<string, IndicatorDetailItem | u
 
   return `
     <div class="section" style="margin-bottom: 6px;">
-      <div style="font-size: 7px; font-weight: 600; margin-bottom: 3px; color: #333;">${title} (${items.length} indicators analyzed)</div>
+      <div style="font-size: 7px; font-weight: 600; margin-bottom: 3px; color: #d1d5db;">${title} (${items.length} indicators analyzed)</div>
       <table class="table indicator-table">
         <tr><th style="width: 22%;">Indicator</th><th style="width: 13%;">Value</th><th style="width: 13%;">Signal</th><th style="width: 52%;">Interpretation</th></tr>
         ${sortedItems.slice(0, maxItems).map(ind => `
@@ -365,7 +365,7 @@ function renderIndicatorTable(indicators: Record<string, IndicatorDetailItem | u
           </tr>
         `).join('')}
         ${items.length > maxItems ? `
-        <tr style="background: #f0f9ff;">
+        <tr style="background: #1a1a2e;">
           <td colspan="4" style="text-align: center; font-size: 6px; color: #0369a1; font-style: italic;">
             + ${items.length - maxItems} more ${(typeof title === 'string' ? title.toLowerCase() : 'items')} analyzed...
           </td>
@@ -397,72 +397,81 @@ const logoSvg = `<svg width="32" height="32" viewBox="0 0 200 200" fill="none" x
 
 const styles = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 9px; color: #1a1a1a; background: #fff; line-height: 1.35; }
-  .page { width: 595px; height: 842px; padding: 20px 24px; position: relative; }
-  .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid #1a1a1a; margin-bottom: 12px; }
+  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 9px; color: #e5e7eb; background: #0A0A0A; line-height: 1.35; }
+  .page { width: 595px; height: 842px; padding: 20px 24px; position: relative; background: #0A0A0A; }
+  .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid #374151; margin-bottom: 12px; }
   .brand { display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .logo { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
   .brand-name { font-size: 14px; font-weight: 700; letter-spacing: -0.5px; }
-  .brand-trade { color: #dc2626; }
-  .brand-path { color: #16a34a; }
+  .brand-trade { color: #f87171; }
+  .brand-path { color: #14B8A6; }
   .header-center { text-align: center; }
-  .report-title { font-size: 11px; font-weight: 600; color: #1a1a1a; text-transform: uppercase; letter-spacing: 1px; }
-  .report-subtitle { font-size: 8px; color: #666; margin-top: 2px; }
+  .report-title { font-size: 11px; font-weight: 600; color: #f1f5f9; text-transform: uppercase; letter-spacing: 1px; }
+  .report-subtitle { font-size: 8px; color: #9ca3af; margin-top: 2px; }
   .header-right { text-align: right; }
-  .symbol { font-size: 14px; font-weight: 700; }
+  .symbol { font-size: 14px; font-weight: 700; color: #f1f5f9; }
   .direction-tag { display: inline-block; font-size: 10px; font-weight: 700; margin-left: 6px; }
-  .tag-long { color: #16a34a; }
-  .tag-short { color: #dc2626; }
+  .tag-long { color: #4ade80; }
+  .tag-short { color: #f87171; }
   .score-box { margin-top: 4px; }
-  .score-value { font-size: 16px; font-weight: 700; }
-  .score-label { font-size: 7px; color: #666; }
+  .score-value { font-size: 16px; font-weight: 700; color: #f1f5f9; }
+  .score-label { font-size: 7px; color: #9ca3af; }
   .section { margin-bottom: 10px; }
-  .section-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; border-bottom: 1px solid #e0e0e0; padding-bottom: 3px; }
-  .step-num { font-size: 8px; font-weight: 600; color: #666; }
-  .section-title { font-size: 10px; font-weight: 600; color: #1a1a1a; }
-  .step-box { border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; background: #fafafa; }
-  .step-box-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid #eee; }
-  .step-box-num { font-size: 9px; font-weight: 700; color: #666; }
-  .step-box-title { font-size: 10px; font-weight: 600; color: #1a1a1a; }
+  .section-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; border-bottom: 1px solid #374151; padding-bottom: 3px; }
+  .step-num { font-size: 8px; font-weight: 600; color: #9ca3af; }
+  .section-title { font-size: 10px; font-weight: 600; color: #f1f5f9; }
+  .step-box { border: 1px solid #374151; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; background: #111111; }
+  .step-box-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid #374151; }
+  .step-box-num { font-size: 9px; font-weight: 700; color: #9ca3af; }
+  .step-box-title { font-size: 10px; font-weight: 600; color: #f1f5f9; }
   .step-box-gate { margin-left: auto; font-size: 7px; font-weight: 600; }
   .row { display: flex; gap: 6px; margin-bottom: 5px; }
   .col { flex: 1; }
   .col-2 { flex: 2; }
-  .metric { background: #fafafa; border: 1px solid #eee; border-radius: 3px; padding: 5px 7px; }
+  .metric { background: #1a1a1a; border: 1px solid #374151; border-radius: 3px; padding: 5px 7px; }
   .metric-sm { padding: 3px 5px; }
-  .metric-label { font-size: 6px; color: #666; text-transform: uppercase; letter-spacing: 0.3px; }
-  .metric-value { font-size: 10px; font-weight: 600; color: #1a1a1a; margin-top: 1px; }
+  .metric-label { font-size: 6px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.3px; }
+  .metric-value { font-size: 10px; font-weight: 600; color: #f1f5f9; margin-top: 1px; }
   .metric-value-lg { font-size: 12px; }
   .metric-value-xl { font-size: 18px; }
-  .metric-note { font-size: 6px; color: #888; margin-top: 1px; }
-  .text-green { color: #16a34a; }
-  .text-red { color: #dc2626; }
-  .text-amber { color: #d97706; }
-  .text-muted { color: #666; }
+  .metric-note { font-size: 6px; color: #6b7280; margin-top: 1px; }
+  .text-green { color: #4ade80; }
+  .text-red { color: #f87171; }
+  .text-amber { color: #fbbf24; }
+  .text-muted { color: #9ca3af; }
   .list { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; }
-  .list-item { display: flex; align-items: center; gap: 5px; padding: 2px 0; font-size: 7px; }
+  .list-item { display: flex; align-items: center; gap: 5px; padding: 2px 0; font-size: 7px; color: #d1d5db; }
   .list-icon { width: 10px; text-align: center; font-weight: 600; }
-  .list-icon-y { color: #16a34a; }
-  .list-icon-n { color: #dc2626; }
+  .list-icon-y { color: #4ade80; }
+  .list-icon-n { color: #f87171; }
   .table { width: 100%; border-collapse: collapse; }
-  .table th { text-align: left; font-size: 6px; font-weight: 600; color: #666; text-transform: uppercase; padding: 3px 5px; border-bottom: 1px solid #ddd; background: #f9fafb; }
-  .table td { font-size: 7px; padding: 3px 5px; border-bottom: 1px solid #f0f0f0; }
+  .table th { text-align: left; font-size: 6px; font-weight: 600; color: #9ca3af; text-transform: uppercase; padding: 3px 5px; border-bottom: 1px solid #374151; background: #1a1a1a; }
+  .table td { font-size: 7px; padding: 3px 5px; border-bottom: 1px solid #1f2937; color: #d1d5db; }
   .table tr:last-child td { border-bottom: none; }
   .indicator-table th { font-size: 5px; padding: 2px 3px; }
   .indicator-table td { font-size: 6px; padding: 2px 3px; }
-  .verdict-box { border: 2px solid #1a1a1a; border-radius: 6px; padding: 15px; margin-bottom: 12px; text-align: center; }
+  .verdict-box { border: 2px solid #374151; border-radius: 6px; padding: 15px; margin-bottom: 12px; text-align: center; background: #111111; }
   .verdict-action { font-size: 28px; font-weight: 700; }
-  .verdict-subtitle { font-size: 9px; color: #666; margin-top: 6px; line-height: 1.5; }
-  .chart-container { border: 1px solid #e0e0e0; border-radius: 6px; background: #fff; padding: 8px; margin: 10px 0; }
+  .verdict-subtitle { font-size: 9px; color: #9ca3af; margin-top: 6px; line-height: 1.5; }
+  .chart-container { border: 1px solid #374151; border-radius: 6px; background: #111111; padding: 8px; margin: 10px 0; }
   .chart-container img { width: 100%; height: auto; display: block; }
-  .summary-box { background: #fafafa; border-left: 2px solid #e0e0e0; padding: 8px 10px; margin-top: 8px; }
-  .summary-text { font-size: 8px; color: #333; line-height: 1.5; }
-  .step-summary { font-size: 7px; color: #333; background: #fafafa; border-left: 2px solid #e0e0e0; padding: 6px 8px; margin-top: 8px; line-height: 1.5; }
-  .step-summary-title { font-size: 7px; font-weight: 600; color: #333; margin-bottom: 3px; }
-  .step-box-expanded { border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; background: #fafafa; min-height: 200px; }
-  .footer { position: absolute; bottom: 8px; left: 24px; right: 24px; font-size: 6px; color: #999; border-top: 1px solid #eee; padding-top: 4px; }
+  .summary-box { background: #111111; border-left: 2px solid #374151; padding: 8px 10px; margin-top: 8px; }
+  .summary-text { font-size: 8px; color: #d1d5db; line-height: 1.5; }
+  .step-summary { font-size: 7px; color: #d1d5db; background: #111111; border-left: 2px solid #374151; padding: 6px 8px; margin-top: 8px; line-height: 1.5; }
+  .step-summary-title { font-size: 7px; font-weight: 600; color: #e5e7eb; margin-bottom: 3px; }
+  .step-box-expanded { border: 1px solid #374151; border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; background: #111111; min-height: 200px; }
+  .footer { position: absolute; bottom: 8px; left: 24px; right: 24px; font-size: 6px; color: #6b7280; border-top: 1px solid #374151; padding-top: 4px; }
   .footer-row { display: flex; justify-content: space-between; align-items: center; }
-  .footer-disclaimer { font-size: 5px; color: #b91c1c; margin-top: 2px; line-height: 1.3; }
+  .footer-disclaimer { font-size: 5px; color: #f87171; margin-top: 2px; line-height: 1.3; }
+  .step-box { page-break-inside: avoid; break-inside: avoid; }
+  .step-box-expanded { page-break-inside: avoid; break-inside: avoid; }
+  .row { page-break-inside: avoid; break-inside: avoid; }
+  .table { page-break-inside: avoid; break-inside: avoid; }
+  .section { page-break-inside: avoid; break-inside: avoid; }
+  .metric-value { word-break: break-word; overflow-wrap: break-word; }
+  .summary-text { word-break: break-word; overflow-wrap: break-word; }
+  .step-summary { word-break: break-word; overflow-wrap: break-word; }
+  td, th { word-break: break-word; overflow-wrap: break-word; max-width: 200px; }
 `;
 
 const DISCLAIMER_TEXT = 'IMPORTANT DISCLAIMER: This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. All investments carry risk, including the potential loss of principal. Past performance does not guarantee future results. Conduct your own research and consult with a licensed financial advisor before making any investment decisions. TraderPath is not responsible for any losses resulting from the use of this report.';
@@ -759,51 +768,51 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
       </div>
 
       <!-- Report Title -->
-      <div style="font-size: 16px; font-weight: 700; color: #1a1a1a; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">Asset Analysis Report</div>
+      <div style="font-size: 16px; font-weight: 700; color: #f1f5f9; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">Asset Analysis Report</div>
 
       <!-- Method Badge -->
-      <div style="display: inline-block; padding: 3px 10px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 10px; font-weight: 600; color: #333; margin-bottom: 10px;">
+      <div style="display: inline-block; padding: 3px 10px; border: 1px solid #374151; border-radius: 4px; font-size: 10px; font-weight: 600; color: #d1d5db; margin-bottom: 10px;">
         ${methodDisplay}
       </div>
 
       <!-- Report Date -->
-      <div style="font-size: 10px; color: #666; margin-top: 5px;">
+      <div style="font-size: 10px; color: #9ca3af; margin-top: 5px;">
         <span style="font-weight: 600;">Report Date:</span> ${reportDate}
       </div>
-      <div style="font-size: 9px; color: #888; margin-top: 2px;">${tradeTypes[data.tradeType || ''] || 'Analysis'}</div>
+      <div style="font-size: 9px; color: #6b7280; margin-top: 2px;">${tradeTypes[data.tradeType || ''] || 'Analysis'}</div>
 
       <!-- Symbol and Direction -->
       <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
         <span class="symbol" style="font-size: 22px; font-weight: 800;">${data.symbol}/USDT</span>
-        <span class="direction-tag ${hasDirection ? (isLong ? 'tag-long' : 'tag-short') : ''}" style="font-size: 14px; margin-left: 12px; padding: 3px 10px; border-radius: 4px; border: 1px solid #e0e0e0; ${!hasDirection ? 'color: #d97706;' : isLong ? 'color: #16a34a;' : 'color: #dc2626;'}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'WAIT'}</span>
+        <span class="direction-tag ${hasDirection ? (isLong ? 'tag-long' : 'tag-short') : ''}" style="font-size: 14px; margin-left: 12px; padding: 3px 10px; border-radius: 4px; border: 1px solid #374151; ${!hasDirection ? 'color: #d97706;' : isLong ? 'color: #16a34a;' : 'color: #dc2626;'}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'WAIT'}</span>
       </div>
     </div>
 
     <!-- Verdict & Direction Box -->
-    <div class="step-box" style="background: #fff; border: 1px solid #e0e0e0; padding: 10px 15px;">
+    <div class="step-box" style="background: #111111; border: 1px solid #374151; padding: 10px 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <div style="font-size: 8px; color: #666; margin-bottom: 2px;">VERDICT</div>
+          <div style="font-size: 8px; color: #9ca3af; margin-bottom: 2px;">VERDICT</div>
           <div style="font-size: 16px; font-weight: 700; ${isConditional ? 'color: #d97706' : hasDirection ? (isLong ? 'color: #16a34a' : 'color: #dc2626') : 'color: #d97706'}">${formatAction(verdictAction)}</div>
         </div>
         <div>
-          <div style="font-size: 8px; color: #666; margin-bottom: 2px;">DIRECTION</div>
+          <div style="font-size: 8px; color: #9ca3af; margin-bottom: 2px;">DIRECTION</div>
           <div style="font-size: 16px; font-weight: 700; ${hasDirection ? (isLong ? 'color: #16a34a' : 'color: #dc2626') : 'color: #d97706'}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'NEUTRAL'}</div>
         </div>
         <div style="text-align: center;">
-          <div style="font-size: 8px; color: #666; margin-bottom: 2px;">CONFIDENCE</div>
-          <div style="font-size: 20px; font-weight: 800; color: #1a1a1a;">${score}</div>
+          <div style="font-size: 8px; color: #9ca3af; margin-bottom: 2px;">CONFIDENCE</div>
+          <div style="font-size: 20px; font-weight: 800; color: #f1f5f9;">${score}</div>
         </div>
         <div style="text-align: right;">
-          <div style="font-size: 8px; color: #666; margin-bottom: 2px;">RISK:REWARD</div>
-          <div style="font-size: 18px; font-weight: 700; color: #1a1a1a;">${formatRiskReward(tp?.riskReward)}</div>
+          <div style="font-size: 8px; color: #9ca3af; margin-bottom: 2px;">RISK:REWARD</div>
+          <div style="font-size: 18px; font-weight: 700; color: #f1f5f9;">${formatRiskReward(tp?.riskReward)}</div>
         </div>
       </div>
     </div>
 
     ${isConditional ? `
     <!-- CONDITIONAL GO Explanation Box -->
-    <div style="margin-top: 8px; margin-bottom: 8px; padding: 10px 12px; background: #fff; border: 1px solid #e0e0e0; border-left: 3px solid #d97706; border-radius: 4px;">
+    <div style="margin-top: 8px; margin-bottom: 8px; padding: 10px 12px; background: #111111; border: 1px solid #374151; border-left: 3px solid #d97706; border-radius: 4px;">
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
         <span style="font-size: 10px; font-weight: 700; color: #d97706;">CONDITIONAL ENTRY - CONDITIONS REQUIRED</span>
       </div>
@@ -883,8 +892,8 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
     </div>
 
     <!-- Note about full report -->
-    <div style="margin-top: 15px; padding: 10px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; text-align: center;">
-      <div style="font-size: 9px; color: #666; font-weight: 600;">Full detailed analysis available in the following pages</div>
+    <div style="margin-top: 15px; padding: 10px; background: #111111; border: 1px solid #374151; border-radius: 4px; text-align: center;">
+      <div style="font-size: 9px; color: #9ca3af; font-weight: 600;">Full detailed analysis available in the following pages</div>
     </div>
 
     ${generateFooter(data, 1, totalPages)}
@@ -923,7 +932,7 @@ function generatePageTradePlan(data: AnalysisReportData, totalPages: number): st
       </div>
       <div class="header-center">
         <div class="report-title">Trade Plan</div>
-        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #e0e0e0; border-radius: 3px; font-size: 7px; font-weight: 600; color: #333; margin-top: 2px;">${methodDisplay}</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -962,11 +971,11 @@ function generatePageTradePlan(data: AnalysisReportData, totalPages: number): st
 
     <!-- Full Page Chart -->
     ${data.chartImage ? `
-    <div class="chart-container" style="height: 480px; display: flex; align-items: center; justify-content: center; border: 1px solid #e0e0e0; border-radius: 6px;">
+    <div class="chart-container" style="height: 480px; display: flex; align-items: center; justify-content: center; border: 1px solid #374151; border-radius: 6px;">
       <img src="${data.chartImage}" style="max-height: 100%; width: auto; max-width: 100%; border-radius: 4px;" alt="Trade Plan Chart" />
     </div>
     ` : `
-    <div class="chart-container" style="height: 480px; border: 1px solid #e0e0e0; border-radius: 6px; padding: 15px;">
+    <div class="chart-container" style="height: 480px; border: 1px solid #374151; border-radius: 6px; padding: 15px;">
       ${generateTradePlanSvgChart(tp, as, as?.chartCandles)}
     </div>
     `}
@@ -1022,7 +1031,7 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
       </div>
       <div class="header-center">
         <div class="report-title">Tokenomics Analysis</div>
-        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #e0e0e0; border-radius: 3px; font-size: 7px; font-weight: 600; color: #333; margin-top: 2px;">${methodDisplay}</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1034,15 +1043,15 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
     <div class="verdict-box" style="padding: 12px; margin-bottom: 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <div style="font-size: 10px; color: #666; margin-bottom: 3px;">Tokenomics Score</div>
+          <div style="font-size: 10px; color: #9ca3af; margin-bottom: 3px;">Tokenomics Score</div>
           <div style="font-size: 32px; font-weight: 700; ${tk.assessment.overallScore >= 70 ? 'color: #16a34a' : tk.assessment.overallScore < 40 ? 'color: #dc2626' : 'color: #d97706'}">${tk.assessment.overallScore}/100</div>
         </div>
         <div style="text-align: right;">
-          <div style="font-size: 10px; color: #666; margin-bottom: 3px;">Risk Level</div>
+          <div style="font-size: 10px; color: #9ca3af; margin-bottom: 3px;">Risk Level</div>
           <div style="font-size: 18px; font-weight: 700; ${tk.assessment.riskLevel === 'low' ? 'color: #16a34a' : tk.assessment.riskLevel === 'high' ? 'color: #dc2626' : 'color: #d97706'}">${formatDirection(tk.assessment.riskLevel)}</div>
         </div>
       </div>
-      <div style="margin-top: 10px; font-size: 8px; color: #444; border-top: 1px solid #eee; padding-top: 8px;">${tk.assessment.recommendation}</div>
+      <div style="margin-top: 10px; font-size: 8px; color: #d1d5db; border-top: 1px solid #eee; padding-top: 8px;">${tk.assessment.recommendation}</div>
     </div>
 
     <!-- Supply Information -->
@@ -1125,16 +1134,16 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
 
     <!-- AI Tokenomics Insight -->
     ${data.verdict?.tokenomicsInsight ? `
-    <div class="step-summary" style="margin-top: 15px; background: #f0f9f0; border-left: 3px solid #16a34a; padding: 10px 12px;">
+    <div class="step-summary" style="margin-top: 15px; background: #0d1f0d; border-left: 3px solid #16a34a; padding: 10px 12px;">
       <div style="font-size: 9px; font-weight: 600; color: #16a34a; margin-bottom: 5px;">AI Tokenomics Analysis</div>
-      <div style="font-size: 8px; color: #333; line-height: 1.5;">${data.verdict.tokenomicsInsight}</div>
+      <div style="font-size: 8px; color: #d1d5db; line-height: 1.5;">${data.verdict.tokenomicsInsight}</div>
     </div>
     ` : ''}
     ` : `
     <!-- No Tokenomics Data - Enhanced Display -->
     <div style="padding: 20px;">
-      <div class="verdict-box" style="padding: 20px; margin-bottom: 20px; background: #fff; border-color: #e0e0e0;">
-        <div style="font-size: 16px; font-weight: 700; color: #666; margin-bottom: 5px;">Tokenomics Data Unavailable</div>
+      <div class="verdict-box" style="padding: 20px; margin-bottom: 20px; background: #111111; border-color: #e0e0e0;">
+        <div style="font-size: 16px; font-weight: 700; color: #9ca3af; margin-bottom: 5px;">Tokenomics Data Unavailable</div>
         <div style="font-size: 10px; color: #999;">Data could not be retrieved from CoinGecko API</div>
       </div>
 
@@ -1142,7 +1151,7 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
         <div class="step-box-header">
           <span class="step-box-title">Why This Happens</span>
         </div>
-        <div style="font-size: 8px; line-height: 1.6; color: #444;">
+        <div style="font-size: 8px; line-height: 1.6; color: #d1d5db;">
           <p style="margin-bottom: 8px;"><strong>1. New or Low-Cap Token:</strong> The token may be too new or have insufficient market data in CoinGecko's database.</p>
           <p style="margin-bottom: 8px;"><strong>2. API Rate Limits:</strong> CoinGecko API has rate limits that may temporarily restrict data access.</p>
           <p style="margin-bottom: 8px;"><strong>3. Symbol Mismatch:</strong> The trading symbol may not directly map to CoinGecko's identifier.</p>
@@ -1153,18 +1162,18 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
         <div class="step-box-header">
           <span class="step-box-title">What You Should Do</span>
         </div>
-        <div style="font-size: 8px; line-height: 1.6; color: #444;">
+        <div style="font-size: 8px; line-height: 1.6; color: #d1d5db;">
           <p style="margin-bottom: 8px;">✓ <strong>Manual Research:</strong> Visit <a href="https://www.coingecko.com" style="color: #0369a1;">CoinGecko</a> or <a href="https://coinmarketcap.com" style="color: #0369a1;">CoinMarketCap</a> directly to verify tokenomics.</p>
           <p style="margin-bottom: 8px;">✓ <strong>Check Token Contract:</strong> Review the token's smart contract for supply information.</p>
           <p style="margin-bottom: 8px;">✓ <strong>Assess Liquidity Risk:</strong> Without tokenomics data, be extra cautious about position sizing.</p>
         </div>
       </div>
 
-      <div class="step-box" style="background: #fff; border: 1px solid #e0e0e0; border-left: 3px solid #dc2626;">
+      <div class="step-box" style="background: #111111; border: 1px solid #374151; border-left: 3px solid #dc2626;">
         <div class="step-box-header" style="border-color: #e0e0e0;">
           <span class="step-box-title" style="color: #dc2626;">Risk Warning</span>
         </div>
-        <div style="font-size: 8px; line-height: 1.6; color: #666;">
+        <div style="font-size: 8px; line-height: 1.6; color: #9ca3af;">
           Trading without tokenomics data increases risk. Unknown supply dynamics, whale concentration, and dilution risks could significantly impact your trade. Proceed with caution and use smaller position sizes.
         </div>
       </div>
@@ -1225,7 +1234,7 @@ function generatePageSteps12(data: AnalysisReportData, totalPages: number): stri
       </div>
       <div class="header-center">
         <div class="report-title">Analysis Steps 1-2</div>
-        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #e0e0e0; border-radius: 3px; font-size: 7px; font-weight: 600; color: #333; margin-top: 2px;">${methodDisplay}</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1260,7 +1269,7 @@ function generatePageSteps12(data: AnalysisReportData, totalPages: number): stri
         </div>
       </div>
       ${trendIndicators.length > 0 ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Trend Indicators (SMA, EMA, ADX, Ichimoku)</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #9ca3af; border-top: 1px dashed #ddd; padding-top: 6px;">Trend Indicators (SMA, EMA, ADX, Ichimoku)</div>
       <div class="row" style="margin-top: 4px;">
         ${trendIndicators.map(i => `
           <div class="col metric metric-sm">
@@ -1308,7 +1317,7 @@ function generatePageSteps12(data: AnalysisReportData, totalPages: number): stri
       </div>
       ` : ''}
       ${tk ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Tokenomics</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #9ca3af; border-top: 1px dashed #ddd; padding-top: 6px;">Tokenomics</div>
       <div class="row" style="margin-top: 4px;">
         <div class="col metric metric-sm">
           <div class="metric-label">Market Cap</div>
@@ -1329,7 +1338,7 @@ function generatePageSteps12(data: AnalysisReportData, totalPages: number): stri
       </div>
       ` : ''}
       ${volumeIndicators.length > 0 ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Volume Indicators (VWAP, OBV, CMF, AD)</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #9ca3af; border-top: 1px dashed #ddd; padding-top: 6px;">Volume Indicators (VWAP, OBV, CMF, AD)</div>
       <div class="row" style="margin-top: 4px;">
         ${volumeIndicators.map(i => `
           <div class="col metric metric-sm">
@@ -1390,7 +1399,7 @@ function generatePageSteps34(data: AnalysisReportData, totalPages: number): stri
       </div>
       <div class="header-center">
         <div class="report-title">Analysis Steps 3-4</div>
-        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #e0e0e0; border-radius: 3px; font-size: 7px; font-weight: 600; color: #333; margin-top: 2px;">${methodDisplay}</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1428,7 +1437,7 @@ function generatePageSteps34(data: AnalysisReportData, totalPages: number): stri
       </div>
       ` : ''}
       ${advancedIndicators.length > 0 ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Advanced Indicators</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #9ca3af; border-top: 1px dashed #ddd; padding-top: 6px;">Advanced Indicators</div>
       <div class="row" style="margin-top: 4px;">
         ${advancedIndicators.map(i => `
           <div class="col metric metric-sm">
@@ -1462,7 +1471,7 @@ function generatePageSteps34(data: AnalysisReportData, totalPages: number): stri
       </div>
       ${tm.conditions && tm.conditions.length > 0 ? `
       <div style="margin-top: 6px;">
-        <div style="font-size: 7px; color: #666; margin-bottom: 4px;">Entry Conditions (${tm.conditions.filter(c => c.met).length}/${tm.conditions.length} met):</div>
+        <div style="font-size: 7px; color: #9ca3af; margin-bottom: 4px;">Entry Conditions (${tm.conditions.filter(c => c.met).length}/${tm.conditions.length} met):</div>
         <div class="list">
           ${tm.conditions.map(c => `
             <div class="list-item">
@@ -1485,7 +1494,7 @@ function generatePageSteps34(data: AnalysisReportData, totalPages: number): stri
       </div>
       ` : ''}
       ${momentumIndicators.length > 0 ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Momentum Indicators</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #9ca3af; border-top: 1px dashed #ddd; padding-top: 6px;">Momentum Indicators</div>
       <div class="row" style="margin-top: 4px;">
         ${momentumIndicators.map(i => `
           <div class="col metric metric-sm">
@@ -1551,7 +1560,7 @@ function generatePageSteps56(data: AnalysisReportData, totalPages: number): stri
       </div>
       <div class="header-center">
         <div class="report-title">Analysis Steps 5-6</div>
-        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #e0e0e0; border-radius: 3px; font-size: 7px; font-weight: 600; color: #333; margin-top: 2px;">${methodDisplay}</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1607,7 +1616,7 @@ function generatePageSteps56(data: AnalysisReportData, totalPages: number): stri
         `).join('')}
       </table>
       ${volatilityIndicators.length > 0 ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Volatility Indicators (ATR, PSAR, KELTNER, BB)</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #9ca3af; border-top: 1px dashed #ddd; padding-top: 6px;">Volatility Indicators (ATR, PSAR, KELTNER, BB)</div>
       <div class="row" style="margin-top: 4px;">
         ${volatilityIndicators.map(i => `
           <div class="col metric metric-sm">
@@ -1648,18 +1657,18 @@ function generatePageSteps56(data: AnalysisReportData, totalPages: number): stri
         </div>
       </div>
       ${divergences.length > 0 ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Detected Divergences</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #9ca3af; border-top: 1px dashed #ddd; padding-top: 6px;">Detected Divergences</div>
       <div style="margin-top: 4px; font-size: 7px;">
         ${divergences.slice(0, 3).map(d => `
           <div style="display: flex; align-items: center; margin-bottom: 2px;">
             <span style="width: 60px; font-weight: 500;">${d.indicator}</span>
             <span class="${d.type === 'bullish' ? 'text-green' : d.type === 'bearish' ? 'text-red' : ''}" style="width: 60px;">${d.type}</span>
-            <span style="color: #666;">${d.description?.slice(0, 40) || ''}</span>
+            <span style="color: #9ca3af;">${d.description?.slice(0, 40) || ''}</span>
           </div>
         `).join('')}
       </div>
       ` : ''}
-      ${tc.proTip ? `<div style="margin-top: 6px; font-size: 7px; background: #fafafa; border: 1px solid #e0e0e0; padding: 6px 8px; border-radius: 3px; color: #444;"><strong>Pro Tip:</strong> ${tc.proTip}</div>` : ''}
+      ${tc.proTip ? `<div style="margin-top: 6px; font-size: 7px; background: #111111; border: 1px solid #374151; padding: 6px 8px; border-radius: 3px; color: #d1d5db;"><strong>Pro Tip:</strong> ${tc.proTip}</div>` : ''}
       ${tcSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tcSummary}</div>` : ''}
     </div>
     ` : ''}
@@ -1718,7 +1727,7 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
       </div>
       <div class="header-center">
         <div class="report-title">Final Verdict</div>
-        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #e0e0e0; border-radius: 3px; font-size: 7px; font-weight: 600; color: #333; margin-top: 2px;">${methodDisplay}</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
         <span class="symbol">${data.symbol}/USDT</span>
@@ -1726,7 +1735,7 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
     </div>
 
     <!-- Step 07: Final Verdict -->
-    <div class="step-box" style="background: #fff; border: 1px solid #e0e0e0;">
+    <div class="step-box" style="background: #111111; border: 1px solid #374151;">
       <div class="step-box-header">
         <span class="step-box-num">07</span>
         <span class="step-box-title">Final Verdict</span>
@@ -1734,13 +1743,13 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
       <div style="text-align: center; padding: 10px 0;">
         <div style="font-size: 24px; font-weight: 700; ${isConditional ? 'color: #d97706' : hasDirection ? (isLong ? 'color: #16a34a' : 'color: #dc2626') : 'color: #d97706'}">${formatAction(getVerdictAction(v))}</div>
         <div style="font-size: 28px; font-weight: 800; margin: 8px 0;">${formatPercent(v?.overallScore)}</div>
-        <div style="font-size: 9px; color: #666;">${isConditional ? 'Conditional entry - Specific conditions must be met before entering' : hasDirection ? (isLong ? 'Bullish setup - Long position recommended' : 'Bearish setup - Short position recommended') : 'Market conditions unclear - Wait for better setup'}</div>
+        <div style="font-size: 9px; color: #9ca3af;">${isConditional ? 'Conditional entry - Specific conditions must be met before entering' : hasDirection ? (isLong ? 'Bullish setup - Long position recommended' : 'Bearish setup - Short position recommended') : 'Market conditions unclear - Wait for better setup'}</div>
       </div>
     </div>
 
     ${isConditional ? `
     <!-- CONDITIONAL GO Explanation -->
-    <div style="margin-bottom: 10px; padding: 12px; background: #fff; border: 1px solid #e0e0e0; border-left: 3px solid #d97706; border-radius: 6px;">
+    <div style="margin-bottom: 10px; padding: 12px; background: #111111; border: 1px solid #374151; border-left: 3px solid #d97706; border-radius: 6px;">
       <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
         <span style="font-size: 18px;">⚠️</span>
         <span style="font-size: 12px; font-weight: 700; color: #92400e;">CONDITIONAL ENTRY REQUIREMENTS</span>
@@ -1760,11 +1769,11 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
           `}
         </div>
         ${data.timing?.waitFor ? `
-        <div style="margin-top: 8px; padding: 6px 10px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; color: #444;">
+        <div style="margin-top: 8px; padding: 6px 10px; background: #111111; border: 1px solid #374151; border-radius: 4px; color: #d1d5db;">
           <strong>Wait for:</strong> ${data.timing.waitFor.event} (Estimated: ${data.timing.waitFor.estimatedTime})
         </div>
         ` : ''}
-        <div style="margin-top: 8px; padding: 6px 10px; background: #fafafa; border-left: 3px solid #dc2626; font-size: 8px; color: #666;">
+        <div style="margin-top: 8px; padding: 6px 10px; background: #111111; border-left: 3px solid #dc2626; font-size: 8px; color: #9ca3af;">
           <strong>Warning:</strong> Do NOT enter this trade until all conditions above are satisfied. Entering prematurely significantly increases risk.
         </div>
       </div>
@@ -1797,47 +1806,47 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
 
       <!-- Main Stats -->
       <div class="row" style="margin-bottom: 8px;">
-        <div class="col metric metric-sm" style="text-align: center; background: #fafafa; border: 1px solid #e0e0e0;">
+        <div class="col metric metric-sm" style="text-align: center; background: #111111; border: 1px solid #374151;">
           <div class="metric-value text-green" style="font-size: 18px;">${ind.summary.bullishIndicators}</div>
           <div class="metric-label">Bullish</div>
         </div>
-        <div class="col metric metric-sm" style="text-align: center; background: #fafafa; border: 1px solid #e0e0e0;">
+        <div class="col metric metric-sm" style="text-align: center; background: #111111; border: 1px solid #374151;">
           <div class="metric-value text-red" style="font-size: 18px;">${ind.summary.bearishIndicators}</div>
           <div class="metric-label">Bearish</div>
         </div>
-        <div class="col metric metric-sm" style="text-align: center; background: #fafafa; border: 1px solid #e0e0e0;">
+        <div class="col metric metric-sm" style="text-align: center; background: #111111; border: 1px solid #374151;">
           <div class="metric-value" style="font-size: 18px;">${ind.summary.neutralIndicators}</div>
           <div class="metric-label">Neutral</div>
         </div>
-        <div class="col metric metric-sm" style="text-align: center; background: #fafafa; border: 1px solid #e0e0e0;">
+        <div class="col metric metric-sm" style="text-align: center; background: #111111; border: 1px solid #374151;">
           <div class="metric-value ${ind.summary.overallSignal === 'bullish' ? 'text-green' : ind.summary.overallSignal === 'bearish' ? 'text-red' : ''}" style="font-size: 14px;">${formatDirection(ind.summary.overallSignal).toUpperCase()}</div>
           <div class="metric-label">Overall Signal</div>
         </div>
       </div>
 
       <!-- Indicator Categories Breakdown -->
-      <div style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
-        <div style="font-size: 7px; font-weight: 600; color: #666; margin-bottom: 6px;">INDICATOR CATEGORIES ANALYZED:</div>
+      <div style="margin-top: 8px; padding: 8px; background: #1a1a1a; border-radius: 4px;">
+        <div style="font-size: 7px; font-weight: 600; color: #9ca3af; margin-bottom: 6px;">INDICATOR CATEGORIES ANALYZED:</div>
         <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; font-size: 7px;">
           <div style="text-align: center;">
-            <div style="font-weight: 600; color: #333;">Trend</div>
-            <div style="color: #666; font-size: 6px;">EMA, SMA, MACD, ADX, Ichimoku, Supertrend, PSAR, Aroon, VWMA</div>
+            <div style="font-weight: 600; color: #d1d5db;">Trend</div>
+            <div style="color: #9ca3af; font-size: 6px;">EMA, SMA, MACD, ADX, Ichimoku, Supertrend, PSAR, Aroon, VWMA</div>
           </div>
           <div style="text-align: center;">
-            <div style="font-weight: 600; color: #333;">Momentum</div>
-            <div style="color: #666; font-size: 6px;">RSI, Stoch, StochRSI, CCI, Williams %R, ROC, MFI, Ultimate, TSI</div>
+            <div style="font-weight: 600; color: #d1d5db;">Momentum</div>
+            <div style="color: #9ca3af; font-size: 6px;">RSI, Stoch, StochRSI, CCI, Williams %R, ROC, MFI, Ultimate, TSI</div>
           </div>
           <div style="text-align: center;">
-            <div style="font-weight: 600; color: #333;">Volatility</div>
-            <div style="color: #666; font-size: 6px;">BB, ATR, Keltner, Donchian, Hist Vol, Squeeze</div>
+            <div style="font-weight: 600; color: #d1d5db;">Volatility</div>
+            <div style="color: #9ca3af; font-size: 6px;">BB, ATR, Keltner, Donchian, Hist Vol, Squeeze</div>
           </div>
           <div style="text-align: center;">
-            <div style="font-weight: 600; color: #333;">Volume</div>
-            <div style="color: #666; font-size: 6px;">OBV, VWAP, A/D, CMF, Force, EOM, PVT, Rel Vol</div>
+            <div style="font-weight: 600; color: #d1d5db;">Volume</div>
+            <div style="color: #9ca3af; font-size: 6px;">OBV, VWAP, A/D, CMF, Force, EOM, PVT, Rel Vol</div>
           </div>
           <div style="text-align: center;">
-            <div style="font-weight: 600; color: #333;">Advanced</div>
-            <div style="color: #666; font-size: 6px;">Order Flow, Whale, Liquidity, Spoofing, Market Impact</div>
+            <div style="font-weight: 600; color: #d1d5db;">Advanced</div>
+            <div style="color: #9ca3af; font-size: 6px;">Order Flow, Whale, Liquidity, Spoofing, Market Impact</div>
           </div>
         </div>
       </div>
@@ -1845,18 +1854,18 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
       <!-- Signal Confidence -->
       <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 7px;">
         <div>
-          <span style="color: #666;">Leading Indicators Signal: </span>
+          <span style="color: #9ca3af;">Leading Indicators Signal: </span>
           <span class="${(ind.summary as unknown as { leadingIndicatorsSignal?: string }).leadingIndicatorsSignal === 'bullish' ? 'text-green' : (ind.summary as unknown as { leadingIndicatorsSignal?: string }).leadingIndicatorsSignal === 'bearish' ? 'text-red' : ''}" style="font-weight: 600;">
             ${formatDirection((ind.summary as unknown as { leadingIndicatorsSignal?: string }).leadingIndicatorsSignal || 'neutral')}
           </span>
         </div>
         <div>
-          <span style="color: #666;">Confidence: </span>
-          <span style="font-weight: 600; color: #333;">${ind.summary.signalConfidence}%</span>
+          <span style="color: #9ca3af;">Confidence: </span>
+          <span style="font-weight: 600; color: #d1d5db;">${ind.summary.signalConfidence}%</span>
         </div>
         <div>
-          <span style="color: #666;">Total Analyzed: </span>
-          <span style="font-weight: 600; color: #333;">${ind.summary.totalIndicatorsUsed}+</span>
+          <span style="color: #9ca3af;">Total Analyzed: </span>
+          <span style="font-weight: 600; color: #d1d5db;">${ind.summary.totalIndicatorsUsed}+</span>
         </div>
       </div>
     </div>
@@ -1864,12 +1873,12 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
 
     <!-- AI Expert Comment -->
     ${data.aiExpertComment ? `
-    <div class="step-box" style="background: #fff; border: 1px solid #e0e0e0;">
+    <div class="step-box" style="background: #111111; border: 1px solid #374151;">
       <div class="step-box-header" style="border-color: #e0e0e0;">
         <span style="font-size: 8px; font-weight: 700; color: #fff; background: #16a34a; padding: 2px 5px; border-radius: 3px;">AI</span>
-        <span class="step-box-title" style="color: #333;">Expert Review</span>
+        <span class="step-box-title" style="color: #d1d5db;">Expert Review</span>
       </div>
-      <div style="font-size: 7px; line-height: 1.5; color: #444; max-height: 150px; overflow: hidden;">${data.aiExpertComment.slice(0, 800)}${data.aiExpertComment.length > 800 ? '...' : ''}</div>
+      <div style="font-size: 7px; line-height: 1.5; color: #d1d5db; max-height: 150px; overflow: hidden;">${data.aiExpertComment.slice(0, 800)}${data.aiExpertComment.length > 800 ? '...' : ''}</div>
     </div>
     ` : ''}
 
@@ -1936,9 +1945,9 @@ export async function captureChartAsImage(): Promise<string | null> {
       console.warn('[Chart Capture] No canvas found inside chart element - chart may not be fully rendered');
     }
 
-    // Capture with dark background for better visibility
+    // Capture with dark background
     const canvas = await html2canvas(element, {
-      backgroundColor: '#ffffff',  // Light background
+      backgroundColor: '#0A0A0A',  // Dark background
       scale: 2,
       logging: false,
       useCORS: true,
@@ -1984,7 +1993,7 @@ async function renderPageToCanvas(html: string): Promise<HTMLCanvasElement> {
   }
 
   const canvas = await html2canvas(page, {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#0A0A0A',
     scale: 2,
     logging: false,
     width: 595,
@@ -2029,12 +2038,12 @@ function generatePageRAG(data: AnalysisReportData, totalPages: number): string {
 
     ${validation ? `
     <!-- Validation Badge -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:6px 10px;border-radius:6px;border:1px solid #e0e0e0;background:#fff;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:6px 10px;border-radius:6px;border:1px solid #e0e0e0;background:#111111;">
       <span style="font-size:12px;color:${validation.passed ? '#16a34a' : '#dc2626'};">${validation.passed ? '✓' : '✗'}</span>
       <span style="font-size:8px;font-weight:600;color:${validation.passed ? '#16a34a' : '#dc2626'};">${validation.passed ? 'Plan Validated' : 'Validation Issues Found'}</span>
-      ${rag.capitalFlowAligned != null ? `<span style="margin-left:auto;font-size:6px;font-weight:600;color:${rag.capitalFlowAligned ? '#16a34a' : '#dc2626'};padding:2px 6px;border-radius:3px;border:1px solid #e0e0e0;background:#fafafa;">${rag.capitalFlowAligned ? 'Flow Aligned' : 'Counter-Flow'}</span>` : ''}
+      ${rag.capitalFlowAligned != null ? `<span style="margin-left:auto;font-size:6px;font-weight:600;color:${rag.capitalFlowAligned ? '#16a34a' : '#dc2626'};padding:2px 6px;border-radius:3px;border:1px solid #e0e0e0;background:#111111;">${rag.capitalFlowAligned ? 'Flow Aligned' : 'Counter-Flow'}</span>` : ''}
     </div>
-    ${validation.summary ? `<div style="font-size:7px;color:#666;margin-bottom:10px;padding:4px 8px;background:#fafafa;border-radius:4px;">${validation.summary}</div>` : ''}
+    ${validation.summary ? `<div style="font-size:7px;color:#666;margin-bottom:10px;padding:4px 8px;background:#111111;border-radius:4px;">${validation.summary}</div>` : ''}
     ` : ''}
 
     ${bands.length > 0 ? `
@@ -2045,15 +2054,15 @@ function generatePageRAG(data: AnalysisReportData, totalPages: number): string {
         ${bands.map((b: { horizon: string; label: string; p10: number; p50: number; p90: number; bandWidthPercent: number; drivers: string[] }) => {
           const horizonColor = b.horizon === 'short' ? '#16a34a' : b.horizon === 'medium' ? '#2563eb' : '#7c3aed';
           return `
-          <div style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 8px;background:#fafafa;">
+          <div style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 8px;background:#111111;">
             <div style="font-size:7px;font-weight:600;color:${horizonColor};text-transform:uppercase;margin-bottom:4px;">${b.label || b.horizon}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;text-align:center;">
               <div><div style="font-size:5px;color:#999;">P10</div><div style="font-size:8px;font-weight:600;color:#dc2626;">${formatPrice(b.p10)}</div></div>
-              <div style="background:#fafafa;border:1px solid #e0e0e0;border-radius:3px;padding:2px;"><div style="font-size:5px;color:#999;">P50</div><div style="font-size:10px;font-weight:700;color:#1a1a1a;">${formatPrice(b.p50)}</div></div>
+              <div style="background:#1a1a1a;border:1px solid #374151;border-radius:3px;padding:2px;"><div style="font-size:5px;color:#9ca3af;">P50</div><div style="font-size:10px;font-weight:700;color:#f1f5f9;">${formatPrice(b.p50)}</div></div>
               <div><div style="font-size:5px;color:#999;">P90</div><div style="font-size:8px;font-weight:600;color:#16a34a;">${formatPrice(b.p90)}</div></div>
             </div>
             <div style="font-size:6px;color:#888;margin-top:3px;text-align:center;">Band: ${b.bandWidthPercent?.toFixed(1) || '0'}%</div>
-            ${b.drivers?.length ? `<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px;">${b.drivers.slice(0, 3).map((d: string) => `<span style="font-size:5px;padding:1px 4px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:2px;color:#666;">${d}</span>`).join('')}</div>` : ''}
+            ${b.drivers?.length ? `<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px;">${b.drivers.slice(0, 3).map((d: string) => `<span style="font-size:5px;padding:1px 4px;background:#1a1a1a;border:1px solid #374151;border-radius:2px;color:#9ca3af;">${d}</span>`).join('')}</div>` : ''}
           </div>`;
         }).join('')}
       </div>
@@ -2080,7 +2089,7 @@ function generatePageRAG(data: AnalysisReportData, totalPages: number): string {
           ${strategies.map((s: { id: string; label: string; direction: string; entry: { price: number; type: string }; stopLoss: { price: number }; takeProfits: Array<{ price: number; label: string }>; riskReward: number; applicability: number; counterFlow?: boolean }) => {
             const isRec = s.id === recommended;
             return `
-            <tr style="${isRec ? 'background:#fafafa;font-weight:600;' : ''}">
+            <tr style="${isRec ? 'background:#111111;font-weight:600;' : ''}">
               <td>
                 ${s.label}${isRec ? ' ★' : ''}${s.counterFlow ? ' ⚠️' : ''}
               </td>
@@ -2110,12 +2119,12 @@ function generatePageRAG(data: AnalysisReportData, totalPages: number): string {
         <span style="font-size:6px;padding:1px 5px;border-radius:3px;background:${research.mode === 'deep' ? '#ede9fe' : research.mode === 'news' ? '#dbeafe' : '#f3f4f6'};color:${research.mode === 'deep' ? '#6d28d9' : research.mode === 'news' ? '#1d4ed8' : '#4b5563'};font-weight:600;">${research.mode?.toUpperCase()}</span>
         ${research.sentiment ? `<span style="font-size:6px;margin-left:auto;color:${research.sentiment.label === 'bullish' ? '#16a34a' : research.sentiment.label === 'bearish' ? '#dc2626' : '#d97706'};font-weight:600;">${research.sentiment.label?.toUpperCase()} (${research.sentiment.score}/100)</span>` : ''}
       </div>
-      ${research.summary ? `<div style="font-size:7px;color:#374151;line-height:1.5;margin-bottom:6px;padding:6px 8px;background:#f9fafb;border-radius:4px;">${research.summary}</div>` : ''}
+      ${research.summary ? `<div style="font-size:7px;color:#374151;line-height:1.5;margin-bottom:6px;padding:6px 8px;background:#1a1a1a;border-radius:4px;">${research.summary}</div>` : ''}
       ${research.citations?.length ? `
       <div style="font-size:6px;color:#666;font-weight:600;margin-bottom:3px;">Sources (${research.citations.length})</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
         ${research.citations.slice(0, 6).map((c: { source: string; title: string; sentiment?: string; reliability: number }, i: number) => `
-        <div style="font-size:6px;padding:3px 5px;background:#fafafa;border:1px solid #eee;border-radius:3px;">
+        <div style="font-size:6px;padding:3px 5px;background:#111111;border:1px solid #eee;border-radius:3px;">
           <span style="font-weight:600;">[${i + 1}] ${c.source}</span>
           <span style="color:${c.sentiment === 'bullish' ? '#16a34a' : c.sentiment === 'bearish' ? '#dc2626' : '#666'}; margin-left:3px;">${c.sentiment || ''}</span>
           <div style="color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.title || ''}</div>
@@ -2181,13 +2190,13 @@ function generateSinglePageReport(data: AnalysisReportData): string {
 
   // Helper for Capital Flow layer boxes
   const getLayerBox = (num: number, title: string, content: string, badge?: string, badgeColor?: string) => `
-    <div style="flex: 1; min-width: 240px; border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px 8px; background: #fafafa;">
+    <div style="flex: 1; min-width: 240px; border: 1px solid #374151; border-radius: 4px; padding: 6px 8px; background: #111111;">
       <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
-        <span style="font-size: 7px; font-weight: 700; color: #666;">L${num}</span>
-        <span style="font-size: 8px; font-weight: 600; color: #1a1a1a;">${title}</span>
+        <span style="font-size: 7px; font-weight: 700; color: #9ca3af;">L${num}</span>
+        <span style="font-size: 8px; font-weight: 600; color: #f1f5f9;">${title}</span>
         ${badge ? `<span style="margin-left: auto; font-size: 6px; font-weight: 600; padding: 1px 4px; border-radius: 2px; background: ${badgeColor || '#666'}; color: white;">${badge}</span>` : ''}
       </div>
-      <div style="font-size: 7px; color: #444; line-height: 1.4;">${content}</div>
+      <div style="font-size: 7px; color: #d1d5db; line-height: 1.4;">${content}</div>
     </div>
   `;
 
@@ -2217,27 +2226,27 @@ function generateSinglePageReport(data: AnalysisReportData): string {
       <style>
         ${styles}
         .single-page { padding: 12px 24px; max-width: 560px; margin: 0 auto; }
-        .section-box { border: 1px solid #ddd; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; background: #fff; }
+        .section-box { border: 1px solid #ddd; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; background: #111111; }
         .section-title-bar { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e0e0e0; }
         .section-num { font-size: 8px; font-weight: 700; color: #fff; background: #1a1a1a; padding: 2px 6px; border-radius: 3px; }
-        .section-name { font-size: 10px; font-weight: 600; color: #1a1a1a; }
+        .section-name { font-size: 10px; font-weight: 600; color: #f1f5f9; }
         .layer-grid { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
         .two-col { display: flex; gap: 8px; justify-content: center; }
         .two-col > div { flex: 1; max-width: 260px; }
-        .step-mini { border: 1px solid #e5e5e5; border-radius: 3px; padding: 5px 7px; margin-bottom: 5px; background: #fafafa; }
+        .step-mini { border: 1px solid #e5e5e5; border-radius: 3px; padding: 5px 7px; margin-bottom: 5px; background: #111111; }
         .step-mini-header { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
-        .step-mini-num { font-size: 7px; font-weight: 700; color: #666; }
-        .step-mini-title { font-size: 8px; font-weight: 600; color: #1a1a1a; }
+        .step-mini-num { font-size: 7px; font-weight: 700; color: #9ca3af; }
+        .step-mini-title { font-size: 8px; font-weight: 600; color: #f1f5f9; }
         .step-mini-gate { margin-left: auto; font-size: 6px; font-weight: 600; }
-        .step-mini-content { font-size: 7px; color: #444; line-height: 1.35; }
+        .step-mini-content { font-size: 7px; color: #d1d5db; line-height: 1.35; }
         .step-mini-row { display: flex; gap: 4px; margin-top: 3px; justify-content: center; }
-        .step-mini-metric { background: #fff; border: 1px solid #eee; border-radius: 2px; padding: 2px 5px; flex: 1; text-align: center; }
-        .step-mini-metric-label { font-size: 5px; color: #888; text-transform: uppercase; }
-        .step-mini-metric-value { font-size: 8px; font-weight: 600; color: #1a1a1a; }
-        .trade-decision-box { border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px 12px; text-align: center; background: #fff; }
+        .step-mini-metric { background: #111111; border: 1px solid #eee; border-radius: 2px; padding: 2px 5px; flex: 1; text-align: center; }
+        .step-mini-metric-label { font-size: 5px; color: #6b7280; text-transform: uppercase; }
+        .step-mini-metric-value { font-size: 8px; font-weight: 600; color: #f1f5f9; }
+        .trade-decision-box { border: 1px solid #374151; border-radius: 4px; padding: 8px 12px; text-align: center; background: #111111; }
         .trade-decision-action { font-size: 20px; font-weight: 700; }
-        .trade-decision-sub { font-size: 7px; color: #666; margin-top: 2px; }
-        .ml-box { border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px 10px; background: #fff; margin-top: 6px; }
+        .trade-decision-sub { font-size: 7px; color: #9ca3af; margin-top: 2px; }
+        .ml-box { border: 1px solid #374151; border-radius: 4px; padding: 6px 10px; background: #111111; margin-top: 6px; }
         .ml-header { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px; }
         .ml-badge { font-size: 7px; font-weight: 700; color: #fff; background: #8b5cf6; padding: 2px 6px; border-radius: 3px; }
         .ml-title { font-size: 8px; font-weight: 600; color: #6b21a8; }
@@ -2245,15 +2254,15 @@ function generateSinglePageReport(data: AnalysisReportData): string {
         .ml-rec { font-size: 12px; font-weight: 700; color: #6b21a8; }
         .ml-conf { font-size: 8px; color: #7c3aed; }
         .ml-layers { display: flex; gap: 4px; flex: 1; justify-content: center; }
-        .ml-layer { flex: 1; max-width: 60px; background: #fff; border: 1px solid #ddd6fe; border-radius: 2px; padding: 2px 4px; text-align: center; }
+        .ml-layer { flex: 1; max-width: 60px; background: #111111; border: 1px solid #ddd6fe; border-radius: 2px; padding: 2px 4px; text-align: center; }
         .ml-layer-name { font-size: 5px; color: #7c3aed; text-transform: uppercase; }
         .ml-layer-score { font-size: 8px; font-weight: 600; color: #6b21a8; }
-        .trade-plan-box { border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px 10px; background: #fff; margin-top: 6px; }
+        .trade-plan-box { border: 1px solid #374151; border-radius: 4px; padding: 8px 10px; background: #111111; margin-top: 6px; }
         .tp-header { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 6px; }
         .tp-badge { font-size: 7px; font-weight: 700; color: #fff; background: #0d9488; padding: 2px 6px; border-radius: 3px; }
         .tp-title { font-size: 9px; font-weight: 600; color: #0f766e; }
         .tp-grid { display: flex; gap: 6px; justify-content: center; }
-        .tp-item { flex: 1; max-width: 120px; background: #fff; border: 1px solid #99f6e4; border-radius: 3px; padding: 4px 6px; text-align: center; }
+        .tp-item { flex: 1; max-width: 120px; background: #111111; border: 1px solid #99f6e4; border-radius: 3px; padding: 4px 6px; text-align: center; }
         .tp-item-label { font-size: 6px; color: #0f766e; text-transform: uppercase; }
         .tp-item-value { font-size: 10px; font-weight: 700; color: #0d9488; }
         .tp-item-sub { font-size: 6px; color: #5eead4; }
@@ -2486,25 +2495,25 @@ function generateSinglePageReport(data: AnalysisReportData): string {
           </div>
 
           <!-- AI RECOMMENDATION (Full Width) -->
-          <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px 10px; background: #fff; margin-top: 6px;">
+          <div style="border: 1px solid #374151; border-radius: 4px; padding: 6px 10px; background: #111111; margin-top: 6px;">
             <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px;">
               <span style="font-size: 7px; font-weight: 700; color: #fff; background: #f59e0b; padding: 2px 6px; border-radius: 3px;">AI</span>
               <span style="font-size: 8px; font-weight: 600; color: #92400e;">AI Recommendation</span>
             </div>
             <div style="display: flex; gap: 8px; justify-content: center;">
-              <div style="flex: 1; max-width: 90px; background: #fff; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
+              <div style="flex: 1; max-width: 90px; background: #111111; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
                 <div style="font-size: 6px; color: #92400e; text-transform: uppercase;">Direction</div>
                 <div style="font-size: 12px; font-weight: 700; color: ${l4Dir === 'BUY' ? '#16a34a' : l4Dir === 'SELL' ? '#dc2626' : '#666'};">${l4Dir}</div>
               </div>
-              <div style="flex: 1; max-width: 90px; background: #fff; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
+              <div style="flex: 1; max-width: 90px; background: #111111; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
                 <div style="font-size: 6px; color: #92400e; text-transform: uppercase;">Market</div>
                 <div style="font-size: 10px; font-weight: 600; color: #92400e;">${cf.layer4?.market || '-'}</div>
               </div>
-              <div style="flex: 1; max-width: 90px; background: #fff; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
+              <div style="flex: 1; max-width: 90px; background: #111111; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
                 <div style="font-size: 6px; color: #92400e; text-transform: uppercase;">Confidence</div>
                 <div style="font-size: 10px; font-weight: 600; color: #b45309;">${cf.layer4?.confidence || 0}%</div>
               </div>
-              <div style="flex: 2; max-width: 200px; background: #fff; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
+              <div style="flex: 2; max-width: 200px; background: #111111; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
                 <div style="font-size: 6px; color: #92400e; text-transform: uppercase;">Reason</div>
                 <div style="font-size: 7px; color: #78350f;">${cf.layer4?.reason || 'Capital flow analysis based recommendation'}</div>
               </div>
@@ -2542,8 +2551,8 @@ function generateSinglePageReport(data: AnalysisReportData): string {
           </div>
 
           <!-- TRADE PLAN CHART (Full Width) -->
-          <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px; margin-top: 6px; background: #fff;">
-            <div style="font-size: 7px; font-weight: 600; color: #333; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <div style="border: 1px solid #374151; border-radius: 4px; padding: 6px; margin-top: 6px; background: #111111;">
+            <div style="font-size: 7px; font-weight: 600; color: #d1d5db; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 6px;">
               <span>Trade Plan Chart</span>
               <span style="font-size: 6px; color: #999;">Entry • TP1-2 • SL</span>
             </div>
