@@ -43,6 +43,7 @@ const PriceTicker = dynamic(
 
 // Primary navigation - Top-Down Methodology Flow (L1→L7)
 const directNav = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Terminal', href: '/terminal', icon: Monitor },
   { name: 'Analyze', href: '/analyze', icon: BarChart3 },
   { name: 'Signals', href: '/signals', icon: Activity },
