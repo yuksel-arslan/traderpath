@@ -589,41 +589,18 @@ export function AnalysisDialog({
           const errorCode = data.error?.code;
 
           if (errorCode === 'DAILY_PASS_REQUIRED') {
-            // Auto-purchase daily pass and retry
-            const purchaseRes = await authFetch('/api/passes/purchase', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ passType: 'ASSET_ANALYSIS' }),
-            });
-            const purchaseData = await purchaseRes.json();
-            if (purchaseData.success) {
-              // Retry the analysis after purchasing the pass
-              const retryResponse = await fetch(getApiUrl('/api/analysis/full'), {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                  symbol,
-                  accountSize: 10000,
-                  interval: timeframe,
-                  tradeType,
-                  ...(capitalFlowContext ? { capitalFlowContext } : {}),
-                }),
-              });
-              const retryText = await retryResponse.text();
-              data = retryText ? JSON.parse(retryText) : {};
-              if (!retryResponse.ok) {
-                throw new Error(data.error?.message || 'Analysis failed after purchasing pass');
-              }
-              // Fall through to success handling below
-            } else {
-              notifyInsufficientCredits(100, purchaseData.error?.currentBalance || 0);
-              throw new Error('Insufficient credits for Daily Analysis Pass (100 credits required).');
-            }
+            // Do NOT auto-purchase - user must purchase the pass explicitly
+            const currentBalance = data.error?.currentBalance || 0;
+            notifyInsufficientCredits(100, currentBalance);
+            throw new Error('Daily Analysis Pass required (100 credits). Please go back and purchase a pass first.');
           } else if (errorCode === 'DAILY_LIMIT_REACHED') {
             throw new Error('Daily analysis limit reached (10/10). Your pass will reset at midnight UTC.');
-          } else {
-            notifyInsufficientCredits(100, data.data?.currentBalance || 0);
+          } else if (errorCode === 'INSUFFICIENT_CREDITS') {
+            const currentBalance = data.error?.currentBalance || 0;
+            notifyInsufficientCredits(data.error?.required || 100, currentBalance);
             throw new Error(data.error?.message || 'Insufficient credits. Please purchase more credits.');
+          } else {
+            throw new Error(data.error?.message || 'Analysis failed. Please try again.');
           }
         } else {
           throw new Error(data.error?.message || 'Full analysis failed');

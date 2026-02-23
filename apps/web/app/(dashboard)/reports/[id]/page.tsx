@@ -103,7 +103,7 @@ function renderAIExpertComment(comment: string) {
                 <div className="text-lg flex-shrink-0">{config.emoji}</div>
                 <div className="flex-1">
                   <div className={cn('text-xs font-semibold mb-1', config.color)}>{config.name}</div>
-                  <p className="text-sm text-gray-700 dark:text-slate-300 leading-relaxed">{section.content}</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{section.content}</p>
                 </div>
               </div>
             );
@@ -118,7 +118,7 @@ function renderAIExpertComment(comment: string) {
             <div className="text-lg flex-shrink-0">🤖</div>
             <div className="flex-1">
               <div className="text-xs font-semibold mb-1 text-teal-600 dark:text-teal-400">VOLTRAN - Final Synthesis</div>
-              <p className="text-sm text-gray-700 dark:text-slate-300 leading-relaxed font-medium">{voltranContent}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium">{voltranContent}</p>
             </div>
           </div>
         </div>
@@ -126,7 +126,7 @@ function renderAIExpertComment(comment: string) {
 
       {/* Fallback if no sections parsed */}
       {sections.length === 0 && !voltranContent && !verdict && (
-        <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
           {comment}
         </p>
       )}
@@ -235,6 +235,10 @@ export default function ReportViewPage() {
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [whatsappSent, setWhatsappSent] = useState(false);
+  const [whatsappPhoneModal, setWhatsappPhoneModal] = useState(false);
+  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [whatsappSending, setWhatsappSending] = useState(false);
   const [autoEmailInProgress, setAutoEmailInProgress] = useState(false);
   const [autoEmailDone, setAutoEmailDone] = useState(false);
   const [reportMeta, setReportMeta] = useState<{ analysisId: string; interval?: string } | null>(null);
@@ -326,9 +330,9 @@ export default function ReportViewPage() {
       if (response.ok) {
         setAutoEmailDone(true);
         setEmailSent(true);
-        // Redirect back to reports page after showing success
+        // Dismiss overlay after 2 seconds - let user stay on page
         setTimeout(() => {
-          router.push('/reports');
+          setAutoEmailInProgress(false);
         }, 2000);
       } else {
         const errorData = await response.json().catch(() => ({}));
@@ -341,7 +345,7 @@ export default function ReportViewPage() {
       alert('Failed to send email. Please try again.');
       setAutoEmailInProgress(false);
     }
-  }, [report, reportMeta, router]);
+  }, [report, reportMeta]);
 
   // Trigger auto-email when report is loaded and email=true parameter is present
   useEffect(() => {
@@ -520,6 +524,71 @@ export default function ReportViewPage() {
     }
   };
 
+  // Send via WhatsApp - captures screenshot and sends via Twilio
+  const handleSendWhatsApp = async (phoneNumber: string) => {
+    if (!pageRef.current || exporting || !report || !phoneNumber) return;
+
+    setWhatsappSending(true);
+    setWhatsappPhoneModal(false);
+    setExportDropdownOpen(false);
+    try {
+      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
+
+      let canvas: HTMLCanvasElement;
+      try {
+        canvas = await html2canvas(pageRef.current, {
+          backgroundColor: '#0A0A0A',
+          scale: 2,
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+          windowWidth: 1200,
+          onclone: (clonedDoc) => {
+            clonedDoc.documentElement.classList.add('dark');
+            const clonedElement = clonedDoc.querySelector('[data-export-container]');
+            if (clonedElement) {
+              (clonedElement as HTMLElement).style.overflow = 'visible';
+              (clonedElement as HTMLElement).style.backgroundColor = '#0A0A0A';
+              (clonedElement as HTMLElement).style.color = '#e5e7eb';
+            }
+          },
+        });
+      } finally {
+        restoreCanvases();
+      }
+
+      const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
+
+      const response = await authFetch('/api/reports/whatsapp-screenshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          analysisId: report.analysisId,
+          symbol: report.symbol,
+          interval: report.interval || '4h',
+          screenshot: imageBase64,
+          score: report.verdict?.overallScore ? report.verdict.overallScore * 10 : 0,
+          direction: report.tradePlan?.direction || 'long',
+          phoneNumber,
+        }),
+      });
+
+      if (response.ok) {
+        setWhatsappSent(true);
+        setTimeout(() => setWhatsappSent(false), 3000);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('WhatsApp send failed:', response.status, errorData);
+        alert(errorData?.error?.message || 'Failed to send WhatsApp message. Please try again.');
+      }
+    } catch (err) {
+      console.error('Failed to send WhatsApp:', err);
+      alert('Failed to send WhatsApp message');
+    } finally {
+      setWhatsappSending(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -569,23 +638,83 @@ export default function ReportViewPage() {
 
   return (
     <>
+      {/* WhatsApp phone number modal */}
+      {whatsappPhoneModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setWhatsappPhoneModal(false)}>
+          <div className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-gray-800 rounded-lg p-6 shadow-sm max-w-sm mx-4 w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-[#25D366]/10 flex items-center justify-center">
+                <svg className="w-5 h-5 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Send via WhatsApp</h3>
+                <p className="text-sm text-gray-500">Report screenshot will be sent</p>
+              </div>
+            </div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              value={whatsappPhone}
+              onChange={(e) => setWhatsappPhone(e.target.value)}
+              placeholder="+905551234567"
+              className="w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-[#111111] text-gray-900 dark:text-gray-100 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition-colors mb-1"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && whatsappPhone.trim()) {
+                  handleSendWhatsApp(whatsappPhone.trim());
+                }
+              }}
+            />
+            <p className="text-xs text-gray-400 mb-4">Include country code (e.g., +90 for Turkey)</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setWhatsappPhoneModal(false)}
+                className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium px-4 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleSendWhatsApp(whatsappPhone.trim())}
+                disabled={!whatsappPhone.trim()}
+                className="bg-[#25D366] hover:bg-[#20bd5a] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-md transition-colors"
+              >
+                Send Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp sending overlay */}
+      {whatsappSending && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-gray-800 rounded-lg p-8 shadow-sm text-center max-w-md mx-4">
+            <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-[#25D366]" />
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Sending via WhatsApp...</h2>
+            <p className="text-sm text-gray-500">Capturing report screenshot and sending to WhatsApp...</p>
+          </div>
+        </div>
+      )}
+
       {/* Auto-email overlay - shows on top of page content */}
       {autoEmailInProgress && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl text-center max-w-md mx-4">
+          <div className="bg-white dark:bg-[#111111] rounded-lg p-8 shadow-sm text-center max-w-md mx-4">
             {autoEmailDone ? (
               <>
                 <div className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
                   <Check className="w-8 h-8 text-green-500" />
                 </div>
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Email Sent!</h2>
-                <p className="text-gray-500 dark:text-slate-400">Your report screenshot has been sent to your email. Redirecting...</p>
+                <p className="text-gray-500 dark:text-gray-400">Your report screenshot has been sent to your email. Redirecting...</p>
               </>
             ) : (
               <>
                 <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-teal-500" />
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Sending Email...</h2>
-                <p className="text-gray-500 dark:text-slate-400">Capturing full report screenshot and sending to your email...</p>
+                <p className="text-gray-500 dark:text-gray-400">Capturing full report screenshot and sending to your email...</p>
               </>
             )}
           </div>
@@ -604,7 +733,7 @@ export default function ReportViewPage() {
           <div
             ref={pageRef}
             data-export-container
-            className="bg-[#0A0A0A] rounded-2xl p-4 sm:p-6 border border-gray-800">
+            className="bg-white dark:bg-[#0A0A0A] rounded-lg p-4 sm:p-6 border border-gray-200 dark:border-gray-800">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
@@ -618,7 +747,7 @@ export default function ReportViewPage() {
               />
               <div>
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{report.symbol}/USDT Analysis</h1>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">{report.generatedAt}</p>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{report.generatedAt}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 justify-between sm:justify-end">
@@ -636,7 +765,7 @@ export default function ReportViewPage() {
           {/* 6 Info Cards - 1 col mobile, 2 col desktop */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
             {/* 1. Market Pulse */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+            <div className="bg-gray-50 dark:bg-[#111111] rounded-lg p-4 border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
@@ -647,13 +776,13 @@ export default function ReportViewPage() {
                   marketStatus === 'Bullish' ? 'text-green-600 dark:text-green-400' : marketStatus === 'Bearish' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{marketStatus}</span>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Fear & Greed: {report.marketPulse?.fearGreedIndex || 0} ({report.marketPulse?.fearGreedLabel || 'N/A'}) • BTC Dominance: {report.marketPulse?.btcDominance?.toFixed(1) || '0'}%
               </p>
             </div>
 
             {/* 2. Asset Scan */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+            <div className="bg-gray-50 dark:bg-[#111111] rounded-lg p-4 border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Search className="w-4 h-4 text-purple-500 dark:text-purple-400" />
@@ -666,13 +795,13 @@ export default function ReportViewPage() {
                   assetStatus === 'Weak' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
                 )}>{assetStatus}</span>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Price: {formatPrice(report.assetScan?.currentPrice)} • 24h: {(report.assetScan?.priceChange24h || 0) >= 0 ? '+' : ''}{report.assetScan?.priceChange24h?.toFixed(2) || '0'}%
               </p>
             </div>
 
             {/* 3. Safety Check */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+            <div className="bg-gray-50 dark:bg-[#111111] rounded-lg p-4 border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-amber-500 dark:text-amber-400" />
@@ -683,13 +812,13 @@ export default function ReportViewPage() {
                   safetyStatus === 'Safe' ? 'text-green-600 dark:text-green-400' : safetyStatus === 'Risky' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{safetyStatus}</span>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 {report.safetyCheck?.manipulation?.pumpDumpRisk === 'low' ? 'No manipulation detected' : 'Manipulation risk detected'} • Whale activity: {report.safetyCheck?.whaleActivity?.bias || 'neutral'}
               </p>
             </div>
 
             {/* 4. Timing Analysis */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+            <div className="bg-gray-50 dark:bg-[#111111] rounded-lg p-4 border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400" />
@@ -700,13 +829,13 @@ export default function ReportViewPage() {
                   timingStatus === 'Good' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{timingStatus}</span>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 RSI: {report.assetScan?.indicators?.rsi?.toFixed(0) || 'N/A'} • MACD: {macdDesc}
               </p>
             </div>
 
             {/* 5. Trade Plan */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+            <div className="bg-gray-50 dark:bg-[#111111] rounded-lg p-4 border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Target className="w-4 h-4 text-cyan-500 dark:text-cyan-400" />
@@ -717,7 +846,7 @@ export default function ReportViewPage() {
                   planStatus === 'Ready' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{planStatus}</span>
               </div>
-              <div className="text-sm text-gray-500 dark:text-slate-400 space-y-0.5 sm:space-y-0">
+              <div className="text-sm text-gray-500 dark:text-gray-400 space-y-0.5 sm:space-y-0">
                 <span className="block sm:inline">Entry: {formatPrice(report.tradePlan?.averageEntry)}</span>
                 <span className="hidden sm:inline"> • </span>
                 <span className="block sm:inline">TP: {formatPrice(report.tradePlan?.takeProfits?.[0]?.price)}</span>
@@ -727,7 +856,7 @@ export default function ReportViewPage() {
             </div>
 
             {/* 6. Trap Check */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+            <div className="bg-gray-50 dark:bg-[#111111] rounded-lg p-4 border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Crosshair className="w-4 h-4 text-red-500 dark:text-red-400" />
@@ -738,7 +867,7 @@ export default function ReportViewPage() {
                   trapStatus === 'Clear' ? 'text-green-600 dark:text-green-400' : trapStatus === 'Warning' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{trapStatus}</span>
               </div>
-              <div className="text-sm text-gray-500 dark:text-slate-400 space-y-0.5 sm:space-y-0">
+              <div className="text-sm text-gray-500 dark:text-gray-400 space-y-0.5 sm:space-y-0">
                 <span className="block sm:inline">Bull trap: {report.trapCheck?.traps?.bullTrap ? 'Yes' : 'No'}</span>
                 <span className="hidden sm:inline"> • </span>
                 <span className="block sm:inline">Bear trap: {report.trapCheck?.traps?.bearTrap ? 'Yes' : 'No'}</span>
@@ -767,7 +896,7 @@ export default function ReportViewPage() {
 
           {/* AI Recommendation */}
           <div className={cn(
-            "rounded-xl p-4 mb-6",
+            "rounded-lg p-4 mb-6",
             isNeutral ? "bg-gray-50 dark:bg-gray-500/10 border border-gray-500/20" :
             isLong ? "bg-green-50 dark:bg-green-500/10 border border-green-500/20" : "bg-red-50 dark:bg-red-500/10 border border-red-500/20"
           )}>
@@ -777,7 +906,7 @@ export default function ReportViewPage() {
                 AI Recommendation
               </span>
             </div>
-            <p className="text-sm text-gray-600 dark:text-slate-300">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               {report.verdict?.aiSummary || `Market conditions favor ${isNeutral ? 'sideways' : isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(report.tradePlan?.averageEntry)} with ${report.tradePlan?.riskReward?.toFixed(1) || '0'}:1 risk-reward ratio. Set stop-loss at ${formatPrice(report.tradePlan?.stopLoss?.price)} to protect against downside.`}
             </p>
           </div>
@@ -813,10 +942,10 @@ export default function ReportViewPage() {
                   {exportDropdownOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setExportDropdownOpen(false)} />
-                      <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 z-50 overflow-hidden">
+                      <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#111111] rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 z-50 overflow-hidden">
                         <button
                           onClick={handleExportPNG}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
                         >
                           <Image className="w-4 h-4 text-teal-500" />
                           <div>
@@ -826,7 +955,7 @@ export default function ReportViewPage() {
                         </button>
                         <button
                           onClick={handleExportJPG}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
                         >
                           <Image className="w-4 h-4 text-blue-500" />
                           <div>
@@ -834,23 +963,19 @@ export default function ReportViewPage() {
                             <div className="text-xs text-gray-400">Smaller Size</div>
                           </div>
                         </button>
-                        <div className="border-t border-gray-100 dark:border-slate-700" />
+                        <div className="border-t border-gray-100 dark:border-gray-800" />
                         <button
                           onClick={() => {
-                            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://traderpath.io';
-                            const symbol = report.symbol || '';
-                            const direction = isLong ? 'LONG' : isNeutral ? 'NEUTRAL' : 'SHORT';
-                            const score = report.verdict?.overallScore?.toFixed(1) || '-';
-                            const msg = `TraderPath Report: ${symbol} ${direction}\nScore: ${score}/10\n${appUrl}/reports/${reportId}`;
-                            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
                             setExportDropdownOpen(false);
+                            setWhatsappPhoneModal(true);
                           }}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-[#25D366]/10 transition"
+                          disabled={whatsappSending}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-[#25D366]/10 transition"
                         >
                           <svg className="w-4 h-4 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                           <div>
-                            <div>Share on WhatsApp</div>
-                            <div className="text-xs text-gray-400">Send link</div>
+                            <div>{whatsappSending ? 'Sending...' : whatsappSent ? 'Sent!' : 'Send via WhatsApp'}</div>
+                            <div className="text-xs text-gray-400">Send report with image</div>
                           </div>
                         </button>
                       </div>
@@ -858,7 +983,7 @@ export default function ReportViewPage() {
                   )}
                 </div>
               </div>
-              <div ref={chartRef} className="bg-white dark:bg-slate-800 rounded-xl p-2">
+              <div ref={chartRef} className="bg-white dark:bg-[#111111] rounded-lg p-2">
                 <TradePlanChart
                   symbol={report.symbol}
                   direction={(isLong ? 'long' : 'short') as 'long' | 'short'}
@@ -884,7 +1009,7 @@ export default function ReportViewPage() {
 
           {/* AI Expert Review Section - Only show if comment exists */}
           {aiExpertComment && (
-            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-4 mb-6">
+            <div className="rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-4 mb-6">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
                   <Bot className="w-4 h-4 text-white" />
@@ -895,18 +1020,18 @@ export default function ReportViewPage() {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-800/50 rounded-lg p-4 border border-amber-200 dark:border-amber-500/20">
+              <div className="bg-white dark:bg-[#111111] rounded-lg p-4 border border-amber-200 dark:border-amber-500/20">
                 {renderAIExpertComment(aiExpertComment)}
               </div>
             </div>
           )}
 
           {/* Footer - Copyright */}
-          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-700">
-            <p className="text-center text-xs text-gray-500 dark:text-slate-400">
+          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-800">
+            <p className="text-center text-xs text-gray-500 dark:text-gray-400">
               © 2025 <span className="font-semibold text-teal-500">TraderPath</span>. All rights reserved.
             </p>
-            <p className="text-center text-xs text-gray-400 dark:text-slate-500 mt-1">
+            <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-1">
               For informational and educational purposes only. Not financial advice. Past performance does not guarantee future results.
             </p>
           </div>

@@ -749,13 +749,16 @@ Warn about potential traps and give protective advice.`;
       const passCheck = await dailyPassService.checkPass(userId, 'ASSET_ANALYSIS');
 
       if (!passCheck.hasPass) {
-        // User doesn't have a daily pass - they need to purchase one
+        // User doesn't have a daily pass - include current balance for UI
+        const { creditService: cs } = await import('../credits/credit.service');
+        const balance = await cs.getBalance(userId);
         return reply.status(402).send({
           success: false,
           error: {
             code: 'DAILY_PASS_REQUIRED',
             message: 'A Daily Analysis Pass is required. Purchase for 100 credits to get 10 analyses today.',
             required: 100,
+            currentBalance: balance.balance,
             passType: 'ASSET_ANALYSIS',
             purchaseUrl: '/api/passes/purchase',
           },
@@ -1014,15 +1017,15 @@ Warn about potential traps and give protective advice.`;
             takeProfits: tradePlan.takeProfits,
             riskReward: tradePlan.riskReward,
           } : null,
-          news: marketPulse.news ? {
-            items: (marketPulse.news?.items || []).map((n: Record<string, unknown>) => ({
+          news: marketPulse.newsSentiment?.topHeadlines?.length ? {
+            items: marketPulse.newsSentiment.topHeadlines.map((n: Record<string, unknown>) => ({
               title: String(n.title || ''),
               url: String(n.url || ''),
               source: String(n.source || ''),
-              publishedAt: n.publishedAt as Date || new Date(),
+              publishedAt: n.publishedAt ? new Date(String(n.publishedAt)) : new Date(),
               sentiment: String(n.sentiment || 'neutral'),
             })),
-            sentiment: marketPulse.news.sentiment || { overall: 'neutral', score: 50 },
+            sentiment: { overall: marketPulse.newsSentiment.overall || 'neutral', score: marketPulse.newsSentiment.score || 0 },
           } : undefined,
           economicCalendar: timing.economicCalendar || undefined,
         };

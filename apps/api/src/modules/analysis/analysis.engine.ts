@@ -2854,7 +2854,7 @@ async function fetchNewsSentiment(symbol: string): Promise<NewsSentimentResult> 
   const cached = getCached<NewsSentimentResult>(cacheKey);
   if (cached) return cached;
 
-  const NEWS_API_KEY = process.env.NEWS_API_KEY;
+  const NEWS_API_KEY = process.env.NEWS_API_KEY || process.env.CRYPTOPANIC_API_KEY;
   const NEWS_API_URL = process.env.NEWS_API_URL || 'https://cryptopanic.com/api/v1';
 
   // Default result if no API key or error
@@ -3740,6 +3740,8 @@ export const analysisEngine = {
           title: n.title,
           source: n.source,
           sentiment: n.sentiment,
+          url: n.url || '',
+          publishedAt: n.publishedAt || new Date().toISOString(),
         })),
       },
       macroEvents: economicCalendar?.todayHighImpact.map(e => ({
@@ -4414,6 +4416,8 @@ export const analysisEngine = {
           title: n.title,
           source: n.source,
           sentiment: n.sentiment,
+          url: n.url || '',
+          publishedAt: n.publishedAt || new Date().toISOString(),
         })),
       },
       exchangeFlows: [

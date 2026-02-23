@@ -1860,6 +1860,241 @@ export async function reportRoutes(fastify: FastifyInstance) {
       }
     }
   );
+
+  // ===========================================
+  // Temporary Media Store (for WhatsApp image delivery via Twilio)
+  // ===========================================
+  const tempMediaStore = new Map<string, { data: Buffer; contentType: string; expiresAt: number }>();
+
+  // Cleanup expired entries every 2 minutes
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of tempMediaStore) {
+      if (now > value.expiresAt) {
+        tempMediaStore.delete(key);
+      }
+    }
+  }, 2 * 60 * 1000);
+
+  // GET /api/reports/temp-media/:token - Serve temporary media (public, no auth)
+  fastify.get<{ Params: { token: string } }>(
+    '/api/reports/temp-media/:token',
+    async (request: FastifyRequest<{ Params: { token: string } }>, reply: FastifyReply) => {
+      const { token } = request.params;
+      const media = tempMediaStore.get(token);
+
+      if (!media || Date.now() > media.expiresAt) {
+        tempMediaStore.delete(token);
+        return reply.code(404).send({ error: 'Media not found or expired' });
+      }
+
+      reply.header('Content-Type', media.contentType);
+      reply.header('Cache-Control', 'no-store');
+      return reply.send(media.data);
+    }
+  );
+
+  // ===========================================
+  // POST /api/reports/whatsapp-screenshot - Send report screenshot via WhatsApp
+  // ===========================================
+  interface SendWhatsAppScreenshotBody {
+    analysisId?: string;
+    symbol: string;
+    interval?: string;
+    screenshot: string; // Base64 encoded image
+    score: number;
+    direction: string;
+    phoneNumber: string; // Recipient WhatsApp number (e.g., +905xxxxxxxxx)
+  }
+
+  const WHATSAPP_SEND_CREDIT_COST = 5;
+
+  fastify.post<{ Body: SendWhatsAppScreenshotBody }>(
+    '/api/reports/whatsapp-screenshot',
+    { preHandler: [authenticate], config: { rawBody: true }, bodyLimit: 20 * 1024 * 1024 },
+    async (
+      request: FastifyRequest<{ Body: SendWhatsAppScreenshotBody }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const userId = (request.user as JwtUser).id;
+        const { analysisId, symbol, interval, screenshot, score, direction, phoneNumber } = request.body;
+
+        if (!symbol || !screenshot || !phoneNumber) {
+          return reply.code(400).send({
+            error: { code: 'MISSING_FIELDS', message: 'Missing required fields (symbol, screenshot, phoneNumber)' },
+          });
+        }
+
+        // Validate phone number format
+        const cleanPhone = phoneNumber.replace(/\s/g, '');
+        if (!/^\+\d{10,15}$/.test(cleanPhone)) {
+          return reply.code(400).send({
+            error: { code: 'INVALID_PHONE', message: 'Phone number must start with + followed by 10-15 digits (e.g., +905551234567)' },
+          });
+        }
+
+        // Get user info
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { name: true, email: true, isAdmin: true },
+        });
+
+        if (!user) {
+          return reply.code(400).send({
+            error: { code: 'USER_NOT_FOUND', message: 'User not found' },
+          });
+        }
+
+        // Check free email limit for this analysis (reuses same counter as email)
+        if (!user.isAdmin && analysisId) {
+          const analysis = await prisma.analysis.findUnique({
+            where: { id: analysisId },
+            select: { emailsSentUsed: true },
+          });
+
+          if (analysis && (analysis.emailsSentUsed || 0) >= FREE_EMAILS_PER_ANALYSIS) {
+            const chargeResult = await creditService.charge(
+              userId,
+              WHATSAPP_SEND_CREDIT_COST,
+              'whatsapp_send_report',
+              { symbol, analysisId }
+            );
+
+            if (!chargeResult.success) {
+              return reply.code(402).send({
+                error: {
+                  code: 'INSUFFICIENT_CREDITS',
+                  message: `Requires ${WHATSAPP_SEND_CREDIT_COST} credits. You have ${chargeResult.newBalance} credits.`,
+                  required: WHATSAPP_SEND_CREDIT_COST,
+                  currentBalance: chargeResult.newBalance,
+                },
+              });
+            }
+          }
+
+          // Increment usage counter
+          if (analysisId) {
+            try {
+              await prisma.analysis.update({
+                where: { id: analysisId },
+                data: { emailsSentUsed: { increment: 1 } },
+              });
+            } catch { /* Analysis might not exist */ }
+          }
+        }
+
+        // Check Twilio credentials
+        const twilioSid = process.env['TWILIO_ACCOUNT_SID'];
+        const twilioToken = process.env['TWILIO_AUTH_TOKEN'];
+        const twilioPhone = process.env['TWILIO_PHONE_NUMBER'];
+
+        if (!twilioSid || !twilioToken || !twilioPhone) {
+          return reply.code(503).send({
+            error: { code: 'WHATSAPP_NOT_CONFIGURED', message: 'WhatsApp sending is not configured. Please contact support.' },
+          });
+        }
+
+        // Store screenshot in temp media store
+        const crypto = await import('crypto');
+        const token = crypto.randomBytes(32).toString('hex');
+
+        // Strip data URL prefix if present
+        const base64Data = screenshot.replace(/^data:image\/\w+;base64,/, '');
+        const imageBuffer = Buffer.from(base64Data, 'base64');
+        const contentType = screenshot.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+
+        tempMediaStore.set(token, {
+          data: imageBuffer,
+          contentType,
+          expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+        });
+
+        const apiUrl = process.env['API_URL'] || 'https://api.traderpath.io';
+        const mediaUrl = `${apiUrl}/api/reports/temp-media/${token}`;
+
+        // Format WhatsApp message
+        const directionText = direction?.toLowerCase() === 'long' ? 'LONG' : direction?.toLowerCase() === 'short' ? 'SHORT' : 'NEUTRAL';
+        const directionEmoji = direction?.toLowerCase() === 'long' ? '🟢' : direction?.toLowerCase() === 'short' ? '🔴' : '⚪';
+        const scoreNum = typeof score === 'number' ? score : 0;
+        const scoreDisplay = scoreNum > 10 ? scoreNum.toFixed(0) : (scoreNum * 10).toFixed(0);
+
+        const appUrl = process.env['APP_URL'] || 'https://traderpath.io';
+        const waText = [
+          `${directionEmoji} *TraderPath Analysis Report*`,
+          ``,
+          `*${formatSymbolPair(symbol)}* | ${directionText}`,
+          `Score: *${scoreDisplay}/100*`,
+          interval ? `Timeframe: ${interval}` : '',
+          ``,
+          `✅ 7-Step Analysis`,
+          `✅ Trade Plan (Entry, SL, TP)`,
+          `✅ AI Expert Commentary`,
+          ``,
+          analysisId ? `📊 View Interactive: ${appUrl}/analyze/details/${analysisId}` : '',
+          ``,
+          `_TraderPath - Professional Trading Analysis_`,
+          `_This is not financial advice._`,
+        ].filter(Boolean).join('\n');
+
+        // Send via Twilio WhatsApp API
+        const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`;
+        const auth = Buffer.from(`${twilioSid}:${twilioToken}`).toString('base64');
+
+        const response = await fetch(twilioUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${auth}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            To: `whatsapp:${cleanPhone}`,
+            From: `whatsapp:${twilioPhone}`,
+            Body: waText,
+            MediaUrl: mediaUrl,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.text();
+          fastify.log.error({ status: response.status, body: errorBody }, 'Twilio WhatsApp send failed');
+
+          // Refund credits if charged
+          if (!user.isAdmin && analysisId) {
+            try {
+              const analysis = await prisma.analysis.findUnique({ where: { id: analysisId }, select: { emailsSentUsed: true } });
+              if (analysis && (analysis.emailsSentUsed || 0) > FREE_EMAILS_PER_ANALYSIS) {
+                await creditService.add(userId, WHATSAPP_SEND_CREDIT_COST, 'BONUS', 'whatsapp_send_error_refund', { isRefund: true, symbol, analysisId });
+                await prisma.analysis.update({ where: { id: analysisId }, data: { emailsSentUsed: { decrement: 1 } } });
+              }
+            } catch { /* best effort refund */ }
+          }
+
+          return reply.code(500).send({
+            error: { code: 'WHATSAPP_FAILED', message: 'Failed to send WhatsApp message', details: errorBody },
+          });
+        }
+
+        // Clean up media after a short delay (Twilio needs time to fetch)
+        setTimeout(() => {
+          tempMediaStore.delete(token);
+        }, 3 * 60 * 1000); // 3 minutes
+
+        fastify.log.info({ userId, phone: cleanPhone, symbol, analysisId }, 'WhatsApp report screenshot sent');
+
+        return reply.send({
+          success: true,
+          message: `Report sent via WhatsApp to ${cleanPhone}`,
+        });
+      } catch (error) {
+        fastify.log.error({ error, userId: (request.user as JwtUser)?.id }, 'WhatsApp screenshot endpoint error');
+        const msg = error instanceof Error ? error.message : 'Failed to send WhatsApp message';
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: msg },
+        });
+      }
+    }
+  );
 }
 
 // Generate coin icon as base64 SVG (reliable for all email clients)
