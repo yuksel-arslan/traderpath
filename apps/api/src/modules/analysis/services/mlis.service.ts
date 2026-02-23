@@ -27,7 +27,8 @@ import { extractConv1DFeatures, type Conv1DFeatures } from './ml/conv1d-features
 import { getAdaptiveThresholds, type AdaptiveThresholds } from './ml/regime-thresholds.service';
 import { analyzeGARCH, type GARCHResult } from './ml/garch.service';
 import { estimateInstitutionalFlow, type InstitutionalFlowResult } from './ml/institutional-flow.service';
-import { calibrateScore, type PlattCalibrationResult } from './ml/platt-scaling.service';
+import { calibrateScore, type PlattCalibrationResult, type TrainingOutcome } from './ml/platt-scaling.service';
+import { prisma } from '../../../core/database';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -188,9 +189,25 @@ export class MLISService {
       );
 
       // ── ML Layer 5: Platt Scaling Calibration ──
-      // Convert raw score to calibrated probability
-      // TODO: Feed real historical outcomes from DB when available
-      const plattCalibration = calibrateScore(overallScore);
+      // Convert raw score to calibrated probability using historical outcomes
+      let historicalOutcomes: TrainingOutcome[] | undefined;
+      try {
+        const recentAnalyses = await prisma.analysis.findMany({
+          where: { outcome: { in: ['tp1_hit', 'tp2_hit', 'tp3_hit', 'sl_hit'] } },
+          select: { totalScore: true, outcome: true },
+          orderBy: { createdAt: 'desc' },
+          take: 200,
+        });
+        if (recentAnalyses.length >= 30) {
+          historicalOutcomes = recentAnalyses.map((a) => ({
+            score: Number(a.totalScore) || 50,
+            outcome: (a.outcome === 'sl_hit' ? 0 : 1) as 0 | 1,
+          }));
+        }
+      } catch {
+        // Fall back to default calibration if DB is unavailable
+      }
+      const plattCalibration = calibrateScore(overallScore, historicalOutcomes);
       const calibratedConfidence = Math.round(plattCalibration.calibratedProbability * 100);
 
       // Use calibrated confidence for recommendation/direction decisions

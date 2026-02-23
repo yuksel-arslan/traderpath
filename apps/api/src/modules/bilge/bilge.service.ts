@@ -413,7 +413,10 @@ export async function getErrors(
  * Get health status for a project
  */
 export async function getHealthStatus(project: string): Promise<GuardianHealthStatus> {
-  const errors = await getErrors(project);
+  const [errors, pendingFeedbacks] = await Promise.all([
+    getErrors(project),
+    getFeedbacks(project, { status: 'new' }),
+  ]);
 
   const now = Date.now();
   const last24h = now - 24 * 60 * 60 * 1000;
@@ -440,9 +443,9 @@ export async function getHealthStatus(project: string): Promise<GuardianHealthSt
     metrics: {
       errorsLast24h,
       criticalErrorsLast24h,
-      avgResponseTime: 0, // TODO: Implement response time tracking
-      uptime: 99.9, // TODO: Implement uptime tracking
-      pendingFeedback: 0, // TODO: Implement feedback count
+      avgResponseTime: 0, // Requires request timing middleware (future work)
+      uptime: 99.9, // Requires total request count tracking (future work)
+      pendingFeedback: pendingFeedbacks.length,
     },
     activeIssues: errors.filter((e) => e.status === 'new' || e.status === 'investigating')
       .length,
