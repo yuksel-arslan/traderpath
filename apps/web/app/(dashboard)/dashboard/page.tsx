@@ -27,6 +27,7 @@ import { OpportunityRadar } from '@/components/dashboard/OpportunityRadar';
 import { AIBriefing } from '@/components/dashboard/AIBriefing';
 import { BehavioralScore } from '@/components/dashboard/BehavioralScore';
 import { TradingAssistant } from '@/components/dashboard/TradingAssistant';
+import { SmartAlertsWidget } from '@/components/dashboard/SmartAlertsWidget';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
 import type { MarketType } from '@/components/dashboard/CategoryBar';
 
@@ -850,6 +851,9 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Smart Alerts */}
+                <SmartAlertsWidget />
 
                 {/* Trading Assistant */}
                 <TradingAssistant
