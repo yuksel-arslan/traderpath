@@ -747,13 +747,13 @@ export default async function adminRoutes(app: FastifyInstance) {
       });
     }
 
-    // Get or create credit balance
-    let balance = await prisma.creditBalance.findUnique({
+    // Get or create credit balance (ensure record exists before add)
+    const existingBalance = await prisma.creditBalance.findUnique({
       where: { userId },
     });
 
-    if (!balance) {
-      balance = await prisma.creditBalance.create({
+    if (!existingBalance) {
+      await prisma.creditBalance.create({
         data: {
           userId,
           balance: 0,
@@ -761,64 +761,61 @@ export default async function adminRoutes(app: FastifyInstance) {
       });
     }
 
-    // Add credits and create transaction
-    const [updated] = await prisma.$transaction([
-      prisma.creditBalance.update({
-        where: { userId },
-        data: {
-          balance: { increment: amount },
-          lifetimeEarned: { increment: amount },
-        },
-      }),
-      prisma.creditTransaction.create({
-        data: {
-          userId,
+    // Add credits via creditService (handles locking, ledger, cache invalidation)
+    const { creditService } = await import('../credits/credit.service');
+    const addResult = await creditService.add(userId, amount, 'BONUS', 'admin_grant', {
+      grantedBy: request.user?.email || 'admin',
+      reason: reason || 'Admin credit grant',
+    });
+
+    if (!addResult.success) {
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'GRANT_FAILED', message: 'Failed to grant credits' },
+      });
+    }
+
+    // Send notifications (fire-and-forget, don't block response)
+    let emailSuccess = false;
+    let socialResult: { sent: number; results: Array<{ channel: string; success: boolean }> } = { sent: 0, results: [] };
+
+    try {
+      const { emailService } = await import('../email/email.service');
+      const emailResult = await emailService.sendCreditGrantNotification(
+        user.email,
+        user.name || 'Trader',
+        {
           amount,
-          balanceAfter: balance.balance + amount,
-          type: 'BONUS',
-          source: 'admin_grant',
-          metadata: {
-            grantedBy: request.user?.email || 'admin',
-            reason: reason || 'Admin credit grant',
-          },
-        },
-      }),
-    ]);
+          reason: reason || 'Admin credit grant',
+          newBalance: addResult.newBalance,
+        }
+      );
+      emailSuccess = emailResult.success;
+    } catch (err) {
+      console.error('[AdminGrant] Email notification failed:', err);
+    }
 
-    // Clear cache
-    const { cache, cacheKeys } = await import('../../core/cache');
-    await cache.del(cacheKeys.userCredits(userId));
-
-    // Send email notification to user
-    const { emailService } = await import('../email/email.service');
-    const emailResult = await emailService.sendCreditGrantNotification(
-      user.email,
-      user.name || 'Trader',
-      {
+    try {
+      const { socialNotificationService } = await import('../notifications/social-notification.service');
+      socialResult = await socialNotificationService.sendCreditGrantNotifications(user, {
         amount,
         reason: reason || 'Admin credit grant',
-        newBalance: updated.balance,
-      }
-    );
-
-    // Send social notifications (Telegram, Discord)
-    const { socialNotificationService } = await import('../notifications/social-notification.service');
-    const socialResult = await socialNotificationService.sendCreditGrantNotifications(user, {
-      amount,
-      reason: reason || 'Admin credit grant',
-      newBalance: updated.balance,
-    });
+        newBalance: addResult.newBalance,
+      });
+    } catch (err) {
+      console.error('[AdminGrant] Social notification failed:', err);
+    }
 
     return reply.send({
       success: true,
       data: {
         user: { id: user.id, email: user.email, name: user.name },
         creditsAdded: amount,
-        newBalance: updated.balance,
+        newBalance: addResult.newBalance,
         reason: reason || 'Admin credit grant',
         notifications: {
-          email: emailResult.success,
-          social: socialResult.sent,
+          email: emailSuccess,
+          social: socialResult.sent > 0,
           channels: socialResult.results.map(r => ({ channel: r.channel, success: r.success })),
         },
       },

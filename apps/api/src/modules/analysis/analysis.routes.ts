@@ -2277,18 +2277,18 @@ Explain the key risks and what conditions would need to change before trading th
         const activeSymbols = [...new Set(activeAnalyses.map(a => a.symbol as string))];
         const prices: Record<string, number> = {};
 
+        // Use multi-asset data provider (supports crypto, stocks, metals, bonds)
         try {
-          const pairs = activeSymbols.map((s: string) => `"${s.toUpperCase()}USDT"`).join(',');
-          const priceResponse = await fetch(
-            `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
-          );
-          if (priceResponse.ok) {
-            const priceData = await priceResponse.json();
-            for (const item of priceData) {
-              const symbol = item.symbol.replace('USDT', '');
-              prices[symbol] = parseFloat(item.price);
+          const { fetchTicker } = await import('./providers/multi-asset-data-provider');
+          const tickerPromises = activeSymbols.map(async (sym: string) => {
+            try {
+              const ticker = await fetchTicker(sym);
+              prices[sym.toUpperCase()] = ticker.price;
+            } catch {
+              // Skip symbols that fail to fetch
             }
-          }
+          });
+          await Promise.all(tickerPromises);
         } catch (err) {
           logger.warn({ error: err }, 'Failed to fetch prices for active performance');
         }
@@ -2302,7 +2302,8 @@ Explain the key risks and what conditions would need to change before trading th
             tradePlan?.entryPrice
           ) || 0;
 
-          const currentPrice = prices[analysis.symbol] || 0;
+          const sym = (analysis.symbol as string).toUpperCase();
+          const currentPrice = prices[sym] || 0;
           const direction = ((tradePlan?.direction as string) || 'long').toLowerCase();
 
           if (entryPrice > 0 && currentPrice > 0) {

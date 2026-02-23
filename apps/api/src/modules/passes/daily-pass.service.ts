@@ -57,6 +57,7 @@ interface PassPurchaseResult {
     code: string;
     message: string;
     required?: number;
+    currentBalance?: number;
   };
   isAdmin?: boolean;
 }
@@ -233,8 +234,9 @@ class DailyPassService {
         success: false,
         error: {
           code: 'INSUFFICIENT_CREDITS',
-          message: `You need ${config.cost} credits to purchase a daily pass`,
+          message: `You need ${config.cost} credits to purchase a daily pass. Current balance: ${chargeResult.newBalance}`,
           required: config.cost,
+          currentBalance: chargeResult.newBalance,
         },
       };
     }
