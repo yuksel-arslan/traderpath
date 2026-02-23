@@ -98,7 +98,7 @@ export function OpportunityRadar({ capitalFlow, selectedMarkets }: OpportunityRa
           <p className="text-sm text-gray-500 mt-0.5">Where money is moving now</p>
         </div>
         <Link
-          href="/capital-flow"
+          href="/flow"
           className="text-sm font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
         >
           All markets →

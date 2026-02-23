@@ -874,7 +874,7 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { href: '/analyze', label: 'New Analysis' },
-                      { href: '/capital-flow', label: 'Capital Flow' },
+                      { href: '/flow', label: 'Capital Flow' },
                       { href: '/signals', label: 'Signals' },
                       { href: '/reports', label: 'Reports' },
                     ].map((action) => (
