@@ -330,9 +330,9 @@ export default function ReportViewPage() {
       if (response.ok) {
         setAutoEmailDone(true);
         setEmailSent(true);
-        // Redirect back to reports page after showing success
+        // Dismiss overlay after 2 seconds - let user stay on page
         setTimeout(() => {
-          router.push('/reports');
+          setAutoEmailInProgress(false);
         }, 2000);
       } else {
         const errorData = await response.json().catch(() => ({}));
@@ -345,7 +345,7 @@ export default function ReportViewPage() {
       alert('Failed to send email. Please try again.');
       setAutoEmailInProgress(false);
     }
-  }, [report, reportMeta, router]);
+  }, [report, reportMeta]);
 
   // Trigger auto-email when report is loaded and email=true parameter is present
   useEffect(() => {

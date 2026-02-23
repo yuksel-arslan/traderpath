@@ -207,8 +207,9 @@ export default function AnalysisDetailsPage() {
       if (response.ok) {
         setAutoEmailDone(true);
         setEmailSent(true);
+        // Dismiss overlay after 2 seconds - let user stay on page
         setTimeout(() => {
-          router.push('/analyze#recent-analyses');
+          setAutoEmailInProgress(false);
         }, 2000);
       } else {
         const errorData = await response.json().catch(() => ({}));
@@ -222,7 +223,7 @@ export default function AnalysisDetailsPage() {
       alert('Failed to send email: ' + (err instanceof Error ? err.message : 'Unknown error'));
       setAutoEmailInProgress(false);
     }
-  }, [analysis, router]);
+  }, [analysis]);
 
   // Trigger auto-email when analysis is loaded and email=true parameter is present
   useEffect(() => {
@@ -289,16 +290,16 @@ export default function AnalysisDetailsPage() {
       pdf.save(`TraderPath_${symbol}_${date}.pdf`);
 
       setAutoPdfDone(true);
-      // Redirect back to analyze page after showing success
+      // Dismiss overlay after 2 seconds - let user stay on page
       setTimeout(() => {
-        router.push('/analyze#recent-analyses');
+        setAutoPdfInProgress(false);
       }, 2000);
     } catch (err) {
       console.error('Failed to auto generate PDF:', err);
       alert('Failed to generate PDF. Please try again.');
       setAutoPdfInProgress(false);
     }
-  }, [analysis, router]);
+  }, [analysis]);
 
   // Trigger auto-PDF when analysis is loaded and pdf=true parameter is present
   useEffect(() => {

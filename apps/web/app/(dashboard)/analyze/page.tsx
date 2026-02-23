@@ -399,11 +399,16 @@ export default function AutomatedAnalysisPage() {
 
             // Ask user for confirmation before spending 100 credits
             const confirmed = window.confirm(
-              `Daily Analysis Pass Required\n\nCost: 100 credits (10 analyses today)\nYour balance: ${currentBalance} credits\nRemaining after purchase: ${currentBalance - 100} credits\n\nPurchase now?`
+              `Daily Analysis Pass Required\n\n` +
+              `Cost: 100 credits\n` +
+              `Includes: 10 full analyses for today\n` +
+              `Your balance: ${currentBalance} credits\n` +
+              `After purchase: ${currentBalance - 100} credits\n\n` +
+              `Purchase now?`
             );
 
             if (!confirmed) {
-              setPipelineError('Analysis cancelled. A Daily Analysis Pass is required to run analyses.');
+              setPipelineError('Analysis cancelled. You can use Tailored Analysis to analyze any asset without a Daily Pass.');
               setPipelineStep('error');
               setPipelineRunning(false);
               return;
@@ -502,11 +507,16 @@ export default function AutomatedAnalysisPage() {
             }
 
             const confirmed = window.confirm(
-              `Daily Analysis Pass Required\n\nCost: 100 credits (10 analyses today)\nYour balance: ${currentBalance} credits\nRemaining after purchase: ${currentBalance - 100} credits\n\nPurchase now?`
+              `Daily Analysis Pass Required\n\n` +
+              `Cost: 100 credits\n` +
+              `Includes: 10 full analyses for today\n` +
+              `Your balance: ${currentBalance} credits\n` +
+              `After purchase: ${currentBalance - 100} credits\n\n` +
+              `Purchase now?`
             );
 
             if (!confirmed) {
-              setPipelineError('Analysis cancelled. A Daily Analysis Pass is required to run analyses.');
+              setPipelineError('Analysis cancelled. You can use Tailored Analysis to analyze any asset without a Daily Pass.');
               setPipelineStep('error');
               setPipelineRunning(false);
               return;
