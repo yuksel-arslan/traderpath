@@ -47,11 +47,11 @@ export function HeroStats({
       {/* P&L Card */}
       <div className="border border-gray-200 dark:border-gray-800 rounded-lg p-5 bg-white dark:bg-[#111111]">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-medium text-gray-500">Realized P&L</p>
+          <p className="text-xs font-medium text-gray-500">Plan Return</p>
           <PnLIcon className={`w-3.5 h-3.5 ${pnlColor}`} />
         </div>
         <p className={`text-2xl font-semibold font-mono ${pnlColor}`}>
-          {pnlPositive ? '+' : ''}${Math.abs(periodPnL).toFixed(0)}
+          {periodPnL === 0 ? '—' : `${pnlPositive ? '+' : ''}${Math.abs(periodPnL).toFixed(1)}%`}
         </p>
         <div className="flex gap-1 mt-3">
           {VIEW_MODES.map((m) => (
