@@ -4,6 +4,7 @@
  * Handles notifications to Slack, Discord, SMS/WhatsApp
  */
 
+import { logger } from '../../core/logger';
 import {
   NotificationChannel,
   NotificationMessage,
@@ -27,7 +28,7 @@ const ADMIN_PHONE_NUMBERS = getEnvVar('BILGE_ADMIN_PHONE_NUMBERS')?.split(',') |
  */
 export async function sendSlackNotification(message: NotificationMessage): Promise<boolean> {
   if (!SLACK_WEBHOOK_URL) {
-    console.log('[BILGE] Slack webhook URL not configured');
+    logger.info('[BILGE] Slack webhook URL not configured');
     return false;
   }
 
@@ -102,14 +103,14 @@ export async function sendSlackNotification(message: NotificationMessage): Promi
     });
 
     if (!response.ok) {
-      console.error('[BILGE] Slack notification failed:', response.status);
+      logger.error('[BILGE] Slack notification failed:', response.status);
       return false;
     }
 
-    console.log('[BILGE] Slack notification sent successfully');
+    logger.info('[BILGE] Slack notification sent successfully');
     return true;
   } catch (error) {
-    console.error('[BILGE] Error sending Slack notification:', error);
+    logger.error('[BILGE] Error sending Slack notification:', error);
     return false;
   }
 }
@@ -119,7 +120,7 @@ export async function sendSlackNotification(message: NotificationMessage): Promi
  */
 export async function sendDiscordNotification(message: NotificationMessage): Promise<boolean> {
   if (!DISCORD_WEBHOOK_URL) {
-    console.log('[BILGE] Discord webhook URL not configured');
+    logger.info('[BILGE] Discord webhook URL not configured');
     return false;
   }
 
@@ -183,14 +184,14 @@ export async function sendDiscordNotification(message: NotificationMessage): Pro
     });
 
     if (!response.ok) {
-      console.error('[BILGE] Discord notification failed:', response.status);
+      logger.error('[BILGE] Discord notification failed:', response.status);
       return false;
     }
 
-    console.log('[BILGE] Discord notification sent successfully');
+    logger.info('[BILGE] Discord notification sent successfully');
     return true;
   } catch (error) {
-    console.error('[BILGE] Error sending Discord notification:', error);
+    logger.error('[BILGE] Error sending Discord notification:', error);
     return false;
   }
 }
@@ -203,13 +204,13 @@ export async function sendSMSNotification(
   phoneNumbers?: string[]
 ): Promise<boolean> {
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
-    console.log('[BILGE] Twilio credentials not configured');
+    logger.info('[BILGE] Twilio credentials not configured');
     return false;
   }
 
   const recipients = phoneNumbers || ADMIN_PHONE_NUMBERS;
   if (recipients.length === 0) {
-    console.log('[BILGE] No phone numbers configured for SMS');
+    logger.info('[BILGE] No phone numbers configured for SMS');
     return false;
   }
 
@@ -238,17 +239,17 @@ export async function sendSMSNotification(
 
           return response.ok;
         } catch (err) {
-          console.error(`[BILGE] SMS to ${phoneNumber} failed:`, err);
+          logger.error(`[BILGE] SMS to ${phoneNumber} failed:`, err);
           return false;
         }
       })
     );
 
     const successCount = results.filter(Boolean).length;
-    console.log(`[BILGE] SMS sent: ${successCount}/${recipients.length}`);
+    logger.info(`[BILGE] SMS sent: ${successCount}/${recipients.length}`);
     return successCount > 0;
   } catch (error) {
-    console.error('[BILGE] Error sending SMS:', error);
+    logger.error('[BILGE] Error sending SMS:', error);
     return false;
   }
 }
@@ -261,13 +262,13 @@ export async function sendWhatsAppNotification(
   phoneNumbers?: string[]
 ): Promise<boolean> {
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
-    console.log('[BILGE] Twilio credentials not configured');
+    logger.info('[BILGE] Twilio credentials not configured');
     return false;
   }
 
   const recipients = phoneNumbers || ADMIN_PHONE_NUMBERS;
   if (recipients.length === 0) {
-    console.log('[BILGE] No phone numbers configured for WhatsApp');
+    logger.info('[BILGE] No phone numbers configured for WhatsApp');
     return false;
   }
 
@@ -296,17 +297,17 @@ export async function sendWhatsAppNotification(
 
           return response.ok;
         } catch (err) {
-          console.error(`[BILGE] WhatsApp to ${phoneNumber} failed:`, err);
+          logger.error(`[BILGE] WhatsApp to ${phoneNumber} failed:`, err);
           return false;
         }
       })
     );
 
     const successCount = results.filter(Boolean).length;
-    console.log(`[BILGE] WhatsApp sent: ${successCount}/${recipients.length}`);
+    logger.info(`[BILGE] WhatsApp sent: ${successCount}/${recipients.length}`);
     return successCount > 0;
   } catch (error) {
-    console.error('[BILGE] Error sending WhatsApp:', error);
+    logger.error('[BILGE] Error sending WhatsApp:', error);
     return false;
   }
 }
@@ -420,5 +421,5 @@ export async function sendCriticalAlert(
   // Send to all channels for critical errors
   await sendNotification(message, ['slack', 'discord', 'sms', 'whatsapp']);
 
-  console.log(`[BILGE] Critical alert sent for error ${error.id}`);
+  logger.info(`[BILGE] Critical alert sent for error ${error.id}`);
 }

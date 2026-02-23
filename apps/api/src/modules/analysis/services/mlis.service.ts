@@ -16,6 +16,7 @@
 
 import { OHLCV, IndicatorsService } from './indicators.service';
 import { callGeminiWithRetry } from '../../../core/gemini';
+import { logger } from '../../../core/logger';
 import {
   fetchCandles as fetchMultiAssetCandles,
   getAssetClass,
@@ -29,6 +30,7 @@ import { analyzeGARCH, type GARCHResult } from './ml/garch.service';
 import { estimateInstitutionalFlow, type InstitutionalFlowResult } from './ml/institutional-flow.service';
 import { calibrateScore, type PlattCalibrationResult, type TrainingOutcome } from './ml/platt-scaling.service';
 import { prisma } from '../../../core/database';
+import { getDeFiTvl } from '../../capital-flow/providers/defillama.provider';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -269,7 +271,7 @@ export class MLISService {
         analysisVersion: '2.0.0',
       };
     } catch (error) {
-      console.error(`[MLIS] Analysis failed for ${symbol}:`, error);
+      logger.error(`[MLIS] Analysis failed for ${symbol}:`, error);
       return this.createEmptyResult(symbol, timeframe, timestamp, 'Analysis failed');
     }
   }
@@ -281,7 +283,7 @@ export class MLISService {
   private async fetchCandles(symbol: string, timeframe: string): Promise<OHLCV[]> {
     try {
       const assetClass = getAssetClass(symbol);
-      console.log(`[MLIS] Fetching candles for ${symbol} (${assetClass}) - timeframe: ${timeframe}`);
+      logger.info(`[MLIS] Fetching candles for ${symbol} (${assetClass}) - timeframe: ${timeframe}`);
 
       // Use multi-asset provider which routes to correct API based on asset class
       const candles = await fetchMultiAssetCandles(symbol, timeframe, 500);
@@ -295,7 +297,7 @@ export class MLISService {
         volume: c.volume,
       }));
     } catch (error) {
-      console.warn(`[MLIS] Failed to fetch candles for ${symbol}:`, error);
+      logger.warn(`[MLIS] Failed to fetch candles for ${symbol}:`, error);
       return [];
     }
   }
@@ -673,26 +675,56 @@ export class MLISService {
         weight: 0.05,
       };
     } catch (error) {
-      console.warn('[MLIS] Sentiment analysis failed:', error);
+      logger.warn('[MLIS] Sentiment analysis failed:', error);
       return null;
     }
   }
 
-  private async analyzeOnchainLayer(symbol: string): Promise<MLISLayer | null> {
-    // On-chain analysis is more complex and would require additional data sources
-    // This is a placeholder for future implementation
+  private async analyzeOnchainLayer(_symbol: string): Promise<MLISLayer | null> {
     try {
+      const tvl = await getDeFiTvl();
       const signals: string[] = [];
-      let score = 50;
 
-      // For now, we return a neutral on-chain analysis
-      // In production, this would integrate with Glassnode, CryptoQuant, etc.
-      signals.push('On-chain metrics neutral');
+      // Score DeFi TVL trend: 7d change drives the signal
+      const change7d = tvl.change7d;
+      let score: number;
+
+      if (change7d >= 10) {
+        score = 82;
+        signals.push(`DeFi TVL surging +${change7d.toFixed(1)}% in 7d — strong on-chain inflow`);
+      } else if (change7d >= 5) {
+        score = 68;
+        signals.push(`DeFi TVL growing +${change7d.toFixed(1)}% in 7d — healthy on-chain activity`);
+      } else if (change7d >= 1) {
+        score = 57;
+        signals.push(`DeFi TVL up +${change7d.toFixed(1)}% in 7d — mild on-chain expansion`);
+      } else if (change7d >= -3) {
+        score = 48;
+        signals.push(`DeFi TVL flat (${change7d.toFixed(1)}% 7d) — neutral on-chain activity`);
+      } else if (change7d >= -8) {
+        score = 35;
+        signals.push(`DeFi TVL contracting ${change7d.toFixed(1)}% in 7d — on-chain outflow`);
+      } else {
+        score = 22;
+        signals.push(`DeFi TVL falling sharply ${change7d.toFixed(1)}% in 7d — significant on-chain exit`);
+      }
+
+      // Additional signal from 30d trend
+      if (tvl.change30d > 15) {
+        signals.push(`Strong 30d TVL trend: +${tvl.change30d.toFixed(1)}%`);
+        score = Math.min(100, score + 5);
+      } else if (tvl.change30d < -15) {
+        signals.push(`Weak 30d TVL trend: ${tvl.change30d.toFixed(1)}%`);
+        score = Math.max(0, score - 5);
+      }
+
+      // Confidence scales with the magnitude of the signal
+      const confidence = Math.round(50 + Math.min(40, Math.abs(change7d) * 2));
 
       return {
         name: 'Onchain',
         score,
-        confidence: 50,
+        confidence,
         signals,
         weight: 0.05,
       };

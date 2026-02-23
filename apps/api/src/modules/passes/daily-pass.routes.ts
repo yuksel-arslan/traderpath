@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { authenticate } from '../../core/auth/middleware';
 import { dailyPassService, DAILY_PASS_CONFIG } from './daily-pass.service';
 import { DailyPassType } from '@prisma/client';
+import { logger } from '../../core/logger';
 
 // User type from JWT
 interface JwtUser {
@@ -58,7 +59,7 @@ export default async function dailyPassRoutes(app: FastifyInstance) {
         },
       });
     } catch (error) {
-      console.error('Error getting pass status:', error);
+      logger.error({ userId, error }, 'Error getting pass status');
       return reply.status(500).send({
         success: false,
         error: { code: 'PASS_STATUS_ERROR', message: 'Failed to get pass status' },
@@ -98,7 +99,7 @@ export default async function dailyPassRoutes(app: FastifyInstance) {
         },
       });
     } catch (error) {
-      console.error('Error purchasing pass:', error);
+      logger.error({ userId, passType: body.passType, error }, 'Error purchasing pass');
       return reply.status(500).send({
         success: false,
         error: { code: 'PASS_PURCHASE_ERROR', message: 'Failed to purchase pass' },
@@ -135,7 +136,7 @@ export default async function dailyPassRoutes(app: FastifyInstance) {
         },
       });
     } catch (error) {
-      console.error('Error checking pass:', error);
+      logger.error({ userId, passType, error }, 'Error checking pass');
       return reply.status(500).send({
         success: false,
         error: { code: 'PASS_CHECK_ERROR', message: 'Failed to check pass' },
@@ -187,7 +188,7 @@ export default async function dailyPassRoutes(app: FastifyInstance) {
         data: stats,
       });
     } catch (error) {
-      console.error('Error getting pass stats:', error);
+      logger.error({ userId, error }, 'Error getting pass stats');
       return reply.status(500).send({
         success: false,
         error: { code: 'PASS_STATS_ERROR', message: 'Failed to get pass statistics' },

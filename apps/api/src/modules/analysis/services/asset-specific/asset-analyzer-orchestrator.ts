@@ -46,8 +46,6 @@ export class AssetAnalyzerOrchestrator {
       case 'bonds':
         return bondsAnalyzer.analyze(symbol);
       case 'crypto':
-        // For now, return a basic crypto analysis
-        // TODO: Implement dedicated crypto analyzer
         return this.analyzeBasicCrypto(symbol);
       default:
         throw new Error(`Unknown asset class: ${assetClass}`);

@@ -11,13 +11,7 @@
  * - Swing: 2-14 days holding, conservative indicators, 1 credit
  */
 
-// Simple logger replacement for NestJS Logger
-const Logger = {
-  log: (message: string, context?: string) => console.log(`[${context || 'Analysis'}] ${message}`),
-  error: (message: string, trace?: string, context?: string) => console.error(`[${context || 'Analysis'}] ${message}`, trace),
-  warn: (message: string, context?: string) => console.warn(`[${context || 'Analysis'}] ${message}`),
-  debug: (message: string, context?: string) => console.debug(`[${context || 'Analysis'}] ${message}`),
-};
+import { logger as Logger } from '../../../core/logger';
 import {
   TradeType,
   AnalysisStep,
@@ -223,7 +217,7 @@ async function fetchKlines(
       volume: parseFloat(k[5]),
     }));
   } catch (error) {
-    console.error(`Failed to fetch klines for ${symbol} ${interval}:`, error);
+    Logger.error(`Failed to fetch klines for ${symbol} ${interval}:`, error);
     return [];
   }
 }
@@ -1169,22 +1163,41 @@ Include specific price levels and actionable insights.
     overallScore = overallScore / 0.9; // Total weight = 0.9
     finalDirection = overallScore >= 6 ? 'long' : overallScore <= 4 ? 'short' : null;
 
-    // Create placeholder trade plan (would be filled from actual analysis)
+    // ATR-based trade plan — use ATR(14) × 1.5 for stop loss distance
+    const atrResult = this.indicatorsService.calculateATR(primaryCandles, 14);
+    const atrValue = atrResult.value ?? currentPrice * 0.02; // fallback: 2% of price
+    const slDistance = atrValue * 1.5;
+    const slPct = parseFloat(((slDistance / currentPrice) * 100).toFixed(2));
+    const dir = (finalDirection ?? 'long') as 'long' | 'short';
+    const sign = dir === 'long' ? 1 : -1;
+
     const tradePlanSummary = {
-      direction: (finalDirection || 'long') as 'long' | 'short',
+      direction: dir,
       entries: [{ price: currentPrice, percentage: 100 }],
       averageEntry: currentPrice,
       stopLoss: {
-        price: finalDirection === 'short' ? currentPrice * 1.03 : currentPrice * 0.97,
-        percentage: 3,
-        reason: 'ATR-based stop loss',
+        price: parseFloat((currentPrice - sign * slDistance).toFixed(8)),
+        percentage: slPct,
+        reason: `ATR(14) × 1.5 stop loss (ATR=${atrValue.toFixed(4)})`,
       },
       takeProfits: [
-        { price: finalDirection === 'short' ? currentPrice * 0.97 : currentPrice * 1.03, percentage: 33, reason: 'TP1: 1R target' },
-        { price: finalDirection === 'short' ? currentPrice * 0.94 : currentPrice * 1.06, percentage: 33, reason: 'TP2: 2R target' },
-        { price: finalDirection === 'short' ? currentPrice * 0.90 : currentPrice * 1.10, percentage: 34, reason: 'TP3: 3R target' },
+        {
+          price: parseFloat((currentPrice + sign * slDistance * 1.5).toFixed(8)),
+          percentage: 33,
+          reason: 'TP1: 1.5R target',
+        },
+        {
+          price: parseFloat((currentPrice + sign * slDistance * 2.5).toFixed(8)),
+          percentage: 33,
+          reason: 'TP2: 2.5R target',
+        },
+        {
+          price: parseFloat((currentPrice + sign * slDistance * 4.0).toFixed(8)),
+          percentage: 34,
+          reason: 'TP3: 4R target',
+        },
       ],
-      riskReward: 2.5,
+      riskReward: parseFloat(((1.5 * 33 + 2.5 * 33 + 4.0 * 34) / 100).toFixed(2)),
       winRateEstimate: Math.round(overallScore * 8),
     };
 
