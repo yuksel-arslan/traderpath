@@ -229,16 +229,17 @@ export class BinanceCryptoProvider extends MarketDataProvider {
       this.fetchMarketData(symbol),
     ]);
 
-    // Get market cap from CoinGecko (basic version)
+    // Get market cap and circulating supply from CoinGecko /coins/markets
     let marketCap = 0;
+    let circulatingSupply = 0;
     try {
       const cgResponse = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${this.getCoinGeckoId(base)}&vs_currencies=usd&include_market_cap=true`
+        `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${this.getCoinGeckoId(base)}&per_page=1`
       );
       const cgData = await cgResponse.json();
-      const id = this.getCoinGeckoId(base);
-      if (cgData[id]) {
-        marketCap = cgData[id].usd_market_cap || 0;
+      if (Array.isArray(cgData) && cgData.length > 0) {
+        marketCap = cgData[0].market_cap || 0;
+        circulatingSupply = cgData[0].circulating_supply || 0;
       }
     } catch {
       // Ignore CoinGecko errors
@@ -248,7 +249,7 @@ export class BinanceCryptoProvider extends MarketDataProvider {
       symbol: base,
       assetClass: 'crypto',
       marketCap,
-      circulatingSupply: 0, // Would need full tokenomics service
+      circulatingSupply,
       fundingRate: fundingRate.fundingRate,
       openInterest: openInterest.openInterest,
       longShortRatio: longShortRatio.longShortRatio,
