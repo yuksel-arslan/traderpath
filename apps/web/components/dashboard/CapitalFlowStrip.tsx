@@ -69,32 +69,13 @@ export function CapitalFlowStrip({ capitalFlow }: CapitalFlowStripProps) {
   return (
     <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-[#111111]">
 
-      {/* ── MOBILE: 2×2 grid ── */}
+      {/* ── MOBILE: 2×2 card grid ── */}
       <div className="sm:hidden">
-        <div className="grid grid-cols-2">
-          {steps.map((step, i) => (
-            <div
-              key={i}
-              className={`px-4 py-3 ${
-                i % 2 === 0 ? 'border-r' : ''
-              } ${i < 2 ? 'border-b' : ''} border-gray-100 dark:border-gray-800`}
-            >
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="text-[10px] font-mono text-gray-400 bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">
-                  {step.index}
-                </span>
-                <span className="text-[10px] text-gray-400">{step.label}</span>
-              </div>
-              <p className={`text-sm font-semibold leading-none ${step.valueColor}`}>{step.value}</p>
-            </div>
-          ))}
-        </div>
-        <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-100 dark:border-gray-800">
+        {/* Header row */}
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-1.5">
-            <Activity className="w-3 h-3 text-gray-400" />
-            <span className="text-[10px] text-gray-400">
-              {rec.confidence > 0 ? `${rec.confidence}% confidence` : 'Capital Flow'}
-            </span>
+            <Activity className="w-3.5 h-3.5 text-gray-400" />
+            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Capital Flow</span>
           </div>
           <Link
             href="/capital-flow"
@@ -103,6 +84,35 @@ export function CapitalFlowStrip({ capitalFlow }: CapitalFlowStripProps) {
             Full Analysis →
           </Link>
         </div>
+
+        {/* 2×2 grid — all 4 layers always visible */}
+        <div className="grid grid-cols-2">
+          {steps.map((step, i) => (
+            <div
+              key={step.index}
+              className={[
+                'px-4 py-3',
+                i % 2 === 0 ? 'border-r border-gray-100 dark:border-gray-800' : '',
+                i < 2 ? 'border-b border-gray-100 dark:border-gray-800' : '',
+              ].join(' ')}
+            >
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <span className="text-[10px] font-mono text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
+                  {step.index}
+                </span>
+                <span className="text-[10px] text-gray-400">{step.label}</span>
+              </div>
+              <p className={`text-sm font-semibold leading-none ${step.valueColor}`}>{step.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Confidence footer */}
+        {rec.confidence > 0 && (
+          <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-800">
+            <span className="text-[10px] text-gray-400">{rec.confidence}% confidence</span>
+          </div>
+        )}
       </div>
 
       {/* ── DESKTOP: horizontal strip ── */}
