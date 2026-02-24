@@ -511,14 +511,19 @@ export async function recordSuccessfulLogin(
     }
   }
 
-  await logSecurityEvent({
-    userId,
-    email,
-    eventType: 'LOGIN_SUCCESS',
-    success: true,
-    ipAddress,
-    userAgent,
-  });
+  // Must be inside try-catch to prevent audit log failures from crashing login
+  try {
+    await logSecurityEvent({
+      userId,
+      email,
+      eventType: 'LOGIN_SUCCESS',
+      success: true,
+      ipAddress,
+      userAgent,
+    });
+  } catch (error) {
+    console.error('[Security] Failed to log successful login event:', error);
+  }
 }
 
 // ===========================================

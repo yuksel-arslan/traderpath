@@ -363,22 +363,28 @@ export default async function authRoutes(app: FastifyInstance) {
       let updatedCredits = user.creditBalance?.balance || 0;
 
       if (!user.firstLoginBonusReceived) {
-        isFirstLogin = true;
-        // Award first login bonus
-        const bonusResult = await creditService.add(
-          user.id,
-          FIRST_LOGIN_BONUS,
-          'BONUS',
-          'first_login_bonus',
-          { message: 'Welcome bonus for first login' }
-        );
-        updatedCredits = bonusResult.newBalance;
+        try {
+          isFirstLogin = true;
+          // Award first login bonus
+          const bonusResult = await creditService.add(
+            user.id,
+            FIRST_LOGIN_BONUS,
+            'BONUS',
+            'first_login_bonus',
+            { message: 'Welcome bonus for first login' }
+          );
+          updatedCredits = bonusResult.newBalance;
 
-        // Mark first login bonus as received
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { firstLoginBonusReceived: true },
-        });
+          // Mark first login bonus as received
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { firstLoginBonusReceived: true },
+          });
+        } catch (bonusError) {
+          // Don't block login if bonus award fails
+          console.error('[Login] First login bonus failed (login will continue):', bonusError);
+          isFirstLogin = false;
+        }
       }
 
       // Generate JWT token
@@ -581,22 +587,28 @@ export default async function authRoutes(app: FastifyInstance) {
       let updatedCredits = user.creditBalance?.balance || 0;
 
       if (!user.firstLoginBonusReceived) {
-        isFirstLogin = true;
-        // Award first login bonus
-        const bonusResult = await creditService.add(
-          user.id,
-          FIRST_LOGIN_BONUS,
-          'BONUS',
-          'first_login_bonus',
-          { message: 'Welcome bonus for first login' }
-        );
-        updatedCredits = bonusResult.newBalance;
+        try {
+          isFirstLogin = true;
+          // Award first login bonus
+          const bonusResult = await creditService.add(
+            user.id,
+            FIRST_LOGIN_BONUS,
+            'BONUS',
+            'first_login_bonus',
+            { message: 'Welcome bonus for first login' }
+          );
+          updatedCredits = bonusResult.newBalance;
 
-        // Mark first login bonus as received
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { firstLoginBonusReceived: true },
-        });
+          // Mark first login bonus as received
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { firstLoginBonusReceived: true },
+          });
+        } catch (bonusError) {
+          // Don't block login if bonus award fails
+          console.error('[Login] First login bonus failed (login will continue):', bonusError);
+          isFirstLogin = false;
+        }
       }
 
       // Generate JWT token
@@ -823,22 +835,28 @@ export default async function authRoutes(app: FastifyInstance) {
       let updatedCredits = user.creditBalance?.balance || 0;
 
       if (!user.firstLoginBonusReceived) {
-        isFirstLogin = true;
-        // Award first login bonus
-        const bonusResult = await creditService.add(
-          user.id,
-          FIRST_LOGIN_BONUS,
-          'BONUS',
-          'first_login_bonus',
-          { message: 'Welcome bonus for first login' }
-        );
-        updatedCredits = bonusResult.newBalance;
+        try {
+          isFirstLogin = true;
+          // Award first login bonus
+          const bonusResult = await creditService.add(
+            user.id,
+            FIRST_LOGIN_BONUS,
+            'BONUS',
+            'first_login_bonus',
+            { message: 'Welcome bonus for first login' }
+          );
+          updatedCredits = bonusResult.newBalance;
 
-        // Mark first login bonus as received
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { firstLoginBonusReceived: true },
-        });
+          // Mark first login bonus as received
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { firstLoginBonusReceived: true },
+          });
+        } catch (bonusError) {
+          // Don't block login if bonus award fails
+          console.error('[Login] First login bonus failed (login will continue):', bonusError);
+          isFirstLogin = false;
+        }
       }
 
       // Generate JWT token
