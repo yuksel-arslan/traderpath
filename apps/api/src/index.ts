@@ -700,47 +700,32 @@ const start = async () => {
       startCoinScoreCacheJob();
       logger.info('✓ Coin score cache cron started');
 
-      // Initialize asset logos in database (non-blocking - don't hold up server startup)
+      // Initialize asset logos in database (non-blocking)
       initializeAssetLogos().then(() => {
         logger.info('✓ Asset logos initialized');
       }).catch((err) => {
-        logger.warn(err, 'Asset logos initialization failed (non-blocking)');
+        logger.warn({ message: err?.message, stack: err?.stack }, 'Asset logos initialization failed (non-blocking)');
       });
 
-      // Initialize BILGE Guardian System
-      initializeBilgeService(redis);
-      logger.info('✓ BILGE Guardian initialized');
+      // Each cron job is wrapped individually so one failure doesn't block the rest
+      const safeCronStart = (name: string, fn: () => void) => {
+        try {
+          fn();
+          logger.info(`✓ ${name} started`);
+        } catch (err: any) {
+          logger.error({ message: err?.message, stack: err?.stack, code: err?.code }, `✗ ${name} failed to start (non-blocking)`);
+        }
+      };
 
-      // Start BILGE weekly report cron job (Sunday 21:00 UTC+3)
-      startBilgeWeeklyReportJob();
-      logger.info('✓ BILGE weekly report cron started');
-
-      // Start Signal Generator cron job (hourly at :15)
-      startSignalGeneratorJob();
-      logger.info('✓ Signal generator cron started');
-
-      // Start Signal Outcome Tracker cron job (every 15 minutes)
-      startSignalOutcomeTracker();
-      logger.info('✓ Signal outcome tracker cron started');
-
-      // Start Smart Alert scan cron job (every 15 minutes)
-      startSmartAlertJob();
-      logger.info('✓ Smart alert cron started');
-
-      // Start subscription daily credits cron job (00:00 UTC)
-      startDailyCreditsJob();
-      logger.info('✓ Subscription daily credits cron started');
-
-      // Start Morning Briefing cron job (07:00 UTC+3 daily)
-      startMorningBriefingJob();
-      logger.info('✓ Morning briefing cron started');
-      // Start payment reconciliation cron job (03:00 UTC daily)
-      startReconciliationJob();
-      logger.info('✓ Payment reconciliation cron started');
-
-      // Start Capital Flow smart refresh cron jobs (publication-aware scheduling)
-      startCapitalFlowRefreshJobs();
-      logger.info('✓ Capital Flow smart refresh cron started');
+      safeCronStart('BILGE Guardian', () => initializeBilgeService(redis));
+      safeCronStart('BILGE weekly report cron', () => startBilgeWeeklyReportJob());
+      safeCronStart('Signal generator cron', () => startSignalGeneratorJob());
+      safeCronStart('Signal outcome tracker cron', () => startSignalOutcomeTracker());
+      safeCronStart('Smart alert cron', () => startSmartAlertJob());
+      safeCronStart('Subscription daily credits cron', () => startDailyCreditsJob());
+      safeCronStart('Morning briefing cron', () => startMorningBriefingJob());
+      safeCronStart('Payment reconciliation cron', () => startReconciliationJob());
+      safeCronStart('Capital Flow smart refresh cron', () => startCapitalFlowRefreshJobs());
     }
 
     // Start server
@@ -761,8 +746,22 @@ const start = async () => {
     logger.info(`   Metrics:   http://localhost:${config.port}/metrics`);
     logger.info(`   API:       http://localhost:${config.port}/api/v1`);
     logger.info('');
-  } catch (error) {
-    logger.error({ error }, 'STARTUP ERROR: Failed to start server');
+  } catch (error: any) {
+    // Error objects are not enumerable — JSON.stringify yields {}.
+    // Extract fields explicitly so the real cause appears in logs.
+    logger.error(
+      {
+        message: error?.message,
+        stack: error?.stack,
+        code: error?.code,
+        name: error?.name,
+        // Fastify-specific: port conflicts surface here
+        port: config.port,
+        syscall: error?.syscall,
+        address: error?.address,
+      },
+      'STARTUP ERROR: Failed to start server'
+    );
     process.exit(1);
   }
 };
