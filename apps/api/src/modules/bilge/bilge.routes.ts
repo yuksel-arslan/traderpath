@@ -26,7 +26,9 @@ interface AuthenticatedRequest extends FastifyRequest {
   user?: {
     id: string;
     email: string;
-    isAdmin: boolean;
+    name: string;
+    level: number;
+    isAdmin?: boolean;
   };
 }
 

@@ -30,6 +30,7 @@ import {
 } from './notification.service';
 import { callGeminiWithRetry } from '../../core/gemini';
 import { getApiMetrics } from '../../core/health';
+import { logger } from '../../core/logger';
 
 // Redis client will be injected
 let redisClient: Redis | null = null;
@@ -599,13 +600,17 @@ ${issuesSummary || 'No significant issues'}
 
 Provide brief, actionable recommendations to improve system stability. Format as a simple list.`;
 
-    const result = await callGeminiWithRetry(prompt, {
-      maxOutputTokens: 300,
-      temperature: 0.3,
-    });
+    const result = await callGeminiWithRetry({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 300,
+      },
+    }, 3, 'bilge_recommendations');
 
     // Parse recommendations from response
-    const lines = result.text.split('\n').filter((l) => l.trim());
+    const responseText = result.text || result.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const lines = responseText.split('\n').filter((l) => l.trim());
     return lines
       .filter((l) => l.match(/^[\d\-\*•]/))
       .map((l) => l.replace(/^[\d\-\*•\.\)]+\s*/, '').trim())
@@ -711,12 +716,15 @@ Respond in JSON format:
   "suggestedResponse": "brief response to user"
 }`;
 
-    const result = await callGeminiWithRetry(prompt, {
-      maxOutputTokens: 200,
-      temperature: 0.2,
-    });
+    const result = await callGeminiWithRetry({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 200,
+      },
+    }, 3, 'bilge_analyze_feedback');
 
-    const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+    const jsonMatch = result.text?.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const analysis = JSON.parse(jsonMatch[0]);
       return { ...analysis, similarFeedbackCount };
@@ -843,12 +851,15 @@ Respond in JSON format:
   "businessValue": "business impact"
 }`;
 
-    const result = await callGeminiWithRetry(prompt, {
-      maxOutputTokens: 400,
-      temperature: 0.7,
-    });
+    const result = await callGeminiWithRetry({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 400,
+      },
+    }, 3, 'bilge_innovation_idea');
 
-    const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+    const jsonMatch = result.text?.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return null;
 
     const ideaData = JSON.parse(jsonMatch[0]);

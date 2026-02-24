@@ -1231,6 +1231,7 @@ function buildFallbackSummary(): CapitalFlowSummary {
     liquidityBias: 'neutral',
     markets,
     recommendation: getFallbackRecommendation(),
+    activeRotation: null,
     cacheExpiry: new Date(Date.now() + 60_000), // 1 min TTL in fallback mode
   };
 }
@@ -1241,14 +1242,13 @@ function buildFallbackSummary(): CapitalFlowSummary {
 function getFallbackRecommendation(): FlowRecommendation {
   return {
     action: 'wait',
-    direction: 'neutral',
+    direction: 'BUY',
     primaryMarket: 'crypto',
     confidence: 50,
     reason: 'Data temporarily unavailable. Please refresh.',
     phase: 'mid',
     sectors: [],
     suggestedAssets: [],
-    riskLevel: 'medium',
   };
 }
 
@@ -1294,10 +1294,6 @@ function determineLiquidityBias(liquidity: GlobalLiquidity): LiquidityBias {
   else if (liquidity.vix.level === 'neutral') riskOnScore += 0.5;
   else if (liquidity.vix.level === 'fear') riskOffScore += 1;
   else if (liquidity.vix.level === 'extreme_fear') riskOffScore += 2;
-
-  // VIX term structure (backwardation = stress signal)
-  if (liquidity.vix.termStructure === 'backwardation') riskOffScore += 1.5;
-  else if (liquidity.vix.termStructure === 'contango') riskOnScore += 0.5;
 
   // Yield Curve
   if (liquidity.yieldCurve.inverted) riskOffScore += 1;
@@ -2414,7 +2410,7 @@ Layer 1 - Global Liquidity:
 - Treasury General Account (TGA): ${liquidity.treasuryGeneralAccount.value.toFixed(2)}T USD (${liquidity.treasuryGeneralAccount.trend}, 30d: ${liquidity.treasuryGeneralAccount.change30d > 0 ? '+' : ''}${liquidity.treasuryGeneralAccount.change30d.toFixed(1)}%)
 - M2 Money Supply: ${liquidity.m2MoneySupply.value.toFixed(2)}T USD (YoY: ${liquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%)
 - DXY (Dollar): ${liquidity.dxy.value.toFixed(2)} (${liquidity.dxy.trend}, 7d: ${liquidity.dxy.change7d > 0 ? '+' : ''}${liquidity.dxy.change7d.toFixed(2)}%)
-- VIX: ${liquidity.vix.value.toFixed(2)} (${liquidity.vix.level})${liquidity.vix.termStructure ? ` | Term Structure: ${liquidity.vix.termStructure}${liquidity.vix.termSpread != null ? ` (spread: ${liquidity.vix.termSpread > 0 ? '+' : ''}${liquidity.vix.termSpread.toFixed(2)})` : ''}` : ''}
+- VIX: ${liquidity.vix.value.toFixed(2)} (${liquidity.vix.level})
 - Yield Curve: ${liquidity.yieldCurve.inverted ? 'INVERTED' : 'Normal'} (10Y-2Y: ${liquidity.yieldCurve.spread10y2y.toFixed(3)}%)
 - Overall Bias: ${bias.toUpperCase()}
 

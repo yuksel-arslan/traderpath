@@ -8,9 +8,9 @@
  * they are NOT separate analysis methods.
  */
 
-import cron from 'node-cron';
+import cron, { type ScheduledTask } from 'node-cron';
 import { prisma } from '../../core/database';
-import { redis } from '../../core/cache';
+import { redis, cache } from '../../core/cache';
 import { getCapitalFlowSummary } from '../capital-flow/capital-flow.service';
 import { analysisEngine } from '../analysis/analysis.engine';
 import { analyzeMLIS } from '../analysis/services/mlis.service';
@@ -42,7 +42,7 @@ const MAX_ASSETS_PER_RUN = 5;
 const LOCK_KEY = 'signal-generator:running';
 const LOCK_TTL = 1800; // 30 minutes
 
-let cronJob: cron.ScheduledTask | null = null;
+let cronJob: ScheduledTask | null = null;
 
 /**
  * Check if a Prisma error is due to missing table (P2021) or missing column (P2022)
@@ -102,7 +102,7 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
 
     // Acquire lock
     if (redis) {
-      const acquired = await redis.set(LOCK_KEY, '1', 'EX', LOCK_TTL, 'NX');
+      const acquired = await cache.setNX(LOCK_KEY, '1', LOCK_TTL);
       if (!acquired) {
         console.log('[SignalGenerator] Another instance is running, skipping');
         return result;
@@ -133,7 +133,7 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
         // Check for duplicate signals
         const isDuplicate = await signalService.isDuplicateSignal(
           asset.symbol,
-          recommendation.action === 'BUY' ? 'long' : 'short',
+          recommendation.direction === 'BUY' ? 'long' : 'short',
           4 // Within last 4 hours
         );
 
@@ -178,7 +178,7 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
           symbol: asset.symbol,
           assetClass: asset.assetClass,
           market: asset.market,
-          direction: recommendation.action === 'BUY' ? 'long' : 'short',
+          direction: recommendation.direction === 'BUY' ? 'long' : 'short',
           entryPrice: analysisResult.tradePlan?.averageEntry || 0,
           stopLoss: analysisResult.tradePlan?.stopLoss?.price || 0,
           takeProfit1: analysisResult.tradePlan?.takeProfits?.[0]?.price || 0,
@@ -191,7 +191,7 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
           mlisConfidence: analysisResult.mlisConfidence,
           overallConfidence,
           capitalFlowPhase: recommendation.phase,
-          capitalFlowBias: capitalFlowSummary.globalLiquidity?.bias || 'neutral',
+          capitalFlowBias: capitalFlowSummary.liquidityBias || 'neutral',
           sectorFlow: asset.sectorFlow,
           classicAnalysisId: analysisResult.analysisId,
           mlisAnalysisId: analysisResult.analysisId, // Same analysis includes MLIS
@@ -215,7 +215,7 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
           volumeConfirm: analysisResult.step7Result?.indicatorSummary?.volumeConfirm,
           atr: analysisResult.step7Result?.indicatorSummary?.atr,
           bbWidth: analysisResult.step7Result?.indicatorSummary?.bbWidth,
-          l1LiquidityBias: capitalFlowSummary.globalLiquidity?.bias,
+          l1LiquidityBias: capitalFlowSummary.liquidityBias,
           l2MarketPhase: recommendation.phase,
           l3SectorFlowAligned: asset.sectorFlow !== undefined
             ? (signalData.direction === 'long' ? asset.sectorFlow > 0 : asset.sectorFlow < 0)
@@ -268,13 +268,12 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
 
     // Store result in Redis for monitoring
     if (redis) {
-      await redis.set(
+      await cache.set(
         'signal-generator:last-run',
         JSON.stringify({
           timestamp: new Date().toISOString(),
           result,
         }),
-        'EX',
         86400 // 24 hours
       );
     }

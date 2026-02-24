@@ -163,6 +163,7 @@ function detectIntent(message: string): {
   intent: string;
   symbol?: string;
   interval?: string;
+  intervalExplicit?: boolean;
   expertType?: string;
   market?: string;
 } {
@@ -1093,7 +1094,7 @@ M2 Money Supply: $${(liquidity.m2MoneySupply.value / 1e12).toFixed(2)}T (YoY: ${
 
 DXY (Dollar): ${liquidity.dxy.value.toFixed(2)} (${liquidity.dxy.trend === 'weakening' ? 'Weakening → Risk-On ✅' : liquidity.dxy.trend === 'strengthening' ? 'Strengthening → Risk-Off ⚠️' : 'Stable'})
 
-VIX (Fear): ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level === 'low' ? 'Low → Calm Market' : liquidity.vix.level === 'elevated' ? 'Elevated → Caution' : 'High → Panic ⚠️'})
+VIX (Fear): ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level === 'complacent' ? 'Low → Calm Market' : liquidity.vix.level === 'fear' ? 'Elevated → Caution' : liquidity.vix.level === 'extreme_fear' ? 'High → Panic ⚠️' : 'Neutral'})
 
 Yield Curve (10Y-2Y): ${liquidity.yieldCurve.spread10y2y.toFixed(2)}bp ${liquidity.yieldCurve.inverted ? '⚠️ INVERTED (Recession signal)' : '✅ Normal'}`;
 
@@ -1189,7 +1190,7 @@ Trend: ${liquidity.dxy.trend === 'weakening' ? '📉 WEAKENING → Bullish for r
 
 😱 VIX (FEAR INDEX)
 Value: ${liquidity.vix.value.toFixed(2)}
-Level: ${liquidity.vix.level === 'low' ? '🟢 LOW (Calm market, complacency)' : liquidity.vix.level === 'elevated' ? '🟡 ELEVATED (Rising concern)' : '🔴 HIGH (Panic mode)'}
+Level: ${liquidity.vix.level === 'complacent' ? '🟢 LOW (Calm market, complacency)' : liquidity.vix.level === 'fear' ? '🟡 ELEVATED (Rising concern)' : liquidity.vix.level === 'extreme_fear' ? '🔴 HIGH (Panic mode)' : '⚪ NEUTRAL'}
 
 📈 YIELD CURVE (10Y-2Y)
 Spread: ${liquidity.yieldCurve.spread10y2y.toFixed(2)} basis points
@@ -1324,7 +1325,7 @@ ${bestMarket.flow7d > 0 ? `+${bestMarket.flow7d.toFixed(2)}% weekly inflow` : 'R
         .map((s, i) => {
           const rankEmoji = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  ';
           const flowSign = s.flow7d > 0 ? '+' : '';
-          return `${rankEmoji} ${s.name}: ${flowSign}${s.flow7d.toFixed(2)}% (7D) | TVL: $${(s.tvl / 1e9).toFixed(2)}B`;
+          return `${rankEmoji} ${s.name}: ${flowSign}${s.flow7d.toFixed(2)}% (7D) | 30D: ${s.flow30d > 0 ? '+' : ''}${s.flow30d.toFixed(2)}% | Dom: ${s.dominance.toFixed(1)}%`;
         });
 
       const topSector = marketFlow.sectors.sort((a, b) => b.flow7d - a.flow7d)[0];
