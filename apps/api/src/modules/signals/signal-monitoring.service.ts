@@ -59,9 +59,9 @@ export const signalMonitoring = {
     const key = 'signal-monitoring:generator';
 
     // Get existing metrics
-    const existing = await cache.get(key);
+    const existing = await cache.get<SignalGeneratorMetrics>(key);
     const metrics: SignalGeneratorMetrics = existing
-      ? JSON.parse(existing)
+      ? existing
       : {
           lastRunAt: new Date(),
           lastStatus: 'success',
@@ -118,8 +118,7 @@ export const signalMonitoring = {
    */
   async getGeneratorMetrics(): Promise<SignalGeneratorMetrics | null> {
     const key = 'signal-monitoring:generator';
-    const data = await cache.get(key);
-    return data ? JSON.parse(data) : null;
+    return await cache.get<SignalGeneratorMetrics>(key);
   },
 
   /**
@@ -164,9 +163,9 @@ export const signalMonitoring = {
     const key = 'signal-monitoring:tracker';
 
     // Get existing metrics
-    const existing = await cache.get(key);
+    const existing = await cache.get<OutcomeTrackerMetrics>(key);
     const metrics: OutcomeTrackerMetrics = existing
-      ? JSON.parse(existing)
+      ? existing
       : {
           lastRunAt: new Date(),
           lastStatus: 'success',
@@ -228,8 +227,7 @@ export const signalMonitoring = {
    */
   async getTrackerMetrics(): Promise<OutcomeTrackerMetrics | null> {
     const key = 'signal-monitoring:tracker';
-    const data = await cache.get(key);
-    return data ? JSON.parse(data) : null;
+    return await cache.get<OutcomeTrackerMetrics>(key);
   },
 
   /**

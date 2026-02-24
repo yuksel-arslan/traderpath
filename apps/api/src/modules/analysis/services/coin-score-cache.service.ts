@@ -142,7 +142,7 @@ class CoinScoreCacheService {
       const momentumScore = this.calculateMomentumFromAnalysis(assetScan);
 
       // Use the real analysis score
-      const totalScore = assetScan.overallScore || 50;
+      const totalScore = assetScan.score || 50;
 
       // Reliability score (weighted: real analysis score + component scores)
       const reliabilityScore = Math.round(
@@ -155,8 +155,9 @@ class CoinScoreCacheService {
 
       // Get verdict from analysis
       const verdict = this.determineVerdict(assetScan, safetyCheck, timing);
-      const direction = assetScan.trendDirection === 'bullish' ? 'LONG' :
-                       assetScan.trendDirection === 'bearish' ? 'SHORT' : null;
+      const primaryTrend = assetScan.timeframes?.find(t => t.tf === '4H')?.trend;
+      const direction = primaryTrend === 'bullish' ? 'LONG' :
+                       primaryTrend === 'bearish' ? 'SHORT' : null;
 
       const confidence = Math.min(10, Math.max(1, Math.round(reliabilityScore / 10)));
 

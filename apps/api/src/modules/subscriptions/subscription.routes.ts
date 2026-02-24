@@ -6,6 +6,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { authenticate } from '../../core/auth/middleware';
+import { prisma } from '../../core/database';
 import { subscriptionService } from './subscription.service';
 import { stripeService } from '../payments/stripe.service';
 import { isAdminEmail } from '../../config/admin';
@@ -198,7 +199,7 @@ export default async function subscriptionRoutes(app: FastifyInstance) {
       const body = checkoutSchema.parse(request.body);
 
       // Get user email
-      const user = await app.prisma.user.findUnique({
+      const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { email: true },
       });

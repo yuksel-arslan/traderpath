@@ -26,7 +26,7 @@ const CREDIT_COSTS = {
 };
 
 interface CostLogInput {
-  service: 'gemini' | 'binance' | 'coingecko' | 'internal';
+  service: 'gemini' | 'binance' | 'coingecko' | 'internal' | 'google_translate';
   operation: string;
   inputTokens?: number;
   outputTokens?: number;

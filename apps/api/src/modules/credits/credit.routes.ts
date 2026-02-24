@@ -117,11 +117,12 @@ export default async function creditRoutes(app: FastifyInstance) {
    */
   app.get('/costs', async (_request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const { CREDIT_COSTS } = await import('@traderpath/types');
+      const { getCreditCosts } = await import('../costs/credit-costs.service');
+      const costs = await getCreditCosts();
 
       return reply.send({
         success: true,
-        data: { costs: CREDIT_COSTS },
+        data: { costs },
       });
     } catch (error) {
       logger.error('GET /api/credits/costs error:', error);

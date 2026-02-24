@@ -1801,6 +1801,8 @@ interface MarketData {
   low24h: number;
   volume24h: number;
   quoteVolume24h: number;
+  openInterest?: number;
+  previousOpenInterest?: number;
 }
 
 // Step 1 Types
@@ -2214,6 +2216,9 @@ interface FinalVerdictResult {
   aiSummary?: string;
   // NEW: Tokenomics interpretation for the report
   tokenomicsInsight?: string;
+  // MLIS verdict downgrade tracking
+  verdictDowngraded?: boolean;
+  verdictDowngradeReason?: string;
 }
 
 // ===========================================
@@ -4251,7 +4256,7 @@ export const analysisEngine = {
       low: c.low,
       close: c.close,
       volume: c.volume,
-      timestamp: c.timestamp ?? 0,
+      timestamp: c.openTime ?? 0,
     }));
     const smiResult = calculateSmartMoneyIndex(smiCandles);
 
@@ -4922,15 +4927,20 @@ export const analysisEngine = {
     // Guard against empty candle arrays (non-crypto assets may not have secondary timeframe data)
     if (prices1h.length === 0 || prices4h.length === 0) {
       return {
+        symbol,
+        traps: {
+          bullTrap: false,
+          bearTrap: false,
+          liquidityGrab: { detected: false, zones: [] },
+          stopHuntZones: [],
+          fakeoutRisk: 'low' as const,
+        },
+        liquidationLevels: [],
+        counterStrategy: ['Insufficient candle data for trap detection'],
+        proTip: 'Trap check skipped due to insufficient data.',
+        riskLevel: 'low' as const,
         score: 5,
-        bullTrap: false,
-        bearTrap: false,
-        fakeBreakout: false,
-        squeezeDetected: false,
-        manipulationRisk: 'low' as const,
-        warnings: ['Insufficient candle data for trap detection'],
-        details: 'Trap check skipped due to insufficient data.',
-        gate: { canProceed: true, reason: 'Trap check skipped - insufficient data', confidence: 50, urgency: 'medium' as const },
+        gate: { canProceed: true, reason: 'Trap check skipped - insufficient data', confidence: 50, trapRisk: 'moderate' as const },
       };
     }
 
@@ -5932,8 +5942,8 @@ export const analysisEngine = {
     // ===== WIN RATE ESTIMATE — via RiskEngine (TASK 2.3) =====
     const winRateEstimate = estimateWinRate({
       direction,
-      trendDirection: assetScan.trend?.direction ?? 'neutral',
-      trendStrength:  assetScan.trend?.strength  ?? 50,
+      trendDirection: assetScan.timeframes?.find(t => t.tf === '4H')?.trend ?? 'neutral',
+      trendStrength:  assetScan.timeframes?.find(t => t.tf === '4H')?.strength ?? 50,
       confidence:     preliminaryVerdict.confidence,
       safetyScore:    safetyCheck.score,
       tradeNow:       timing.tradeNow,
@@ -6048,7 +6058,7 @@ export const analysisEngine = {
     // Map TradeType → BundleType so weights shift by trading style.
     const bundleTypeForScoring =
       tradeType === 'scalping'   ? 'scalping' :
-      tradeType === 'swingTrade' ? 'swing'    : 'day';
+      tradeType === 'swing'      ? 'swing'    : 'day';
 
     const stepScoreInputs = [
       quickStepScore('marketPulse', marketPulse),
@@ -6257,8 +6267,8 @@ export const analysisEngine = {
    */
   getTradeTypeFromTimeframe(timeframe: string): TradeType {
     const mapping: Record<string, TradeType> = {
-      '5m': 'scalp',
-      '15m': 'scalp',
+      '5m': 'scalping',
+      '15m': 'scalping',
       '30m': 'dayTrade',
       '1h': 'dayTrade',
       '4h': 'dayTrade',

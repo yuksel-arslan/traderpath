@@ -186,7 +186,7 @@ export class BinanceCryptoProvider extends MarketDataProvider {
   /**
    * Fetch order book
    */
-  async fetchOrderBook(symbol: string, depth: number = 100): Promise<OrderBook> {
+  override async fetchOrderBook(symbol: string, depth: number = 100): Promise<OrderBook> {
     const resolved = this.resolveSymbol(symbol);
     const cacheKey = `binance:orderbook:${resolved.normalized}:${depth}`;
 
@@ -217,7 +217,7 @@ export class BinanceCryptoProvider extends MarketDataProvider {
   /**
    * Fetch crypto fundamentals (tokenomics + futures data)
    */
-  async fetchFundamentals(symbol: string): Promise<CryptoFundamentals> {
+  override async fetchFundamentals(symbol: string): Promise<CryptoFundamentals> {
     const resolved = this.resolveSymbol(symbol);
     const base = resolved.baseCurrency!;
 

@@ -6,7 +6,7 @@
 import cron, { type ScheduledTask } from 'node-cron';
 import { morningBriefingService } from './morning-briefing.service';
 import { emailService } from '../email/email.service';
-import { redis } from '../../core/cache';
+import { cache } from '../../core/cache';
 import { prisma } from '../../core/database';
 
 const LOCK_KEY = 'morning-briefing:running';
@@ -21,7 +21,7 @@ async function executeMorningBriefing() {
   console.log('[MorningBriefing] Cron job triggered');
 
   // Acquire lock to prevent concurrent runs
-  const acquired = await redis?.set(LOCK_KEY, '1', 'EX', LOCK_TTL);
+  const acquired = await cache.setNX(LOCK_KEY, '1', LOCK_TTL);
   if (!acquired) {
     console.log('[MorningBriefing] Another instance running, skipping');
     return;
@@ -69,7 +69,7 @@ async function executeMorningBriefing() {
     console.error('[MorningBriefing] Execution failed:', error);
   } finally {
     // Release lock
-    await redis?.del(LOCK_KEY);
+    await cache.del(LOCK_KEY);
   }
 }
 

@@ -66,9 +66,9 @@ export const subscriptionService = {
   async getUserSubscription(userId: string): Promise<UserSubscription> {
     // Check cache first
     const cacheKey = `subscription:${userId}`;
-    const cached = await cache.get(cacheKey);
+    const cached = await cache.get<string>(cacheKey);
     if (cached) {
-      return JSON.parse(cached);
+      return JSON.parse(typeof cached === 'string' ? cached : JSON.stringify(cached));
     }
 
     // Get from database
@@ -88,7 +88,7 @@ export const subscriptionService = {
         stripeSubscriptionId: null,
       };
 
-      await cache.set(cacheKey, JSON.stringify(result), 'EX', SUBSCRIPTION_CACHE_TTL);
+      await cache.set(cacheKey, JSON.stringify(result), SUBSCRIPTION_CACHE_TTL);
       return result;
     }
 
@@ -105,7 +105,7 @@ export const subscriptionService = {
       stripeSubscriptionId: subscription.stripeSubscriptionId,
     };
 
-    await cache.set(cacheKey, JSON.stringify(result), 'EX', SUBSCRIPTION_CACHE_TTL);
+    await cache.set(cacheKey, JSON.stringify(result), SUBSCRIPTION_CACHE_TTL);
     return result;
   },
 
