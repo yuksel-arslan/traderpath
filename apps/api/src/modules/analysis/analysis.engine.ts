@@ -1501,10 +1501,11 @@ function indicatorResultsToAnalysisInputs(
     // Moving Averages
     if (upperName.startsWith('SMA_') || upperName.startsWith('EMA_')) {
       const period = parseInt(upperName.split('_')[1]);
-      inputs.movingAverages = inputs.movingAverages || {};
-      if (period === 50) inputs.movingAverages.ma50 = result.value;
-      if (period === 200) inputs.movingAverages.ma200 = result.value;
-      if (period === 20) inputs.movingAverages.ma20 = result.value;
+      const ma = (inputs.movingAverages || {}) as { ma20?: number | null; ma50?: number | null; ma200?: number | null };
+      if (period === 50) ma.ma50 = result.value;
+      if (period === 200) ma.ma200 = result.value;
+      if (period === 20) ma.ma20 = result.value;
+      inputs.movingAverages = ma;
     }
 
     // PVT
@@ -3751,7 +3752,9 @@ export const analysisEngine = {
           average: fundingSpread.average,
           spread: fundingSpread.spread,
           interpretation: fundingSpread.interpretation,
-          rates: fundingSpread.rates,
+          rates: Array.isArray(fundingSpread.rates)
+            ? Object.fromEntries(fundingSpread.rates.map((r: { symbol: string; rate: number }) => [r.symbol, r.rate]))
+            : fundingSpread.rates,
         },
         openInterest: btcOpenInterest.openInterestValue,
         longShortRatio: btcLongShortRatio.longShortRatio,
