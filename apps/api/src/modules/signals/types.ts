@@ -93,9 +93,11 @@ export interface TelegramSignalMessage {
   disableWebPagePreview?: boolean;
 }
 
+export type SignalOutcomeValue = 'tp1_hit' | 'tp2_hit' | 'sl_hit' | 'expired';
+
 export interface SignalOutcome {
   signalId: string;
-  outcome: 'tp1_hit' | 'tp2_hit' | 'sl_hit' | 'expired';
+  outcome: SignalOutcomeValue;
   outcomePrice: number;
   pnlPercent: number;
 }

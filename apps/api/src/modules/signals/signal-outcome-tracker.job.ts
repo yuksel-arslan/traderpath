@@ -4,25 +4,25 @@
  * Runs every 15 minutes
  */
 
-import cron from 'node-cron';
+import cron, { type ScheduledTask } from 'node-cron';
 import { prisma } from '../../core/database';
-import { redis } from '../../core/cache';
+import { redis, cache } from '../../core/cache';
 import { formatSignalUpdate } from './telegram-formatter';
 import { signalMonitoring } from './signal-monitoring.service';
 import { emailService } from '../email/email.service';
-import type { SignalOutcome } from './types';
+import type { SignalOutcomeValueValue } from './types';
 
 const CRON_SCHEDULE = '*/15 * * * *'; // Every 15 minutes
 const REDIS_LOCK_KEY = 'signal-outcome-tracker:lock';
 const REDIS_LOCK_TTL = 600; // 10 minutes
 
-let cronJob: cron.ScheduledTask | null = null;
+let cronJob: ScheduledTask | null = null;
 
 // Email notification template
 function generateOutcomeEmailHTML(
   symbol: string,
   direction: 'long' | 'short',
-  outcome: SignalOutcome,
+  outcome: SignalOutcomeValue,
   entryPrice: number,
   outcomePrice: number,
   pnlPercent: number,
@@ -173,8 +173,8 @@ function checkOutcome(
   takeProfit1: number,
   takeProfit2: number,
   direction: 'long' | 'short'
-): { outcome: SignalOutcome | null; pnlPercent: number } {
-  let outcome: SignalOutcome | null = null;
+): { outcome: SignalOutcomeValue | null; pnlPercent: number } {
+  let outcome: SignalOutcomeValue | null = null;
   let pnlPercent = 0;
 
   if (direction === 'long') {
@@ -209,7 +209,7 @@ function checkOutcome(
 // Send Telegram notification for signal update
 async function sendTelegramNotification(
   signal: any,
-  outcome: SignalOutcome,
+  outcome: SignalOutcomeValue,
   outcomePrice: number,
   pnlPercent: number
 ) {
@@ -251,7 +251,7 @@ async function sendTelegramNotification(
 // Send user notifications (Telegram/Discord/Email)
 async function sendUserNotifications(
   signal: any,
-  outcome: SignalOutcome,
+  outcome: SignalOutcomeValue,
   outcomePrice: number,
   pnlPercent: number
 ) {
@@ -373,7 +373,7 @@ function isTableMissing(error: unknown): boolean {
 let tableMissingWarningLogged = false;
 
 // Main tracking function
-export async function trackSignalOutcomes() {
+export async function trackSignalOutcomeValues() {
   const startTime = Date.now();
   console.log('[OutcomeTracker] Starting outcome tracking...');
 
@@ -530,7 +530,7 @@ export async function trackSignalOutcomes() {
 }
 
 // Start the cron job
-export function startSignalOutcomeTracker() {
+export function startSignalOutcomeValueTracker() {
   if (cronJob) {
     console.log('[OutcomeTracker] Job already running');
     return;
@@ -538,19 +538,19 @@ export function startSignalOutcomeTracker() {
 
   cronJob = cron.schedule(CRON_SCHEDULE, async () => {
     console.log('[OutcomeTracker] Cron triggered');
-    await trackSignalOutcomes();
+    await trackSignalOutcomeValues();
   });
 
   console.log('[OutcomeTracker] Cron job started (runs every 15 minutes)');
 
   // Run immediately on startup
   setTimeout(() => {
-    trackSignalOutcomes().catch(console.error);
+    trackSignalOutcomeValues().catch(console.error);
   }, 5000); // 5 second delay
 }
 
 // Stop the cron job
-export function stopSignalOutcomeTracker() {
+export function stopSignalOutcomeValueTracker() {
   if (cronJob) {
     cronJob.stop();
     cronJob = null;
@@ -559,7 +559,7 @@ export function stopSignalOutcomeTracker() {
 }
 
 // Manual trigger (for testing/admin)
-export async function runSignalOutcomeTrackerManually() {
+export async function runSignalOutcomeValueTrackerManually() {
   console.log('[OutcomeTracker] Manual execution triggered');
-  return await trackSignalOutcomes();
+  return await trackSignalOutcomeValues();
 }

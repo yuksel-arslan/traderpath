@@ -1905,7 +1905,16 @@ interface AssetScanResult {
     movingAverages: { ma20: number; ma50: number; ma200: number };
     bollingerBands: { upper: number; middle: number; lower: number };
     atr: number;
+    candlestickPatterns?: {
+      total: number;
+      bullish: number;
+      bearish: number;
+      highSignificance: string[];
+      all: Array<{ name: string; direction: string; significance: string }>;
+    };
   };
+  // Which indicator bundle was used
+  bundleType?: string;
   // Detailed indicator analysis with interpretations
   indicatorDetails?: IndicatorAnalysis;
   // NEW: Tokenomics analysis (financial structure of the token)
@@ -1923,6 +1932,15 @@ interface AssetScanResult {
     keyDrivers: string[];
     warnings: string[];
   };
+  // Chart data for PDF generation
+  chartCandles?: Array<{
+    timestamp: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+  }>;
   score: number;
   // Gate decision for sequential approach
   gate: {

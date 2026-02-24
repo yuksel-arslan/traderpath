@@ -104,7 +104,7 @@ export class MorningBriefingService {
    */
   private async cacheBriefing(briefing: MorningBriefing): Promise<void> {
     try {
-      await redis?.set(BRIEFING_CACHE_KEY, JSON.stringify(briefing), 'EX', BRIEFING_TTL);
+      await redis?.setex(BRIEFING_CACHE_KEY, BRIEFING_TTL, JSON.stringify(briefing));
     } catch (error) {
       console.error('[MorningBriefing] Cache write failed:', error);
     }
@@ -115,20 +115,23 @@ export class MorningBriefingService {
    */
   private async getTopAssets(): Promise<MorningBriefing['topAssets']> {
     try {
-      const cacheEntry = await prisma.coinScoreCache.findFirst({
-        orderBy: { updatedAt: 'desc' },
+      const coins = await prisma.coinScoreCache.findMany({
+        where: {
+          expiresAt: { gt: new Date() },
+        },
+        orderBy: { totalScore: 'desc' },
+        take: 3,
       });
 
-      if (!cacheEntry?.coins) {
+      if (!coins.length) {
         return this.getFallbackTopAssets();
       }
 
-      const coins = JSON.parse(cacheEntry.coins as any);
-      return coins.slice(0, 3).map((coin: any) => ({
+      return coins.map((coin) => ({
         symbol: coin.symbol,
-        name: coin.name || coin.symbol,
-        direction: coin.direction?.toLowerCase() || 'long',
-        score: coin.totalScore || 0,
+        name: coin.symbol,
+        direction: (coin.direction?.toLowerCase() || 'long') as 'long' | 'short',
+        score: Number(coin.totalScore) || 0,
         reason: this.generateAssetReason(coin),
       }));
     } catch (error) {

@@ -231,7 +231,15 @@ Respond in JSON:
   "long": { "drivers": ["driver1", "driver2"], "invalidations": ["inv1"] }
 }`;
 
-    const response = await callGeminiWithRetry(prompt, { type: 'default', maxOutputTokens: 300 });
+    const response = await callGeminiWithRetry(
+      {
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 300 },
+      },
+      3,
+      'forecast_band_drivers',
+      'default',
+    );
 
     try {
       const jsonMatch = response.text.match(/\{[\s\S]*\}/);
