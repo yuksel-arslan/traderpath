@@ -10,7 +10,7 @@ import { redis, cache } from '../../core/cache';
 import { formatSignalUpdate } from './telegram-formatter';
 import { signalMonitoring } from './signal-monitoring.service';
 import { emailService } from '../email/email.service';
-import type { SignalOutcomeValueValue } from './types';
+import type { SignalOutcomeValue } from './types';
 
 const CRON_SCHEDULE = '*/15 * * * *'; // Every 15 minutes
 const REDIS_LOCK_KEY = 'signal-outcome-tracker:lock';
@@ -373,13 +373,13 @@ function isTableMissing(error: unknown): boolean {
 let tableMissingWarningLogged = false;
 
 // Main tracking function
-export async function trackSignalOutcomeValues() {
+export async function trackSignalOutcomes() {
   const startTime = Date.now();
   console.log('[OutcomeTracker] Starting outcome tracking...');
 
   // Acquire distributed lock
   if (redis) {
-    const lockAcquired = await redis.set(REDIS_LOCK_KEY, '1', 'EX', REDIS_LOCK_TTL, 'NX');
+    const lockAcquired = await cache.setNX(REDIS_LOCK_KEY, '1', REDIS_LOCK_TTL);
     if (!lockAcquired) {
       console.log('[OutcomeTracker] Another instance is already running');
       return {
@@ -530,7 +530,7 @@ export async function trackSignalOutcomeValues() {
 }
 
 // Start the cron job
-export function startSignalOutcomeValueTracker() {
+export function startSignalOutcomeTracker() {
   if (cronJob) {
     console.log('[OutcomeTracker] Job already running');
     return;
@@ -538,19 +538,19 @@ export function startSignalOutcomeValueTracker() {
 
   cronJob = cron.schedule(CRON_SCHEDULE, async () => {
     console.log('[OutcomeTracker] Cron triggered');
-    await trackSignalOutcomeValues();
+    await trackSignalOutcomes();
   });
 
   console.log('[OutcomeTracker] Cron job started (runs every 15 minutes)');
 
   // Run immediately on startup
   setTimeout(() => {
-    trackSignalOutcomeValues().catch(console.error);
+    trackSignalOutcomes().catch(console.error);
   }, 5000); // 5 second delay
 }
 
 // Stop the cron job
-export function stopSignalOutcomeValueTracker() {
+export function stopSignalOutcomeTracker() {
   if (cronJob) {
     cronJob.stop();
     cronJob = null;
@@ -559,7 +559,7 @@ export function stopSignalOutcomeValueTracker() {
 }
 
 // Manual trigger (for testing/admin)
-export async function runSignalOutcomeValueTrackerManually() {
+export async function runSignalOutcomeTrackerManually() {
   console.log('[OutcomeTracker] Manual execution triggered');
-  return await trackSignalOutcomeValues();
+  return await trackSignalOutcomes();
 }

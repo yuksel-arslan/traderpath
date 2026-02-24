@@ -8,6 +8,7 @@ import { config } from '../../core/config';
 import { callGeminiWithRetry } from '../../core/gemini';
 import { contractSecurityService } from '../security/contract-security.service';
 import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig, getMaxStopLossPercent, getMaxTakeProfitPercent } from './config/trade-config';
+import { Timeframe as TimeframeEnum } from './config/timeframe.enum';
 import { selectBundle, getBundleType } from './bundles';
 import { aggregateScores, quickStepScore, STEP_WEIGHTS } from './scoring';
 import {
@@ -4055,7 +4056,7 @@ export const analysisEngine = {
         },
       },
       // Indicator bundle used for this analysis (timeframe-driven selection)
-      bundleType: getBundleType(tf.primary as Timeframe),
+      bundleType: getBundleType(tf.primary as TimeframeEnum),
       // Build detailed indicator analysis using bundle-appropriate indicators
       indicatorDetails: indicatorAnalysis,
       // NEW: Tokenomics analysis (financial structure of the token)
@@ -4066,7 +4067,7 @@ export const analysisEngine = {
       assetContext: assetContext.metrics ? assetContext : undefined,
       // Chart data for PDF generation (last 50 candles)
       chartCandles: candlesPrimary.slice(-50).map(c => ({
-        timestamp: c.timestamp,
+        timestamp: c.openTime,
         open: c.open,
         high: c.high,
         low: c.low,
