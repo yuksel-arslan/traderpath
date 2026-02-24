@@ -1487,6 +1487,24 @@ Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
 • Consider safe havens (gold, bonds)`;
       }
 
+      // Build action emoji, confidence bar, and asset advice
+      const actionEmoji = recommendation.action === 'analyze' ? '✅' : recommendation.action === 'wait' ? '⏳' : '⛔';
+      const confidencePercent = Math.min(100, Math.max(0, recommendation.confidence));
+      const filledBars = Math.round(confidencePercent / 10);
+      const confidenceBar = '█'.repeat(filledBars) + '░'.repeat(10 - filledBars);
+
+      // Generate asset-specific advice if we have suggested assets
+      let assetAdvice = '';
+      if (recommendation.suggestedAssets && recommendation.suggestedAssets.length > 0) {
+        const assetList = recommendation.suggestedAssets
+          .slice(0, 3)
+          .map(a => `• ${a.symbol} (${a.name}) - ${a.reason}`)
+          .join('\n');
+        assetAdvice = language === 'tr'
+          ? `\n\n📌 ÖNERİLEN VARLIKLAR:\n${assetList}`
+          : `\n\n📌 SUGGESTED ASSETS:\n${assetList}`;
+      }
+
       // Build English message
       const messageEn = `🎯 AI RECOMMENDATION
 "Where money flows, potential exists"
@@ -2002,7 +2020,7 @@ What would you like to do now? For example, say "Analyze BTC" to start an analys
             : '\n\n[Be helpful and provide useful trading insights.]';
 
           const response = await aiExpertService.chat({
-            expertId: expertType,
+            expertId: expertType as 'aria' | 'nexus' | 'oracle' | 'sentinel',
             message: message + languageInstruction,
             userId,
           });
@@ -2515,7 +2533,7 @@ Example: "Alert me when ETH hits 4000"`,
           userId,
           symbol: alertCoin,
           targetPrice: alertPrice,
-          condition: 'ABOVE', // Could detect ABOVE/BELOW from message
+          direction: 'ABOVE', // Could detect ABOVE/BELOW from message
           isActive: true,
         },
       });
@@ -3743,7 +3761,7 @@ ${mlisResult.keySignals.slice(0, 3).map(s => `• ${s}`).join('\n')}`;
 
       // Use AI Expert for question with language context
       const response = await aiExpertService.chat({
-        expertId: expertType,
+        expertId: expertType as 'aria' | 'nexus' | 'oracle' | 'sentinel',
         message: question + languageInstruction,
         userId,
       });
@@ -3920,7 +3938,7 @@ Quel est votre style? (scalp/day trade/swing)`,
 
       // Use AI Expert for intelligent response
       const response = await aiExpertService.chat({
-        expertId: expertType,
+        expertId: expertType as 'aria' | 'nexus' | 'oracle' | 'sentinel',
         message: contextPrompt + languageInstruction,
         userId,
       });

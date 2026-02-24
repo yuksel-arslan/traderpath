@@ -357,16 +357,14 @@ async function runIntegratedAnalysis(symbol: string, assetClass: string): Promis
     const tradeType = 'swing'; // Default for signals
     const interval = '1d';
 
-    // Create analysis record
+    // Create analysis record (system-generated for signal generation)
     const analysis = await prisma.analysis.create({
       data: {
         symbol,
         interval,
-        tradeType,
         method: 'classic', // Integrated analysis uses classic method with MLIS confirmation
-        status: 'in_progress',
       },
-    });
+    } as Parameters<typeof prisma.analysis.create>[0]);
 
     // ===== 7-Step Classic Analysis =====
     const [marketPulse, assetScan, safetyCheck, timing, trapCheck] = await Promise.all([
