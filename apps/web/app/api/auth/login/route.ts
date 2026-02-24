@@ -167,8 +167,8 @@ export async function POST(request: NextRequest) {
             error: {
               code: 'SERVER_ERROR',
               message: err.name === 'AbortError'
-                ? `Backend timeout after ${BACKEND_TIMEOUT_MS / 1000}s (target: ${API_URL}). The backend may be sleeping or overloaded.`
-                : `Cannot connect to backend (${err.message}). Target: ${API_URL}`,
+                ? `Backend server did not respond within ${BACKEND_TIMEOUT_MS / 1000}s. Please try again.`
+                : `Cannot connect to backend server (${err.message}). Please try again later.`,
             },
           },
           { status: 502 }
