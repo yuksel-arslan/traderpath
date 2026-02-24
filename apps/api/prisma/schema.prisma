@@ -480,8 +480,9 @@ model PriceAlert {
   // Notification channels (stored as JSON array: ["browser", "telegram", "discord", "tradingview"])
   channels     Json      @default("[\"browser\"]")
 
-  isTriggered  Boolean  @default(false) @map("is_triggered")
-  triggeredAt  DateTime? @map("triggered_at")
+  isTriggered    Boolean   @default(false) @map("is_triggered")
+  triggeredPrice Float?    @map("triggered_price")
+  triggeredAt    DateTime? @map("triggered_at")
 
   creditsSpent Int      @default(1) @map("credits_spent")
   isActive     Boolean  @default(true) @map("is_active")
