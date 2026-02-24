@@ -28,6 +28,7 @@ interface PriceAlert {
   currentPrice?: number;
   isActive: boolean;
   isTriggered: boolean;
+  triggeredPrice?: number;
   triggeredAt?: string;
   createdAt: string;
   alertType?: string;
@@ -340,6 +341,11 @@ export default function AlertsPage() {
                   <p className="text-lg font-semibold mt-1">
                     ${Number(alert.targetPrice).toLocaleString(undefined, { maximumFractionDigits: 8 })}
                   </p>
+                  {alert.isTriggered && alert.triggeredPrice != null && (
+                    <p className="text-sm text-amber-500 font-medium">
+                      Triggered @ ${Number(alert.triggeredPrice).toLocaleString(undefined, { maximumFractionDigits: 8 })}
+                    </p>
+                  )}
                   <p className="text-sm text-muted-foreground flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {alert.isTriggered && alert.triggeredAt

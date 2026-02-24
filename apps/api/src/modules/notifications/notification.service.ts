@@ -327,32 +327,40 @@ class NotificationService {
 
     // Check each alert
     for (const alert of activeAlerts) {
-      const currentPrice = prices[alert.symbol];
-      if (!currentPrice) continue;
+      try {
+        const currentPrice = prices[alert.symbol];
+        if (!currentPrice) continue;
 
-      const targetPrice = Number(alert.targetPrice);
-      const triggered = alert.direction === 'ABOVE'
-        ? currentPrice >= targetPrice
-        : currentPrice <= targetPrice;
+        const targetPrice = Number(alert.targetPrice);
+        const triggered = alert.direction === 'ABOVE'
+          ? currentPrice >= targetPrice
+          : currentPrice <= targetPrice;
 
-      if (triggered) {
-        // Mark as triggered
-        await prisma.priceAlert.update({
-          where: { id: alert.id },
-          data: { isTriggered: true, triggeredAt: new Date() },
-        });
+        if (triggered) {
+          // Mark as triggered
+          await prisma.priceAlert.update({
+            where: { id: alert.id },
+            data: {
+              isTriggered: true,
+              triggeredAt: new Date(),
+              triggeredPrice: currentPrice,
+            },
+          });
 
-        // Send notifications
-        const channels = (alert.channels as string[]) || ['browser'];
-        await this.sendAlert({
-          userId: alert.userId,
-          symbol: alert.symbol,
-          alertType: alert.alertType,
-          targetPrice,
-          currentPrice,
-          direction: alert.direction,
-          note: alert.note || undefined,
-        }, channels);
+          // Send notifications
+          const channels = (alert.channels as string[]) || ['browser'];
+          await this.sendAlert({
+            userId: alert.userId,
+            symbol: alert.symbol,
+            alertType: alert.alertType,
+            targetPrice,
+            currentPrice,
+            direction: alert.direction,
+            note: alert.note || undefined,
+          }, channels);
+        }
+      } catch (error) {
+        console.error(`[Alert Check] Error processing alert ${alert.id}:`, error);
       }
     }
   }
