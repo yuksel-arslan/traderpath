@@ -371,28 +371,23 @@ async function runIntegratedAnalysis(symbol: string, assetClass: string): Promis
       analysisEngine.getMarketPulse(),
       analysisEngine.scanAsset(symbol, tradeType),
       analysisEngine.safetyCheck(symbol, tradeType),
-      analysisEngine.getTiming(symbol, tradeType),
-      analysisEngine.getTrapCheck(symbol, tradeType),
+      analysisEngine.timingAnalysis(symbol, tradeType),
+      analysisEngine.trapCheck(symbol, tradeType),
     ]);
 
     // Get preliminary verdict
-    const preliminaryVerdict = analysisEngine.getPreliminaryVerdict(
-      marketPulse,
-      assetScan,
-      safetyCheck,
-      timing,
-      trapCheck
+    const preliminaryVerdict = analysisEngine.preliminaryVerdict(
+      symbol,
+      { marketPulse, assetScan, safetyCheck, timing, trapCheck }
     );
 
     // Generate trade plan if verdict is positive
     let tradePlan = null;
-    if (['GO', 'CONDITIONAL_GO'].includes(preliminaryVerdict.action)) {
-      tradePlan = await analysisEngine.getTradePlan(
+    if (['go', 'conditional_go'].includes(preliminaryVerdict.verdict)) {
+      tradePlan = await analysisEngine.tradePlan(
         symbol,
-        preliminaryVerdict.direction || 'long',
-        assetScan.entries || [],
-        tradeType,
-        preliminaryVerdict
+        10000, // Default account size
+        tradeType
       );
     }
 

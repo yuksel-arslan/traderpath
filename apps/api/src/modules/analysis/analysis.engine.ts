@@ -18,7 +18,7 @@ import {
   estimateWinRate,
 } from './risk';
 import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/indicator-interpreter.service';
-import { IndicatorAnalysis } from '../../../types';
+import { IndicatorAnalysis } from '../../types';
 import { IndicatorsService, OHLCV, IndicatorResult } from './services/indicators.service';
 import { getTFTClient, TFTForecast } from './services/tft-client.service';
 import { getTradingKnowledgeForAI } from '../ai-expert/trading-knowledge-base';
@@ -1238,7 +1238,7 @@ TOKENOMICS DATA:
     }
 
     // Safe metric extraction with full null checks
-    const keyMetrics = input.keyMetrics || {};
+    const keyMetrics: Partial<AIAnalysisSummaryInput['keyMetrics']> = input.keyMetrics || {};
     const rsi = keyMetrics.rsi?.toFixed(1) || '50';
     const macdHist = keyMetrics.macdHistogram?.toFixed(4) || '0';
     const fearGreed = keyMetrics.fearGreedIndex || 50;
@@ -1822,6 +1822,12 @@ interface MarketPulseResult {
   futuresData?: {
     fundingRate: number; // percentage
     fundingRateInterpretation: 'bullish' | 'bearish' | 'neutral';
+    fundingRateSpread?: {
+      average: number;
+      spread: number;
+      interpretation: string;
+      rates: Record<string, number>;
+    };
     openInterest: number; // in USDT
     openInterestChange24h?: number;
     longShortRatio: number;

@@ -57,6 +57,16 @@ interface ConciergeResponse {
     tradePlan?: TradePlan;
     currentPrice?: number;
   };
+  // MLIS analysis result
+  mlisResult?: {
+    recommendation: string;
+    direction: string;
+    confidence: number;
+    riskLevel: string;
+    layers: Record<string, { score: number; signals: string[] }>;
+    keySignals: string[];
+    riskFactors: string[];
+  };
 }
 
 // Expanded asset list - 80+ assets including crypto, stocks, bonds, metals
@@ -2591,8 +2601,8 @@ You'll be notified when ${alertCoin} reaches this price.`,
     }
 
     const alertList = alerts.map(a => {
-      const condition = a.condition === 'ABOVE' ? '↑' : '↓';
-      return `${condition} ${a.symbol} @ $${Number(a.targetPrice).toLocaleString()}`;
+      const directionArrow = a.direction === 'ABOVE' ? '↑' : '↓';
+      return `${directionArrow} ${a.symbol} @ $${Number(a.targetPrice).toLocaleString()}`;
     }).join('\n');
 
     const alertText = language === 'tr'
@@ -2953,13 +2963,22 @@ Or visit /scheduled for detailed settings.`,
 
     // Create the schedule
     try {
+      // Calculate next run time based on frequency
+      const now = new Date();
+      const nextRun = new Date(now);
+      nextRun.setUTCHours(9, 0, 0, 0); // 9 AM UTC
+      if (nextRun <= now) {
+        nextRun.setDate(nextRun.getDate() + 1); // Next day if already past 9 AM
+      }
+
       await prisma.scheduledReport.create({
         data: {
-          userId,
+          user: { connect: { id: userId } },
           symbol: symbol.toUpperCase(),
           interval,
           frequency,
           scheduleHour: 9, // Default to 9 AM UTC
+          nextRunAt: nextRun,
           deliverEmail: true,
           isActive: true,
         },
@@ -3391,7 +3410,6 @@ Type "top coins" to see results when complete.`;
       const chargeResult = await creditService.charge(
         userId,
         ANALYSIS_COST,
-        'ANALYSIS',
         'concierge_analysis',
         { symbol: upperSymbol, interval, tradeType }
       );
@@ -3401,11 +3419,11 @@ Type "top coins" to see results when complete.`;
           success: false,
           intent: 'ANALYSIS',
           message: isTurkish
-            ? `Kredi çekimi başarısız: ${chargeResult.error || 'Bilinmeyen hata'}`
-            : `Credit charge failed: ${chargeResult.error || 'Unknown error'}`,
+            ? 'Kredi çekimi başarısız. Yetersiz bakiye olabilir.'
+            : 'Credit charge failed. Insufficient balance.',
           creditsSpent: 0,
           creditsRemaining: creditBalance,
-          error: chargeResult.error,
+          error: 'CREDIT_CHARGE_FAILED',
         };
       }
 
@@ -3476,7 +3494,7 @@ Type "top coins" to see results when complete.`;
       // Build response
       const verdict = verdictResult.verdict?.toUpperCase() || 'WAIT';
       const score = verdictResult.overallScore || 5;
-      const direction = tradePlanResult?.direction || verdictResult.direction;
+      const direction = tradePlanResult?.direction || null;
 
       const synthesis = this.generateNaturalResponse(upperSymbol, interval, verdict, score, language);
 
@@ -3488,7 +3506,7 @@ Type "top coins" to see results when complete.`;
           stopLoss: tradePlanResult.stopLoss,
           takeProfits: tradePlanResult.takeProfits,
           direction: tradePlanResult.direction || direction,
-          riskRewardRatio: tradePlanResult.riskRewardRatio,
+          riskReward: tradePlanResult.riskReward,
         };
       }
 
