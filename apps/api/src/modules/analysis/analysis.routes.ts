@@ -1027,7 +1027,11 @@ Warn about potential traps and give protective advice.`;
             })),
             sentiment: { overall: marketPulse.newsSentiment.overall || 'neutral', score: marketPulse.newsSentiment.score || 0 },
           } : undefined,
-          economicCalendar: (timing as unknown as Record<string, unknown>).economicCalendar as { events: { title: string; impact: string }[]; shouldBlockTrade: boolean; blockReason?: string } | undefined,
+          economicCalendar: marketPulse.economicCalendar ? {
+            events: (marketPulse.economicCalendar.todayEvents || []).map(e => ({ title: e.title, impact: e.impact })),
+            shouldBlockTrade: marketPulse.economicCalendar.riskLevel === 'high',
+            blockReason: marketPulse.economicCalendar.riskReason,
+          } : undefined,
         };
 
         // Capital Flow context for RAG (if available)
