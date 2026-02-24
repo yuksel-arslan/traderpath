@@ -190,9 +190,17 @@ export async function POST(request: NextRequest) {
 
       // Don't mask server errors as "Invalid credentials"
       if (isServerError(response.status, parsed.code)) {
-        console.error('[Login] Backend server error:', response.status, parsed.code, parsed.message);
+        console.error('[Login] Backend server error:', {
+          status: response.status,
+          code: parsed.code,
+          message: parsed.message,
+          apiUrl: API_URL,
+          rawBody: JSON.stringify(data).slice(0, 500),
+        });
+        // Pass through the backend's actual error message instead of masking it.
+        // The backend already sanitizes messages (no internal details leak).
         return NextResponse.json(
-          { success: false, error: { code: 'SERVER_ERROR', message: `Backend error (HTTP ${response.status}): ${parsed.message}` } },
+          { success: false, error: { code: parsed.code, message: parsed.message } },
           { status: 502 }
         );
       }
