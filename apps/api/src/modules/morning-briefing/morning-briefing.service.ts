@@ -41,13 +41,13 @@ export class MorningBriefingService {
           bias: capitalFlow.liquidityBias,
           fedBalanceSheet: capitalFlow.globalLiquidity.fedBalanceSheet.value,
           m2Growth: capitalFlow.globalLiquidity.m2MoneySupply.yoyGrowth,
-          dxyLevel: capitalFlow.globalLiquidity.dxy.current,
-          vixLevel: capitalFlow.globalLiquidity.vix.current,
+          dxyLevel: capitalFlow.globalLiquidity.dxy.value,
+          vixLevel: capitalFlow.globalLiquidity.vix.value,
           verdict: this.generateL1Verdict(capitalFlow),
         },
 
         marketBias: {
-          primary: capitalFlow.recommendation.primaryMarket,
+          primary: capitalFlow.recommendation.primaryMarket as 'crypto' | 'stocks' | 'bonds' | 'metals',
           flow7d: this.getMarketFlow(capitalFlow, capitalFlow.recommendation.primaryMarket, '7d'),
           flow30d: this.getMarketFlow(capitalFlow, capitalFlow.recommendation.primaryMarket, '30d'),
           phase: this.getMarketPhase(capitalFlow, capitalFlow.recommendation.primaryMarket),

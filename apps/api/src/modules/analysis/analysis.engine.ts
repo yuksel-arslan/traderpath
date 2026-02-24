@@ -1456,8 +1456,8 @@ function indicatorResultsToAnalysisInputs(
   currentPrice: number,
   priceChange24h: number,
   prices: number[]
-): Record<string, any> {
-  const inputs: Record<string, any> = {
+): { currentPrice: number; priceChange24h: number; prices: number[] } & Record<string, unknown> {
+  const inputs: Record<string, unknown> & { currentPrice: number; priceChange24h: number; prices: number[] } = {
     currentPrice,
     priceChange24h,
     prices,
@@ -3942,7 +3942,7 @@ export const analysisEngine = {
     });
 
     // Candlestick pattern detection for direction confirmation
-    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candles4h);
+    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candlesToOHLCV(candles4h));
     const patterns = candlestickPatterns.metadata?.patterns || [];
     const bullishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bullish');
     const bearishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bearish');
@@ -4505,7 +4505,7 @@ export const analysisEngine = {
     const volumeSpike = detectVolumeSpike(candles1h, 15, 2.0);
 
     // Candlestick pattern detection for entry confirmation
-    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candles4h);
+    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candlesToOHLCV(candles4h));
     const patterns = candlestickPatterns.metadata?.patterns || [];
     const bullishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bullish');
     const bearishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bearish');

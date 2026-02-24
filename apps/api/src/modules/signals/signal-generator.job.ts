@@ -415,7 +415,7 @@ async function runIntegratedAnalysis(symbol: string, assetClass: string): Promis
         mlisConfidence = mlisResult.confidence;
 
         // Check if MLIS confirms the Classic direction
-        const classicDirection = finalVerdict.verdict?.direction?.toLowerCase();
+        const classicDirection = preliminaryVerdict.direction?.toLowerCase();
         const mlisDirection = mlisResult.direction?.toLowerCase();
 
         // MLIS confirms if:
@@ -444,14 +444,13 @@ async function runIntegratedAnalysis(symbol: string, assetClass: string): Promis
     await prisma.analysis.update({
       where: { id: analysis.id },
       data: {
-        status: 'completed',
         totalScore,
-        step1Result: marketPulse as any,
-        step2Result: assetScan as any,
-        step3Result: safetyCheck as any,
-        step4Result: timing as any,
-        step5Result: tradePlan as any,
-        step6Result: trapCheck as any,
+        step1Result: marketPulse as object,
+        step2Result: assetScan as object,
+        step3Result: safetyCheck as object,
+        step4Result: timing as object,
+        step5Result: tradePlan as object || null,
+        step6Result: trapCheck as object,
         step7Result: {
           ...finalVerdict,
           // MLIS confirmation integrated into final verdict
@@ -459,15 +458,15 @@ async function runIntegratedAnalysis(symbol: string, assetClass: string): Promis
           mlisRecommendation,
           mlisConfidence,
           mlisLayers,
-        } as any,
+        } as object,
       },
     });
 
     return {
       analysisId: analysis.id,
       totalScore,
-      verdict: finalVerdict.verdict?.action || 'WAIT',
-      direction: finalVerdict.verdict?.direction,
+      verdict: finalVerdict.verdict.toUpperCase() || 'WAIT',
+      direction: preliminaryVerdict.direction,
       tradePlan,
       // MLIS confirmation data
       mlisConfirmation,

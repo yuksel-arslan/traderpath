@@ -3494,7 +3494,7 @@ Type "top coins" to see results when complete.`;
       // Build response
       const verdict = verdictResult.verdict?.toUpperCase() || 'WAIT';
       const score = verdictResult.overallScore || 5;
-      const direction = tradePlanResult?.direction || null;
+      const direction = tradePlanResult?.direction || undefined;
 
       const synthesis = this.generateNaturalResponse(upperSymbol, interval, verdict, score, language);
 
