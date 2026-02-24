@@ -4,13 +4,13 @@
  * Weekly report generation (Sunday 21:00 UTC+3)
  */
 
-import cron from 'node-cron';
+import cron, { type ScheduledTask } from 'node-cron';
 import { generateWeeklyReport } from './bilge.service';
 import { sendNotification } from './notification.service';
 import { NotificationMessage } from './types';
 import { logger } from '../../core/logger';
 
-let weeklyReportJob: cron.ScheduledTask | null = null;
+let weeklyReportJob: ScheduledTask | null = null;
 
 /**
  * Start the BILGE weekly report cron job

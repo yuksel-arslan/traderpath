@@ -4,25 +4,25 @@
  * Runs every 15 minutes
  */
 
-import cron from 'node-cron';
+import cron, { type ScheduledTask } from 'node-cron';
 import { prisma } from '../../core/database';
-import { redis } from '../../core/cache';
+import { redis, cache } from '../../core/cache';
 import { formatSignalUpdate } from './telegram-formatter';
 import { signalMonitoring } from './signal-monitoring.service';
 import { emailService } from '../email/email.service';
-import type { SignalOutcome } from './types';
+import type { SignalOutcomeValue } from './types';
 
 const CRON_SCHEDULE = '*/15 * * * *'; // Every 15 minutes
 const REDIS_LOCK_KEY = 'signal-outcome-tracker:lock';
 const REDIS_LOCK_TTL = 600; // 10 minutes
 
-let cronJob: cron.ScheduledTask | null = null;
+let cronJob: ScheduledTask | null = null;
 
 // Email notification template
 function generateOutcomeEmailHTML(
   symbol: string,
   direction: 'long' | 'short',
-  outcome: SignalOutcome,
+  outcome: SignalOutcomeValue,
   entryPrice: number,
   outcomePrice: number,
   pnlPercent: number,
@@ -173,8 +173,8 @@ function checkOutcome(
   takeProfit1: number,
   takeProfit2: number,
   direction: 'long' | 'short'
-): { outcome: SignalOutcome | null; pnlPercent: number } {
-  let outcome: SignalOutcome | null = null;
+): { outcome: SignalOutcomeValue | null; pnlPercent: number } {
+  let outcome: SignalOutcomeValue | null = null;
   let pnlPercent = 0;
 
   if (direction === 'long') {
@@ -209,7 +209,7 @@ function checkOutcome(
 // Send Telegram notification for signal update
 async function sendTelegramNotification(
   signal: any,
-  outcome: SignalOutcome,
+  outcome: SignalOutcomeValue,
   outcomePrice: number,
   pnlPercent: number
 ) {
@@ -251,7 +251,7 @@ async function sendTelegramNotification(
 // Send user notifications (Telegram/Discord/Email)
 async function sendUserNotifications(
   signal: any,
-  outcome: SignalOutcome,
+  outcome: SignalOutcomeValue,
   outcomePrice: number,
   pnlPercent: number
 ) {
@@ -379,7 +379,7 @@ export async function trackSignalOutcomes() {
 
   // Acquire distributed lock
   if (redis) {
-    const lockAcquired = await redis.set(REDIS_LOCK_KEY, '1', 'EX', REDIS_LOCK_TTL, 'NX');
+    const lockAcquired = await cache.setNX(REDIS_LOCK_KEY, '1', REDIS_LOCK_TTL);
     if (!lockAcquired) {
       console.log('[OutcomeTracker] Another instance is already running');
       return {

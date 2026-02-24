@@ -4,7 +4,7 @@
 // Now triggered on-demand by user request (300 credits)
 // ===========================================
 
-import cron from 'node-cron';
+import * as cron from 'node-cron';
 import { coinScoreCacheService } from './services/coin-score-cache.service';
 
 let cronJob: cron.ScheduledTask | null = null;

@@ -1687,23 +1687,23 @@ export default async function adminRoutes(app: FastifyInstance) {
           // Stripe revenue (subscriptions)
           prisma.subscription.aggregate({
             where: {
-              status: { in: ['active', 'past_due', 'canceled'] },
+              status: { in: ['ACTIVE', 'PAST_DUE', 'CANCELED'] },
             },
             _count: true,
           }).then(async (result) => {
             // Estimate based on active subscriptions
             const subscriptions = await prisma.subscription.findMany({
               where: {
-                status: { in: ['active', 'past_due'] },
+                status: { in: ['ACTIVE', 'PAST_DUE'] },
               },
               select: { tier: true },
             });
 
             let estimatedMRR = 0;
             for (const sub of subscriptions) {
-              if (sub.tier === 'starter') estimatedMRR += 29;
-              else if (sub.tier === 'pro') estimatedMRR += 59;
-              else if (sub.tier === 'elite') estimatedMRR += 79;
+              if (sub.tier === 'STARTER') estimatedMRR += 29;
+              else if (sub.tier === 'PRO') estimatedMRR += 59;
+              else if (sub.tier === 'ELITE') estimatedMRR += 79;
             }
             return estimatedMRR;
           }),
@@ -1732,12 +1732,12 @@ export default async function adminRoutes(app: FastifyInstance) {
         // Subscription Metrics
         const [activeSubscriptions, subscriptionsByTier, totalSubscriptions] = await Promise.all([
           prisma.subscription.count({
-            where: { status: 'active' },
+            where: { status: 'ACTIVE' },
           }),
 
           prisma.subscription.groupBy({
             by: ['tier'],
-            where: { status: 'active' },
+            where: { status: 'ACTIVE' },
             _count: true,
           }),
 
@@ -1746,15 +1746,15 @@ export default async function adminRoutes(app: FastifyInstance) {
 
         // Calculate MRR (Monthly Recurring Revenue)
         const subscriptions = await prisma.subscription.findMany({
-          where: { status: 'active' },
+          where: { status: 'ACTIVE' },
           select: { tier: true },
         });
 
         let mrr = 0;
         for (const sub of subscriptions) {
-          if (sub.tier === 'starter') mrr += 29;
-          else if (sub.tier === 'pro') mrr += 59;
-          else if (sub.tier === 'elite') mrr += 79;
+          if (sub.tier === 'STARTER') mrr += 29;
+          else if (sub.tier === 'PRO') mrr += 59;
+          else if (sub.tier === 'ELITE') mrr += 79;
         }
 
         // Time-series revenue data (last 30 days)
@@ -2118,7 +2118,7 @@ export default async function adminRoutes(app: FastifyInstance) {
         // Find users who had failed payments recently
         const failedPayments = await prisma.subscription.findMany({
           where: {
-            status: 'past_due',
+            status: 'PAST_DUE',
           },
           include: {
             user: {

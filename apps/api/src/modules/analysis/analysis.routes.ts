@@ -870,7 +870,7 @@ Warn about potential traps and give protective advice.`;
           tradePlan.confidence = adjustedConfidence;
 
           // Add Capital Flow context to trade plan
-          (tradePlan as Record<string, unknown>).capitalFlowContext = {
+          (tradePlan as unknown as Record<string, unknown>).capitalFlowContext = {
             originalConfidence,
             adjustedConfidence,
             modifier: capitalFlowModifier.modifier,
@@ -933,7 +933,7 @@ Warn about potential traps and give protective advice.`;
           tradePlan.confidence = mlisConfirmation.adjustedConfidence;
 
           // Store MLIS context in trade plan
-          (tradePlan as Record<string, unknown>).mlisConfirmation = {
+          (tradePlan as unknown as Record<string, unknown>).mlisConfirmation = {
             confirmationStatus: mlisConfirmation.confirmationStatus,
             agreementLevel: mlisConfirmation.agreementLevel,
             agreementReason: mlisConfirmation.agreementReason,
@@ -1002,13 +1002,13 @@ Warn about potential traps and give protective advice.`;
           atr: assetScan.indicators?.atr || assetScan.currentPrice * 0.02,
           direction: (tradePlan?.direction?.toLowerCase() || preliminaryVerdict.direction?.toLowerCase() || 'neutral') as 'long' | 'short' | 'neutral',
           confidence: tradePlan?.confidence ?? preliminaryVerdict.confidence ?? 50,
-          supports: assetScan.keyLevels?.supports || [],
-          resistances: assetScan.keyLevels?.resistances || [],
+          supports: assetScan.levels?.support || [],
+          resistances: assetScan.levels?.resistance || [],
           rsi: assetScan.indicators?.rsi,
-          adx: assetScan.indicators?.adx,
-          bbWidth: assetScan.indicators?.bollingerBands?.bandwidth,
-          trendStrength: assetScan.indicators?.trendStrength,
-          volume24hRatio: assetScan.volume24hRatio,
+          adx: undefined,
+          bbWidth: undefined,
+          trendStrength: undefined,
+          volume24hRatio: undefined,
           macdHistogram: assetScan.indicators?.macd?.histogram,
           tradePlan: tradePlan ? {
             direction: tradePlan.direction,
@@ -1027,14 +1027,18 @@ Warn about potential traps and give protective advice.`;
             })),
             sentiment: { overall: marketPulse.newsSentiment.overall || 'neutral', score: marketPulse.newsSentiment.score || 0 },
           } : undefined,
-          economicCalendar: timing.economicCalendar || undefined,
+          economicCalendar: marketPulse.economicCalendar ? {
+            events: (marketPulse.economicCalendar.todayEvents || []).map(e => ({ title: e.title, impact: e.impact })),
+            shouldBlockTrade: marketPulse.economicCalendar.riskLevel === 'high',
+            blockReason: marketPulse.economicCalendar.riskReason,
+          } : undefined,
         };
 
         // Capital Flow context for RAG (if available)
         const cfCtx = capitalFlowModifier ? {
           phase: (capitalFlowModifier.phase || 'mid') as Phase,
           bias: (capitalFlowModifier.action === 'avoid' ? 'risk_off' : capitalFlowModifier.action === 'analyze' ? 'risk_on' : 'neutral') as LiquidityBias,
-          direction: capitalFlowModifier.marketAlignment === 'aligned' ? 'entering' as const : capitalFlowModifier.marketAlignment === 'counter' ? 'exiting' as const : 'stable' as const,
+          direction: capitalFlowModifier.marketAlignment ? 'entering' as const : 'stable' as const,
         } : undefined;
 
         ragEnrichment = await ragOrchestrator.enrichAnalysis(
@@ -1051,8 +1055,8 @@ Warn about potential traps and give protective advice.`;
           hasResearch: !!ragEnrichment.research,
           hasForecast: !!ragEnrichment.forecastBands,
           strategyCount: ragEnrichment.strategies?.strategies?.length || 0,
-          validationPassed: ragEnrichment.validation?.passed,
-          capitalFlowAligned: ragEnrichment.capitalFlowAligned,
+          validationPassed: ragEnrichment.validations?.enginePlan?.overallStatus === 'pass',
+          capitalFlowAligned: ragEnrichment.capitalFlowAlignment?.aligned,
           costUsd: ragEnrichment.totalCostUsd,
         }, '[Analysis] Step 9: RAG enrichment completed');
       } catch (ragError) {
@@ -1146,15 +1150,14 @@ Warn about potential traps and give protective advice.`;
                   stopLoss: s.stopLoss,
                   takeProfits: s.takeProfits,
                   riskReward: s.riskReward,
-                  counterFlow: s.counterFlow,
                 })),
               } : null,
-              validation: ragEnrichment.validation ? {
-                passed: ragEnrichment.validation.passed,
-                checks: ragEnrichment.validation.checks,
-                summary: ragEnrichment.validation.summary,
+              validation: ragEnrichment.validations?.enginePlan ? {
+                passed: ragEnrichment.validations.enginePlan.overallStatus === 'pass',
+                checks: ragEnrichment.validations.enginePlan.checks,
+                summary: `${ragEnrichment.validations.enginePlan.passedCount} passed, ${ragEnrichment.validations.enginePlan.warnCount} warnings, ${ragEnrichment.validations.enginePlan.blockCount} blocks`,
               } : null,
-              capitalFlowAligned: ragEnrichment.capitalFlowAligned,
+              capitalFlowAligned: ragEnrichment.capitalFlowAlignment?.aligned ?? null,
             } : null,
           } as object,
           totalScore: verdict.overallScore,
@@ -1378,16 +1381,15 @@ Explain the key risks and what conditions would need to change before trading th
                 stopLoss: s.stopLoss,
                 takeProfits: s.takeProfits,
                 riskReward: s.riskReward,
-                counterFlow: s.counterFlow,
               })),
             } : null,
-            validation: ragEnrichment.validation ? {
-              passed: ragEnrichment.validation.passed,
-              blockers: ragEnrichment.validation.checks.filter(c => c.severity === 'block' && !c.passed).length,
-              warnings: ragEnrichment.validation.checks.filter(c => c.severity === 'warn' && !c.passed).length,
-              summary: ragEnrichment.validation.summary,
+            validation: ragEnrichment.validations?.enginePlan ? {
+              passed: ragEnrichment.validations.enginePlan.overallStatus === 'pass',
+              blockers: ragEnrichment.validations.enginePlan.checks.filter(c => c.severity === 'block' && !c.passed).length,
+              warnings: ragEnrichment.validations.enginePlan.checks.filter(c => c.severity === 'warn' && !c.passed).length,
+              summary: `${ragEnrichment.validations.enginePlan.passedCount} passed, ${ragEnrichment.validations.enginePlan.warnCount} warnings, ${ragEnrichment.validations.enginePlan.blockCount} blocks`,
             } : null,
-            capitalFlowAligned: ragEnrichment.capitalFlowAligned,
+            capitalFlowAligned: ragEnrichment.capitalFlowAlignment?.aligned ?? null,
           } : null,
         },
         creditsSpent: cost,

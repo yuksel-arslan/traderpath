@@ -87,7 +87,7 @@ function makeService() {
 // ---------------------------------------------------------------------------
 
 describe('CreditService.charge()', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => { vi.clearAllMocks(); });
 
   it('succeeds and returns newBalance when balance is sufficient', async () => {
     mockQueryRaw.mockResolvedValueOnce([{ balance: 5 }]);
@@ -142,7 +142,7 @@ describe('CreditService.charge()', () => {
 });
 
 describe('CreditService.add()', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => { vi.clearAllMocks(); });
 
   it('returns the committed newBalance from the DB (not pre-computed)', async () => {
     mockUpdate.mockResolvedValueOnce({ balance: 35 });

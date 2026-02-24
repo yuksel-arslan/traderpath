@@ -14,7 +14,7 @@
  *   DXY / VIX        — Real-time (Yahoo)      → handled by MARKET cache (5 min)
  */
 
-import cron from 'node-cron';
+import cron, { type ScheduledTask } from 'node-cron';
 import { logger } from '../../core/logger';
 import { redis } from '../../core/cache';
 
@@ -50,7 +50,7 @@ const CACHE_TTL = {
   DEFI: 43_200,               // 12 hours
 };
 
-let scheduledTasks: cron.ScheduledTask[] = [];
+let scheduledTasks: ScheduledTask[] = [];
 
 /**
  * Safely write data to Redis cache

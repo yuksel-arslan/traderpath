@@ -13,11 +13,13 @@ import { yahooStockProvider, yahooMetalsProvider } from './yahoo-finance.provide
 import { fredBondsProvider } from './fred-bonds.provider';
 
 // Provider instances
+// BIST stocks use Yahoo Finance provider (symbols end with .IS suffix)
 const providers: Record<AssetClass, MarketDataProvider> = {
   crypto: binanceCryptoProvider,
   stocks: yahooStockProvider,
   bonds: fredBondsProvider,
   metals: yahooMetalsProvider,
+  bist: yahooStockProvider,
 };
 
 /**

@@ -3,16 +3,16 @@
  * Runs daily at 07:00 (4:00 UTC)
  */
 
-import cron from 'node-cron';
+import cron, { type ScheduledTask } from 'node-cron';
 import { morningBriefingService } from './morning-briefing.service';
 import { emailService } from '../email/email.service';
-import { redis } from '../../core/cache';
+import { cache } from '../../core/cache';
 import { prisma } from '../../core/database';
 
 const LOCK_KEY = 'morning-briefing:running';
 const LOCK_TTL = 1800; // 30 minutes
 
-let cronJob: cron.ScheduledTask | null = null;
+let cronJob: ScheduledTask | null = null;
 
 /**
  * Execute morning briefing generation and delivery
@@ -21,7 +21,7 @@ async function executeMorningBriefing() {
   console.log('[MorningBriefing] Cron job triggered');
 
   // Acquire lock to prevent concurrent runs
-  const acquired = await redis?.set(LOCK_KEY, '1', 'EX', LOCK_TTL, 'NX');
+  const acquired = await cache.setNX(LOCK_KEY, '1', LOCK_TTL);
   if (!acquired) {
     console.log('[MorningBriefing] Another instance running, skipping');
     return;
@@ -35,7 +35,8 @@ async function executeMorningBriefing() {
     // Get users who want briefing (for now, all active users)
     const users = await prisma.user.findMany({
       where: {
-        isActive: true,
+        accountLocked: false,
+        emailVerified: { not: null },
       },
       select: {
         id: true,
@@ -68,7 +69,7 @@ async function executeMorningBriefing() {
     console.error('[MorningBriefing] Execution failed:', error);
   } finally {
     // Release lock
-    await redis?.del(LOCK_KEY);
+    await cache.del(LOCK_KEY);
   }
 }
 

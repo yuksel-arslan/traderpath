@@ -255,7 +255,7 @@ export class AnalysisOrchestratorService {
     const { symbol, tradeType, accountSize = 10000 } = config;
     const tradeConfig = getTradeConfig(tradeType);
 
-    this.logger.log(`Starting ${tradeType} analysis for ${symbol}`);
+    this.logger.info(`Starting ${tradeType} analysis for ${symbol}`);
 
     // Fetch all required timeframe data
     const timeframeDataMap = await this.fetchAllTimeframeData(symbol, tradeType);
@@ -1049,7 +1049,7 @@ Include specific price levels and actionable insights.
     const { symbol, tradeType } = config;
     const tradeConfig = getTradeConfig(tradeType);
 
-    this.logger.log(`Starting detailed ${tradeType} analysis for ${symbol}`);
+    this.logger.info(`Starting detailed ${tradeType} analysis for ${symbol}`);
 
     // Fetch all required timeframe data
     const timeframeDataMap = await this.fetchAllTimeframeData(symbol, tradeType);

@@ -57,6 +57,16 @@ interface ConciergeResponse {
     tradePlan?: TradePlan;
     currentPrice?: number;
   };
+  // MLIS analysis result
+  mlisResult?: {
+    recommendation: string;
+    direction: string;
+    confidence: number;
+    riskLevel: string;
+    layers: Record<string, { score: number; signals: string[] }>;
+    keySignals: string[];
+    riskFactors: string[];
+  };
 }
 
 // Expanded asset list - 80+ assets including crypto, stocks, bonds, metals
@@ -163,6 +173,7 @@ function detectIntent(message: string): {
   intent: string;
   symbol?: string;
   interval?: string;
+  intervalExplicit?: boolean;
   expertType?: string;
   market?: string;
 } {
@@ -1093,7 +1104,7 @@ M2 Money Supply: $${(liquidity.m2MoneySupply.value / 1e12).toFixed(2)}T (YoY: ${
 
 DXY (Dollar): ${liquidity.dxy.value.toFixed(2)} (${liquidity.dxy.trend === 'weakening' ? 'Weakening → Risk-On ✅' : liquidity.dxy.trend === 'strengthening' ? 'Strengthening → Risk-Off ⚠️' : 'Stable'})
 
-VIX (Fear): ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level === 'low' ? 'Low → Calm Market' : liquidity.vix.level === 'elevated' ? 'Elevated → Caution' : 'High → Panic ⚠️'})
+VIX (Fear): ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level === 'complacent' ? 'Low → Calm Market' : liquidity.vix.level === 'fear' ? 'Elevated → Caution' : liquidity.vix.level === 'extreme_fear' ? 'High → Panic ⚠️' : 'Neutral'})
 
 Yield Curve (10Y-2Y): ${liquidity.yieldCurve.spread10y2y.toFixed(2)}bp ${liquidity.yieldCurve.inverted ? '⚠️ INVERTED (Recession signal)' : '✅ Normal'}`;
 
@@ -1189,7 +1200,7 @@ Trend: ${liquidity.dxy.trend === 'weakening' ? '📉 WEAKENING → Bullish for r
 
 😱 VIX (FEAR INDEX)
 Value: ${liquidity.vix.value.toFixed(2)}
-Level: ${liquidity.vix.level === 'low' ? '🟢 LOW (Calm market, complacency)' : liquidity.vix.level === 'elevated' ? '🟡 ELEVATED (Rising concern)' : '🔴 HIGH (Panic mode)'}
+Level: ${liquidity.vix.level === 'complacent' ? '🟢 LOW (Calm market, complacency)' : liquidity.vix.level === 'fear' ? '🟡 ELEVATED (Rising concern)' : liquidity.vix.level === 'extreme_fear' ? '🔴 HIGH (Panic mode)' : '⚪ NEUTRAL'}
 
 📈 YIELD CURVE (10Y-2Y)
 Spread: ${liquidity.yieldCurve.spread10y2y.toFixed(2)} basis points
@@ -1324,7 +1335,7 @@ ${bestMarket.flow7d > 0 ? `+${bestMarket.flow7d.toFixed(2)}% weekly inflow` : 'R
         .map((s, i) => {
           const rankEmoji = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  ';
           const flowSign = s.flow7d > 0 ? '+' : '';
-          return `${rankEmoji} ${s.name}: ${flowSign}${s.flow7d.toFixed(2)}% (7D) | TVL: $${(s.tvl / 1e9).toFixed(2)}B`;
+          return `${rankEmoji} ${s.name}: ${flowSign}${s.flow7d.toFixed(2)}% (7D) | 30D: ${s.flow30d > 0 ? '+' : ''}${s.flow30d.toFixed(2)}% | Dom: ${s.dominance.toFixed(1)}%`;
         });
 
       const topSector = marketFlow.sectors.sort((a, b) => b.flow7d - a.flow7d)[0];
@@ -1484,6 +1495,24 @@ Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
 • Reduce positions
 • Tighten stop-losses
 • Consider safe havens (gold, bonds)`;
+      }
+
+      // Build action emoji, confidence bar, and asset advice
+      const actionEmoji = recommendation.action === 'analyze' ? '✅' : recommendation.action === 'wait' ? '⏳' : '⛔';
+      const confidencePercent = Math.min(100, Math.max(0, recommendation.confidence));
+      const filledBars = Math.round(confidencePercent / 10);
+      const confidenceBar = '█'.repeat(filledBars) + '░'.repeat(10 - filledBars);
+
+      // Generate asset-specific advice if we have suggested assets
+      let assetAdvice = '';
+      if (recommendation.suggestedAssets && recommendation.suggestedAssets.length > 0) {
+        const assetList = recommendation.suggestedAssets
+          .slice(0, 3)
+          .map(a => `• ${a.symbol} (${a.name}) - ${a.reason}`)
+          .join('\n');
+        assetAdvice = language === 'tr'
+          ? `\n\n📌 ÖNERİLEN VARLIKLAR:\n${assetList}`
+          : `\n\n📌 SUGGESTED ASSETS:\n${assetList}`;
       }
 
       // Build English message
@@ -2001,7 +2030,7 @@ What would you like to do now? For example, say "Analyze BTC" to start an analys
             : '\n\n[Be helpful and provide useful trading insights.]';
 
           const response = await aiExpertService.chat({
-            expertId: expertType,
+            expertId: expertType as 'aria' | 'nexus' | 'oracle' | 'sentinel',
             message: message + languageInstruction,
             userId,
           });
@@ -2514,7 +2543,7 @@ Example: "Alert me when ETH hits 4000"`,
           userId,
           symbol: alertCoin,
           targetPrice: alertPrice,
-          condition: 'ABOVE', // Could detect ABOVE/BELOW from message
+          direction: 'ABOVE', // Could detect ABOVE/BELOW from message
           isActive: true,
         },
       });
@@ -2572,8 +2601,8 @@ You'll be notified when ${alertCoin} reaches this price.`,
     }
 
     const alertList = alerts.map(a => {
-      const condition = a.condition === 'ABOVE' ? '↑' : '↓';
-      return `${condition} ${a.symbol} @ $${Number(a.targetPrice).toLocaleString()}`;
+      const directionArrow = a.direction === 'ABOVE' ? '↑' : '↓';
+      return `${directionArrow} ${a.symbol} @ $${Number(a.targetPrice).toLocaleString()}`;
     }).join('\n');
 
     const alertText = language === 'tr'
@@ -2934,13 +2963,22 @@ Or visit /scheduled for detailed settings.`,
 
     // Create the schedule
     try {
+      // Calculate next run time based on frequency
+      const now = new Date();
+      const nextRun = new Date(now);
+      nextRun.setUTCHours(9, 0, 0, 0); // 9 AM UTC
+      if (nextRun <= now) {
+        nextRun.setDate(nextRun.getDate() + 1); // Next day if already past 9 AM
+      }
+
       await prisma.scheduledReport.create({
         data: {
-          userId,
+          user: { connect: { id: userId } },
           symbol: symbol.toUpperCase(),
           interval,
           frequency,
           scheduleHour: 9, // Default to 9 AM UTC
+          nextRunAt: nextRun,
           deliverEmail: true,
           isActive: true,
         },
@@ -3372,7 +3410,6 @@ Type "top coins" to see results when complete.`;
       const chargeResult = await creditService.charge(
         userId,
         ANALYSIS_COST,
-        'ANALYSIS',
         'concierge_analysis',
         { symbol: upperSymbol, interval, tradeType }
       );
@@ -3382,11 +3419,11 @@ Type "top coins" to see results when complete.`;
           success: false,
           intent: 'ANALYSIS',
           message: isTurkish
-            ? `Kredi çekimi başarısız: ${chargeResult.error || 'Bilinmeyen hata'}`
-            : `Credit charge failed: ${chargeResult.error || 'Unknown error'}`,
+            ? 'Kredi çekimi başarısız. Yetersiz bakiye olabilir.'
+            : 'Credit charge failed. Insufficient balance.',
           creditsSpent: 0,
           creditsRemaining: creditBalance,
-          error: chargeResult.error,
+          error: 'CREDIT_CHARGE_FAILED',
         };
       }
 
@@ -3457,7 +3494,7 @@ Type "top coins" to see results when complete.`;
       // Build response
       const verdict = verdictResult.verdict?.toUpperCase() || 'WAIT';
       const score = verdictResult.overallScore || 5;
-      const direction = tradePlanResult?.direction || verdictResult.direction;
+      const direction = tradePlanResult?.direction || undefined;
 
       const synthesis = this.generateNaturalResponse(upperSymbol, interval, verdict, score, language);
 
@@ -3469,7 +3506,7 @@ Type "top coins" to see results when complete.`;
           stopLoss: tradePlanResult.stopLoss,
           takeProfits: tradePlanResult.takeProfits,
           direction: tradePlanResult.direction || direction,
-          riskRewardRatio: tradePlanResult.riskRewardRatio,
+          riskReward: tradePlanResult.riskReward,
         };
       }
 
@@ -3742,7 +3779,7 @@ ${mlisResult.keySignals.slice(0, 3).map(s => `• ${s}`).join('\n')}`;
 
       // Use AI Expert for question with language context
       const response = await aiExpertService.chat({
-        expertId: expertType,
+        expertId: expertType as 'aria' | 'nexus' | 'oracle' | 'sentinel',
         message: question + languageInstruction,
         userId,
       });
@@ -3919,7 +3956,7 @@ Quel est votre style? (scalp/day trade/swing)`,
 
       // Use AI Expert for intelligent response
       const response = await aiExpertService.chat({
-        expertId: expertType,
+        expertId: expertType as 'aria' | 'nexus' | 'oracle' | 'sentinel',
         message: contextPrompt + languageInstruction,
         userId,
       });

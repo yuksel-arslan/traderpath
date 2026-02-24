@@ -8,6 +8,7 @@ import { config } from '../../core/config';
 import { callGeminiWithRetry } from '../../core/gemini';
 import { contractSecurityService } from '../security/contract-security.service';
 import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig, getMaxStopLossPercent, getMaxTakeProfitPercent } from './config/trade-config';
+import { Timeframe as TimeframeEnum } from './config/timeframe.enum';
 import { selectBundle, getBundleType } from './bundles';
 import { aggregateScores, quickStepScore, STEP_WEIGHTS } from './scoring';
 import {
@@ -18,7 +19,7 @@ import {
   estimateWinRate,
 } from './risk';
 import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/indicator-interpreter.service';
-import { IndicatorAnalysis } from '../../../types';
+import { IndicatorAnalysis } from '../../types';
 import { IndicatorsService, OHLCV, IndicatorResult } from './services/indicators.service';
 import { getTFTClient, TFTForecast } from './services/tft-client.service';
 import { getTradingKnowledgeForAI } from '../ai-expert/trading-knowledge-base';
@@ -1238,7 +1239,7 @@ TOKENOMICS DATA:
     }
 
     // Safe metric extraction with full null checks
-    const keyMetrics = input.keyMetrics || {};
+    const keyMetrics: Partial<AIAnalysisSummaryInput['keyMetrics']> = input.keyMetrics || {};
     const rsi = keyMetrics.rsi?.toFixed(1) || '50';
     const macdHist = keyMetrics.macdHistogram?.toFixed(4) || '0';
     const fearGreed = keyMetrics.fearGreedIndex || 50;
@@ -1456,8 +1457,8 @@ function indicatorResultsToAnalysisInputs(
   currentPrice: number,
   priceChange24h: number,
   prices: number[]
-): Record<string, any> {
-  const inputs: Record<string, any> = {
+): { currentPrice: number; priceChange24h: number; prices: number[] } & Record<string, unknown> {
+  const inputs: Record<string, unknown> & { currentPrice: number; priceChange24h: number; prices: number[] } = {
     currentPrice,
     priceChange24h,
     prices,
@@ -1500,10 +1501,11 @@ function indicatorResultsToAnalysisInputs(
     // Moving Averages
     if (upperName.startsWith('SMA_') || upperName.startsWith('EMA_')) {
       const period = parseInt(upperName.split('_')[1]);
-      inputs.movingAverages = inputs.movingAverages || {};
-      if (period === 50) inputs.movingAverages.ma50 = result.value;
-      if (period === 200) inputs.movingAverages.ma200 = result.value;
-      if (period === 20) inputs.movingAverages.ma20 = result.value;
+      const ma = (inputs.movingAverages || {}) as { ma20?: number | null; ma50?: number | null; ma200?: number | null };
+      if (period === 50) ma.ma50 = result.value;
+      if (period === 200) ma.ma200 = result.value;
+      if (period === 20) ma.ma20 = result.value;
+      inputs.movingAverages = ma;
     }
 
     // PVT
@@ -1800,6 +1802,8 @@ interface MarketData {
   low24h: number;
   volume24h: number;
   quoteVolume24h: number;
+  openInterest?: number;
+  previousOpenInterest?: number;
 }
 
 // Step 1 Types
@@ -1822,6 +1826,12 @@ interface MarketPulseResult {
   futuresData?: {
     fundingRate: number; // percentage
     fundingRateInterpretation: 'bullish' | 'bearish' | 'neutral';
+    fundingRateSpread?: {
+      average: number;
+      spread: number;
+      interpretation: string;
+      rates: Record<string, number>;
+    };
     openInterest: number; // in USDT
     openInterestChange24h?: number;
     longShortRatio: number;
@@ -1899,7 +1909,16 @@ interface AssetScanResult {
     movingAverages: { ma20: number; ma50: number; ma200: number };
     bollingerBands: { upper: number; middle: number; lower: number };
     atr: number;
+    candlestickPatterns?: {
+      total: number;
+      bullish: number;
+      bearish: number;
+      highSignificance: string[];
+      all: Array<{ name: string; direction: string; significance: string }>;
+    };
   };
+  // Which indicator bundle was used
+  bundleType?: string;
   // Detailed indicator analysis with interpretations
   indicatorDetails?: IndicatorAnalysis;
   // NEW: Tokenomics analysis (financial structure of the token)
@@ -1917,6 +1936,15 @@ interface AssetScanResult {
     keyDrivers: string[];
     warnings: string[];
   };
+  // Chart data for PDF generation
+  chartCandles?: Array<{
+    timestamp: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+  }>;
   score: number;
   // Gate decision for sequential approach
   gate: {
@@ -2189,6 +2217,9 @@ interface FinalVerdictResult {
   aiSummary?: string;
   // NEW: Tokenomics interpretation for the report
   tokenomicsInsight?: string;
+  // MLIS verdict downgrade tracking
+  verdictDowngraded?: boolean;
+  verdictDowngradeReason?: string;
 }
 
 // ===========================================
@@ -3721,7 +3752,9 @@ export const analysisEngine = {
           average: fundingSpread.average,
           spread: fundingSpread.spread,
           interpretation: fundingSpread.interpretation,
-          rates: fundingSpread.rates,
+          rates: Array.isArray(fundingSpread.rates)
+            ? Object.fromEntries(fundingSpread.rates.map((r: { symbol: string; rate: number }) => [r.symbol, r.rate]))
+            : fundingSpread.rates,
         },
         openInterest: btcOpenInterest.openInterestValue,
         longShortRatio: btcLongShortRatio.longShortRatio,
@@ -3936,7 +3969,7 @@ export const analysisEngine = {
     });
 
     // Candlestick pattern detection for direction confirmation
-    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candles4h);
+    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candlesToOHLCV(candles4h));
     const patterns = candlestickPatterns.metadata?.patterns || [];
     const bullishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bullish');
     const bearishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bearish');
@@ -4031,7 +4064,7 @@ export const analysisEngine = {
         },
       },
       // Indicator bundle used for this analysis (timeframe-driven selection)
-      bundleType: getBundleType(tf.primary as Timeframe),
+      bundleType: getBundleType(tf.primary as TimeframeEnum),
       // Build detailed indicator analysis using bundle-appropriate indicators
       indicatorDetails: indicatorAnalysis,
       // NEW: Tokenomics analysis (financial structure of the token)
@@ -4042,7 +4075,7 @@ export const analysisEngine = {
       assetContext: assetContext.metrics ? assetContext : undefined,
       // Chart data for PDF generation (last 50 candles)
       chartCandles: candlesPrimary.slice(-50).map(c => ({
-        timestamp: c.timestamp,
+        timestamp: c.openTime,
         open: c.open,
         high: c.high,
         low: c.low,
@@ -4226,7 +4259,7 @@ export const analysisEngine = {
       low: c.low,
       close: c.close,
       volume: c.volume,
-      timestamp: c.timestamp ?? 0,
+      timestamp: c.openTime ?? 0,
     }));
     const smiResult = calculateSmartMoneyIndex(smiCandles);
 
@@ -4499,7 +4532,7 @@ export const analysisEngine = {
     const volumeSpike = detectVolumeSpike(candles1h, 15, 2.0);
 
     // Candlestick pattern detection for entry confirmation
-    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candles4h);
+    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candlesToOHLCV(candles4h));
     const patterns = candlestickPatterns.metadata?.patterns || [];
     const bullishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bullish');
     const bearishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bearish');
@@ -4897,15 +4930,20 @@ export const analysisEngine = {
     // Guard against empty candle arrays (non-crypto assets may not have secondary timeframe data)
     if (prices1h.length === 0 || prices4h.length === 0) {
       return {
+        symbol,
+        traps: {
+          bullTrap: false,
+          bearTrap: false,
+          liquidityGrab: { detected: false, zones: [] },
+          stopHuntZones: [],
+          fakeoutRisk: 'low' as const,
+        },
+        liquidationLevels: [],
+        counterStrategy: ['Insufficient candle data for trap detection'],
+        proTip: 'Trap check skipped due to insufficient data.',
+        riskLevel: 'low' as const,
         score: 5,
-        bullTrap: false,
-        bearTrap: false,
-        fakeBreakout: false,
-        squeezeDetected: false,
-        manipulationRisk: 'low' as const,
-        warnings: ['Insufficient candle data for trap detection'],
-        details: 'Trap check skipped due to insufficient data.',
-        gate: { canProceed: true, reason: 'Trap check skipped - insufficient data', confidence: 50, urgency: 'medium' as const },
+        gate: { canProceed: true, reason: 'Trap check skipped - insufficient data', confidence: 50, trapRisk: 'moderate' as const },
       };
     }
 
@@ -5907,8 +5945,8 @@ export const analysisEngine = {
     // ===== WIN RATE ESTIMATE — via RiskEngine (TASK 2.3) =====
     const winRateEstimate = estimateWinRate({
       direction,
-      trendDirection: assetScan.trend?.direction ?? 'neutral',
-      trendStrength:  assetScan.trend?.strength  ?? 50,
+      trendDirection: assetScan.timeframes?.find(t => t.tf === '4H')?.trend ?? 'neutral',
+      trendStrength:  assetScan.timeframes?.find(t => t.tf === '4H')?.strength ?? 50,
       confidence:     preliminaryVerdict.confidence,
       safetyScore:    safetyCheck.score,
       tradeNow:       timing.tradeNow,
@@ -6023,7 +6061,7 @@ export const analysisEngine = {
     // Map TradeType → BundleType so weights shift by trading style.
     const bundleTypeForScoring =
       tradeType === 'scalping'   ? 'scalping' :
-      tradeType === 'swingTrade' ? 'swing'    : 'day';
+      tradeType === 'swing'      ? 'swing'    : 'day';
 
     const stepScoreInputs = [
       quickStepScore('marketPulse', marketPulse),
@@ -6232,8 +6270,8 @@ export const analysisEngine = {
    */
   getTradeTypeFromTimeframe(timeframe: string): TradeType {
     const mapping: Record<string, TradeType> = {
-      '5m': 'scalp',
-      '15m': 'scalp',
+      '5m': 'scalping',
+      '15m': 'scalping',
       '30m': 'dayTrade',
       '1h': 'dayTrade',
       '4h': 'dayTrade',

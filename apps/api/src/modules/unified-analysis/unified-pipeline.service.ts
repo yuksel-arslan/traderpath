@@ -457,11 +457,10 @@ export async function runUnifiedPipeline(symbol: string): Promise<UnifiedReport>
 
     // Cache report in Redis for 1 hour
     try {
-      await redis.set(
+      await redis.setex(
         `unified-report:${sessionId}`,
-        JSON.stringify(report),
-        'EX',
         3600,
+        JSON.stringify(report),
       );
     } catch { /* ignore cache errors */ }
 
@@ -677,7 +676,7 @@ async function runPipelineWithSession(sessionId: string, symbol: string): Promis
     };
 
     try {
-      await redis.set(`unified-report:${sessionId}`, JSON.stringify(report), 'EX', 3600);
+      await redis.setex(`unified-report:${sessionId}`, 3600, JSON.stringify(report));
     } catch { /* ignore */ }
 
     updateStep(sessionId, 'report_generation', 'completed');

@@ -82,10 +82,10 @@ export async function getAllLogos(): Promise<{
 
     if (record) {
       return {
-        crypto: record.cryptoLogos as AssetLogosMap,
-        stocks: record.stockLogos as AssetLogosMap,
-        metals: record.metalLogos as AssetLogosMap,
-        bonds: record.bondLogos as AssetLogosMap,
+        crypto: record.cryptoLogos as unknown as AssetLogosMap,
+        stocks: record.stockLogos as unknown as AssetLogosMap,
+        metals: record.metalLogos as unknown as AssetLogosMap,
+        bonds: record.bondLogos as unknown as AssetLogosMap,
         version: record.version,
         lastUpdated: record.lastUpdated,
       };
@@ -153,12 +153,12 @@ export async function getLogoForSymbol(
       for (const cls of classes) {
         const logos =
           cls === 'crypto'
-            ? (record.cryptoLogos as AssetLogosMap)
+            ? (record.cryptoLogos as unknown as AssetLogosMap)
             : cls === 'stocks'
-              ? (record.stockLogos as AssetLogosMap)
+              ? (record.stockLogos as unknown as AssetLogosMap)
               : cls === 'metals'
-                ? (record.metalLogos as AssetLogosMap)
-                : (record.bondLogos as AssetLogosMap);
+                ? (record.metalLogos as unknown as AssetLogosMap)
+                : (record.bondLogos as unknown as AssetLogosMap);
 
         if (logos[upperSymbol]) {
           return logos[upperSymbol];
@@ -199,7 +199,7 @@ export async function updateLogo(
             ? 'metalLogos'
             : 'bondLogos';
 
-    const currentLogos = record[updateField] as AssetLogosMap;
+    const currentLogos = record[updateField] as unknown as AssetLogosMap;
     const updatedLogos = {
       ...currentLogos,
       [upperSymbol]: logoInfo,

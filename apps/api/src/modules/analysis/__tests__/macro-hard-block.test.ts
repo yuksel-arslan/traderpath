@@ -343,11 +343,11 @@ describe('Macro Penalty System — Economic Calendar (TASK 1.4)', () => {
       const lowScorePulse = { ...makeFomcMarketPulse(), score: 0 };
       const weakSteps = {
         marketPulse: lowScorePulse,
-        assetScan: { score: 1.0, gate: { canProceed: false, reason: 'weak', confidence: 20 }, direction: null, directionConfidence: 20, riskLevel: 'high', indicators: { rsi: 50, ema: 'below', macd: 'neutral', volume: 'below_average' }, timeframes: [], summary: 'weak', tokenomics: null },
-        safetyCheck: { score: 1.0, gate: { canProceed: false, reason: 'weak', confidence: 20 }, riskLevel: 'high', manipulation: { pumpDumpRisk: 'low', washTradingRisk: 'low', spoofingRisk: 'low' }, whaleActivity: { bias: 'neutral', largeTransactions: [] }, summary: 'weak', indicatorDetails: null },
-        timing: { score: 1.0, gate: { canProceed: false, reason: 'weak', confidence: 20 }, marketPhase: 'ranging', entryTiming: 'poor', summary: 'weak' },
-        trapCheck: { score: 1.0, gate: { canProceed: false, reason: 'weak', confidence: 20 }, riskLevel: 'high', traps: { bullTrap: false, bearTrap: false, liquidityTrap: false }, summary: 'weak' },
-      };
+        assetScan: { symbol: 'BTCUSDT', currentPrice: 50000, priceChange24h: -1, volume24h: 100000, score: 1.0, gate: { canProceed: false, reason: 'weak', confidence: 20 }, direction: null, directionConfidence: 20, riskLevel: 'high', indicators: { rsi: 50, macd: { value: 0, signal: 0, histogram: 0 }, movingAverages: { ma20: 0, ma50: 0, ma200: 0 }, bollingerBands: { upper: 0, middle: 0, lower: 0 }, atr: 1000 }, timeframes: [], forecast: { price24h: 50000, price7d: 50000, confidence: 20, scenarios: [] }, levels: { resistance: [], support: [], poc: 50000 }, tokenomics: null },
+        safetyCheck: { symbol: 'BTCUSDT', score: 1.0, gate: { canProceed: false, reason: 'weak', confidence: 20, riskAdjustment: 0 }, riskLevel: 'high', manipulation: { spoofingDetected: false, layeringDetected: false, icebergDetected: false, washTrading: false, pumpDumpRisk: 'low' as const }, whaleActivity: { largeBuys: [], largeSells: [], netFlowUsd: 0, bias: 'neutral' as const }, exchangeFlows: [], smartMoney: { positioning: 'neutral' as const, confidence: 20 }, warnings: [] },
+        timing: { symbol: 'BTCUSDT', currentPrice: 50000, score: 1.0, gate: { canProceed: false, reason: 'weak', confidence: 20, urgency: 'avoid' as const }, tradeNow: false, reason: 'weak', conditions: [], entryZones: [], optimalEntry: 50000 },
+        trapCheck: { symbol: 'BTCUSDT', score: 1.0, gate: { canProceed: false, reason: 'weak', confidence: 20, trapRisk: 'severe' as const }, riskLevel: 'high' as const, traps: { bullTrap: false, bearTrap: false, liquidityGrab: { detected: false, zones: [] }, stopHuntZones: [], fakeoutRisk: 'high' as const }, liquidationLevels: [], counterStrategy: [], proTip: 'weak' },
+      } as Parameters<typeof analysisEngine.preliminaryVerdict>[1];
       const result = analysisEngine.preliminaryVerdict('BTCUSDT', weakSteps);
       expect(result.score).toBeGreaterThanOrEqual(0);
     });

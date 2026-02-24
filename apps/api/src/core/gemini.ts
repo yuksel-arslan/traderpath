@@ -5,6 +5,7 @@
 
 import { config } from './config';
 import { redis } from './cache';
+import { logger } from './logger';
 // @ts-ignore - SDK types may not be fully compatible
 import { GoogleGenAI } from '@google/genai';
 

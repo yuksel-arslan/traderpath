@@ -4,9 +4,28 @@
 // ===========================================
 
 import { prisma } from '../../core/database';
+import type { SubscriptionStatus } from '@prisma/client';
 import { logger } from '../../core/logger';
 import { stripeService } from '../payments/stripe.service';
 import { lemonSqueezyService } from '../payments/lemonSqueezy.service';
+
+/** Map Stripe subscription status string to local Prisma SubscriptionStatus enum */
+function mapStripeStatusToLocal(stripeStatus: string): SubscriptionStatus {
+  switch (stripeStatus) {
+    case 'active':
+      return 'ACTIVE';
+    case 'past_due':
+      return 'PAST_DUE';
+    case 'canceled':
+      return 'CANCELED';
+    case 'unpaid':
+      return 'UNPAID';
+    case 'trialing':
+      return 'TRIALING';
+    default:
+      return 'INACTIVE';
+  }
+}
 
 export interface ReconciliationReport {
   timestamp: Date;
@@ -220,7 +239,7 @@ class ReconciliationService {
     // Get all active or past_due subscriptions
     const subscriptions = await prisma.subscription.findMany({
       where: {
-        status: { in: ['active', 'past_due', 'trialing'] },
+        status: { in: ['ACTIVE', 'PAST_DUE', 'TRIALING'] },
         stripeSubscriptionId: { not: null },
       },
       select: {
@@ -250,7 +269,8 @@ class ReconciliationService {
         }
 
         // Check status mismatch
-        if (sub.status !== stripeSub.status) {
+        const mappedStripeStatus = mapStripeStatusToLocal(stripeSub.status);
+        if (sub.status !== mappedStripeStatus) {
           discrepancies.push({
             subscriptionId: sub.id,
             issue: 'Status mismatch',
@@ -263,7 +283,7 @@ class ReconciliationService {
             await prisma.subscription.update({
               where: { id: sub.id },
               data: {
-                status: stripeSub.status as any,
+                status: mappedStripeStatus,
                 currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
                 cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
               },

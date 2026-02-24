@@ -11,7 +11,7 @@
  * - Multi-indicator signal aggregation
  */
 
-import { IndicatorDetail, IndicatorAnalysis, DivergenceInfo } from '../../../../types';
+import { IndicatorDetail, IndicatorAnalysis, DivergenceInfo } from '../../../types';
 
 interface IndicatorValue {
   value: number | null;

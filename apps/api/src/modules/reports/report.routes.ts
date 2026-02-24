@@ -312,11 +312,6 @@ export async function reportRoutes(fastify: FastifyInstance) {
             analysisId: true,
             aiExpertComment: true,
             isPublic: true,
-            analysis: {
-              select: {
-                method: true,
-              },
-            },
           },
           orderBy: { generatedAt: 'desc' },
           take: Math.min(parseInt(limit), 50),
@@ -347,11 +342,6 @@ export async function reportRoutes(fastify: FastifyInstance) {
             analysisId: true,
             aiExpertComment: true,
             isPublic: true,
-            analysis: {
-              select: {
-                method: true,
-              },
-            },
           },
           orderBy: { generatedAt: 'desc' },
           take: 10, // Limit sample reports

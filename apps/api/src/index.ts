@@ -12,6 +12,7 @@ import rateLimit from '@fastify/rate-limit';
 import jwt from '@fastify/jwt';
 import websocket from '@fastify/websocket';
 import rawBody from 'fastify-raw-body';
+import type { Redis as IoRedis } from 'ioredis';
 import { config } from './core/config';
 import { prisma } from './core/database';
 import { redis } from './core/cache';
@@ -717,7 +718,7 @@ const start = async () => {
         }
       };
 
-      safeCronStart('BILGE Guardian', () => initializeBilgeService(redis));
+      safeCronStart('BILGE Guardian', () => initializeBilgeService(redis as unknown as IoRedis));
       safeCronStart('BILGE weekly report cron', () => startBilgeWeeklyReportJob());
       safeCronStart('Signal generator cron', () => startSignalGeneratorJob());
       safeCronStart('Signal outcome tracker cron', () => startSignalOutcomeTracker());

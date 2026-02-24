@@ -8,9 +8,9 @@
  * they are NOT separate analysis methods.
  */
 
-import cron from 'node-cron';
+import cron, { type ScheduledTask } from 'node-cron';
 import { prisma } from '../../core/database';
-import { redis } from '../../core/cache';
+import { redis, cache } from '../../core/cache';
 import { getCapitalFlowSummary } from '../capital-flow/capital-flow.service';
 import { analysisEngine } from '../analysis/analysis.engine';
 import { analyzeMLIS } from '../analysis/services/mlis.service';
@@ -42,7 +42,7 @@ const MAX_ASSETS_PER_RUN = 5;
 const LOCK_KEY = 'signal-generator:running';
 const LOCK_TTL = 1800; // 30 minutes
 
-let cronJob: cron.ScheduledTask | null = null;
+let cronJob: ScheduledTask | null = null;
 
 /**
  * Check if a Prisma error is due to missing table (P2021) or missing column (P2022)
@@ -102,7 +102,7 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
 
     // Acquire lock
     if (redis) {
-      const acquired = await redis.set(LOCK_KEY, '1', 'EX', LOCK_TTL, 'NX');
+      const acquired = await cache.setNX(LOCK_KEY, '1', LOCK_TTL);
       if (!acquired) {
         console.log('[SignalGenerator] Another instance is running, skipping');
         return result;
@@ -133,7 +133,7 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
         // Check for duplicate signals
         const isDuplicate = await signalService.isDuplicateSignal(
           asset.symbol,
-          recommendation.action === 'BUY' ? 'long' : 'short',
+          recommendation.direction === 'BUY' ? 'long' : 'short',
           4 // Within last 4 hours
         );
 
@@ -178,7 +178,7 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
           symbol: asset.symbol,
           assetClass: asset.assetClass,
           market: asset.market,
-          direction: recommendation.action === 'BUY' ? 'long' : 'short',
+          direction: recommendation.direction === 'BUY' ? 'long' : 'short',
           entryPrice: analysisResult.tradePlan?.averageEntry || 0,
           stopLoss: analysisResult.tradePlan?.stopLoss?.price || 0,
           takeProfit1: analysisResult.tradePlan?.takeProfits?.[0]?.price || 0,
@@ -191,7 +191,7 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
           mlisConfidence: analysisResult.mlisConfidence,
           overallConfidence,
           capitalFlowPhase: recommendation.phase,
-          capitalFlowBias: capitalFlowSummary.globalLiquidity?.bias || 'neutral',
+          capitalFlowBias: capitalFlowSummary.liquidityBias || 'neutral',
           sectorFlow: asset.sectorFlow,
           classicAnalysisId: analysisResult.analysisId,
           mlisAnalysisId: analysisResult.analysisId, // Same analysis includes MLIS
@@ -215,7 +215,7 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
           volumeConfirm: analysisResult.step7Result?.indicatorSummary?.volumeConfirm,
           atr: analysisResult.step7Result?.indicatorSummary?.atr,
           bbWidth: analysisResult.step7Result?.indicatorSummary?.bbWidth,
-          l1LiquidityBias: capitalFlowSummary.globalLiquidity?.bias,
+          l1LiquidityBias: capitalFlowSummary.liquidityBias,
           l2MarketPhase: recommendation.phase,
           l3SectorFlowAligned: asset.sectorFlow !== undefined
             ? (signalData.direction === 'long' ? asset.sectorFlow > 0 : asset.sectorFlow < 0)
@@ -268,13 +268,12 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
 
     // Store result in Redis for monitoring
     if (redis) {
-      await redis.set(
+      await cache.set(
         'signal-generator:last-run',
         JSON.stringify({
           timestamp: new Date().toISOString(),
           result,
         }),
-        'EX',
         86400 // 24 hours
       );
     }
@@ -358,44 +357,37 @@ async function runIntegratedAnalysis(symbol: string, assetClass: string): Promis
     const tradeType = 'swing'; // Default for signals
     const interval = '1d';
 
-    // Create analysis record
+    // Create analysis record (system-generated for signal generation)
     const analysis = await prisma.analysis.create({
       data: {
         symbol,
         interval,
-        tradeType,
         method: 'classic', // Integrated analysis uses classic method with MLIS confirmation
-        status: 'in_progress',
       },
-    });
+    } as Parameters<typeof prisma.analysis.create>[0]);
 
     // ===== 7-Step Classic Analysis =====
     const [marketPulse, assetScan, safetyCheck, timing, trapCheck] = await Promise.all([
       analysisEngine.getMarketPulse(),
       analysisEngine.scanAsset(symbol, tradeType),
       analysisEngine.safetyCheck(symbol, tradeType),
-      analysisEngine.getTiming(symbol, tradeType),
-      analysisEngine.getTrapCheck(symbol, tradeType),
+      analysisEngine.timingAnalysis(symbol, tradeType),
+      analysisEngine.trapCheck(symbol, tradeType),
     ]);
 
     // Get preliminary verdict
-    const preliminaryVerdict = analysisEngine.getPreliminaryVerdict(
-      marketPulse,
-      assetScan,
-      safetyCheck,
-      timing,
-      trapCheck
+    const preliminaryVerdict = analysisEngine.preliminaryVerdict(
+      symbol,
+      { marketPulse, assetScan, safetyCheck, timing, trapCheck }
     );
 
     // Generate trade plan if verdict is positive
     let tradePlan = null;
-    if (['GO', 'CONDITIONAL_GO'].includes(preliminaryVerdict.action)) {
-      tradePlan = await analysisEngine.getTradePlan(
+    if (['go', 'conditional_go'].includes(preliminaryVerdict.verdict)) {
+      tradePlan = await analysisEngine.tradePlan(
         symbol,
-        preliminaryVerdict.direction || 'long',
-        assetScan.entries || [],
-        tradeType,
-        preliminaryVerdict
+        10000, // Default account size
+        tradeType
       );
     }
 
@@ -423,7 +415,7 @@ async function runIntegratedAnalysis(symbol: string, assetClass: string): Promis
         mlisConfidence = mlisResult.confidence;
 
         // Check if MLIS confirms the Classic direction
-        const classicDirection = finalVerdict.verdict?.direction?.toLowerCase();
+        const classicDirection = preliminaryVerdict.direction?.toLowerCase();
         const mlisDirection = mlisResult.direction?.toLowerCase();
 
         // MLIS confirms if:
@@ -452,14 +444,13 @@ async function runIntegratedAnalysis(symbol: string, assetClass: string): Promis
     await prisma.analysis.update({
       where: { id: analysis.id },
       data: {
-        status: 'completed',
         totalScore,
-        step1Result: marketPulse as any,
-        step2Result: assetScan as any,
-        step3Result: safetyCheck as any,
-        step4Result: timing as any,
-        step5Result: tradePlan as any,
-        step6Result: trapCheck as any,
+        step1Result: marketPulse as object,
+        step2Result: assetScan as object,
+        step3Result: safetyCheck as object,
+        step4Result: timing as object,
+        step5Result: tradePlan as object || null,
+        step6Result: trapCheck as object,
         step7Result: {
           ...finalVerdict,
           // MLIS confirmation integrated into final verdict
@@ -467,15 +458,15 @@ async function runIntegratedAnalysis(symbol: string, assetClass: string): Promis
           mlisRecommendation,
           mlisConfidence,
           mlisLayers,
-        } as any,
+        } as object,
       },
     });
 
     return {
       analysisId: analysis.id,
       totalScore,
-      verdict: finalVerdict.verdict?.action || 'WAIT',
-      direction: finalVerdict.verdict?.direction,
+      verdict: finalVerdict.verdict.toUpperCase() || 'WAIT',
+      direction: preliminaryVerdict.direction,
       tradePlan,
       // MLIS confirmation data
       mlisConfirmation,

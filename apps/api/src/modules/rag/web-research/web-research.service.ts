@@ -206,8 +206,13 @@ class WebResearchService {
     let geminiSummary: { summary: string; keyFindings: string[]; riskFactors: string[]; catalysts: string[]; sentiment: string } | null = null;
     try {
       const response = await callGeminiWithRetry(
-        this.buildNewsPrompt(evidencePack),
-        { type: 'default', maxOutputTokens: 400 },
+        {
+          contents: [{ role: 'user', parts: [{ text: this.buildNewsPrompt(evidencePack) }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 400 },
+        },
+        3,
+        'web_research_news',
+        'default',
       );
 
       geminiSummary = this.parseGeminiResponse(response.text);
@@ -262,8 +267,13 @@ class WebResearchService {
     let deepAnalysis: { summary: string; keyFindings: string[]; riskFactors: string[]; catalysts: string[]; sentiment: string } | null = null;
     try {
       const response = await callGeminiWithRetry(
-        this.buildDeepPrompt(evidencePack),
-        { type: 'expert', maxOutputTokens: 600 },
+        {
+          contents: [{ role: 'user', parts: [{ text: this.buildDeepPrompt(evidencePack) }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 600 },
+        },
+        3,
+        'web_research_deep',
+        'expert',
       );
 
       deepAnalysis = this.parseGeminiResponse(response.text);
