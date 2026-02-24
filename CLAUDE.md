@@ -247,6 +247,22 @@ Kullanıcı Hakları Aktif:
 ---
 
 
+## 🐛 Çözülen Bug'lar
+
+| Tarih | Bug | Kök Neden | Çözüm | Dosyalar |
+|-------|-----|-----------|-------|----------|
+| 2026-02-24 | Login "Server is temporarily unavailable" | `next.config.js` env fallback `http://localhost:4000` → build time'da inline edilince `route.ts`'deki production fallback (`https://api.traderpath.io`) asla çalışmıyor | 1) `next.config.js` fallback'i production-aware yapıldı 2) Tüm 16 auth route'a localhost safety check eklendi | `next.config.js`, `apps/web/app/api/auth/*/route.ts` (16 dosya) |
+
+---
+
+## 📝 Son Güncellemeler
+
+| Tarih | Özet |
+|-------|------|
+| 2026-02-24 | Login "temporarily unavailable" bug fix: `next.config.js` env fallback çakışması düzeltildi. Tüm auth route'lara production localhost safety check eklendi. |
+
+---
+
 ## 🤖 Claude Code Talimatları
 
 1. **Session başında** bu dosyayı oku

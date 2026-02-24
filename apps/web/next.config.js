@@ -96,8 +96,14 @@ const nextConfig = {
   productionBrowserSourceMaps: true,
 
   // Environment variables exposed to the browser
+  // IMPORTANT: Production fallback must be the real API URL, not localhost.
+  // next.config.js `env` values are inlined at build time via DefinePlugin,
+  // so any fallback here overrides fallbacks in API route files (e.g. route.ts).
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL
+      || (process.env.NODE_ENV === 'production'
+        ? 'https://api.traderpath.io'
+        : 'http://localhost:4000'),
   },
 
   // Experimental features for faster navigation

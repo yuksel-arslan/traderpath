@@ -9,7 +9,13 @@ import { NextRequest, NextResponse } from 'next/server';
 // Hobby plan caps at 10s, Pro plan caps at 60s
 export const maxDuration = 60;
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io';
+// Resolve backend URL with safety check:
+// In production, NEVER allow localhost (which next.config.js may inject as fallback).
+const _rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io';
+const API_URL =
+  process.env.NODE_ENV === 'production' && _rawApiUrl.includes('localhost')
+    ? 'https://api.traderpath.io'
+    : _rawApiUrl;
 
 // Timeout per backend request attempt (12 seconds)
 // Two attempts = max 25s total (well within Vercel limits)
@@ -92,10 +98,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Backend URL logged only in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[Login] Calling backend at: ${API_URL}/api/auth/login`);
-    }
+    // Log backend URL (always in production for diagnostics, since it's server-only)
+    console.log(`[Login] Backend target: ${API_URL}/api/auth/login`);
 
     // Call backend API with timeout and retry
     let response: Response | undefined;
