@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
           }
 
           return NextResponse.json(
-            { success: false, error: { code: 'SERVER_ERROR', message: 'Backend service is temporarily unavailable. Please try again in a moment.' } },
+            { success: false, error: { code: 'SERVER_ERROR', message: `Backend returned non-JSON (HTTP ${response.status}). This usually means the backend server is restarting or unreachable.` } },
             { status: 502 }
           );
         }
@@ -167,8 +167,8 @@ export async function POST(request: NextRequest) {
             error: {
               code: 'SERVER_ERROR',
               message: err.name === 'AbortError'
-                ? 'Server is taking too long to respond. Please try again.'
-                : 'Cannot connect to server. Please try again later.',
+                ? `Backend timeout after ${BACKEND_TIMEOUT_MS / 1000}s (target: ${API_URL}). The backend may be sleeping or overloaded.`
+                : `Cannot connect to backend (${err.message}). Target: ${API_URL}`,
             },
           },
           { status: 502 }
@@ -190,9 +190,9 @@ export async function POST(request: NextRequest) {
 
       // Don't mask server errors as "Invalid credentials"
       if (isServerError(response.status, parsed.code)) {
-        console.error('[Login] Backend server error, status:', response.status);
+        console.error('[Login] Backend server error:', response.status, parsed.code, parsed.message);
         return NextResponse.json(
-          { success: false, error: { code: 'SERVER_ERROR', message: 'Server is temporarily unavailable. Please try again in a moment.' } },
+          { success: false, error: { code: 'SERVER_ERROR', message: `Backend error (HTTP ${response.status}): ${parsed.message}` } },
           { status: 502 }
         );
       }
