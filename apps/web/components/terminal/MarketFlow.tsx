@@ -1,6 +1,5 @@
 'use client';
 
-import { Sparkline } from '../ui/intelligence';
 import { TerminalSummaryBar } from './TerminalSummaryBar';
 
 interface MarketFlowData {
@@ -30,14 +29,6 @@ function FlowCard({ flow }: { flow: MarketFlowData }) {
   const phase = phaseConfig[flow.phase] || phaseConfig.MID;
   const isPositive = flow.flow7d > 0;
   const barWidth = Math.min(Math.abs(flow.flow7d) * 10, 100);
-
-  // Generate mock sparkline data based on flow direction
-  const sparkData: number[] = [];
-  let v = 50;
-  for (let i = 0; i < 14; i++) {
-    v += (flow.flow7d > 0 ? 0.3 : -0.3) + (Math.random() - 0.5) * 3;
-    sparkData.push(v);
-  }
 
   return (
     <div
@@ -101,13 +92,6 @@ function FlowCard({ flow }: { flow: MarketFlowData }) {
         </span>
       </div>
 
-      {/* Mini sparkline */}
-      <Sparkline
-        data={sparkData}
-        width={120}
-        height={20}
-        color={isPositive ? '#00F5A0' : '#FF4757'}
-      />
     </div>
   );
 }

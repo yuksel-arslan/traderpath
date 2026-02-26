@@ -2,7 +2,7 @@
 
 import { cn } from '../../lib/utils';
 import { formatPriceValue, formatPrice } from '../../lib/utils';
-import { ScoreRing, VerdictBadge, Sparkline } from '../ui/intelligence';
+import { ScoreRing, VerdictBadge } from '../ui/intelligence';
 
 interface TradePlan {
   entry: number;
@@ -183,17 +183,6 @@ export function ForecastPanel({
   const pctMove = (score / 100) * 8;
   const p50Target = selectedAsset.price * (1 + ((isLong ? pctMove : -pctMove) / 100));
 
-  // Generate forecast sparkline
-  const sparkData: number[] = [];
-  let v = selectedAsset.price;
-  for (let i = 0; i < 48; i++) {
-    const progress = i / 48;
-    const ease = 1 - Math.pow(1 - progress, 2);
-    const offset = (pctMove / 100) * ease * (isLong ? 1 : -1);
-    v = selectedAsset.price * (1 + offset);
-    sparkData.push(v);
-  }
-
   return (
     <div
       className="rounded-xl p-3 mt-2"
@@ -245,15 +234,6 @@ export function ForecastPanel({
         </div>
       </div>
 
-      {/* Mini forecast sparkline */}
-      <div className="mt-2">
-        <Sparkline
-          data={sparkData}
-          width={300}
-          height={32}
-          color={isLong ? '#00F5A0' : '#FF4757'}
-        />
-      </div>
     </div>
   );
 }
