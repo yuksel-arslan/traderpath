@@ -197,8 +197,8 @@ export function FlowAccordion() {
           </p>
           <p className="text-[10px] sm:text-xs font-sans text-slate-400 max-w-lg leading-relaxed">
             Built on{' '}
-            <span className="text-slate-300 dark:text-slate-300 font-medium">Lean Construction</span>{' '}
-            principles — eliminate noise, pull decisions from data, and maintain
+            <span className="text-slate-300 dark:text-slate-300 font-medium">Hierarchical Decision Architecture</span>{' '}
+            — eliminate noise, derive decisions from data, and maintain
             continuous flow from macro insight to micro execution. No wasted analysis,
             no speculative guesswork.
           </p>
