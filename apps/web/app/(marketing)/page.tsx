@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { AnimatedCounter } from '../../components/ui/AnimatedCounter';
 import dynamic from 'next/dynamic';
 import { Footer } from '../../components/common/Footer';
 import { PriceTicker } from '../../components/home/PriceTicker';
@@ -127,18 +128,30 @@ function Stats() {
     );
   }
 
-  const stats = [
-    { label: 'ANALYSES COMPLETED', value: `${metrics.totalAnalyses.toLocaleString()}+` },
-    { label: 'WIN RATE ALL SIGNALS', value: metrics.closedCount > 0 ? `${metrics.accuracy}%` : '—' },
-    { label: 'VERIFIED PLATFORM P/L', value: metrics.closedCount > 0 ? `${metrics.totalPnL >= 0 ? '+' : ''}${metrics.totalPnL}%` : '—' },
-    { label: 'TRADEABLE ASSETS', value: '194+' },
+  const stats: { label: string; end: number; suffix: string; prefix: string; decimals: number; show: boolean }[] = [
+    { label: 'ANALYSES COMPLETED', end: metrics.totalAnalyses, suffix: '+', prefix: '', decimals: 0, show: true },
+    { label: 'WIN RATE ALL SIGNALS', end: metrics.accuracy, suffix: '%', prefix: '', decimals: 1, show: metrics.closedCount > 0 },
+    { label: 'VERIFIED PLATFORM P/L', end: Math.abs(metrics.totalPnL), suffix: '%', prefix: metrics.totalPnL >= 0 ? '+' : '-', decimals: 1, show: metrics.closedCount > 0 },
+    { label: 'TRADEABLE ASSETS', end: 194, suffix: '+', prefix: '', decimals: 0, show: true },
   ];
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-200 dark:bg-gray-800">
       {stats.map((s, i) => (
         <div key={i} className="bg-white dark:bg-[#111111] p-6">
-          <div className="text-2xl sm:text-3xl font-bold tabular-nums mb-1 text-gray-900 dark:text-gray-100">{s.value}</div>
+          <div className="text-2xl sm:text-3xl font-bold mb-1 text-gray-900 dark:text-gray-100">
+            {s.show ? (
+              <AnimatedCounter
+                end={s.end}
+                suffix={s.suffix}
+                prefix={s.prefix}
+                decimals={s.decimals}
+                duration={2000}
+              />
+            ) : (
+              <span className="font-mono tabular-nums">&mdash;</span>
+            )}
+          </div>
           <div className="text-[10px] tracking-wider text-slate-400">{s.label}</div>
         </div>
       ))}
