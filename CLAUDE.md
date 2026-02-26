@@ -273,6 +273,9 @@ Kullanıcı Hakları Aktif:
 | 2026-02-26 | Landing: SocialProof trust metrics + tech stack | 200+ assets, 5 markets, 24/7 scanning, 309+ analyses + tech badges |
 | 2026-02-26 | Landing: PricingSection Free/Pro/Enterprise | Credit-based, no subscriptions, Popular badge on Pro tier |
 | 2026-02-26 | Landing: PerformanceChart metrics grid | Total Signals, Win Rate, Avg R:R, Max Drawdown + disclaimer |
+| 2026-02-26 | AnalysisDialog: Duplicate analysis warning | 4 saat içinde aynı asset+timeframe uyarısı, View Existing / Analyze Again butonları |
+| 2026-02-26 | AnalysisDialog: Results drawer format | Mobilde bottom-up (%85vh), desktopda sağdan sola (520px panel) |
+| 2026-02-26 | OpportunityRadar: CF-only filtering | Primary market önce, exit-phase ve negatif flow gizleniyor |
 
 ---
 
@@ -284,6 +287,8 @@ Kullanıcı Hakları Aktif:
 | 2026-02-24 | Login "Server is temporarily unavailable" | `next.config.js` env fallback `http://localhost:4000` → build time'da inline edilince `route.ts`'deki production fallback (`https://api.traderpath.io`) asla çalışmıyor | 1) `next.config.js` fallback'i production-aware yapıldı 2) Tüm 16 auth route'a localhost safety check eklendi | `next.config.js`, `apps/web/app/api/auth/*/route.ts` (16 dosya) |
 | 2026-02-24 | Login hala "Server is temporarily unavailable" gösteriyor | 3 kök neden: 1) `login/route.ts` backend hata mesajını maskeliyor → gerçek hatayı gizliyor 2) Trailing slash koruması yok → `API_URL/` varsa `//api/auth/login` oluyor 3) Diagnostik endpoint yok → backend erişimi test edilemiyor | 1) Backend error maskeleme kaldırıldı, gerçek hata pass-through yapılıyor 2) Tüm 16 auth route + `next.config.js`'e trailing slash strip eklendi 3) `/api/debug/health` diagnostık endpoint oluşturuldu 4) Kapsamlı error loglama eklendi | `login/route.ts`, `next.config.js`, tüm auth route'lar, yeni `debug/health/route.ts` |
 | 2026-02-26 | Confidence 6800% gösteriyor (68 olmalı) | Frontend `confidence * 100` yapıyor ama API zaten 0-100 döndürüyor → 68 * 100 = 6800 | 1) 4 frontend dosyadan `* 100` kaldırıldı 2) Backend `preliminaryVerdict.confidence` 0-100'e clamp edildi | `PrimaryDecision.tsx`, `MarketContextPanel.tsx`, `FlowChain.tsx`, `analysis.engine.ts` |
+| 2026-02-26 | Dashboard PnL Chart günlük view sahte veri gösteriyor | 1D modu günün PnL'ini 8 saatlik slota lineer interpolasyon yapıyor → gerçek intra-day veri yok | Tüm view modları (1D/7D/30D) aynı gerçek günlük API verisini kullanacak şekilde birleştirildi | `dashboard/page.tsx` |
+| 2026-02-26 | Opportunity Radar tüm marketleri gösteriyor | Filtre sadece user selection'a bakıyor, CF önerisini dikkate almıyor | Exit-phase ve negatif flow marketler filtrelendi, primary market önce gösteriliyor | `OpportunityRadar.tsx` |
 
 ---
 
@@ -296,6 +301,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-26 | Dashboard + Analyze sayfaları "Decision Engine" konseptiyle yeniden tasarlandı. 5 paylaşılan intelligence UI bileşeni (ScoreRing, PulseDot, FlowArrow, Sparkline, VerdictBadge), 5 dashboard alt bileşeni (PrimaryDecision, ProfitTracker, FlowChain, AgentPanel, IntelligenceQuickActions), 4 analyze alt bileşeni (MarketContextPanel, TrendingAssets, AnalysisPipelineCard, RecentAnalysisRow) oluşturuldu. Tüm mevcut API bağlantıları ve veri akışları korundu. |
 | 2026-02-26 | Terminal sayfası "Decision Engine Control Room" konseptiyle yeniden tasarlandı. 2700 satırlık monolitik dosya 9 bileşene ayrıldı: TerminalSummaryBar, TerminalSidebar, GlobalLiquidity, MarketFlow, RotationMatrix, SectorActivity, AIRecommendation, AssetTable, RunAnalysis, TradeVisualizerMetrics. Her bölümde TerminalSummaryBar özet barı eklendi. Sidebar SELECTED bölümü ScoreRing+VerdictBadge ile zenginleştirildi. L3'e heatmap/list toggle, L4'e decision bar + gate check list, AssetTable'a verdict filter + action butonları, RunAnalysis'e INP fix + tahmin + duplicate fix, TradeVisualizer'a risk metrics + forecast panel eklendi. TradingView chart'a dokunulmadı. Tüm API bağlantıları ve veri akışları korundu. |
 | 2026-02-26 | Landing page 13-section content overhaul: Hero mesajı güncellendi ("See Where Smart Money Moves"), 6 yeni bileşen oluşturuldu (ProblemSolution, Pipeline, ComparisonTable, LivePreview, ThreeServices, SocialProof), FlowAccordion katman açıklamaları güncellendi, PricingSection (Free/Pro/Enterprise kredi bazlı), PerformanceChart metrik grid + disclaimer eklendi, Stats Bar etiketleri güncellendi, Final CTA güncellendi, Footer "default" variant'a geçirildi. Mevcut gradient animasyonlar ve chart'a dokunulmadı. |
+| 2026-02-26 | Bug fixler ve UX iyileştirmeleri: 1) Confidence 6800% → 68% düzeltildi (4 dosya `*100` kaldırıldı + backend clamp). 2) PnL Chart daily view sahte interpolasyon kaldırıldı, tüm modlar gerçek günlük veri kullanıyor. 3) Duplicate analysis warning: aynı asset+timeframe 4 saat içinde → 409 uyarısı, View Existing / Analyze Again seçenekleri. 4) AnalysisDialog results drawer: mobilde alttan yukarı, desktopda sağdan sola. 5) Opportunity Radar: CF-recommended marketler, exit-phase gizleniyor. |
 
 ---
 
