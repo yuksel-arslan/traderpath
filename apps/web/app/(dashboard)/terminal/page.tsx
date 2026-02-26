@@ -445,10 +445,50 @@ function L7TradeVisualizer({
   const chartRef = useRef<IChartApi | null>(null);
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [resolvedPlan, setResolvedPlan] = useState<TradePlan | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Fetch real trade plan from latest analysis when analysisId exists
+  useEffect(() => {
+    if (!selectedAsset?.analysisId) {
+      setResolvedPlan(tradePlan);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await authFetch(`/api/analysis/${selectedAsset.analysisId}`);
+        if (!res.ok || cancelled) { setResolvedPlan(tradePlan); return; }
+        const json = await res.json();
+        const analysis = json?.data;
+        const step5 = analysis?.step5Result;
+        if (step5 && !cancelled) {
+          const dir = (step5.direction?.toUpperCase() === 'SHORT') ? 'SHORT' : 'LONG';
+          const entry = Number(step5.averageEntry || step5.entryPrice || 0);
+          const sl = Number(step5.stopLoss?.price || 0);
+          const tp1 = Number(step5.takeProfits?.[0]?.price || 0);
+          const tp2 = Number(step5.takeProfits?.[1]?.price || step5.takeProfits?.[0]?.price || 0);
+          const slPct = entry > 0 ? Math.abs(entry - sl) / entry : 0;
+          const tp1Pct = entry > 0 ? Math.abs(tp1 - entry) / entry : 0;
+          const rr = slPct > 0 ? tp1Pct / slPct : 0;
+
+          if (entry > 0 && sl > 0 && tp1 > 0) {
+            setResolvedPlan({ entry, sl, tp1, tp2: tp2 || tp1, rr, direction: dir as TradePlan['direction'] });
+            return;
+          }
+        }
+        if (!cancelled) setResolvedPlan(tradePlan);
+      } catch {
+        if (!cancelled) setResolvedPlan(tradePlan);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [selectedAsset?.analysisId, tradePlan]);
 
   useEffect(() => {
     if (!mounted || !chartContainerRef.current || !selectedAsset) return;
@@ -542,34 +582,24 @@ function L7TradeVisualizer({
 
       series.setData(candles);
 
-      // Trade plan lines
-      if (tradePlan) {
-        series.createPriceLine({ price: tradePlan.entry, color: '#3B82F6', lineWidth: 1, lineStyle: LineStyle.Solid, axisLabelVisible: true, title: 'ENTRY' });
-        series.createPriceLine({ price: tradePlan.sl, color: '#EF4444', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: 'SL' });
-        series.createPriceLine({ price: tradePlan.tp1, color: '#22C55E', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: 'TP1' });
-        series.createPriceLine({ price: tradePlan.tp2, color: '#84CC16', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: 'TP2' });
+      // Trade plan lines — use resolvedPlan (from analysis API) or fallback to prop
+      const activePlan = resolvedPlan || tradePlan;
+      if (activePlan) {
+        series.createPriceLine({ price: activePlan.entry, color: '#3B82F6', lineWidth: 1, lineStyle: LineStyle.Solid, axisLabelVisible: true, title: 'ENTRY' });
+        series.createPriceLine({ price: activePlan.sl, color: '#EF4444', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: 'SL' });
+        series.createPriceLine({ price: activePlan.tp1, color: '#22C55E', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: 'TP1' });
+        series.createPriceLine({ price: activePlan.tp2, color: '#84CC16', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: 'TP2' });
       }
 
-      // Forecast Path
+      // Forecast Path — starts from the LAST candle and extends 48h into the future only
       const isLong = selectedAsset.direction === 'LONG';
       const score = selectedAsset.aiScore;
       const pctMove = (score / 100) * 8;
-      const entryPrice = tradePlan ? tradePlan.entry : selectedAsset.price;
 
-      let entryIdx = candles.length - 1;
-      if (tradePlan) {
-        let minDist = Infinity;
-        for (let i = 0; i < candles.length; i++) {
-          const dist = Math.abs(candles[i].close - entryPrice);
-          if (dist < minDist) { minDist = dist; entryIdx = i; }
-        }
-      }
-
-      const entryCandle = candles[entryIdx];
-      const entryClose = entryCandle.close;
-      const entryTime = entryCandle.time as number;
-      const lastTime = candles[candles.length - 1].time as number;
-      const totalSeconds = (lastTime - entryTime) + 48 * 3600;
+      const lastCandle = candles[candles.length - 1];
+      const forecastStartPrice = lastCandle.close;
+      const forecastStartTime = lastCandle.time as number;
+      const forecastDuration = 48 * 3600; // 48 hours forward
       const forecastSteps = 60;
 
       const p50Data: { time: Time; value: number }[] = [];
@@ -577,16 +607,16 @@ function L7TradeVisualizer({
       const p10Data: { time: Time; value: number }[] = [];
 
       for (let s = 0; s <= forecastSteps; s++) {
-        const t = (entryTime + Math.round((s / forecastSteps) * totalSeconds)) as Time;
+        const t = (forecastStartTime + Math.round((s / forecastSteps) * forecastDuration)) as Time;
         const progress = s / forecastSteps;
         const ease = 1 - Math.pow(1 - progress, 2);
         const p50Offset = (pctMove / 100) * ease * (isLong ? 1 : -1);
         const bandWidth = (pctMove / 100) * 0.6 * ease;
         const p90Offset = p50Offset + bandWidth * (isLong ? 1 : -1);
         const p10Offset = p50Offset - bandWidth * (isLong ? 1 : -1);
-        p50Data.push({ time: t, value: entryClose * (1 + p50Offset) });
-        p90Data.push({ time: t, value: entryClose * (1 + p90Offset) });
-        p10Data.push({ time: t, value: entryClose * (1 + p10Offset) });
+        p50Data.push({ time: t, value: forecastStartPrice * (1 + p50Offset) });
+        p90Data.push({ time: t, value: forecastStartPrice * (1 + p90Offset) });
+        p10Data.push({ time: t, value: forecastStartPrice * (1 + p10Offset) });
       }
 
       const p90Area = chart.addAreaSeries({ lineColor: 'rgba(34, 197, 94, 0.3)', topColor: 'rgba(34, 197, 94, 0.08)', bottomColor: 'rgba(34, 197, 94, 0.0)', lineWidth: 1, lineStyle: LineStyle.Dotted, priceLineVisible: false, crosshairMarkerVisible: false, lastValueVisible: false });
@@ -621,7 +651,7 @@ function L7TradeVisualizer({
       cleanupFn?.();
       if (chart) { chart.remove(); chart = null; chartRef.current = null; }
     };
-  }, [mounted, selectedAsset, tradePlan, resolvedTheme]);
+  }, [mounted, selectedAsset, tradePlan, resolvedPlan, resolvedTheme]);
 
   if (!selectedAsset) {
     return (
@@ -652,14 +682,14 @@ function L7TradeVisualizer({
         <div ref={chartContainerRef} className="w-full h-[300px] sm:h-[400px]" />
       </div>
 
-      {/* Trade Level Cards (Entry/SL/TP1/TP2/R:R) */}
-      {tradePlan && <TradeLevelCards tradePlan={tradePlan} />}
+      {/* Trade Level Cards (Entry/SL/TP1/TP2/R:R) — uses analysis data when available */}
+      {(resolvedPlan || tradePlan) && <TradeLevelCards tradePlan={(resolvedPlan || tradePlan)!} />}
 
       {/* Forecast Panel */}
       <ForecastPanel selectedAsset={selectedAsset} />
 
       {/* Risk Metrics */}
-      {tradePlan && <RiskMetrics tradePlan={tradePlan} selectedAsset={selectedAsset} />}
+      {(resolvedPlan || tradePlan) && <RiskMetrics tradePlan={(resolvedPlan || tradePlan)!} selectedAsset={selectedAsset} />}
     </section>
   );
 }
