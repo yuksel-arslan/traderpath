@@ -501,77 +501,37 @@ export default function DashboardPage() {
   // Chart + PnL calculations (preserved)
   // ===========================================
   const buildChartData = () => {
+    // All view modes use real daily data — no interpolation or fabrication
+    const rangeDays = pnlViewMode === 'monthly' ? 30 : 7;
+
     if (!performanceData?.daily?.length) {
-      if (pnlViewMode === 'daily') {
-        return Array.from({ length: 8 }, (_, i) => {
-          const h = i * 3;
-          return { name: `${String(h).padStart(2, '0')}:00`, pnl: 0, positive: 0, negative: 0, count: 0 };
-        });
-      }
-      if (pnlViewMode === 'monthly') {
-        return Array(30).fill(null).map((_, i) => {
-          const d = new Date();
-          d.setDate(d.getDate() - (29 - i));
-          return { name: String(d.getDate()), pnl: 0, positive: 0, negative: 0, count: 0 };
-        });
-      }
-      return Array(7).fill(null).map((_, i) => {
+      return Array(rangeDays).fill(null).map((_, i) => {
         const d = new Date();
-        d.setDate(d.getDate() - (6 - i));
-        return { name: d.toLocaleDateString('en-US', { weekday: 'short' }), pnl: 0, positive: 0, negative: 0, count: 0 };
+        d.setDate(d.getDate() - (rangeDays - 1 - i));
+        const label = pnlViewMode === 'monthly'
+          ? String(d.getDate())
+          : d.toLocaleDateString('en-US', { weekday: 'short' });
+        return { name: label, pnl: 0, positive: 0, negative: 0, count: 0 };
       });
     }
 
     const daily = performanceData.daily;
-
-    if (pnlViewMode === 'weekly') {
-      let cumulative = 0;
-      return Array(7).fill(null).map((_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (6 - i));
-        const key = d.toISOString().split('T')[0];
-        const dayData = daily.find((x) => x.date === key);
-        cumulative += dayData?.realized || 0;
-        return {
-          name: d.toLocaleDateString('en-US', { weekday: 'short' }),
-          pnl: Number(cumulative.toFixed(2)),
-          positive: Math.max(0, cumulative),
-          negative: Math.min(0, cumulative),
-          count: dayData?.trades || 0,
-        };
-      });
-    }
-
-    if (pnlViewMode === 'monthly') {
-      let cumulative = 0;
-      return Array(30).fill(null).map((_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (29 - i));
-        const key = d.toISOString().split('T')[0];
-        const dayData = daily.find((x) => x.date === key);
-        cumulative += dayData?.realized || 0;
-        return {
-          name: String(d.getDate()),
-          pnl: Number(cumulative.toFixed(2)),
-          positive: Math.max(0, cumulative),
-          negative: Math.min(0, cumulative),
-          count: dayData?.trades || 0,
-        };
-      });
-    }
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const todayPnl = daily.find((d) => d.date === todayStr)?.total || 0;
-    return Array.from({ length: 8 }, (_, i) => {
-      const h = i * 3;
-      const progress = (h + 3) / 24;
-      const pnl = Number((todayPnl * progress).toFixed(2));
+    let cumulative = 0;
+    return Array(rangeDays).fill(null).map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (rangeDays - 1 - i));
+      const key = d.toISOString().split('T')[0];
+      const dayData = daily.find((x) => x.date === key);
+      cumulative += dayData?.realized || 0;
+      const label = pnlViewMode === 'monthly'
+        ? String(d.getDate())
+        : d.toLocaleDateString('en-US', { weekday: 'short' });
       return {
-        name: `${String(h).padStart(2, '0')}:00`,
-        pnl,
-        positive: Math.max(0, pnl),
-        negative: Math.min(0, pnl),
-        count: 0,
+        name: label,
+        pnl: Number(cumulative.toFixed(2)),
+        positive: Math.max(0, cumulative),
+        negative: Math.min(0, cumulative),
+        count: dayData?.trades || 0,
       };
     });
   };

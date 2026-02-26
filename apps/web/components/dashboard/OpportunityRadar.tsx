@@ -79,9 +79,15 @@ export function OpportunityRadar({ capitalFlow, selectedMarkets }: OpportunityRa
     );
   }
 
+  // Only show markets that Capital Flow recommends (positive flow or early/mid phase)
+  // Exit-phase markets are excluded — they represent outflows, not opportunities
   const markets = [...capitalFlow.markets]
     .filter((m) => matchesFilter(m.market, selectedMarkets))
+    .filter((m) => m.market === primaryMarket || m.phase === 'early' || m.phase === 'mid' || m.flow7d > 0)
     .sort((a, b) => {
+      // Primary market always first
+      if (a.market === primaryMarket && b.market !== primaryMarket) return -1;
+      if (b.market === primaryMarket && a.market !== primaryMarket) return 1;
       const pd = (PHASE_ORDER[a.phase] ?? 2) - (PHASE_ORDER[b.phase] ?? 2);
       return pd !== 0 ? pd : b.flow7d - a.flow7d;
     });
@@ -95,7 +101,7 @@ export function OpportunityRadar({ capitalFlow, selectedMarkets }: OpportunityRa
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
         <div>
           <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Opportunity Radar</h3>
-          <p className="text-sm text-gray-500 mt-0.5">Where money is moving now</p>
+          <p className="text-sm text-gray-500 mt-0.5">Capital Flow recommended markets</p>
         </div>
         <Link
           href="/flow"
