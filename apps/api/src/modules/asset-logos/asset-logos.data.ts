@@ -766,6 +766,108 @@ export const STOCK_LOGOS: AssetLogosMap = {
     color: '#0033A0',
     name: 'Riot Platforms',
   },
+
+  // BIST (Borsa Istanbul)
+  THYAO: {
+    logoUrl: 'https://logo.clearbit.com/turkishairlines.com',
+    color: '#C8102E',
+    name: 'Turkish Airlines',
+  },
+  GARAN: {
+    logoUrl: 'https://logo.clearbit.com/garantibbva.com.tr',
+    color: '#00854A',
+    name: 'Garanti BBVA',
+  },
+  AKBNK: {
+    logoUrl: 'https://logo.clearbit.com/akbank.com',
+    color: '#E3000B',
+    name: 'Akbank',
+  },
+  SISE: {
+    logoUrl: 'https://logo.clearbit.com/sisecam.com.tr',
+    color: '#004E9E',
+    name: 'Sisecam',
+  },
+  EREGL: {
+    logoUrl: 'https://logo.clearbit.com/erdemir.com.tr',
+    color: '#003A70',
+    name: 'Eregli Demir Celik',
+  },
+  KCHOL: {
+    logoUrl: 'https://logo.clearbit.com/koc.com.tr',
+    color: '#003DA5',
+    name: 'Koc Holding',
+  },
+  SAHOL: {
+    logoUrl: 'https://logo.clearbit.com/sabanci.com',
+    color: '#003C71',
+    name: 'Sabanci Holding',
+  },
+  ISCTR: {
+    logoUrl: 'https://logo.clearbit.com/isbank.com.tr',
+    color: '#0038A8',
+    name: 'Is Bankasi',
+  },
+  YKBNK: {
+    logoUrl: 'https://logo.clearbit.com/yapikredi.com.tr',
+    color: '#004990',
+    name: 'Yapi Kredi',
+  },
+  HALKB: {
+    logoUrl: 'https://logo.clearbit.com/halkbank.com.tr',
+    color: '#004B87',
+    name: 'Halk Bankasi',
+  },
+  VAKBN: {
+    logoUrl: 'https://logo.clearbit.com/vakifbank.com.tr',
+    color: '#FFD100',
+    name: 'Vakifbank',
+  },
+  TOASO: {
+    logoUrl: 'https://logo.clearbit.com/tofas.com.tr',
+    color: '#1B3C87',
+    name: 'Tofas Oto',
+  },
+  TAVHL: {
+    logoUrl: 'https://logo.clearbit.com/tavhavalimanlari.com.tr',
+    color: '#003B73',
+    name: 'TAV Havalimanlari',
+  },
+  TKFEN: {
+    logoUrl: 'https://logo.clearbit.com/tekfen.com.tr',
+    color: '#E31937',
+    name: 'Tekfen Holding',
+  },
+  TUPRS: {
+    logoUrl: 'https://logo.clearbit.com/tupras.com.tr',
+    color: '#E31E24',
+    name: 'Tupras',
+  },
+  BIMAS: {
+    logoUrl: 'https://logo.clearbit.com/bim.com.tr',
+    color: '#ED1C24',
+    name: 'BIM Magazalar',
+  },
+  ASELS: {
+    logoUrl: 'https://logo.clearbit.com/aselsan.com.tr',
+    color: '#003366',
+    name: 'Aselsan',
+  },
+  PGSUS: {
+    logoUrl: 'https://logo.clearbit.com/flypgs.com',
+    color: '#FFD700',
+    name: 'Pegasus Airlines',
+  },
+  ENKAI: {
+    logoUrl: 'https://logo.clearbit.com/enka.com',
+    color: '#003399',
+    name: 'Enka Insaat',
+  },
+  ARCLK: {
+    logoUrl: 'https://logo.clearbit.com/arcelik.com.tr',
+    color: '#E2001A',
+    name: 'Arcelik',
+  },
 };
 
 // ===========================================
