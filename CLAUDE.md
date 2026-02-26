@@ -276,6 +276,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-26 | AnalysisDialog: Duplicate analysis warning | 4 saat içinde aynı asset+timeframe uyarısı, View Existing / Analyze Again butonları |
 | 2026-02-26 | AnalysisDialog: Results drawer format | Mobilde bottom-up (%85vh), desktopda sağdan sola (520px panel) |
 | 2026-02-26 | OpportunityRadar: CF-only filtering | Primary market önce, exit-phase ve negatif flow gizleniyor |
+| 2026-02-26 | AnimatedCounter: Landing Stats count-up | IntersectionObserver + rAF + easeOutCubic, viewport'a girince 0→değer animasyonu |
 
 ---
 
