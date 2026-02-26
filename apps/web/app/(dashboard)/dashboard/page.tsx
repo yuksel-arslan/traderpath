@@ -28,7 +28,6 @@ import type { MarketType } from '@/components/dashboard/CategoryBar';
 import { PrimaryDecision } from '@/components/dashboard/PrimaryDecision';
 import { ProfitTracker } from '@/components/dashboard/ProfitTracker';
 import { FlowChain } from '@/components/dashboard/FlowChain';
-import { AgentPanel } from '@/components/dashboard/AgentPanel';
 import { IntelligenceQuickActions } from '@/components/dashboard/IntelligenceQuickActions';
 import { ScoreRing, PulseDot, VerdictBadge } from '@/components/ui/intelligence';
 
@@ -823,9 +822,8 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* RIGHT: Agents + Alerts + Quick Actions */}
+              {/* RIGHT: Alerts + Quick Actions */}
               <div className="space-y-4">
-                <AgentPanel />
                 <SmartAlertsWidget />
                 <IntelligenceQuickActions />
               </div>
