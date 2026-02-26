@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0D1421"/>
+      <stop offset="100%" stop-color="#1A0D28"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <!-- Grid -->
+  <g opacity="0.04" stroke="#a78bfa">
+    <line x1="0" y1="180" x2="1280" y2="180"/>
+    <line x1="0" y1="360" x2="1280" y2="360"/>
+    <line x1="0" y1="540" x2="1280" y2="540"/>
+    <line x1="320" y1="0" x2="320" y2="720"/>
+    <line x1="640" y1="0" x2="640" y2="720"/>
+    <line x1="960" y1="0" x2="960" y2="720"/>
+  </g>
+  <!-- Left config panel -->
+  <rect x="60" y="40" width="400" height="640" rx="16" fill="#1a2332" stroke="#a78bfa" stroke-opacity="0.12"/>
+  <rect x="80" y="64" width="120" height="10" rx="5" fill="#a78bfa" opacity="0.35"/>
+  <rect x="80" y="88" width="200" height="8" rx="4" fill="#a78bfa" opacity="0.12"/>
+  <!-- Search bar -->
+  <rect x="80" y="116" width="360" height="40" rx="8" fill="#a78bfa" opacity="0.06" stroke="#a78bfa" stroke-opacity="0.15"/>
+  <rect x="96" y="130" width="120" height="12" rx="4" fill="#a78bfa" opacity="0.15"/>
+  <!-- Asset list -->
+  <rect x="80" y="176" width="360" height="44" rx="8" fill="#a78bfa" opacity="0.1"/>
+  <rect x="96" y="188" width="80" height="8" rx="4" fill="#a78bfa" opacity="0.3"/>
+  <rect x="96" y="202" width="140" height="6" rx="3" fill="#a78bfa" opacity="0.12"/>
+  <rect x="80" y="228" width="360" height="44" rx="8" fill="#a78bfa" opacity="0.04"/>
+  <rect x="80" y="280" width="360" height="44" rx="8" fill="#a78bfa" opacity="0.04"/>
+  <rect x="80" y="332" width="360" height="44" rx="8" fill="#a78bfa" opacity="0.04"/>
+  <rect x="80" y="384" width="360" height="44" rx="8" fill="#a78bfa" opacity="0.04"/>
+  <!-- Timeframe selector -->
+  <rect x="80" y="452" width="360" height="36" rx="8" fill="#a78bfa" opacity="0.06"/>
+  <rect x="92" y="460" width="40" height="20" rx="4" fill="#a78bfa" opacity="0.2"/>
+  <rect x="140" y="460" width="40" height="20" rx="4" fill="#a78bfa" opacity="0.08"/>
+  <rect x="188" y="460" width="40" height="20" rx="4" fill="#a78bfa" opacity="0.08"/>
+  <rect x="236" y="460" width="40" height="20" rx="4" fill="#a78bfa" opacity="0.08"/>
+  <!-- Analyze button -->
+  <rect x="80" y="520" width="360" height="48" rx="12" fill="#a78bfa" opacity="0.25"/>
+  <rect x="200" y="536" width="120" height="16" rx="4" fill="white" opacity="0.6"/>
+  <!-- Right pipeline -->
+  <rect x="500" y="40" width="720" height="300" rx="16" fill="#1a2332" stroke="#a78bfa" stroke-opacity="0.1"/>
+  <rect x="524" y="64" width="100" height="8" rx="4" fill="#a78bfa" opacity="0.3"/>
+  <!-- Pipeline steps -->
+  <g transform="translate(524,96)">
+    <!-- Step 1 -->
+    <rect x="0" y="0" width="200" height="80" rx="10" fill="#a78bfa" opacity="0.08" stroke="#a78bfa" stroke-opacity="0.2"/>
+    <circle cx="24" cy="20" r="12" fill="#a78bfa" opacity="0.25"/>
+    <text x="24" y="24" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="white" opacity="0.6">1</text>
+    <rect x="44" y="14" width="80" height="8" rx="4" fill="#a78bfa" opacity="0.3"/>
+    <rect x="16" y="44" width="168" height="4" rx="2" fill="#a78bfa" opacity="0.1"/>
+    <rect x="16" y="56" width="140" height="4" rx="2" fill="#a78bfa" opacity="0.1"/>
+    <!-- Arrow -->
+    <polygon points="216,40 232,32 232,48" fill="#a78bfa" opacity="0.2"/>
+    <!-- Step 2 -->
+    <rect x="248" y="0" width="200" height="80" rx="10" fill="#a78bfa" opacity="0.08" stroke="#a78bfa" stroke-opacity="0.2"/>
+    <circle cx="272" cy="20" r="12" fill="#a78bfa" opacity="0.25"/>
+    <text x="272" y="24" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="white" opacity="0.6">2</text>
+    <rect x="292" y="14" width="80" height="8" rx="4" fill="#a78bfa" opacity="0.3"/>
+    <rect x="264" y="44" width="168" height="4" rx="2" fill="#a78bfa" opacity="0.1"/>
+    <rect x="264" y="56" width="140" height="4" rx="2" fill="#a78bfa" opacity="0.1"/>
+    <!-- Arrow -->
+    <polygon points="464,40 480,32 480,48" fill="#a78bfa" opacity="0.2"/>
+    <!-- Step 3 -->
+    <rect x="496" y="0" width="200" height="80" rx="10" fill="#00F5A0" opacity="0.08" stroke="#00F5A0" stroke-opacity="0.2"/>
+    <circle cx="520" cy="20" r="12" fill="#00F5A0" opacity="0.25"/>
+    <text x="520" y="24" text-anchor="middle" font-family="Inter,sans-serif" font-size="11" fill="white" opacity="0.6">3</text>
+    <rect x="540" y="14" width="80" height="8" rx="4" fill="#00F5A0" opacity="0.3"/>
+    <rect x="512" y="44" width="168" height="4" rx="2" fill="#00F5A0" opacity="0.1"/>
+    <rect x="512" y="56" width="140" height="4" rx="2" fill="#00F5A0" opacity="0.1"/>
+  </g>
+  <!-- Progress bar -->
+  <rect x="524" y="204" width="672" height="6" rx="3" fill="#a78bfa" opacity="0.1"/>
+  <rect x="524" y="204" width="450" height="6" rx="3" fill="#a78bfa" opacity="0.3"/>
+  <!-- Recent analyses -->
+  <rect x="500" y="360" width="720" height="320" rx="16" fill="#1a2332" stroke="#a78bfa" stroke-opacity="0.1"/>
+  <rect x="524" y="384" width="140" height="8" rx="4" fill="#a78bfa" opacity="0.3"/>
+  <!-- Rows -->
+  <rect x="524" y="412" width="672" height="48" rx="8" fill="#a78bfa" opacity="0.04"/>
+  <rect x="524" y="468" width="672" height="48" rx="8" fill="#00F5A0" opacity="0.04"/>
+  <rect x="524" y="524" width="672" height="48" rx="8" fill="#a78bfa" opacity="0.04"/>
+  <rect x="524" y="580" width="672" height="48" rx="8" fill="#FF4757" opacity="0.04"/>
+  <!-- Glow -->
+  <circle cx="640" cy="360" r="200" fill="#a78bfa" opacity="0.015"/>
+  <text x="640" y="690" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="13" fill="#a78bfa" opacity="0.4" letter-spacing="3">AUTOMATED &amp; TAILORED ANALYSIS</text>
+</svg>
