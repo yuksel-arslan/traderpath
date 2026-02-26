@@ -19,7 +19,7 @@ export function Footer({ className, variant = 'default' }: FooterProps) {
 
   return (
     <footer className={cn(
-      "border-t border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-[#0B1121]",
+      "border-t border-slate-200 dark:border-white/[0.06] bg-background",
       className
     )}>
       <div className="container mx-auto px-4 py-12">

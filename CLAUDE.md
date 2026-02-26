@@ -278,6 +278,8 @@ Kullanıcı Hakları Aktif:
 | 2026-02-26 | OpportunityRadar: CF-only filtering | Primary market önce, exit-phase ve negatif flow gizleniyor |
 | 2026-02-26 | AnimatedCounter: Landing Stats count-up | IntersectionObserver + rAF + easeOutCubic, viewport'a girince 0→değer animasyonu |
 | 2026-02-26 | LivePreview: SVG placeholder görseller + Next.js Image | 4 adet detaylı SVG placeholder (dashboard/terminal/analyzer/visualizer), aspect-video, lazy loading, onerror fallback |
+| 2026-02-26 | Header/Footer: bg-background ile sayfa rengi eşitleme | Navbar `bg-white/bg-[#0A0A0A]` → `bg-background`, Footer `bg-slate-50/bg-[#0B1121]` → `bg-background`, Dashboard header `bg-card/80` → `bg-background/80`, Dashboard footer `bg-card/50` → `bg-background` |
+| 2026-02-26 | Auth Layout: Marketing paneli kaldırıldı | Sol taraftaki %50 marketing paneli kaldırıldı, logo formun üstüne küçük (sm) yerleştirildi, tek kolonlu centered layout |
 
 ---
 
@@ -309,6 +311,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-26 | Bug fixler ve UX iyileştirmeleri: 1) Confidence 6800% → 68% düzeltildi (4 dosya `*100` kaldırıldı + backend clamp). 2) PnL Chart daily view sahte interpolasyon kaldırıldı, tüm modlar gerçek günlük veri kullanıyor. 3) Duplicate analysis warning: aynı asset+timeframe 4 saat içinde → 409 uyarısı, View Existing / Analyze Again seçenekleri. 4) AnalysisDialog results drawer: mobilde alttan yukarı, desktopda sağdan sola. 5) Opportunity Radar: CF-recommended marketler, exit-phase gizleniyor. |
 | 2026-02-26 | Trade Visualizer forecast fix: 1) Forecast çizgisi artık SADECE son mumdan +48h ileriye çiziliyor (geçmişe bakma sorunu düzeltildi). 2) Entry/SL/TP artık `analysisId` varsa gerçek analiz sonucundan çekiliyor (`resolvedPlan` state). 3) Chart price lines + TradeLevelCards + RiskMetrics hepsi `resolvedPlan` kullanıyor. |
 | 2026-02-26 | 1) Landing page logo alignment: Navbar container `px-4` → `pl-0 pr-4` ile logo sol tarafa dayandı. 2) Dashboard crash fix: OpportunityRadar.tsx'de `primaryMarket` değişkeni kullanımdan önce tanımlanmıyordu (temporal dead zone), tanım filtreleme kodunun üstüne taşındı. |
+| 2026-02-26 | 1) Header/Footer arka plan rengi sayfa background'u ile eşitlendi: Navbar, Footer, Dashboard header/footer hepsi `bg-background` kullanıyor. 2) Auth (login/register) layout yeniden tasarlandı: Sol marketing paneli kaldırıldı, logo formun üstüne küçük yerleştirildi, tek kolonlu centered layout. |
 
 ---
 
