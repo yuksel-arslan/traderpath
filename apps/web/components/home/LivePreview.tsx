@@ -13,7 +13,7 @@ const PREVIEWS = [
       'Regime detection, capital flow direction, profit tracking, and top opportunities — all at a glance.',
     icon: BarChart3,
     color: '#2DD4BF',
-    image: '/images/landing/dashboard-preview.svg',
+    image: '/images/landing/dashboard-preview.png',
   },
   {
     title: 'Capital Flow + Asset Analysis',
@@ -22,7 +22,7 @@ const PREVIEWS = [
       '7-layer analysis: Global Liquidity, Market Flow, Rotation Matrix, Sector Activity, AI Recommendation, Asset Screening, Trade Visualizer.',
     icon: Layers,
     color: '#34d399',
-    image: '/images/landing/terminal-preview.svg',
+    image: '/images/landing/terminal-preview.png',
   },
   {
     title: 'Automated & Tailored Analysis',
@@ -31,7 +31,7 @@ const PREVIEWS = [
       'Two modes: Automated pipeline (Capital Flow → AI Pick → Full Report) or Tailored analysis where you pick any asset from 200+ options across Crypto, Stocks, Metals, Bonds, BIST.',
     icon: Crosshair,
     color: '#a78bfa',
-    image: '/images/landing/analyzer-preview.svg',
+    image: '/images/landing/analyzer-preview.png',
   },
   {
     title: 'Chart + Trade Plan',
@@ -40,7 +40,7 @@ const PREVIEWS = [
       'TradingView charts with Entry, SL, TP overlays. 48-hour price forecast with confidence intervals.',
     icon: LineChart,
     color: '#fb923c',
-    image: '/images/landing/visualizer-preview.svg',
+    image: '/images/landing/visualizer-preview.png',
   },
 ];
 
