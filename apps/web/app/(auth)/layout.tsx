@@ -145,7 +145,7 @@ export default function AuthLayout({
       {/* Right Side - Form */}
       <div className="flex-1 flex flex-col min-h-screen lg:min-h-0 relative overflow-hidden bg-slate-50 dark:bg-background">
         {/* Mobile Header */}
-        <div className="lg:hidden flex items-center justify-between pl-0 pr-4 py-4 border-b border-slate-200 dark:border-border bg-white/80 dark:bg-background/80 backdrop-blur-sm sticky top-0 z-20">
+        <div className="lg:hidden flex items-center justify-between px-4 py-4 border-b border-slate-200 dark:border-border bg-white/80 dark:bg-background/80 backdrop-blur-sm sticky top-0 z-20">
           <Link href="/">
             <TraderPathLogo size="sm" showText={true} />
           </Link>
