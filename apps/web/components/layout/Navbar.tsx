@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Menu, X, Sun, Moon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { TraderPathLogo } from '../common/TraderPathLogo';
+import { LanguageSelector } from '../common/LanguageSelector';
 
 const NAV_LINKS: { label: string; href: string }[] = [];
 
@@ -34,6 +35,8 @@ export function Navbar() {
 
         {/* Right */}
         <div className="flex items-center gap-2">
+          <LanguageSelector compact />
+
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className="p-1.5 text-slate-400 hover:text-black dark:hover:text-white transition-colors"
@@ -82,6 +85,11 @@ export function Navbar() {
                 {link.label}
               </a>
             ))}
+            <hr className="border-black/[0.06] dark:border-white/[0.06]" />
+            <div className="flex items-center justify-between py-1">
+              <span className="text-[11px] text-slate-400">LANGUAGE</span>
+              <LanguageSelector />
+            </div>
             <hr className="border-black/[0.06] dark:border-white/[0.06]" />
             <Link href="/login" onClick={closeMenu} className="text-[11px] text-slate-400 hover:text-black dark:hover:text-white py-1">
               SIGN IN
