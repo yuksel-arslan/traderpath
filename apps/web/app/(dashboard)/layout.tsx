@@ -298,7 +298,7 @@ export default function DashboardLayout({
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg supports-[backdrop-filter]:bg-card/60 border-b border-border/50">
-        <div className="w-full px-1 sm:px-3 lg:px-4">
+        <div className="w-full pl-0 pr-1 sm:pr-3 lg:pr-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <TraderPathLogo size="sm" showText={true} showTagline={false} href="/terminal" className="flex sm:hidden" />
