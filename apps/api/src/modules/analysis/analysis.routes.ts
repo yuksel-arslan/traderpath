@@ -729,14 +729,22 @@ Warn about potential traps and give protective advice.`;
   app.post('/full', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
+    // Outer try/catch to prevent global error handler from masking the real error
+    let bodySymbol = 'unknown';
+    let resolvedInterval = 'unknown';
+    let resolvedTradeType = 'unknown';
+    try {
     const userId = getUser(request).id;
     const isAdmin = getUser(request).isAdmin || false;
     const body = fullAnalysisSchema.parse(request.body);
+    bodySymbol = body.symbol;
     // Resolve tradeType from interval if provided
     const tradeType = resolveTradeType(body.interval, body.tradeType as TradeType);
+    resolvedTradeType = tradeType;
     // IMPORTANT: Use the interval exactly as provided by frontend, with fallback for legacy clients
     // Frontend MUST send interval (5m, 15m, 30m, 1h, 4h, 1d)
     const interval = body.interval || (tradeType === 'scalping' ? '15m' : tradeType === 'dayTrade' ? '4h' : '1d');
+    resolvedInterval = interval;
 
     // Debug log to track interval issues
     console.log(`[ANALYSIS] Symbol: ${body.symbol}, Requested interval: ${body.interval}, Resolved interval: ${interval}, TradeType: ${tradeType}`);
@@ -1450,10 +1458,20 @@ Explain the key risks and what conditions would need to change before trading th
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
-      logger.error({ error, errorMessage, errorStack, symbol: body.symbol, interval, tradeType }, 'Full Analysis error');
+      logger.error({ error, errorMessage, errorStack, symbol: body.symbol, interval, tradeType }, 'Full Analysis error (inner catch)');
       return reply.status(500).send({
         success: false,
         error: { code: 'ANALYSIS_ERROR', message: `Analysis failed for ${body.symbol} (${interval}): ${errorMessage}` },
+      });
+    }
+    } catch (outerError) {
+      // Catches errors BEFORE the analysis try block (schema validation, daily pass, duplicate check, etc.)
+      const errorMessage = outerError instanceof Error ? outerError.message : 'Unknown error';
+      const errorStack = outerError instanceof Error ? outerError.stack : undefined;
+      logger.error({ error: outerError, errorMessage, errorStack, symbol: bodySymbol, interval: resolvedInterval, tradeType: resolvedTradeType }, 'Full Analysis error (outer catch - pre-analysis phase)');
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'ANALYSIS_SETUP_ERROR', message: `Analysis setup failed for ${bodySymbol}: ${errorMessage}` },
       });
     }
   });
