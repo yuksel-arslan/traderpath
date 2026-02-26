@@ -268,7 +268,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-26 | Landing: ProblemSolution 3-column grid | Lagging Indicators / Information Overload / Invisible Capital Flows + SVG icons |
 | 2026-02-26 | Landing: Pipeline 3-step (Detect→Analyze→Act) | SVG flow arrows, color-coded steps, output descriptions |
 | 2026-02-26 | Landing: ComparisonTable (Typical vs TraderPath) | 5-row comparison, red X / green check visual indicators |
-| 2026-02-26 | Landing: LivePreview 3 platform cards | Dashboard/Terminal/Trade Visualizer with Lucide icons + gradient backgrounds |
+| 2026-02-26 | Landing: LivePreview 4 platform cards (2x2) | Dashboard/Terminal/Analyzer/Trade Visualizer — screenshot slots + gradient placeholders, hover scale+glow |
 | 2026-02-26 | Landing: ThreeServices credit-based cards | Capital Flow (50 cr), 7-Step (100 cr), Best Opportunities (50 cr) |
 | 2026-02-26 | Landing: SocialProof trust metrics + tech stack | 200+ assets, 5 markets, 24/7 scanning, 309+ analyses + tech badges |
 | 2026-02-26 | Landing: PricingSection Free/Pro/Enterprise | Credit-based, no subscriptions, Popular badge on Pro tier |
