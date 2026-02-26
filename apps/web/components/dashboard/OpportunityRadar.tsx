@@ -79,6 +79,8 @@ export function OpportunityRadar({ capitalFlow, selectedMarkets }: OpportunityRa
     );
   }
 
+  const primaryMarket = capitalFlow.recommendation.primaryMarket;
+
   // Only show markets that Capital Flow recommends (positive flow or early/mid phase)
   // Exit-phase markets are excluded — they represent outflows, not opportunities
   const markets = [...capitalFlow.markets]
@@ -91,8 +93,6 @@ export function OpportunityRadar({ capitalFlow, selectedMarkets }: OpportunityRa
       const pd = (PHASE_ORDER[a.phase] ?? 2) - (PHASE_ORDER[b.phase] ?? 2);
       return pd !== 0 ? pd : b.flow7d - a.flow7d;
     });
-
-  const primaryMarket = capitalFlow.recommendation.primaryMarket;
 
   return (
     <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-[#111111]">
