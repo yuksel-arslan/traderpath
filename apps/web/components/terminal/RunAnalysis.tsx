@@ -25,13 +25,13 @@ interface ScreenerAsset {
   change24h: number;
   volume: number;
   aiScore: number;
-  trend: string;
-  verdict: string;
-  direction: string;
+  trend: 'STRONG_UP' | 'UP' | 'FLAT' | 'DOWN' | 'STRONG_DOWN';
+  verdict: 'GO' | 'COND' | 'WAIT' | 'AVOID';
+  direction: 'LONG' | 'SHORT' | 'NEUTRAL';
   market: string;
-  phase: string;
+  phase: 'EARLY' | 'MID' | 'LATE' | 'EXIT';
   rsi: number;
-  macd: string;
+  macd: 'bullish' | 'bearish' | 'neutral';
   flowScore: number;
   analysisId?: string;
 }
@@ -143,7 +143,7 @@ export function RunAnalysis({
               return {
                 ...r,
                 classicDone: true,
-                tradePlan: asset ? calculateTradePlan(asset as ScreenerAsset) : undefined,
+                tradePlan: asset ? calculateTradePlan(asset) : undefined,
                 verdict: asset?.verdict,
                 direction: asset?.direction,
                 score: asset?.aiScore,
