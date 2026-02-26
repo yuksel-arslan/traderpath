@@ -861,11 +861,26 @@ Warn about potential traps and give protective advice.`;
       // Step 1-5: Run all prerequisite analysis steps in parallel
       // All steps use trade type specific timeframes and indicators
       const [marketPulse, assetScan, safetyCheck, timing, trapCheck] = await Promise.all([
-        analysisEngine.getMarketPulse(),
-        analysisEngine.scanAsset(body.symbol, tradeType),
-        analysisEngine.safetyCheck(body.symbol, tradeType),
-        analysisEngine.timingAnalysis(body.symbol, tradeType),
-        analysisEngine.trapCheck(body.symbol, tradeType),
+        analysisEngine.getMarketPulse().catch(err => {
+          logger.error({ err, step: 'marketPulse' }, '[Analysis] Step 1 failed');
+          throw new Error(`Step 1 (Market Pulse) failed: ${err instanceof Error ? err.message : String(err)}`);
+        }),
+        analysisEngine.scanAsset(body.symbol, tradeType).catch(err => {
+          logger.error({ err, step: 'scanAsset', symbol: body.symbol }, '[Analysis] Step 2 failed');
+          throw new Error(`Step 2 (Asset Scan) failed for ${body.symbol}: ${err instanceof Error ? err.message : String(err)}`);
+        }),
+        analysisEngine.safetyCheck(body.symbol, tradeType).catch(err => {
+          logger.error({ err, step: 'safetyCheck', symbol: body.symbol }, '[Analysis] Step 3 failed');
+          throw new Error(`Step 3 (Safety Check) failed for ${body.symbol}: ${err instanceof Error ? err.message : String(err)}`);
+        }),
+        analysisEngine.timingAnalysis(body.symbol, tradeType).catch(err => {
+          logger.error({ err, step: 'timing', symbol: body.symbol }, '[Analysis] Step 4 failed');
+          throw new Error(`Step 4 (Timing) failed for ${body.symbol}: ${err instanceof Error ? err.message : String(err)}`);
+        }),
+        analysisEngine.trapCheck(body.symbol, tradeType).catch(err => {
+          logger.error({ err, step: 'trapCheck', symbol: body.symbol }, '[Analysis] Step 5 failed');
+          throw new Error(`Step 5 (Trap Check) failed for ${body.symbol}: ${err instanceof Error ? err.message : String(err)}`);
+        }),
       ]);
 
       // Step 6: Preliminary Verdict - decides GO/WAIT/AVOID BEFORE trade plan
@@ -1434,10 +1449,11 @@ Explain the key risks and what conditions would need to change before trading th
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error({ error, errorMessage }, 'Full Analysis error');
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      logger.error({ error, errorMessage, errorStack, symbol: body.symbol, interval, tradeType }, 'Full Analysis error');
       return reply.status(500).send({
         success: false,
-        error: { code: 'ANALYSIS_ERROR', message: `Failed to complete analysis: ${errorMessage}` },
+        error: { code: 'ANALYSIS_ERROR', message: `Analysis failed for ${body.symbol} (${interval}): ${errorMessage}` },
       });
     }
   });
