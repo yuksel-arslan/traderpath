@@ -139,7 +139,6 @@ export async function POST(request: NextRequest) {
           }
 
           return NextResponse.json(
-            { success: false, error: { code: 'SERVER_ERROR', message: `Backend returned non-JSON (HTTP ${response.status}). This usually means the backend server is restarting or unreachable.` } },
             { success: false, error: { code: 'SERVER_ERROR', message: `Backend returned non-JSON response (HTTP ${response.status}). The API server may be misconfigured.` } },
             { status: 502 }
           );

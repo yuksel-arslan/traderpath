@@ -1,8 +1,8 @@
 'use client';
 
 // ===========================================
-// Dashboard — Railway/Linear Minimal Design
-// Mobile-first, clean, professional SaaS
+// Dashboard — Intelligence Command Center
+// Decision Engine layout with real-time data
 // ===========================================
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
@@ -11,7 +11,6 @@ import Link from 'next/link';
 import {
   Loader2,
   TrendingUp,
-  TrendingDown,
   ArrowUpRight,
   ArrowDownRight,
   AlertTriangle,
@@ -20,16 +19,18 @@ import {
 import { getApiUrl, authFetch } from '../../../lib/api';
 import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
 import { CategoryBar, useMarketFilter, useBistSubSector } from '@/components/dashboard/CategoryBar';
-import { ProfileCard } from '@/components/dashboard/ProfileCard';
-import { CapitalFlowStrip } from '@/components/dashboard/CapitalFlowStrip';
-import { HeroStats } from '@/components/dashboard/HeroStats';
 import { OpportunityRadar } from '@/components/dashboard/OpportunityRadar';
-import { AIBriefing } from '@/components/dashboard/AIBriefing';
-import { BehavioralScore } from '@/components/dashboard/BehavioralScore';
-import { TradingAssistant } from '@/components/dashboard/TradingAssistant';
 import { SmartAlertsWidget } from '@/components/dashboard/SmartAlertsWidget';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
 import type { MarketType } from '@/components/dashboard/CategoryBar';
+
+// New Intelligence UI components
+import { PrimaryDecision } from '@/components/dashboard/PrimaryDecision';
+import { ProfitTracker } from '@/components/dashboard/ProfitTracker';
+import { FlowChain } from '@/components/dashboard/FlowChain';
+import { AgentPanel } from '@/components/dashboard/AgentPanel';
+import { IntelligenceQuickActions } from '@/components/dashboard/IntelligenceQuickActions';
+import { ScoreRing, PulseDot, VerdictBadge } from '@/components/ui/intelligence';
 
 // Lazy-load chart
 const PnLChart = dynamic(
@@ -45,7 +46,7 @@ const PnLChart = dynamic(
 );
 
 // ===========================================
-// Types
+// Types (preserved from original)
 // ===========================================
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
 
@@ -163,7 +164,7 @@ interface SignalStats {
 }
 
 // ===========================================
-// Symbol → MarketType mapping
+// Symbol → MarketType mapping (preserved)
 // ===========================================
 const KNOWN_CRYPTO = new Set([
   'BTC','ETH','SOL','BNB','XRP','ADA','DOGE','DOT','AVAX','MATIC',
@@ -194,7 +195,7 @@ function detectMarketType(symbol: string): MarketType {
 }
 
 // ===========================================
-// Verdict config
+// Verdict config for Active Trade Card
 // ===========================================
 const VERDICT_CONFIG = {
   go: { label: 'GO', textColor: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-50 dark:bg-green-500/10' },
@@ -204,7 +205,7 @@ const VERDICT_CONFIG = {
 };
 
 // ===========================================
-// Active Trade Card
+// Active Trade Card (intelligence style)
 // ===========================================
 function ActiveTradeCard({
   trade,
@@ -216,19 +217,17 @@ function ActiveTradeCard({
   const verdict = VERDICT_CONFIG[trade.verdict] ?? VERDICT_CONFIG.wait;
   const pnl = trade.unrealizedPnL ?? 0;
   const isLong = trade.direction?.toLowerCase() === 'long';
-  const pnlColor = pnl >= 0 ? 'text-green-500' : 'text-red-500';
   const coinIcon = getCoinIcon(trade.symbol) || FALLBACK_COIN_ICON;
 
   return (
     <Link
       href={`/analyze/details/${trade.id}`}
-      className="flex-shrink-0 w-[200px] sm:w-[220px] border border-gray-200 dark:border-gray-800 rounded-lg p-4 bg-white dark:bg-[#111111] hover:border-gray-300 dark:hover:border-gray-700 transition-colors block"
+      className="flex-shrink-0 w-[200px] sm:w-[220px] rounded-xl p-4 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] hover:border-gray-300 dark:hover:border-white/[0.12] transition-all block"
     >
-      {/* Symbol + verdict */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
           <img src={coinIcon} alt={trade.symbol} className="w-6 h-6 rounded-full" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON; }} />
-          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 font-mono">
+          <span className="text-sm font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
             {trade.symbol.replace(/USDT$/i, '')}
           </span>
         </div>
@@ -237,7 +236,6 @@ function ActiveTradeCard({
         </span>
       </div>
 
-      {/* Direction + P&L */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
           {isLong ? (
@@ -245,16 +243,21 @@ function ActiveTradeCard({
           ) : (
             <ArrowDownRight className="w-3.5 h-3.5 text-red-500" />
           )}
-          <span className="text-xs text-gray-500 capitalize">{trade.direction ?? '—'}</span>
+          <span className="text-xs text-gray-500 capitalize">{trade.direction ?? '--'}</span>
         </div>
-        <span className={`text-sm font-semibold font-mono ${pnlColor}`}>
+        <span
+          className="text-sm font-bold"
+          style={{
+            color: pnl >= 0 ? '#00F5A0' : '#FF4757',
+            fontFamily: "'JetBrains Mono', monospace",
+          }}
+        >
           {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}%
         </span>
       </div>
 
-      {/* Counter-flow warning */}
       {isCounterFlow && (
-        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-gray-100 dark:border-white/[0.06]">
           <AlertTriangle className="w-3 h-3 text-yellow-500 shrink-0" />
           <span className="text-[10px] text-yellow-500">Counter-flow</span>
         </div>
@@ -268,8 +271,8 @@ function ActiveTradeCard({
 // ===========================================
 function EmptyState() {
   return (
-    <div className="border border-gray-200 dark:border-gray-800 rounded-lg p-10 bg-white dark:bg-[#111111] text-center">
-      <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
+    <div className="rounded-xl p-10 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] text-center">
+      <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-white/[0.06] flex items-center justify-center mx-auto mb-4">
         <TrendingUp className="w-6 h-6 text-gray-400" />
       </div>
       <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">
@@ -280,7 +283,8 @@ function EmptyState() {
       </p>
       <Link
         href="/analyze"
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-teal-500 hover:bg-teal-600 text-white text-sm font-medium transition-colors"
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:scale-105"
+        style={{ background: 'linear-gradient(135deg, #00F5A0, #00D4FF)', color: '#0A0B0F' }}
       >
         Start Analysis
       </Link>
@@ -314,7 +318,7 @@ export default function DashboardPage() {
   const initialLoadDone = useRef(false);
 
   // ===========================================
-  // Data Fetching
+  // Data Fetching (preserved from original)
   // ===========================================
   const fetchData = useCallback(async (forceRefresh = false) => {
     try {
@@ -495,7 +499,7 @@ export default function DashboardPage() {
   }, [fetchData]);
 
   // ===========================================
-  // Chart data
+  // Chart + PnL calculations (preserved)
   // ===========================================
   const buildChartData = () => {
     if (!performanceData?.daily?.length) {
@@ -557,7 +561,6 @@ export default function DashboardPage() {
       });
     }
 
-    // daily
     const todayStr = new Date().toISOString().split('T')[0];
     const todayPnl = daily.find((d) => d.date === todayStr)?.total || 0;
     return Array.from({ length: 8 }, (_, i) => {
@@ -597,6 +600,16 @@ export default function DashboardPage() {
 
   const periodPnL = calculatePeriodPnL();
 
+  // Equity curve from performance data
+  const equityCurve = useMemo(() => {
+    if (!performanceData?.daily?.length) return [];
+    let cumulative = 100;
+    return performanceData.daily.map((d) => {
+      cumulative += d.realized || 0;
+      return cumulative;
+    });
+  }, [performanceData]);
+
   // Filtered analyses
   const filteredAnalyses = useMemo(
     () => recentAnalyses.filter((a) => selectedMarkets.includes(detectMarketType(a.symbol))),
@@ -628,22 +641,21 @@ export default function DashboardPage() {
 
   const hasData = (userStats?.totalAnalyses || 0) > 0;
   const winRate = performanceData?.summary?.winRate ?? userStats?.accuracy ?? 0;
+  const totalTrades = performanceData?.summary?.totalTrades ?? userStats?.totalAnalyses ?? 0;
 
-  // ===========================================
   // Tour
-  // ===========================================
   const tourSteps: TourStep[] = [
     {
-      target: '#tour-flow-strip',
-      title: 'Capital Flow Pipeline',
-      content: 'See exactly where money is flowing — from global liquidity to specific action.',
+      target: '#tour-decision',
+      title: 'System Decision',
+      content: 'The primary market regime indicator. Shows whether conditions favor risk-on or risk-off positioning.',
       placement: 'bottom',
       spotlightPadding: 8,
     },
     {
-      target: '#tour-hero',
-      title: 'Your Key Metrics',
-      content: 'P&L, win rate, accuracy, active trades, and credits — all at a glance.',
+      target: '#tour-flow-chain',
+      title: 'Flow to Action Pipeline',
+      content: 'Visualizes the decision chain from capital flow analysis to trade plan execution.',
       placement: 'bottom',
       spotlightPadding: 8,
     },
@@ -663,40 +675,44 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen bg-white dark:bg-[#0A0A0A] flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-7 h-7 animate-spin text-teal-500 mx-auto mb-3" />
-          <p className="text-sm text-gray-500">Loading dashboard...</p>
+          <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: 'rgba(0,245,160,0.1)' }}>
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: '#00F5A0' }} />
+          </div>
+          <p className="text-sm text-gray-500 dark:text-white/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            Initializing Command Center...
+          </p>
         </div>
       </div>
     );
   }
 
   // ===========================================
-  // Render
+  // Render — Intelligence Command Center
   // ===========================================
   return (
     <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
-      <OnboardingTour steps={tourSteps} tourId="dashboard-v3" autoStart={false} />
+      <OnboardingTour steps={tourSteps} tourId="dashboard-v4" autoStart={false} />
 
-      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 space-y-5">
+      <div className="max-w-[1400px] mx-auto py-6 px-4 sm:px-6 space-y-4">
 
-        {/* Capital Flow Strip */}
-        <div id="tour-flow-strip">
-          <CapitalFlowStrip capitalFlow={capitalFlow} />
-        </div>
-
-        {/* Hero Stats Row */}
-        <div id="tour-hero">
-          <HeroStats
+        {/* ROW 1: Primary Decision + System Performance */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div id="tour-decision">
+            <PrimaryDecision capitalFlow={capitalFlow} />
+          </div>
+          <ProfitTracker
             periodPnL={periodPnL}
             pnlViewMode={pnlViewMode}
             setPnlViewMode={setPnlViewMode}
             winRate={winRate}
-            totalAnalyses={userStats?.totalAnalyses ?? 0}
-            accuracy={userStats?.accuracy ?? 0}
-            activeCount={userStats?.activeCount ?? 0}
-            activeProfitable={userStats?.activeProfitable ?? 0}
-            credits={credits}
+            totalTrades={totalTrades}
+            equityCurve={equityCurve}
           />
+        </div>
+
+        {/* ROW 2: Flow → Action Pipeline (full width) */}
+        <div id="tour-flow-chain">
+          <FlowChain capitalFlow={capitalFlow} recentAnalyses={recentAnalyses} />
         </div>
 
         {/* Market Filter */}
@@ -712,38 +728,45 @@ export default function DashboardPage() {
           <EmptyState />
         ) : (
           <>
-            {/* Main Grid: 2/3 left + 1/3 right */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* ROW 3: Three columns */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-              {/* Left column */}
-              <div className="lg:col-span-2 space-y-5">
-
-                {/* Opportunity Radar */}
+              {/* LEFT: Opportunity Radar */}
+              <div className="space-y-4">
                 <div id="tour-radar">
                   <OpportunityRadar
                     capitalFlow={capitalFlow}
                     selectedMarkets={selectedMarkets}
                   />
                 </div>
+              </div>
 
+              {/* CENTER: Performance Chart + Active Trades */}
+              <div className="space-y-4">
                 {/* Performance Chart */}
-                <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-[#111111]">
-                  <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                <div className="rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/[0.06]">
                     <div>
-                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                         Performance
                       </h3>
-                      <p className="text-sm text-gray-500 mt-0.5">
-                        {pnlViewMode === 'daily' ? "Today's" : pnlViewMode === 'weekly' ? '7-day' : '30-day'} cumulative returns
+                      <p className="text-xs text-gray-500 dark:text-white/40 mt-0.5">
+                        {pnlViewMode === 'daily' ? "Today's" : pnlViewMode === 'weekly' ? '7-day' : '30-day'} returns
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className={`text-sm font-semibold font-mono ${periodPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {periodPnL === 0 ? '—' : `${periodPnL >= 0 ? '+' : ''}${Math.abs(periodPnL).toFixed(1)}%`}
+                      <span
+                        className="text-sm font-bold"
+                        style={{
+                          color: periodPnL >= 0 ? '#00F5A0' : '#FF4757',
+                          fontFamily: "'JetBrains Mono', monospace",
+                        }}
+                      >
+                        {periodPnL === 0 ? '--' : `${periodPnL >= 0 ? '+' : ''}${Math.abs(periodPnL).toFixed(1)}%`}
                       </span>
                       <button
                         onClick={() => { setRefreshing(true); fetchData(true); }}
-                        className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors"
                         title="Refresh"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
@@ -755,148 +778,98 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Platform Stats — moved here to balance columns */}
+                {/* Platform Stats */}
                 {platformStats && (
-                  <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-[#111111]">
-                    <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                      <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                  <div className="rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
+                    <div className="px-5 py-3 border-b border-gray-100 dark:border-white/[0.06]">
+                      <span className="text-xs font-medium uppercase tracking-widest text-gray-500 dark:text-white/40">
                         Platform Stats
-                      </h3>
+                      </span>
                     </div>
-                    <div className="grid grid-cols-3 divide-x divide-gray-100 dark:divide-gray-800">
+                    <div className="grid grid-cols-3 divide-x divide-gray-100 dark:divide-white/[0.06]">
                       {[
                         {
-                          label: 'Platform Accuracy',
+                          label: 'Accuracy',
                           value: `${platformStats.accuracy.overall.toFixed(0)}%`,
-                          sub: platformStats.accuracy.sampleSize
-                            ? `${platformStats.accuracy.sampleSize} verified`
-                            : 'verified trades',
-                          valueColor:
-                            platformStats.accuracy.overall >= 60
-                              ? 'text-green-500'
-                              : 'text-yellow-500',
+                          color: platformStats.accuracy.overall >= 60 ? '#00F5A0' : '#FFB800',
                         },
                         {
-                          label: 'Total Analyses',
+                          label: 'Analyses',
                           value: platformStats.platform.totalAnalyses.toLocaleString(),
-                          sub: `${platformStats.platform.weeklyAnalyses} this week`,
-                          valueColor: 'text-gray-900 dark:text-gray-100',
+                          color: undefined,
                         },
                         {
-                          label: 'Active Users',
+                          label: 'Users',
                           value: platformStats.platform.totalUsers.toLocaleString(),
-                          sub: 'on platform',
-                          valueColor: 'text-gray-900 dark:text-gray-100',
+                          color: undefined,
                         },
                       ].map((item) => (
-                        <div key={item.label} className="px-6 py-4">
-                          <p className="text-xs font-medium text-gray-500 mb-1">{item.label}</p>
-                          <p className={`text-xl font-semibold font-mono ${item.valueColor}`}>{item.value}</p>
-                          {item.sub && <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>}
+                        <div key={item.label} className="px-4 py-3 text-center">
+                          <p className="text-[10px] font-medium text-gray-500 dark:text-white/35 mb-1">{item.label}</p>
+                          <p
+                            className="text-lg font-bold"
+                            style={{
+                              color: item.color || undefined,
+                              fontFamily: "'JetBrains Mono', monospace",
+                            }}
+                          >
+                            {!item.color && <span className="text-gray-900 dark:text-white">{item.value}</span>}
+                            {item.color && item.value}
+                          </p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-
-                {/* Active Trades */}
-                {activeTrades.length > 0 && (
-                  <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-[#111111]">
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                      <div>
-                        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                          Active Trades
-                        </h3>
-                        <p className="text-sm text-gray-500 mt-0.5">
-                          {activeTrades.length} open position{activeTrades.length !== 1 ? 's' : ''}
-                        </p>
-                      </div>
-                      <Link
-                        href="/trades"
-                        className="text-sm font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                      >
-                        All trades →
-                      </Link>
-                    </div>
-                    <div className="flex gap-3 overflow-x-auto px-6 py-4 scrollbar-hide">
-                      {activeTrades.slice(0, 10).map((trade) => (
-                        <ActiveTradeCard
-                          key={trade.id}
-                          trade={trade}
-                          isCounterFlow={counterFlowIds.has(trade.id)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Trading Assistant */}
-                <TradingAssistant
-                  userContext={{
-                    winRate,
-                    accuracy: userStats?.accuracy ?? 0,
-                    activeCount: userStats?.activeCount ?? 0,
-                    totalAnalyses: userStats?.totalAnalyses ?? 0,
-                    capitalFlowAction: capitalFlow?.recommendation?.action ?? 'wait',
-                    topMarket: capitalFlow?.markets?.slice().sort((a, b) => b.flow7d - a.flow7d)[0]?.market ?? 'BTC',
-                    phase: capitalFlow?.markets?.slice().sort((a, b) => b.flow7d - a.flow7d)[0]?.phase ?? 'mid',
-                    credits,
-                  }}
-                />
-
-                {/* Trader Profile */}
-                <ProfileCard />
               </div>
 
-              {/* Right column */}
-              <div className="space-y-5">
-                {/* AI Briefing */}
-                <AIBriefing
-                  userStats={userStats}
-                  recentAnalyses={recentAnalyses}
-                  capitalFlow={capitalFlow}
-                />
-
-                {/* Behavioral Score */}
-                <BehavioralScore
-                  userStats={userStats}
-                  performanceData={performanceData}
-                />
-
-                {/* Smart Alerts */}
+              {/* RIGHT: Agents + Alerts + Quick Actions */}
+              <div className="space-y-4">
+                <AgentPanel />
                 <SmartAlertsWidget />
-
-                {/* Quick Actions */}
-                <div className="border border-gray-200 dark:border-gray-800 rounded-lg p-5 bg-white dark:bg-[#111111]">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
-                    Quick Actions
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { href: '/analyze', label: 'New Analysis' },
-                      { href: '/flow', label: 'Capital Flow' },
-                      { href: '/signals', label: 'Signals' },
-                      { href: '/reports', label: 'Reports' },
-                    ].map((action) => (
-                      <Link
-                        key={action.href}
-                        href={action.href}
-                        className="text-center text-xs font-medium px-3 py-2.5 rounded-md border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
-                      >
-                        {action.label}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
+                <IntelligenceQuickActions />
               </div>
             </div>
 
+            {/* Active Trades (full width) */}
+            {activeTrades.length > 0 && (
+              <div className="rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/[0.06]">
+                  <div className="flex items-center gap-3">
+                    <PulseDot color="#00F5A0" size={6} />
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        Active Trades
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-white/40 mt-0.5">
+                        {activeTrades.length} open position{activeTrades.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/trades"
+                    className="text-xs font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  >
+                    All trades &rarr;
+                  </Link>
+                </div>
+                <div className="flex gap-3 overflow-x-auto px-5 py-4 scrollbar-hide">
+                  {activeTrades.slice(0, 10).map((trade) => (
+                    <ActiveTradeCard
+                      key={trade.id}
+                      trade={trade}
+                      isCounterFlow={counterFlowIds.has(trade.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
 
         {/* Tour trigger */}
         <div className="flex justify-end">
-          <TourTriggerButton tourId="dashboard-v3" />
+          <TourTriggerButton tourId="dashboard-v4" />
         </div>
       </div>
     </div>
