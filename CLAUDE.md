@@ -280,6 +280,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-26 | LivePreview: SVG placeholder görseller + Next.js Image | 4 adet detaylı SVG placeholder (dashboard/terminal/analyzer/visualizer), aspect-video, lazy loading, onerror fallback |
 | 2026-02-26 | Header/Footer: bg-background ile sayfa rengi eşitleme | Navbar `bg-white/bg-[#0A0A0A]` → `bg-background`, Footer `bg-slate-50/bg-[#0B1121]` → `bg-background`, Dashboard header `bg-card/80` → `bg-background/80`, Dashboard footer `bg-card/50` → `bg-background` |
 | 2026-02-26 | Auth Layout: Marketing paneli kaldırıldı | Sol taraftaki %50 marketing paneli kaldırıldı, logo formun üstüne küçük (sm) yerleştirildi, tek kolonlu centered layout |
+| 2026-02-26 | LivePreview: Perspective Tilt 3D layout | Kartlar perspective(1200px) + rotateY(±3deg) ile açılı yerleşim, hover'da düzleşir + scale(1.03) + translateZ(20px), cubic-bezier geçiş |
 
 ---
 

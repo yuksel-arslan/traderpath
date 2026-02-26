@@ -84,20 +84,43 @@ export function LivePreview() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div
+          className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8"
+          style={{ perspective: '1200px' }}
+        >
           {PREVIEWS.map((preview, i) => {
             const Icon = preview.icon;
             const hasError = imgErrors[i];
+            // Left column (0, 2) tilts right, right column (1, 3) tilts left
+            const isLeft = i % 2 === 0;
+            const tiltDeg = isLeft ? 3 : -3;
+
             return (
               <div
                 key={preview.title}
                 className={cn(
-                  'group rounded-xl overflow-hidden border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.03] transition-all duration-700 hover:border-gray-300 dark:hover:border-white/[0.12] hover:scale-[1.02] hover:shadow-lg dark:hover:shadow-[0_0_30px_rgba(45,212,191,0.08)]',
+                  'group rounded-xl overflow-hidden border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.03] transition-all duration-700 hover:border-gray-300 dark:hover:border-white/[0.12] hover:shadow-2xl dark:hover:shadow-[0_8px_40px_rgba(45,212,191,0.12)]',
                   visible
                     ? 'opacity-100 translate-y-0'
-                    : 'opacity-0 translate-y-4',
+                    : 'opacity-0 translate-y-6',
                 )}
-                style={{ transitionDelay: `${i * 120}ms` }}
+                style={{
+                  transitionDelay: `${i * 120}ms`,
+                  transform: visible
+                    ? `rotateY(${tiltDeg}deg)`
+                    : `rotateY(${tiltDeg}deg) translateY(24px)`,
+                  transformStyle: 'preserve-3d',
+                  transition: 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform =
+                    'rotateY(0deg) scale(1.03) translateZ(20px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = visible
+                    ? `rotateY(${tiltDeg}deg)`
+                    : `rotateY(${tiltDeg}deg) translateY(24px)`;
+                }}
               >
                 {/* Screenshot / placeholder area */}
                 <div className="relative aspect-video overflow-hidden rounded-t-lg">
