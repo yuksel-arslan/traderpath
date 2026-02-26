@@ -76,7 +76,7 @@ export function PrimaryDecision({ capitalFlow }: PrimaryDecisionProps) {
 
   const bias = capitalFlow.liquidityBias;
   const config = regimeConfig[bias] || regimeConfig.neutral;
-  const confidence = Math.round(capitalFlow.recommendation.confidence * 100);
+  const confidence = Math.min(100, Math.round(capitalFlow.recommendation.confidence));
 
   return (
     <div

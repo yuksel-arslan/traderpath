@@ -67,13 +67,13 @@ export function MarketContextPanel({ capitalFlow }: MarketContextPanelProps) {
           <span className="text-[11px] text-gray-500 dark:text-white/40">Confidence</span>
           <div className="flex items-center gap-2">
             <ScoreRing
-              score={Math.round(capitalFlow.recommendation.confidence * 100)}
+              score={Math.min(100, Math.round(capitalFlow.recommendation.confidence))}
               size={24}
               strokeWidth={2}
               color={regimeColor}
             />
             <span className="text-xs font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-              {Math.round(capitalFlow.recommendation.confidence * 100)}%
+              {Math.min(100, Math.round(capitalFlow.recommendation.confidence))}%
             </span>
           </div>
         </div>

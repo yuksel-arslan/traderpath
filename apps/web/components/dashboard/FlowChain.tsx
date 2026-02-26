@@ -58,7 +58,7 @@ function buildFlowSteps(
   const flowValue = topMarket
     ? `${topMarket.flow7d >= 0 ? '+' : ''}$${Math.abs(topMarket.flow7d).toFixed(1)}B`
     : '--';
-  const flowScore = Math.min(100, Math.max(0, Math.round(capitalFlow.recommendation.confidence * 100)));
+  const flowScore = Math.min(100, Math.max(0, Math.round(capitalFlow.recommendation.confidence)));
 
   const sectorName = capitalFlow.recommendation.sectors?.[0] || capitalFlow.recommendation.primaryMarket || '--';
   const sectorScore = Math.min(100, Math.max(0, flowScore - 5));
