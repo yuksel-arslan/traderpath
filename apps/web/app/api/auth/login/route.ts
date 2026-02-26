@@ -10,8 +10,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const maxDuration = 60;
 
 // Resolve backend URL with safety check:
-// In production, NEVER allow localhost (which next.config.js may inject as fallback).
-const _rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io';
+// 1. Never allow localhost in production (next.config.js may inject it at build time).
+// 2. Strip trailing slash to avoid double-slash in URL paths.
+const _rawApiUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io').replace(/\/+$/, '');
 const API_URL =
   process.env.NODE_ENV === 'production' && _rawApiUrl.includes('localhost')
     ? 'https://api.traderpath.io'
@@ -124,7 +125,12 @@ export async function POST(request: NextRequest) {
           data = await response.json();
         } else {
           const text = await response.text();
-          console.error(`[Login] Backend returned non-JSON (attempt ${attempt + 1}):`, response.status, text.slice(0, 300));
+          console.error(`[Login] Backend returned non-JSON (attempt ${attempt + 1}):`, {
+            status: response.status,
+            contentType,
+            apiUrl: API_URL,
+            body: text.slice(0, 500),
+          });
 
           // Retry transient errors on first attempt
           if (attempt === 0 && TRANSIENT_STATUS_CODES.includes(response.status)) {
@@ -134,6 +140,7 @@ export async function POST(request: NextRequest) {
 
           return NextResponse.json(
             { success: false, error: { code: 'SERVER_ERROR', message: `Backend returned non-JSON (HTTP ${response.status}). This usually means the backend server is restarting or unreachable.` } },
+            { success: false, error: { code: 'SERVER_ERROR', message: `Backend returned non-JSON response (HTTP ${response.status}). The API server may be misconfigured.` } },
             { status: 502 }
           );
         }
@@ -153,7 +160,12 @@ export async function POST(request: NextRequest) {
           ? 'Request timed out'
           : err.message || 'Connection failed';
 
-        console.error(`[Login] Backend fetch failed (attempt ${attempt + 1}):`, lastError);
+        console.error(`[Login] Backend fetch failed (attempt ${attempt + 1}):`, {
+          error: lastError,
+          errorName: err.name,
+          apiUrl: API_URL,
+          targetUrl: `${API_URL}/api/auth/login`,
+        });
 
         // Retry on first attempt for connection errors
         if (attempt === 0) {
@@ -165,7 +177,7 @@ export async function POST(request: NextRequest) {
           {
             success: false,
             error: {
-              code: 'SERVER_ERROR',
+              code: 'CONNECTION_ERROR',
               message: err.name === 'AbortError'
                 ? `Backend server did not respond within ${BACKEND_TIMEOUT_MS / 1000}s. Please try again.`
                 : `Cannot connect to backend server (${err.message}). Please try again later.`,
@@ -188,7 +200,7 @@ export async function POST(request: NextRequest) {
     if (!response.ok || !data.success) {
       const parsed = parseBackendError(data, response.status);
 
-      // Don't mask server errors as "Invalid credentials"
+      // Log full error details for Vercel function logs (critical for debugging)
       if (isServerError(response.status, parsed.code)) {
         console.error('[Login] Backend server error:', {
           status: response.status,

@@ -252,6 +252,7 @@ Kullanıcı Hakları Aktif:
 | Tarih | Bug | Kök Neden | Çözüm | Dosyalar |
 |-------|-----|-----------|-------|----------|
 | 2026-02-24 | Login "Server is temporarily unavailable" | `next.config.js` env fallback `http://localhost:4000` → build time'da inline edilince `route.ts`'deki production fallback (`https://api.traderpath.io`) asla çalışmıyor | 1) `next.config.js` fallback'i production-aware yapıldı 2) Tüm 16 auth route'a localhost safety check eklendi | `next.config.js`, `apps/web/app/api/auth/*/route.ts` (16 dosya) |
+| 2026-02-24 | Login hala "Server is temporarily unavailable" gösteriyor | 3 kök neden: 1) `login/route.ts` backend hata mesajını maskeliyor → gerçek hatayı gizliyor 2) Trailing slash koruması yok → `API_URL/` varsa `//api/auth/login` oluyor 3) Diagnostik endpoint yok → backend erişimi test edilemiyor | 1) Backend error maskeleme kaldırıldı, gerçek hata pass-through yapılıyor 2) Tüm 16 auth route + `next.config.js`'e trailing slash strip eklendi 3) `/api/debug/health` diagnostik endpoint oluşturuldu 4) Kapsamlı error loglama eklendi | `login/route.ts`, `next.config.js`, tüm auth route'lar, yeni `debug/health/route.ts` |
 
 ---
 
@@ -260,6 +261,7 @@ Kullanıcı Hakları Aktif:
 | Tarih | Özet |
 |-------|------|
 | 2026-02-24 | Login "temporarily unavailable" bug fix: `next.config.js` env fallback çakışması düzeltildi. Tüm auth route'lara production localhost safety check eklendi. |
+| 2026-02-24 | Login hata maskeleme fix: Backend hata mesajları artık kullanıcıya iletiliyor. Trailing slash koruması eklendi. `/api/debug/health` diagnostik endpoint oluşturuldu. |
 
 ---
 
