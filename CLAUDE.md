@@ -264,6 +264,15 @@ Kullanıcı Hakları Aktif:
 | 2026-02-26 | Terminal: AssetTable ScoreRing(28px) + verdict filter | Kompakt ScoreRing + VerdictBadge + Analyze/Chart action butonları + verdict filter tabs |
 | 2026-02-26 | Terminal: RunAnalysis tahmin + INP fix + duplicate fix | requestAnimationFrame ile INP <100ms, zaman/kredi tahmini, Quick Add duplicate filtreleme |
 | 2026-02-26 | Terminal: TradeVisualizer risk metrics + forecast panel | Confidence bar + mini forecast sparkline + Position Size/Max Loss/R:R risk metrikleri |
+| 2026-02-26 | Landing Page: 13-section content overhaul | Hero→Stats→Problem→Pipeline→7-Layer→Comparison→Preview→Performance→Services→Pricing→Social→CTA→Footer |
+| 2026-02-26 | Landing: ProblemSolution 3-column grid | Lagging Indicators / Information Overload / Invisible Capital Flows + SVG icons |
+| 2026-02-26 | Landing: Pipeline 3-step (Detect→Analyze→Act) | SVG flow arrows, color-coded steps, output descriptions |
+| 2026-02-26 | Landing: ComparisonTable (Typical vs TraderPath) | 5-row comparison, red X / green check visual indicators |
+| 2026-02-26 | Landing: LivePreview 3 platform cards | Dashboard/Terminal/Trade Visualizer with Lucide icons + gradient backgrounds |
+| 2026-02-26 | Landing: ThreeServices credit-based cards | Capital Flow (50 cr), 7-Step (100 cr), Best Opportunities (50 cr) |
+| 2026-02-26 | Landing: SocialProof trust metrics + tech stack | 200+ assets, 5 markets, 24/7 scanning, 309+ analyses + tech badges |
+| 2026-02-26 | Landing: PricingSection Free/Pro/Enterprise | Credit-based, no subscriptions, Popular badge on Pro tier |
+| 2026-02-26 | Landing: PerformanceChart metrics grid | Total Signals, Win Rate, Avg R:R, Max Drawdown + disclaimer |
 
 ---
 
@@ -285,6 +294,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-24 | Login hata maskeleme fix: Backend hata mesajları artık kullanıcıya iletiliyor. Trailing slash koruması eklendi. `/api/debug/health` diagnostik endpoint oluşturuldu. |
 | 2026-02-26 | Dashboard + Analyze sayfaları "Decision Engine" konseptiyle yeniden tasarlandı. 5 paylaşılan intelligence UI bileşeni (ScoreRing, PulseDot, FlowArrow, Sparkline, VerdictBadge), 5 dashboard alt bileşeni (PrimaryDecision, ProfitTracker, FlowChain, AgentPanel, IntelligenceQuickActions), 4 analyze alt bileşeni (MarketContextPanel, TrendingAssets, AnalysisPipelineCard, RecentAnalysisRow) oluşturuldu. Tüm mevcut API bağlantıları ve veri akışları korundu. |
 | 2026-02-26 | Terminal sayfası "Decision Engine Control Room" konseptiyle yeniden tasarlandı. 2700 satırlık monolitik dosya 9 bileşene ayrıldı: TerminalSummaryBar, TerminalSidebar, GlobalLiquidity, MarketFlow, RotationMatrix, SectorActivity, AIRecommendation, AssetTable, RunAnalysis, TradeVisualizerMetrics. Her bölümde TerminalSummaryBar özet barı eklendi. Sidebar SELECTED bölümü ScoreRing+VerdictBadge ile zenginleştirildi. L3'e heatmap/list toggle, L4'e decision bar + gate check list, AssetTable'a verdict filter + action butonları, RunAnalysis'e INP fix + tahmin + duplicate fix, TradeVisualizer'a risk metrics + forecast panel eklendi. TradingView chart'a dokunulmadı. Tüm API bağlantıları ve veri akışları korundu. |
+| 2026-02-26 | Landing page 13-section content overhaul: Hero mesajı güncellendi ("See Where Smart Money Moves"), 6 yeni bileşen oluşturuldu (ProblemSolution, Pipeline, ComparisonTable, LivePreview, ThreeServices, SocialProof), FlowAccordion katman açıklamaları güncellendi, PricingSection (Free/Pro/Enterprise kredi bazlı), PerformanceChart metrik grid + disclaimer eklendi, Stats Bar etiketleri güncellendi, Final CTA güncellendi, Footer "default" variant'a geçirildi. Mevcut gradient animasyonlar ve chart'a dokunulmadı. |
 
 ---
 
