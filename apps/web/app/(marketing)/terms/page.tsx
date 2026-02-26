@@ -169,7 +169,7 @@ export default function TermsOfServicePage() {
               <div className="bg-card border rounded-lg p-4">
                 <h3 className="font-semibold text-foreground mb-2">Credit System</h3>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>Each analysis costs 25 credits</li>
+                  <li>Asset Analysis requires a Daily Pass (100 credits/day for up to 10 analyses)</li>
                   <li>Credits are non-transferable between accounts</li>
                   <li>Unused credits do not expire</li>
                   <li>Bonus credits may be earned through platform activities</li>

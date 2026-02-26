@@ -97,15 +97,16 @@ export const MLIS_PRO_LAYERS = [
   { layer: 'Verdict', description: 'Confirmation verdict' },
 ];
 
-// Feature credit costs
-// NOTE: These values must match backend subscription-tiers.ts SERVICE_CREDITS
+// Feature credit costs (per-use costs after free allocations)
+// NOTE: These values must match backend credit-costs.service.ts DEFAULT_CREDIT_COSTS
 export const FEATURE_COSTS = [
-  { name: 'Capital Flow L3+L4', credits: 5, description: 'Sector analysis + AI recommendations' },
-  { name: 'Asset Analysis', credits: 10, description: '7-Step or MLIS Pro analysis' },
-  { name: 'AI Expert Chat', credits: 5, description: 'Per chat session' },
+  { name: 'Capital Flow L3', credits: 25, description: 'Sector Activity daily pass' },
+  { name: 'Capital Flow L4', credits: 25, description: 'AI Recommendations daily pass' },
+  { name: 'Asset Analysis', credits: 100, description: 'Daily pass — 10 analyses/day' },
+  { name: 'AI Expert Chat', credits: 5, description: 'Per question (3 free/analysis)' },
   { name: 'AI Concierge', credits: 5, description: 'Per chat session' },
-  { name: 'PDF Report', credits: 5, description: 'Full analysis report' },
-  { name: 'Email Send', credits: 5, description: 'Send report via email' },
+  { name: 'PDF Report', credits: 5, description: 'Per download (2 free/analysis)' },
+  { name: 'Email Send', credits: 5, description: 'Per email (2 free/analysis)' },
   { name: 'Price Alert', credits: 1, description: 'Per alert created' },
 ];
 
@@ -258,9 +259,9 @@ export const SIGNAL_SUBSCRIPTIONS: SignalSubscription[] = [
   },
 ];
 
-// Per-use costs (for active traders who want to do their own analysis)
+// Daily Pass costs (must match backend daily-pass.service.ts DAILY_PASS_CONFIG)
 export const DAILY_PASS_COSTS = {
-  CAPITAL_FLOW_L3: { cost: 5, name: 'Sector Analysis', description: 'Layer 3 - Sector drill-down' },
-  CAPITAL_FLOW_L4: { cost: 5, name: 'AI Recommendations', description: 'Layer 4 - BUY/SELL signals' },
-  ASSET_ANALYSIS: { cost: 10, name: 'Asset Analysis', description: '7-Step + MLIS Pro analysis' },
+  CAPITAL_FLOW_L3: { cost: 25, name: 'Sector Analysis', description: 'Layer 3 - Sector drill-down (unlimited/day)' },
+  CAPITAL_FLOW_L4: { cost: 25, name: 'AI Recommendations', description: 'Layer 4 - BUY/SELL signals (unlimited/day)' },
+  ASSET_ANALYSIS: { cost: 100, maxUsage: 10, name: 'Asset Analysis', description: '7-Step + MLIS Pro (10 analyses/day)' },
 };

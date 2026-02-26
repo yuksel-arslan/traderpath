@@ -95,7 +95,7 @@ const CATEGORIES = [
 const FAQS = [
   {
     question: 'How many credits does an analysis cost?',
-    answer: 'Each analysis costs 25 credits. You can earn bonus credits through various activities on the platform, such as completing your first analysis (3-credit bonus) or referring friends.',
+    answer: 'Analyses require a Daily Analysis Pass (100 credits) which gives you up to 10 analyses per day. The pass resets at midnight UTC. You can also earn bonus credits through daily activities like quizzes, referrals, and streaks.',
   },
   {
     question: 'What timeframes are available for analysis?',
@@ -123,7 +123,7 @@ const FAQS = [
   },
   {
     question: 'How do scheduled analyses work?',
-    answer: 'Scheduled analyses let you automate recurring analysis for your favorite coins. You can set daily, weekly, or monthly schedules. Each scheduled analysis costs 25 credits and results are delivered via email, Telegram, or Discord.',
+    answer: 'Scheduled analyses let you automate recurring analysis for your favorite coins. You can set daily, weekly, or monthly schedules. Scheduled analyses use your Daily Analysis Pass (or cost 25 credits each without a pass) and results are delivered via email, Telegram, or Discord.',
   },
 ];
 
