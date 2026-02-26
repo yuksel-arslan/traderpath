@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { cn } from '../../lib/utils';
 import { BarChart3, Layers, Crosshair, LineChart } from 'lucide-react';
 
@@ -12,8 +13,7 @@ const PREVIEWS = [
       'Regime detection, capital flow direction, profit tracking, and top opportunities — all at a glance.',
     icon: BarChart3,
     color: '#2DD4BF',
-    // TODO: Replace with actual screenshot once available
-    image: '/images/landing/dashboard-preview.png',
+    image: '/images/landing/dashboard-preview.svg',
   },
   {
     title: 'Capital Flow + Asset Analysis',
@@ -22,8 +22,7 @@ const PREVIEWS = [
       '7-layer analysis: Global Liquidity, Market Flow, Rotation Matrix, Sector Activity, AI Recommendation, Asset Screening, Trade Visualizer.',
     icon: Layers,
     color: '#34d399',
-    // TODO: Replace with actual screenshot once available
-    image: '/images/landing/terminal-preview.png',
+    image: '/images/landing/terminal-preview.svg',
   },
   {
     title: 'Automated & Tailored Analysis',
@@ -32,8 +31,7 @@ const PREVIEWS = [
       'Two modes: Automated pipeline (Capital Flow → AI Pick → Full Report) or Tailored analysis where you pick any asset from 200+ options across Crypto, Stocks, Metals, Bonds, BIST.',
     icon: Crosshair,
     color: '#a78bfa',
-    // TODO: Replace with actual screenshot once available
-    image: '/images/landing/analyzer-preview.png',
+    image: '/images/landing/analyzer-preview.svg',
   },
   {
     title: 'Chart + Trade Plan',
@@ -42,8 +40,7 @@ const PREVIEWS = [
       'TradingView charts with Entry, SL, TP overlays. 48-hour price forecast with confidence intervals.',
     icon: LineChart,
     color: '#fb923c',
-    // TODO: Replace with actual screenshot once available
-    image: '/images/landing/visualizer-preview.png',
+    image: '/images/landing/visualizer-preview.svg',
   },
 ];
 
@@ -61,6 +58,10 @@ export function LivePreview() {
     );
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
+  }, []);
+
+  const handleImageError = useCallback((index: number) => {
+    setImgErrors((prev) => ({ ...prev, [index]: true }));
   }, []);
 
   return (
@@ -86,7 +87,7 @@ export function LivePreview() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {PREVIEWS.map((preview, i) => {
             const Icon = preview.icon;
-            const hasImage = !imgErrors[i];
+            const hasError = imgErrors[i];
             return (
               <div
                 key={preview.title}
@@ -99,18 +100,18 @@ export function LivePreview() {
                 style={{ transitionDelay: `${i * 120}ms` }}
               >
                 {/* Screenshot / placeholder area */}
-                <div className="relative h-48 overflow-hidden rounded-t-lg">
-                  {hasImage ? (
-                    <img
+                <div className="relative aspect-video overflow-hidden rounded-t-lg">
+                  {!hasError ? (
+                    <Image
                       src={preview.image}
-                      alt={`${preview.page} preview`}
-                      className="w-full h-full object-cover object-top"
-                      onError={() =>
-                        setImgErrors((prev) => ({ ...prev, [i]: true }))
-                      }
+                      alt={`${preview.page} — ${preview.title}`}
+                      width={1280}
+                      height={720}
+                      loading="lazy"
+                      className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
+                      onError={() => handleImageError(i)}
                     />
                   ) : (
-                    /* Placeholder gradient box — TODO: replace with real screenshots */
                     <div
                       className="w-full h-full flex items-center justify-center"
                       style={{

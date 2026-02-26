@@ -277,6 +277,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-26 | AnalysisDialog: Results drawer format | Mobilde bottom-up (%85vh), desktopda sağdan sola (520px panel) |
 | 2026-02-26 | OpportunityRadar: CF-only filtering | Primary market önce, exit-phase ve negatif flow gizleniyor |
 | 2026-02-26 | AnimatedCounter: Landing Stats count-up | IntersectionObserver + rAF + easeOutCubic, viewport'a girince 0→değer animasyonu |
+| 2026-02-26 | LivePreview: SVG placeholder görseller + Next.js Image | 4 adet detaylı SVG placeholder (dashboard/terminal/analyzer/visualizer), aspect-video, lazy loading, onerror fallback |
 
 ---
 
@@ -291,6 +292,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-26 | Dashboard PnL Chart günlük view sahte veri gösteriyor | 1D modu günün PnL'ini 8 saatlik slota lineer interpolasyon yapıyor → gerçek intra-day veri yok | Tüm view modları (1D/7D/30D) aynı gerçek günlük API verisini kullanacak şekilde birleştirildi | `dashboard/page.tsx` |
 | 2026-02-26 | Opportunity Radar tüm marketleri gösteriyor | Filtre sadece user selection'a bakıyor, CF önerisini dikkate almıyor | Exit-phase ve negatif flow marketler filtrelendi, primary market önce gösteriliyor | `OpportunityRadar.tsx` |
 | 2026-02-26 | Trade Visualizer forecast çizgisi geçmişe bakıyor + Entry/SL/TP 0.00 | 1) Forecast `entryIdx` en yakın fiyatlı geçmiş mumu buluyor → forecast geçmişten başlıyor 2) Trade plan her zaman sentetik `calculateTradePlan()` kullanıyor, analiz sonucu bağlanmamış | 1) Forecast SADECE son mumdan başlayıp +48h ileriye çiziliyor 2) `analysisId` varsa API'den gerçek entry/SL/TP çekiliyor (`resolvedPlan` state) 3) Chart + TradeLevelCards + RiskMetrics `resolvedPlan` kullanıyor | `terminal/page.tsx` |
+| 2026-02-26 | Landing "Intelligence in Action" kırık image tag'leri | PNG görseller referanslanıyor ama `public/images/landing/` dizini ve dosyaları yok → kırık image icon gösteriliyor | 1) 4 adet detaylı SVG placeholder oluşturuldu (dashboard/terminal/analyzer/visualizer) 2) `img` → Next.js `Image` component 3) `aspect-video` 16:9 ratio 4) `loading="lazy"` 5) Hover scale animasyonu 6) Gradient fallback korundu | `LivePreview.tsx`, `public/images/landing/*.svg` |
 
 ---
 
