@@ -73,27 +73,45 @@ const FALLBACK_CRYPTO_LOGOS: Record<string, AssetLogoInfo> = {
 };
 
 const FALLBACK_STOCK_LOGOS: Record<string, AssetLogoInfo> = {
-  SPY: { logoUrl: '', color: '#E31937', name: 'S&P 500 ETF' },
-  QQQ: { logoUrl: '', color: '#0066CC', name: 'Nasdaq 100 ETF' },
-  AAPL: { logoUrl: 'https://logo.clearbit.com/apple.com', color: '#A2AAAD', name: 'Apple Inc.' },
+  // Index ETFs
+  SPY: { logoUrl: 'https://logo.clearbit.com/ssga.com', color: '#00529B', name: 'SPDR S&P 500 ETF' },
+  QQQ: { logoUrl: 'https://logo.clearbit.com/invesco.com', color: '#002D72', name: 'Invesco QQQ Trust' },
+  DIA: { logoUrl: 'https://logo.clearbit.com/ssga.com', color: '#00529B', name: 'SPDR Dow Jones ETF' },
+  // US Tech
+  AAPL: { logoUrl: 'https://logo.clearbit.com/apple.com', color: '#000000', name: 'Apple Inc.' },
   MSFT: { logoUrl: 'https://logo.clearbit.com/microsoft.com', color: '#00A4EF', name: 'Microsoft' },
   NVDA: { logoUrl: 'https://logo.clearbit.com/nvidia.com', color: '#76B900', name: 'NVIDIA' },
   GOOGL: { logoUrl: 'https://logo.clearbit.com/google.com', color: '#4285F4', name: 'Alphabet' },
   AMZN: { logoUrl: 'https://logo.clearbit.com/amazon.com', color: '#FF9900', name: 'Amazon' },
   META: { logoUrl: 'https://logo.clearbit.com/meta.com', color: '#0668E1', name: 'Meta' },
-  TSLA: { logoUrl: 'https://logo.clearbit.com/tesla.com', color: '#CC0000', name: 'Tesla' },
+  TSLA: { logoUrl: 'https://logo.clearbit.com/tesla.com', color: '#E31937', name: 'Tesla' },
+  AMD: { logoUrl: 'https://logo.clearbit.com/amd.com', color: '#ED1C24', name: 'AMD' },
+  // US Finance
+  JPM: { logoUrl: 'https://logo.clearbit.com/jpmorganchase.com', color: '#0F3D66', name: 'JPMorgan Chase' },
+  V: { logoUrl: 'https://logo.clearbit.com/visa.com', color: '#1A1F71', name: 'Visa' },
+  MA: { logoUrl: 'https://logo.clearbit.com/mastercard.com', color: '#EB001B', name: 'Mastercard' },
+  // BIST (Borsa Istanbul)
+  THYAO: { logoUrl: 'https://logo.clearbit.com/turkishairlines.com', color: '#C8102E', name: 'Turkish Airlines' },
+  GARAN: { logoUrl: 'https://logo.clearbit.com/garantibbva.com.tr', color: '#00854A', name: 'Garanti BBVA' },
+  AKBNK: { logoUrl: 'https://logo.clearbit.com/akbank.com', color: '#E3000B', name: 'Akbank' },
+  SISE: { logoUrl: 'https://logo.clearbit.com/sisecam.com.tr', color: '#004E9E', name: 'Sisecam' },
+  EREGL: { logoUrl: 'https://logo.clearbit.com/erdemir.com.tr', color: '#003A70', name: 'Eregli Demir Celik' },
+  KCHOL: { logoUrl: 'https://logo.clearbit.com/koc.com.tr', color: '#003DA5', name: 'Koc Holding' },
 };
 
 const FALLBACK_METAL_LOGOS: Record<string, AssetLogoInfo> = {
-  GLD: { logoUrl: '', color: '#FFD700', name: 'Gold ETF' },
-  SLV: { logoUrl: '', color: '#C0C0C0', name: 'Silver ETF' },
-  IAU: { logoUrl: '', color: '#D4AF37', name: 'Gold Trust' },
+  GLD: { logoUrl: 'https://logo.clearbit.com/ssga.com', color: '#FFD700', name: 'SPDR Gold Shares' },
+  SLV: { logoUrl: 'https://logo.clearbit.com/ishares.com', color: '#C0C0C0', name: 'iShares Silver Trust' },
+  IAU: { logoUrl: 'https://logo.clearbit.com/ishares.com', color: '#D4AF37', name: 'iShares Gold Trust' },
+  XAUUSD: { logoUrl: '', color: '#FFD700', name: 'Gold/USD' },
+  XAGUSD: { logoUrl: '', color: '#C0C0C0', name: 'Silver/USD' },
 };
 
 const FALLBACK_BOND_LOGOS: Record<string, AssetLogoInfo> = {
-  TLT: { logoUrl: '', color: '#1E3A8A', name: '20+ Year Treasury' },
-  BND: { logoUrl: '', color: '#166534', name: 'Total Bond Market' },
-  IEF: { logoUrl: '', color: '#7C3AED', name: '7-10 Year Treasury' },
+  TLT: { logoUrl: 'https://logo.clearbit.com/ishares.com', color: '#1E3A8A', name: 'iShares 20+ Year Treasury' },
+  BND: { logoUrl: 'https://logo.clearbit.com/vanguard.com', color: '#8B2332', name: 'Vanguard Total Bond Market' },
+  IEF: { logoUrl: 'https://logo.clearbit.com/ishares.com', color: '#000000', name: 'iShares 7-10 Year Treasury' },
+  SHY: { logoUrl: 'https://logo.clearbit.com/ishares.com', color: '#2563EB', name: 'iShares 1-3 Year Treasury' },
 };
 
 const FALLBACK_CACHE: LogoCache = {
@@ -301,6 +319,10 @@ export function detectAssetClass(symbol: string): AssetClass {
     'CVX', 'BA', 'CAT', 'GE', 'T', 'VZ', 'COIN', 'MSTR', 'MARA', 'RIOT',
     'XLF', 'XLK', 'XLE', 'XLV', 'XLI', 'CRM', 'ORCL', 'ADBE', 'NFLX',
     'C', 'V', 'MA', 'PYPL', 'ABBV', 'MRK', 'LLY', 'COP', 'HON', 'UPS', 'TMUS',
+    // BIST (Borsa Istanbul)
+    'THYAO', 'GARAN', 'AKBNK', 'SISE', 'EREGL', 'KCHOL', 'SAHOL', 'ISCTR',
+    'YKBNK', 'HALKB', 'VAKBN', 'TOASO', 'TAVHL', 'TKFEN', 'TUPRS', 'BIMAS',
+    'ASELS', 'PGSUS', 'ENKAI', 'ARCLK',
   ];
   if (knownStocks.includes(upper)) {
     return 'stocks';

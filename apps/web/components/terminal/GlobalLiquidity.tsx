@@ -40,9 +40,6 @@ function MetricCard({ metric }: { metric: MacroMetric }) {
       ? 'text-[#FF4757]'
       : 'text-gray-400 dark:text-white/40';
 
-  // Generate fake history for sparkline if not provided
-  const history = metric.history ?? generateSparkData(metric.delta ?? 0);
-
   const sparkColor =
     metric.signal === 'bullish'
       ? '#00F5A0'
@@ -84,22 +81,12 @@ function MetricCard({ metric }: { metric: MacroMetric }) {
             ? `${metric.delta > 0 ? '+' : ''}${metric.delta.toFixed(1)}%`
             : '--'}
         </span>
-        <Sparkline data={history} width={80} height={24} color={sparkColor} />
+        {metric.history && metric.history.length > 0 && (
+          <Sparkline data={metric.history} width={80} height={24} color={sparkColor} />
+        )}
       </div>
     </div>
   );
-}
-
-function generateSparkData(delta: number): number[] {
-  const base = 50;
-  const trend = delta > 0 ? 0.3 : delta < 0 ? -0.3 : 0;
-  const data: number[] = [];
-  let v = base;
-  for (let i = 0; i < 30; i++) {
-    v += trend + (Math.random() - 0.5) * 2;
-    data.push(v);
-  }
-  return data;
 }
 
 export function GlobalLiquidity({
