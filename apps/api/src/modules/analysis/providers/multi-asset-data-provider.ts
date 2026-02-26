@@ -228,7 +228,8 @@ async function fetchYahooCandles(symbol: string, interval: string, limit: number
     candles = await tryFetchYahooData(yahooSymbol, '1d', '2y');
 
     if (candles.length < MIN_CANDLES_REQUIRED) {
-      throw new Error(`Insufficient data for ${symbol}. Yahoo Finance returned only ${candles.length} candles. Try using 1D timeframe for better results.`);
+      console.warn(`[Yahoo] Insufficient data for ${symbol}: only ${candles.length} candles after daily fallback. Returning available data.`);
+      return candles;
     }
 
     // Note: We're returning daily data even though user requested intraday
@@ -244,9 +245,10 @@ async function fetchYahooCandles(symbol: string, interval: string, limit: number
     console.log(`[Yahoo] Aggregated ${candles.length} 1h candles to ${finalCandles.length} ${originalInterval} candles for ${yahooSymbol}`);
   }
 
-  // Final validation
+  // Final validation - return whatever we have instead of throwing
   if (finalCandles.length < 10) {
-    throw new Error(`Unable to fetch sufficient data for ${symbol}. Only ${finalCandles.length} candles available. Please try a different timeframe (1D recommended for ETFs).`);
+    console.warn(`[Yahoo] Low candle count for ${symbol}: ${finalCandles.length} candles. Analysis may be less accurate.`);
+    return finalCandles;
   }
 
   setCache(cacheKey, finalCandles, CACHE_TTL.CANDLES);
@@ -325,16 +327,46 @@ async function fetchYahooTicker(symbol: string): Promise<MarketData> {
 
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=2d`;
 
-  const response = await fetchWithRetry(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    },
-  });
-
-  const data = await response.json();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any;
+  try {
+    const response = await fetchWithRetry(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    });
+    data = await response.json();
+  } catch (fetchError) {
+    const errMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+    console.warn(`[Yahoo] Ticker fetch failed for ${symbol}: ${errMsg}. Returning zero-price fallback.`);
+    const assetClass = detectAssetClass(symbol);
+    return {
+      symbol: symbol.toUpperCase(),
+      assetClass,
+      price: 0,
+      change24h: 0,
+      changePercent24h: 0,
+      high24h: 0,
+      low24h: 0,
+      volume24h: 0,
+      lastUpdated: new Date(),
+    } as MarketData;
+  }
 
   if (!data.chart?.result?.[0]) {
-    throw new Error(`No data returned from Yahoo Finance for ${symbol}`);
+    console.warn(`[Yahoo] No ticker data returned for ${symbol}, returning zero-price fallback`);
+    const assetClass = detectAssetClass(symbol);
+    return {
+      symbol: symbol.toUpperCase(),
+      assetClass,
+      price: 0,
+      change24h: 0,
+      changePercent24h: 0,
+      high24h: 0,
+      low24h: 0,
+      volume24h: 0,
+      lastUpdated: new Date(),
+    } as MarketData;
   }
 
   const result = data.chart.result[0];
@@ -438,8 +470,9 @@ export async function fetchCandles(
       return await fetchYahooCandles(resolved.normalized, interval, limit);
     }
   } catch (error) {
-    console.error(`[MultiAssetProvider] Error fetching candles for ${symbol}:`, error);
-    throw error;
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[MultiAssetProvider] Error fetching candles for ${symbol}: ${errMsg}. Returning empty array.`);
+    return [];
   }
 }
 
@@ -502,8 +535,19 @@ export async function fetchTicker(symbol: string): Promise<TickerData> {
       };
     }
   } catch (error) {
-    console.error(`[MultiAssetProvider] Error fetching ticker for ${symbol}:`, error);
-    throw error;
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[MultiAssetProvider] Error fetching ticker for ${symbol}: ${errMsg}. Returning zero-price fallback.`);
+    const assetClass = detectAssetClass(symbol);
+    return {
+      symbol: symbol.toUpperCase(),
+      assetClass,
+      price: 0,
+      change24h: 0,
+      changePercent24h: 0,
+      high24h: 0,
+      low24h: 0,
+      volume24h: 0,
+    };
   }
 }
 
