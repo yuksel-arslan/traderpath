@@ -297,8 +297,8 @@ export default function DashboardLayout({
       <PriceTicker />
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg supports-[backdrop-filter]:bg-card/60 border-b border-border/50">
-        <div className="w-full px-1 sm:px-3 lg:px-4">
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60 border-b border-border/50">
+        <div className="w-full pl-0 pr-1 sm:pr-3 lg:pr-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <TraderPathLogo size="sm" showText={true} showTagline={false} href="/terminal" className="flex sm:hidden" />
@@ -654,7 +654,7 @@ export default function DashboardLayout({
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-card/50 py-4">
+      <footer className="border-t border-border bg-background py-4">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} TraderPath. All rights reserved.

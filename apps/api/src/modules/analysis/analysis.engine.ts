@@ -5587,9 +5587,10 @@ export const analysisEngine = {
     }
 
     // Final confidence calculation - now factors in gate confidence
+    // Clamp to 0-100 range to prevent impossible percentages
     const gateConfidenceBonus = (avgGateConfidence - 50) / 100; // -0.5 to +0.5
     const confidence = direction !== null
-      ? parseFloat((directionConfidence * (score / 10) * (1 + gateConfidenceBonus)).toFixed(1))
+      ? Math.min(100, Math.max(0, parseFloat((directionConfidence * (score / 10) * (1 + gateConfidenceBonus)).toFixed(1))))
       : 0;
 
     return {

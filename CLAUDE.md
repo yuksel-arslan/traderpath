@@ -243,6 +243,43 @@ Kullanıcı Hakları Aktif:
 | 2026-01-27 | Testimonials → Platform Metrics | Sahte yorumlar yerine gerçek API verileri - şeffaflık ve güvenilirlik |
 | 2026-01-27 | Feature 1 → AI-Powered Market Scanner | 7-Step Analysis Suite formatında, "Find Your Next Winning Trade" yerine |
 | 2026-01-27 | Real Results section Hero altına taşındı | Metrikler daha erken görünsün |
+| 2026-02-26 | Dashboard: "Decision Engine Control Room" layout | Enterprise dashboard → intelligence-first tasarım, PrimaryDecision + ProfitTracker + FlowChain |
+| 2026-02-26 | Dashboard: ScoreRing, PulseDot, Sparkline bileşenleri | Paylaşılan intelligence UI primitives - animasyonlu SVG |
+| 2026-02-26 | Dashboard: AgentPanel (ARIA/NEXUS/ORACLE/SENTINEL) | 4 AI agent durum göstergesi, PulseDot + ScoreRing |
+| 2026-02-26 | Dashboard: FlowChain pipeline (Capital→Sector→Asset→Plan) | Akış bazlı karar zinciri görselleştirme |
+| 2026-02-26 | Analyze: Sol panel konfigürasyon + sağ panel pipeline | İki kolonlu layout, MarketContext + TrendingAssets sol, pipeline + recent sağ |
+| 2026-02-26 | Analyze: AnalysisPipelineCard 3 adımlı görsel | Shimmer animasyonlu adım ilerlemesi, Daily Pass sayacı |
+| 2026-02-26 | Analyze: RecentAnalysisRow genişletilebilir satır | ScoreRing + VerdictBadge + Entry/SL/TP detay kartları |
+| 2026-02-26 | Analyze: Verdict filtresi (All/GO/COND/AVOID) | Hızlı filtreleme, yeşil/mavi/kırmızı renk kodlu |
+| 2026-02-26 | Renk paleti: #00F5A0 bullish, #FF4757 bearish, #00D4FF accent | Tutarlı intelligence renk sistemi |
+| 2026-02-26 | Font: JetBrains Mono (sayılar) + Inter (metin) | Monospace sayılar için okunabilirlik, sans-serif metin için modernlik |
+| 2026-02-26 | Terminal: Monolitik 2700 satır → 9 ayrı bileşen dosyası | Modülerlik, bakım kolaylığı, yeniden kullanılabilirlik |
+| 2026-02-26 | Terminal: TerminalSummaryBar her bölümün üstünde | Tek cümle özet + skor + durum göstergesi - hızlı bilgi erişimi |
+| 2026-02-26 | Terminal: Sidebar SELECTED bölümü ScoreRing + VerdictBadge | 32px ScoreRing + fiyat + change + verdict badge - zenginleştirilmiş seçim bilgisi |
+| 2026-02-26 | Terminal: L1 GlobalLiquidity Sparkline'lı macro kartlar | Her kart: label + büyük değer + change% + mini sparkline - trend görünürlüğü |
+| 2026-02-26 | Terminal: L2 MarketFlow phase badge'leri renkli | EARLY=#00F5A0, MID=#FFB800, LATE=#A855F7, EXIT=#FF4757 + flow strength bar |
+| 2026-02-26 | Terminal: RotationMatrix ScoreRing + phase timeline | 64px ScoreRing'ler + FlowArrow bağlantıları + yatay phase timeline bar |
+| 2026-02-26 | Terminal: L3 SectorActivity heatmap + list view toggle | Heatmap: renk kodlu kutular (change%'ye göre). List: flow bar'lı detaylı satırlar |
+| 2026-02-26 | Terminal: L4 AIRecommendation decision bar + gate check | PrimaryDecision tarzı regime bar + gate check list (yeşil/kırmızı sol border) + signal kartları |
+| 2026-02-26 | Terminal: AssetTable ScoreRing(28px) + verdict filter | Kompakt ScoreRing + VerdictBadge + Analyze/Chart action butonları + verdict filter tabs |
+| 2026-02-26 | Terminal: RunAnalysis tahmin + INP fix + duplicate fix | requestAnimationFrame ile INP <100ms, zaman/kredi tahmini, Quick Add duplicate filtreleme |
+| 2026-02-26 | Terminal: TradeVisualizer risk metrics + forecast panel | Confidence bar + mini forecast sparkline + Position Size/Max Loss/R:R risk metrikleri |
+| 2026-02-26 | Landing Page: 13-section content overhaul | Hero→Stats→Problem→Pipeline→7-Layer→Comparison→Preview→Performance→Services→Pricing→Social→CTA→Footer |
+| 2026-02-26 | Landing: ProblemSolution 3-column grid | Lagging Indicators / Information Overload / Invisible Capital Flows + SVG icons |
+| 2026-02-26 | Landing: Pipeline 3-step (Detect→Analyze→Act) | SVG flow arrows, color-coded steps, output descriptions |
+| 2026-02-26 | Landing: ComparisonTable (Typical vs TraderPath) | 5-row comparison, red X / green check visual indicators |
+| 2026-02-26 | Landing: LivePreview 4 platform cards (2x2) | Dashboard/Terminal/Analyzer/Trade Visualizer — screenshot slots + gradient placeholders, hover scale+glow |
+| 2026-02-26 | Landing: ThreeServices credit-based cards | Capital Flow (50 cr), 7-Step (100 cr), Best Opportunities (50 cr) |
+| 2026-02-26 | Landing: SocialProof trust metrics + tech stack | 200+ assets, 5 markets, 24/7 scanning, 309+ analyses + tech badges |
+| 2026-02-26 | Landing: PricingSection Free/Pro/Enterprise | Credit-based, no subscriptions, Popular badge on Pro tier |
+| 2026-02-26 | Landing: PerformanceChart metrics grid | Total Signals, Win Rate, Avg R:R, Max Drawdown + disclaimer |
+| 2026-02-26 | AnalysisDialog: Duplicate analysis warning | 4 saat içinde aynı asset+timeframe uyarısı, View Existing / Analyze Again butonları |
+| 2026-02-26 | AnalysisDialog: Results drawer format | Mobilde bottom-up (%85vh), desktopda sağdan sola (520px panel) |
+| 2026-02-26 | OpportunityRadar: CF-only filtering | Primary market önce, exit-phase ve negatif flow gizleniyor |
+| 2026-02-26 | AnimatedCounter: Landing Stats count-up | IntersectionObserver + rAF + easeOutCubic, viewport'a girince 0→değer animasyonu |
+| 2026-02-26 | LivePreview: SVG placeholder görseller + Next.js Image | 4 adet detaylı SVG placeholder (dashboard/terminal/analyzer/visualizer), aspect-video, lazy loading, onerror fallback |
+| 2026-02-26 | Header/Footer: bg-background ile sayfa rengi eşitleme | Navbar `bg-white/bg-[#0A0A0A]` → `bg-background`, Footer `bg-slate-50/bg-[#0B1121]` → `bg-background`, Dashboard header `bg-card/80` → `bg-background/80`, Dashboard footer `bg-card/50` → `bg-background` |
+| 2026-02-26 | Auth Layout: Marketing paneli kaldırıldı | Sol taraftaki %50 marketing paneli kaldırıldı, logo formun üstüne küçük (sm) yerleştirildi, tek kolonlu centered layout |
 
 ---
 
@@ -252,7 +289,13 @@ Kullanıcı Hakları Aktif:
 | Tarih | Bug | Kök Neden | Çözüm | Dosyalar |
 |-------|-----|-----------|-------|----------|
 | 2026-02-24 | Login "Server is temporarily unavailable" | `next.config.js` env fallback `http://localhost:4000` → build time'da inline edilince `route.ts`'deki production fallback (`https://api.traderpath.io`) asla çalışmıyor | 1) `next.config.js` fallback'i production-aware yapıldı 2) Tüm 16 auth route'a localhost safety check eklendi | `next.config.js`, `apps/web/app/api/auth/*/route.ts` (16 dosya) |
-| 2026-02-24 | Login hala "Server is temporarily unavailable" gösteriyor | 3 kök neden: 1) `login/route.ts` backend hata mesajını maskeliyor → gerçek hatayı gizliyor 2) Trailing slash koruması yok → `API_URL/` varsa `//api/auth/login` oluyor 3) Diagnostik endpoint yok → backend erişimi test edilemiyor | 1) Backend error maskeleme kaldırıldı, gerçek hata pass-through yapılıyor 2) Tüm 16 auth route + `next.config.js`'e trailing slash strip eklendi 3) `/api/debug/health` diagnostik endpoint oluşturuldu 4) Kapsamlı error loglama eklendi | `login/route.ts`, `next.config.js`, tüm auth route'lar, yeni `debug/health/route.ts` |
+| 2026-02-24 | Login hala "Server is temporarily unavailable" gösteriyor | 3 kök neden: 1) `login/route.ts` backend hata mesajını maskeliyor → gerçek hatayı gizliyor 2) Trailing slash koruması yok → `API_URL/` varsa `//api/auth/login` oluyor 3) Diagnostik endpoint yok → backend erişimi test edilemiyor | 1) Backend error maskeleme kaldırıldı, gerçek hata pass-through yapılıyor 2) Tüm 16 auth route + `next.config.js`'e trailing slash strip eklendi 3) `/api/debug/health` diagnostık endpoint oluşturuldu 4) Kapsamlı error loglama eklendi | `login/route.ts`, `next.config.js`, tüm auth route'lar, yeni `debug/health/route.ts` |
+| 2026-02-26 | Confidence 6800% gösteriyor (68 olmalı) | Frontend `confidence * 100` yapıyor ama API zaten 0-100 döndürüyor → 68 * 100 = 6800 | 1) 4 frontend dosyadan `* 100` kaldırıldı 2) Backend `preliminaryVerdict.confidence` 0-100'e clamp edildi | `PrimaryDecision.tsx`, `MarketContextPanel.tsx`, `FlowChain.tsx`, `analysis.engine.ts` |
+| 2026-02-26 | Dashboard PnL Chart günlük view sahte veri gösteriyor | 1D modu günün PnL'ini 8 saatlik slota lineer interpolasyon yapıyor → gerçek intra-day veri yok | Tüm view modları (1D/7D/30D) aynı gerçek günlük API verisini kullanacak şekilde birleştirildi | `dashboard/page.tsx` |
+| 2026-02-26 | Opportunity Radar tüm marketleri gösteriyor | Filtre sadece user selection'a bakıyor, CF önerisini dikkate almıyor | Exit-phase ve negatif flow marketler filtrelendi, primary market önce gösteriliyor | `OpportunityRadar.tsx` |
+| 2026-02-26 | Trade Visualizer forecast çizgisi geçmişe bakıyor + Entry/SL/TP 0.00 | 1) Forecast `entryIdx` en yakın fiyatlı geçmiş mumu buluyor → forecast geçmişten başlıyor 2) Trade plan her zaman sentetik `calculateTradePlan()` kullanıyor, analiz sonucu bağlanmamış | 1) Forecast SADECE son mumdan başlayıp +48h ileriye çiziliyor 2) `analysisId` varsa API'den gerçek entry/SL/TP çekiliyor (`resolvedPlan` state) 3) Chart + TradeLevelCards + RiskMetrics `resolvedPlan` kullanıyor | `terminal/page.tsx` |
+| 2026-02-26 | Landing "Intelligence in Action" kırık image tag'leri | PNG görseller referanslanıyor ama `public/images/landing/` dizini ve dosyaları yok → kırık image icon gösteriliyor | 1) 4 adet detaylı SVG placeholder oluşturuldu (dashboard/terminal/analyzer/visualizer) 2) `img` → Next.js `Image` component 3) `aspect-video` 16:9 ratio 4) `loading="lazy"` 5) Hover scale animasyonu 6) Gradient fallback korundu | `LivePreview.tsx`, `public/images/landing/*.svg` |
+| 2026-02-26 | Dashboard crash: "Cannot access 'i' before initialization" | `OpportunityRadar.tsx` satır 86'da `primaryMarket` değişkeni kullanılıyor ama satır 95'te tanımlanıyor → JavaScript temporal dead zone hatası | `const primaryMarket` tanımı filtreleme kodunun üstüne taşındı | `OpportunityRadar.tsx` |
 
 ---
 
@@ -262,6 +305,13 @@ Kullanıcı Hakları Aktif:
 |-------|------|
 | 2026-02-24 | Login "temporarily unavailable" bug fix: `next.config.js` env fallback çakışması düzeltildi. Tüm auth route'lara production localhost safety check eklendi. |
 | 2026-02-24 | Login hata maskeleme fix: Backend hata mesajları artık kullanıcıya iletiliyor. Trailing slash koruması eklendi. `/api/debug/health` diagnostik endpoint oluşturuldu. |
+| 2026-02-26 | Dashboard + Analyze sayfaları "Decision Engine" konseptiyle yeniden tasarlandı. 5 paylaşılan intelligence UI bileşeni (ScoreRing, PulseDot, FlowArrow, Sparkline, VerdictBadge), 5 dashboard alt bileşeni (PrimaryDecision, ProfitTracker, FlowChain, AgentPanel, IntelligenceQuickActions), 4 analyze alt bileşeni (MarketContextPanel, TrendingAssets, AnalysisPipelineCard, RecentAnalysisRow) oluşturuldu. Tüm mevcut API bağlantıları ve veri akışları korundu. |
+| 2026-02-26 | Terminal sayfası "Decision Engine Control Room" konseptiyle yeniden tasarlandı. 2700 satırlık monolitik dosya 9 bileşene ayrıldı: TerminalSummaryBar, TerminalSidebar, GlobalLiquidity, MarketFlow, RotationMatrix, SectorActivity, AIRecommendation, AssetTable, RunAnalysis, TradeVisualizerMetrics. Her bölümde TerminalSummaryBar özet barı eklendi. Sidebar SELECTED bölümü ScoreRing+VerdictBadge ile zenginleştirildi. L3'e heatmap/list toggle, L4'e decision bar + gate check list, AssetTable'a verdict filter + action butonları, RunAnalysis'e INP fix + tahmin + duplicate fix, TradeVisualizer'a risk metrics + forecast panel eklendi. TradingView chart'a dokunulmadı. Tüm API bağlantıları ve veri akışları korundu. |
+| 2026-02-26 | Landing page 13-section content overhaul: Hero mesajı güncellendi ("See Where Smart Money Moves"), 6 yeni bileşen oluşturuldu (ProblemSolution, Pipeline, ComparisonTable, LivePreview, ThreeServices, SocialProof), FlowAccordion katman açıklamaları güncellendi, PricingSection (Free/Pro/Enterprise kredi bazlı), PerformanceChart metrik grid + disclaimer eklendi, Stats Bar etiketleri güncellendi, Final CTA güncellendi, Footer "default" variant'a geçirildi. Mevcut gradient animasyonlar ve chart'a dokunulmadı. |
+| 2026-02-26 | Bug fixler ve UX iyileştirmeleri: 1) Confidence 6800% → 68% düzeltildi (4 dosya `*100` kaldırıldı + backend clamp). 2) PnL Chart daily view sahte interpolasyon kaldırıldı, tüm modlar gerçek günlük veri kullanıyor. 3) Duplicate analysis warning: aynı asset+timeframe 4 saat içinde → 409 uyarısı, View Existing / Analyze Again seçenekleri. 4) AnalysisDialog results drawer: mobilde alttan yukarı, desktopda sağdan sola. 5) Opportunity Radar: CF-recommended marketler, exit-phase gizleniyor. |
+| 2026-02-26 | Trade Visualizer forecast fix: 1) Forecast çizgisi artık SADECE son mumdan +48h ileriye çiziliyor (geçmişe bakma sorunu düzeltildi). 2) Entry/SL/TP artık `analysisId` varsa gerçek analiz sonucundan çekiliyor (`resolvedPlan` state). 3) Chart price lines + TradeLevelCards + RiskMetrics hepsi `resolvedPlan` kullanıyor. |
+| 2026-02-26 | 1) Landing page logo alignment: Navbar container `px-4` → `pl-0 pr-4` ile logo sol tarafa dayandı. 2) Dashboard crash fix: OpportunityRadar.tsx'de `primaryMarket` değişkeni kullanımdan önce tanımlanmıyordu (temporal dead zone), tanım filtreleme kodunun üstüne taşındı. |
+| 2026-02-26 | 1) Header/Footer arka plan rengi sayfa background'u ile eşitlendi: Navbar, Footer, Dashboard header/footer hepsi `bg-background` kullanıyor. 2) Auth (login/register) layout yeniden tasarlandı: Sol marketing paneli kaldırıldı, logo formun üstüne küçük yerleştirildi, tek kolonlu centered layout. |
 
 ---
 

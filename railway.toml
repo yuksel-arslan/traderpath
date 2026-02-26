@@ -1,0 +1,9 @@
+[build]
+command = "pnpm --filter @traderpath/analysis-engine run build && cd apps/api && npx prisma generate && pnpm run build"
+
+[deploy]
+startCommand = "node apps/api/dist/index.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
