@@ -793,6 +793,41 @@ Warn about potential traps and give protective advice.`;
       usedDailyPass = true;
     }
 
+    // Duplicate analysis check — warn if same symbol+interval analyzed recently
+    const recentDuplicateHours = 4; // Check within last 4 hours
+    const recentDuplicateCutoff = new Date(Date.now() - recentDuplicateHours * 60 * 60 * 1000);
+    const recentDuplicate = await prisma.analysis.findFirst({
+      where: {
+        userId,
+        symbol: body.symbol,
+        timeframe: interval,
+        createdAt: { gte: recentDuplicateCutoff },
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        totalScore: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // If force=true query param or body field is set, skip the warning
+    const forceAnalysis = (request.query as Record<string, string>)?.force === 'true';
+
+    if (recentDuplicate && !forceAnalysis) {
+      const minutesAgo = Math.round((Date.now() - recentDuplicate.createdAt.getTime()) / 60000);
+      return reply.status(409).send({
+        success: false,
+        error: {
+          code: 'RECENT_ANALYSIS_EXISTS',
+          message: `${body.symbol} was already analyzed on ${interval} timeframe ${minutesAgo} minutes ago (Score: ${Number(recentDuplicate.totalScore || 0).toFixed(1)}/10). Run again?`,
+          existingAnalysisId: recentDuplicate.id,
+          analyzedMinutesAgo: minutesAgo,
+          score: Number(recentDuplicate.totalScore || 0),
+        },
+      });
+    }
+
     // Capital Flow Top-Down Validation Gate
     // If capitalFlowContext is provided, verify the asset is in the recommended list
     const capitalFlowContext = body.capitalFlowContext;

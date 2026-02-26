@@ -292,7 +292,7 @@ function MLConfirmationResult({ data }: { data: MLConfirmationData }) {
 // 6 standard timeframes — 2h and 1W removed per backend enum standardization
 type Timeframe = '5m' | '15m' | '30m' | '1h' | '4h' | '1d';
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
-type DialogStep = 'analyzing' | 'results';
+type DialogStep = 'analyzing' | 'results' | 'duplicate_warning';
 
 // Timeframe to trade type mapping
 // - Scalping (1000 candles): 5m, 15m
@@ -388,6 +388,13 @@ export function AnalysisDialog({
   const [error, setError] = useState<string | null>(null);
   const [reportSaved, setReportSaved] = useState(false);
   const [savedAnalysisId, setSavedAnalysisId] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<{
+    message: string;
+    existingId: string;
+    minutesAgo: number;
+    score: number;
+  } | null>(null);
+  const forceAnalysisRef = useRef(false);
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const saveAttemptedRef = useRef(false);
   const pdfGeneratedRef = useRef(false);
@@ -407,6 +414,8 @@ export function AnalysisDialog({
       setReportSaved(false);
       setSavedAnalysisId(null);
       setPdfGenerating(false);
+      setDuplicateWarning(null);
+      forceAnalysisRef.current = false;
       saveAttemptedRef.current = false;
       pdfGeneratedRef.current = false;
       analysisStartedRef.current = false;
@@ -564,7 +573,9 @@ export function AnalysisDialog({
 
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(getApiUrl('/api/analysis/full'), {
+      const forceParam = forceAnalysisRef.current ? '?force=true' : '';
+      forceAnalysisRef.current = false;
+      const response = await fetch(getApiUrl(`/api/analysis/full${forceParam}`), {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -585,6 +596,19 @@ export function AnalysisDialog({
       }
 
       if (!response.ok) {
+        // Handle duplicate analysis warning (409)
+        if (response.status === 409 && data.error?.code === 'RECENT_ANALYSIS_EXISTS') {
+          setIsRunning(false);
+          setDuplicateWarning({
+            message: data.error.message,
+            existingId: data.error.existingAnalysisId,
+            minutesAgo: data.error.analyzedMinutesAgo,
+            score: data.error.score,
+          });
+          setDialogStep('duplicate_warning');
+          return;
+        }
+
         if (response.status === 402) {
           const errorCode = data.error?.code;
 
@@ -719,7 +743,17 @@ export function AnalysisDialog({
     && !normalizedVerdict.includes('wait') && !normalizedVerdict.includes('avoid') && !normalizedVerdict.includes('sell');
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 isolate" role="dialog" aria-modal="true" aria-labelledby="analysis-dialog-title">
+    <div
+      className={cn(
+        'fixed inset-0 z-[100] isolate',
+        dialogStep === 'results'
+          ? 'flex items-end sm:items-stretch sm:justify-end'
+          : 'flex items-center justify-center p-4 sm:p-6'
+      )}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="analysis-dialog-title"
+    >
       {/* Accessible title for screen readers */}
       <h2 id="analysis-dialog-title" className="sr-only">Analysis Results</h2>
       {/* Backdrop with blur */}
@@ -728,8 +762,13 @@ export function AnalysisDialog({
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-white/10 bg-[#0a0f1a] animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+      {/* Container: centered modal during analysis, drawer for results */}
+      <div className={cn(
+        'relative overflow-hidden shadow-2xl border border-white/10 bg-[#0a0f1a] flex flex-col transition-all duration-300',
+        dialogStep === 'results'
+          ? 'w-full sm:w-[520px] sm:max-w-[50vw] max-h-[85vh] sm:max-h-full sm:h-full rounded-t-2xl sm:rounded-t-none sm:rounded-l-2xl animate-in slide-in-from-bottom sm:slide-in-from-right duration-300'
+          : 'w-full max-w-2xl max-h-[90vh] rounded-2xl sm:rounded-3xl animate-in fade-in zoom-in-95 duration-200'
+      )}>
         {/* Animated background gradient orbs */}
         <div className="absolute inset-0 overflow-hidden rounded-2xl sm:rounded-3xl pointer-events-none">
           <div
@@ -800,6 +839,46 @@ export function AnalysisDialog({
 
         {/* Content */}
         <div className="relative flex-1 overflow-y-auto p-5 sm:p-6">
+          {/* Duplicate Warning */}
+          {dialogStep === 'duplicate_warning' && duplicateWarning && (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-4">
+                <AlertTriangle className="w-8 h-8 text-amber-500" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                Recent Analysis Found
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mb-2">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">{symbol}</span> was analyzed on the <span className="font-semibold text-gray-700 dark:text-gray-300">{timeframe}</span> timeframe <span className="font-semibold text-amber-600 dark:text-amber-400">{duplicateWarning.minutesAgo} minutes ago</span>.
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-6">
+                Score: {duplicateWarning.score.toFixed(1)}/10 — Running again will use your daily pass.
+              </p>
+              <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
+                <button
+                  onClick={() => {
+                    onClose();
+                    router.push(`/analyze/details/${duplicateWarning.existingId}`);
+                  }}
+                  className="px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  View Existing
+                </button>
+                <button
+                  onClick={() => {
+                    forceAnalysisRef.current = true;
+                    setDuplicateWarning(null);
+                    setDialogStep('analyzing');
+                    analysisStartedRef.current = false;
+                  }}
+                  className="px-4 py-2.5 text-sm font-medium rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors"
+                >
+                  Analyze Again
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Analyzing */}
           {dialogStep === 'analyzing' && (
             <div className="space-y-6">
