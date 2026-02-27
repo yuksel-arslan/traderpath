@@ -23,7 +23,7 @@ export interface SubscriptionPlan {
     capitalFlowL4: boolean;      // Layer 4: AI Recommendations
     assetAnalysis: boolean;      // 7-Step + MLIS Pro Analysis
     aiFeatures: boolean;         // AI Concierge + AI Experts
-    reportsExport: boolean;      // PDF, Email, Screenshot export
+    reportsExport: boolean;      // PDF, Screenshot export
     automation: boolean;         // Scheduled Reports, Price Alerts
     rewards: boolean;            // Daily Login, Spin, Quiz, Referral
   };

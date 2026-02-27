@@ -1265,40 +1265,6 @@ Warn about potential traps and give protective advice.`;
         logger.error({ error: xpErr }, '[XP] Failed to award analysis XP');
       }
 
-      // Send analysis completion notifications (Telegram, Discord only) - fire and forget
-      // NOTE: Automatic email removed - users can send email manually from Recent Analyses
-      (async () => {
-        try {
-          // Get user with notification settings
-          const userWithNotifs = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { name: true, telegramChatId: true, discordWebhookUrl: true },
-          });
-
-          if (!userWithNotifs) return;
-
-          // Only send if user has social notifications configured
-          if (!userWithNotifs.telegramChatId && !userWithNotifs.discordWebhookUrl) return;
-
-          const notifData = {
-            symbol: body.symbol,
-            verdict: verdict.verdict,
-            score: verdict.overallScore,
-            direction: tradePlan?.direction || 'neutral',
-            entryPrice: tradePlan?.averageEntry ? `$${tradePlan.averageEntry}` : 'N/A',
-            stopLoss: tradePlan?.stopLoss?.price ? `$${tradePlan.stopLoss.price}` : 'N/A',
-            takeProfit1: tradePlan?.takeProfits?.[0]?.price ? `$${tradePlan.takeProfits[0].price}` : 'N/A',
-            tradeType: tradeType === 'scalping' ? 'Scalping' : tradeType === 'dayTrade' ? 'Day Trade' : 'Swing Trade',
-          };
-
-          // Send social notifications (Telegram, Discord)
-          const { socialNotificationService } = await import('../notifications/social-notification.service');
-          await socialNotificationService.sendAnalysisSummaryNotifications(userWithNotifs, notifData);
-        } catch (notifError) {
-          logger.error({ error: notifError, symbol: body.symbol }, '[Analysis] Notification error');
-        }
-      })();
-
       // ===== Signal Auto-Publish: Confidence > 70% → add to Signals & notify subscribers =====
       // Runs as fire-and-forget so the analysis response is not delayed
       if (tradePlan && tradePlan.confidence > 70 && ['go', 'conditional_go'].includes(verdict.verdict)) {

@@ -143,7 +143,7 @@ export const ACTIVE_SUBSCRIPTIONS: ActiveSubscription[] = [
     features: [
       'Capital Flow L1-L2 (Liquidity & Market Flow)',
       '50 credits/day included',
-      'PDF & Email reports',
+      'PDF reports',
       'Scheduled reports (3 max)',
       'Price alerts (10 max)',
       'Daily rewards system',
@@ -193,7 +193,7 @@ export const ACTIVE_SUBSCRIPTIONS: ActiveSubscription[] = [
       'AI Expert questions (unlimited)',
       'Unlimited dual-engine analyses',
       'Unlimited scheduled reports',
-      'Capital Flow PDF & email reports',
+      'Capital Flow PDF reports',
     ],
     limits: {
       maxDailyAnalyses: 'unlimited',

@@ -168,7 +168,6 @@ export default function AutomatedAnalysisPage() {
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const [manualSymbol, setManualSymbol] = useState('');
   const [filter, setFilter] = useState('All');
-  const [reportDrawerId, setReportDrawerId] = useState<string | null>(null);
   const [timeframe, setTimeframe] = useState<'5m' | '15m' | '30m' | '1h' | '4h' | '1d'>('4h');
   const pipelineRef = useRef<HTMLDivElement>(null);
 
@@ -177,6 +176,7 @@ export default function AutomatedAnalysisPage() {
   const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
   const [completedAnalysisIds, setCompletedAnalysisIds] = useState<string[]>([]);
   const [showBatchResults, setShowBatchResults] = useState(false);
+  const [reportDrawerId, setReportDrawerId] = useState<string | null>(null);
 
   // ── Data fetching ─────────────────────────
   const fetchDailyPassStatus = useCallback(async () => {

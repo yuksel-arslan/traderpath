@@ -128,9 +128,8 @@
 |-----|--------|----------------|-----------------|-------------|
 | AI Expert Sohbet | 3 | 3 soru/analiz | 5 kredi/soru | `Analysis.aiExpertQuestionsUsed` |
 | PDF İndirme | 2 | 2 indirme/analiz | 5 kredi/indirme | `Analysis.pdfDownloadsUsed` |
-| Email Gönderme | 2 | 2 email/analiz | 5 kredi/email | `Analysis.emailsSentUsed` |
-| Otomatik Özet Email | ∞ | Ücretsiz | - | Otomatik gönderilir |
 
+> **Not:** Email ile rapor gönderme kaldırıldı. Raporlar sadece PDF olarak indirilebilir. İşlem sonuçları (TP/SL hit) otomatik email ile bildirilir.
 ### Trade Type Completion Bonus (Otomatik)
 
 | Trade Type | Bonus Kredi | Açıklama |
@@ -140,12 +139,6 @@
 | Swing Trade | +1 kredi | Standart bonus |
 
 > **Not:** Bonus, analiz tamamlandığında otomatik olarak eklenir. `creditService.add()` ile `BONUS` tipinde kaydedilir.
-
-### Otomatik Bildirimler (Analiz Tamamlandığında)
-
-1. **Email Özeti** - `emailService.sendAnalysisSummary()` ile kullanıcının email'ine gönderilir
-2. **Telegram Bildirimi** - Bağlıysa `telegramChatId` üzerinden gönderilir
-3. **Discord Webhook** - Bağlıysa `discordWebhookUrl` üzerinden gönderilir
 
 ### Orchestration Akışı
 
@@ -163,15 +156,14 @@ Trade Type Bonus Eklenir:
     ├── Day Trade → +2 kredi
     └── Swing Trade → +1 kredi
     ↓
-Otomatik Bildirimler Gönderilir (fire & forget)
-    ├── Email Özeti → Kullanıcı email'i
-    ├── Telegram → telegramChatId (varsa)
-    └── Discord → discordWebhookUrl (varsa)
+Signal Auto-Publish (Confidence > 70% ve GO/COND_GO ise):
+    ├── Signal DB'ye kaydedilir
+    ├── Telegram kanalına yayınlanır (sadece Signal aboneleri)
+    └── Discord'a bildirim gönderilir (sadece Signal aboneleri)
     ↓
 Kullanıcı Hakları Aktif:
     ├── 3x AI Expert sohbet (ücretsiz)
-    ├── 2x PDF indirme (ücretsiz)
-    └── 2x Email gönderme (ücretsiz)
+    └── 2x PDF indirme (ücretsiz)
 ```
 
 ### Kod Lokasyonları
@@ -180,10 +172,9 @@ Kullanıcı Hakları Aktif:
 |-----------|-------|-------|
 | Analiz oluşturma | `analysis.routes.ts` | 528-544 |
 | Trade type bonus | `analysis.routes.ts` | 549-562 |
-| Otomatik email | `analysis.routes.ts` | 564-596 |
+| Signal auto-publish | `analysis.routes.ts` | 1268-1421 |
 | AI Expert hak kontrolü | `ai-expert.routes.ts` | 186-358 |
 | PDF indirme hak kontrolü | `report.routes.ts` | 564-662 |
-| Email gönderme hak kontrolü | `report.routes.ts` | 1209-1328 |
 
 ### Önemli Kurallar
 
