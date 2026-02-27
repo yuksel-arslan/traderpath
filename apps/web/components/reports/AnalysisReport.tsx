@@ -2257,13 +2257,13 @@ function generateSinglePageReport(data: AnalysisReportData): string {
 
   // Helper for Capital Flow layer boxes
   const getLayerBox = (num: number, title: string, content: string, badge?: string, badgeColor?: string) => `
-    <div style="flex: 1; min-width: 240px; border: 1px solid #374151; border-radius: 4px; padding: 6px 8px; background: #111111;">
+    <div style="flex: 1; min-width: 220px; max-width: 260px; border: 1px solid #374151; border-radius: 4px; padding: 6px 8px; background: #111111; overflow: hidden;">
       <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
         <span style="font-size: 7px; font-weight: 700; color: #9ca3af;">L${num}</span>
         <span style="font-size: 8px; font-weight: 600; color: #f1f5f9;">${title}</span>
         ${badge ? `<span style="margin-left: auto; font-size: 6px; font-weight: 600; padding: 1px 4px; border-radius: 2px; background: ${badgeColor || '#666'}; color: white;">${badge}</span>` : ''}
       </div>
-      <div style="font-size: 7px; color: #d1d5db; line-height: 1.4;">${content}</div>
+      <div style="font-size: 7px; color: #d1d5db; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word;">${content}</div>
     </div>
   `;
 
@@ -2292,24 +2292,24 @@ function generateSinglePageReport(data: AnalysisReportData): string {
     <head>
       <style>
         ${styles}
-        .single-page { padding: 12px 24px; max-width: 560px; margin: 0 auto; }
-        .section-box { border: 1px solid #ddd; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; background: #111111; }
+        .single-page { padding: 12px 24px; max-width: 560px; margin: 0 auto; overflow: hidden; }
+        .section-box { border: 1px solid #ddd; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; background: #111111; overflow: hidden; }
         .section-title-bar { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e0e0e0; }
         .section-num { font-size: 8px; font-weight: 700; color: #fff; background: #1a1a1a; padding: 2px 6px; border-radius: 3px; }
         .section-name { font-size: 10px; font-weight: 600; color: #f1f5f9; }
         .layer-grid { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-        .two-col { display: flex; gap: 8px; justify-content: center; }
-        .two-col > div { flex: 1; max-width: 260px; }
-        .step-mini { border: 1px solid #e5e5e5; border-radius: 3px; padding: 5px 7px; margin-bottom: 5px; background: #111111; }
+        .two-col { display: flex; gap: 8px; justify-content: center; overflow: hidden; }
+        .two-col > div { flex: 1; max-width: 260px; overflow: hidden; }
+        .step-mini { border: 1px solid #e5e5e5; border-radius: 3px; padding: 5px 7px; margin-bottom: 5px; background: #111111; overflow: hidden; }
         .step-mini-header { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
         .step-mini-num { font-size: 7px; font-weight: 700; color: #9ca3af; }
         .step-mini-title { font-size: 8px; font-weight: 600; color: #f1f5f9; }
         .step-mini-gate { margin-left: auto; font-size: 6px; font-weight: 600; }
-        .step-mini-content { font-size: 7px; color: #d1d5db; line-height: 1.35; }
+        .step-mini-content { font-size: 7px; color: #d1d5db; line-height: 1.35; word-wrap: break-word; overflow-wrap: break-word; }
         .step-mini-row { display: flex; gap: 4px; margin-top: 3px; justify-content: center; }
-        .step-mini-metric { background: #111111; border: 1px solid #eee; border-radius: 2px; padding: 2px 5px; flex: 1; text-align: center; }
+        .step-mini-metric { background: #111111; border: 1px solid #eee; border-radius: 2px; padding: 2px 5px; flex: 1; text-align: center; overflow: hidden; }
         .step-mini-metric-label { font-size: 5px; color: #6b7280; text-transform: uppercase; }
-        .step-mini-metric-value { font-size: 8px; font-weight: 600; color: #f1f5f9; }
+        .step-mini-metric-value { font-size: 8px; font-weight: 600; color: #f1f5f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .trade-decision-box { border: 1px solid #374151; border-radius: 4px; padding: 8px 12px; text-align: center; background: #111111; }
         .trade-decision-action { font-size: 20px; font-weight: 700; }
         .trade-decision-sub { font-size: 7px; color: #9ca3af; margin-top: 2px; }
@@ -2584,7 +2584,7 @@ function generateSinglePageReport(data: AnalysisReportData): string {
               </div>
               <div style="flex: 2; max-width: 200px; background: #111111; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
                 <div style="font-size: 6px; color: #92400e; text-transform: uppercase;">Reason</div>
-                <div style="font-size: 7px; color: #78350f;">${cf.layer4?.reason || 'Capital flow analysis based recommendation'}</div>
+                <div style="font-size: 7px; color: #78350f; word-wrap: break-word; overflow-wrap: break-word; overflow: hidden;">${(cf.layer4?.reason || 'Capital flow analysis based recommendation').slice(0, 80)}${(cf.layer4?.reason || '').length > 80 ? '...' : ''}</div>
               </div>
             </div>
           </div>
