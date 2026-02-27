@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { getLogoUrl, getAssetLogo, loadLogosCache, isCacheLoaded, AssetClass } from '../../lib/asset-logos-cache';
+import { getLogoUrl, getAssetLogo, loadLogosCache, isCacheLoaded, fetchAndCacheLogo, AssetClass } from '../../lib/asset-logos-cache';
 
 interface CoinIconProps {
   symbol: string;
@@ -33,7 +33,7 @@ function getFallbackCdnUrls(symbol: string): string[] {
 
 /**
  * CoinIcon component - displays real asset logos only
- * Tries API cache, then multiple CDN fallbacks. Shows nothing if no real logo found.
+ * Tries hardcoded cache → CoinGecko API search → CDN fallbacks → nothing
  */
 export function CoinIcon({
   symbol,
@@ -44,8 +44,7 @@ export function CoinIcon({
 }: CoinIconProps) {
   const [iconUrl, setIconUrl] = useState<string | null>(() => {
     const url = getLogoUrl(symbol, assetClass);
-    // Only use URLs that are real HTTP URLs, not data: SVG fallbacks
-    return url.startsWith('http') ? url : null;
+    return url && url.startsWith('http') ? url : null;
   });
   const [allFailed, setAllFailed] = useState(false);
   const errorCountRef = useRef(0);
@@ -56,18 +55,30 @@ export function CoinIcon({
     errorCountRef.current = 0;
     setAllFailed(false);
 
-    // Load cache if not already loaded
+    const resolveUrl = (url: string) => {
+      if (url && url.startsWith('http')) {
+        setIconUrl(url);
+        return;
+      }
+      // Not in hardcoded list — fetch from CoinGecko and add to cache
+      fetchAndCacheLogo(symbol, assetClass).then((fetchedUrl) => {
+        if (fetchedUrl) {
+          setIconUrl(fetchedUrl);
+        } else {
+          // Not found in CoinGecko either — CDN fallbacks will kick in via handleError
+          setIconUrl(getFallbackCdnUrls(symbol)[0] || null);
+          errorCountRef.current = 1; // Skip first CDN since we set it directly
+        }
+      });
+    };
+
     if (!isCacheLoaded()) {
       setIsLoading(true);
       loadLogosCache()
-        .then(() => {
-          const url = getLogoUrl(symbol, assetClass);
-          setIconUrl(url.startsWith('http') ? url : null);
-        })
+        .then(() => resolveUrl(getLogoUrl(symbol, assetClass)))
         .finally(() => setIsLoading(false));
     } else {
-      const url = getLogoUrl(symbol, assetClass);
-      setIconUrl(url.startsWith('http') ? url : null);
+      resolveUrl(getLogoUrl(symbol, assetClass));
     }
   }, [symbol, assetClass]);
 

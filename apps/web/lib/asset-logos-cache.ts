@@ -281,6 +281,10 @@ const FALLBACK_CACHE: LogoCache = {
 let memoryCache: LogoCache | null = FALLBACK_CACHE;
 let cacheLoadPromise: Promise<LogoCache> | null = null;
 
+// Track symbols already looked up from internet to avoid duplicate fetches
+const fetchAttempted = new Set<string>();
+const pendingFetches = new Map<string, Promise<string | null>>();
+
 // ===========================================
 // localStorage helpers
 // ===========================================
@@ -652,6 +656,66 @@ export function generateFallbackSvg(symbol: string, color: string = DEFAULT_COLO
   `.trim().replace(/\s+/g, ' ');
 
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+/**
+ * Fetch a single asset's logo from CoinGecko search API
+ * Used for symbols not in the hardcoded list
+ * Returns the logo URL or null if not found
+ */
+export async function fetchAndCacheLogo(symbol: string, assetClass?: AssetClass): Promise<string | null> {
+  const clean = symbol.toUpperCase().replace(/USDT$|USD$|BUSD$|USDC$/, '');
+
+  // Already have it in cache
+  const existing = getLogoUrl(clean, assetClass);
+  if (existing) return existing;
+
+  // Already attempted this symbol
+  if (fetchAttempted.has(clean)) return null;
+
+  // Return pending promise if already fetching
+  if (pendingFetches.has(clean)) return pendingFetches.get(clean)!;
+
+  const fetchPromise = (async (): Promise<string | null> => {
+    fetchAttempted.add(clean);
+
+    try {
+      const response = await fetch(
+        `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(clean.toLowerCase())}`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      const coins: Array<{ symbol?: string; large?: string; thumb?: string; name?: string }> = data.coins || [];
+
+      // Find exact symbol match
+      const match = coins.find((c) => c.symbol?.toUpperCase() === clean);
+      if (!match) return null;
+
+      const logoUrl = match.large || match.thumb;
+      if (!logoUrl) return null;
+
+      const name = match.name || clean;
+      const detectedClass = assetClass || detectAssetClass(clean);
+
+      // Add to in-memory cache
+      if (memoryCache) {
+        memoryCache[detectedClass][clean] = { logoUrl, color: DEFAULT_COLOR, name };
+        saveToLocalStorage(memoryCache);
+      }
+
+      return logoUrl;
+    } catch {
+      return null;
+    } finally {
+      pendingFetches.delete(clean);
+    }
+  })();
+
+  pendingFetches.set(clean, fetchPromise);
+  return fetchPromise;
 }
 
 /**
