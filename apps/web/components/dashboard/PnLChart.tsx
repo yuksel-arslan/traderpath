@@ -80,20 +80,7 @@ export function PnLChart({ chartData }: PnLChartProps) {
           strokeWidth={2.5}
           fill="url(#greenGradient)"
           filter="url(#glowEffect)"
-          dot={(props: any) => {
-            if (!props.payload || props.payload.positive <= 0) return <g key={props.key} />;
-            return (
-              <circle
-                key={props.key}
-                cx={props.cx}
-                cy={props.cy}
-                r={4}
-                fill="#10b981"
-                stroke="#fff"
-                strokeWidth={2}
-              />
-            );
-          }}
+          dot={false}
           activeDot={{ fill: '#10b981', strokeWidth: 3, stroke: '#fff', r: 6 }}
         />
         {/* Negative area - Red */}
@@ -104,20 +91,7 @@ export function PnLChart({ chartData }: PnLChartProps) {
           strokeWidth={2.5}
           fill="url(#redGradient)"
           filter="url(#glowEffect)"
-          dot={(props: any) => {
-            if (!props.payload || props.payload.negative >= 0) return <g key={props.key} />;
-            return (
-              <circle
-                key={props.key}
-                cx={props.cx}
-                cy={props.cy}
-                r={4}
-                fill="#ef4444"
-                stroke="#fff"
-                strokeWidth={2}
-              />
-            );
-          }}
+          dot={false}
           activeDot={{ fill: '#ef4444', strokeWidth: 3, stroke: '#fff', r: 6 }}
         />
       </AreaChart>

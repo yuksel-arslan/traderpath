@@ -1663,13 +1663,15 @@ Explain the key risks and what conditions would need to change before trading th
         });
       }
 
-      // Extract unique symbols
-      const symbols = [...new Set(analyses.map(a => a.symbol as string))];
+      // Extract unique symbols (normalize: strip trailing USDT, uppercase)
+      const rawSymbols = [...new Set(analyses.map(a => a.symbol as string))];
+      const normalizeSymbol = (s: string) => s.toUpperCase().replace(/USDT$/i, '');
+      const symbols = [...new Set(rawSymbols.map(normalizeSymbol))];
 
       // Fetch current prices from Binance
       const prices: Record<string, number> = {};
       try {
-        const pairs = symbols.map((s: string) => `"${s.toUpperCase()}USDT"`).join(',');
+        const pairs = symbols.map((s: string) => `"${s}USDT"`).join(',');
         const response = await fetch(
           `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
         );
@@ -1678,13 +1680,36 @@ Explain the key risks and what conditions would need to change before trading th
           if (responseText && responseText.trim() !== '') {
             const data = JSON.parse(responseText) as Array<{ symbol: string; price: string }>;
             for (const item of data) {
-              const symbol = item.symbol.replace('USDT', '');
-              prices[symbol] = parseFloat(item.price);
+              const base = item.symbol.replace(/USDT$/, '');
+              const price = parseFloat(item.price);
+              // Store with multiple key formats for robust lookup
+              prices[base] = price;
+              prices[base.toLowerCase()] = price;
+              prices[base + 'USDT'] = price;
+              prices[base.toLowerCase() + 'USDT'] = price;
             }
           }
         }
       } catch (err) {
-        logger.warn({ error: err }, 'Failed to fetch prices');
+        logger.warn({ error: err }, 'Failed to fetch prices from Binance');
+      }
+
+      // Fallback: use multi-asset data provider if Binance returned no prices
+      if (Object.keys(prices).length === 0 && symbols.length > 0) {
+        try {
+          const { fetchTicker } = await import('./providers/multi-asset-data-provider');
+          await Promise.all(symbols.map(async (sym: string) => {
+            try {
+              const ticker = await fetchTicker(sym);
+              prices[sym] = ticker.price;
+              prices[sym.toLowerCase()] = ticker.price;
+              prices[sym + 'USDT'] = ticker.price;
+              prices[sym.toLowerCase() + 'USDT'] = ticker.price;
+            } catch { /* skip */ }
+          }));
+        } catch (err) {
+          logger.warn({ error: err }, 'Failed to fetch prices from fallback provider');
+        }
       }
 
       // Calculate next candle close time based on intervals present
@@ -1721,7 +1746,8 @@ Explain the key risks and what conditions would need to change before trading th
 
         const entryPrice = tradePlan?.averageEntry as number || tradePlan?.entryPrice as number || null;
         const direction = (tradePlan?.direction as string || 'long').toLowerCase();
-        const currentPrice = prices[a.symbol] || null;
+        const sym = a.symbol as string;
+        const currentPrice = prices[sym] || prices[sym.toUpperCase()] || prices[sym.toUpperCase().replace(/USDT$/i, '')] || null;
 
         let unrealizedPnL: number | null = null;
         if (entryPrice && entryPrice > 0 && currentPrice) {
@@ -2346,9 +2372,17 @@ Explain the key risks and what conditions would need to change before trading th
       const activeCount = activeAnalyses.length;
 
       // Fetch current prices for active analyses to calculate active performance
+      // Only count analyses with trade plans (GO/CONDITIONAL_GO verdicts)
+      const activeWithTradePlan = activeAnalyses.filter(a => {
+        const tp = a.step5Result as Record<string, unknown> | null;
+        return tp && (tp.averageEntry || tp.entryPrice);
+      });
       let activeProfitable = 0;
-      if (activeCount > 0) {
-        const activeSymbols = [...new Set(activeAnalyses.map(a => a.symbol as string))];
+      if (activeWithTradePlan.length > 0) {
+        const activeSymbols = [...new Set(activeWithTradePlan.map(a => {
+          const s = a.symbol as string;
+          return s.toUpperCase().replace(/USDT$/i, '');
+        }))];
         const prices: Record<string, number> = {};
 
         // Use multi-asset data provider (supports crypto, stocks, metals, bonds)
@@ -2357,7 +2391,9 @@ Explain the key risks and what conditions would need to change before trading th
           const tickerPromises = activeSymbols.map(async (sym: string) => {
             try {
               const ticker = await fetchTicker(sym);
-              prices[sym.toUpperCase()] = ticker.price;
+              prices[sym] = ticker.price;
+              prices[sym.toLowerCase()] = ticker.price;
+              prices[sym + 'USDT'] = ticker.price;
             } catch {
               // Skip symbols that fail to fetch
             }
@@ -2368,7 +2404,7 @@ Explain the key risks and what conditions would need to change before trading th
         }
 
         // Calculate how many active analyses are profitable
-        activeAnalyses.forEach(analysis => {
+        activeWithTradePlan.forEach(analysis => {
           const tradePlan = analysis.step5Result as Record<string, unknown> | null;
 
           const entryPrice = Number(
@@ -2376,14 +2412,14 @@ Explain the key risks and what conditions would need to change before trading th
             tradePlan?.entryPrice
           ) || 0;
 
-          const sym = (analysis.symbol as string).toUpperCase();
-          const currentPrice = prices[sym] || 0;
+          const rawSym = (analysis.symbol as string);
+          const currentPrice = prices[rawSym] || prices[rawSym.toUpperCase()] || prices[rawSym.toUpperCase().replace(/USDT$/i, '')] || 0;
           const direction = ((tradePlan?.direction as string) || 'long').toLowerCase();
 
           if (entryPrice > 0 && currentPrice > 0) {
             const pnl = direction === 'short'
-              ? entryPrice - currentPrice
-              : currentPrice - entryPrice;
+              ? ((entryPrice - currentPrice) / entryPrice) * 100
+              : ((currentPrice - entryPrice) / entryPrice) * 100;
             if (pnl > 0) {
               activeProfitable++;
             }
@@ -2538,21 +2574,26 @@ Explain the key risks and what conditions would need to change before trading th
         take: 10
       });
 
-      // Fetch current prices for all symbols
-      const symbols = [...new Set(reportsWithExpiration.map(r => r.symbol as string))];
+      // Fetch current prices for all symbols (normalize: strip trailing USDT)
+      const rawReportSymbols = [...new Set(reportsWithExpiration.map(r => r.symbol as string))];
+      const normalizedReportSymbols = [...new Set(rawReportSymbols.map(s => s.toUpperCase().replace(/USDT$/i, '')))];
       const prices: Record<string, number> = {};
 
-      if (symbols.length > 0) {
+      if (normalizedReportSymbols.length > 0) {
         try {
-          const pairs = symbols.map((s: string) => `"${s.toUpperCase()}USDT"`).join(',');
+          const pairs = normalizedReportSymbols.map((s: string) => `"${s}USDT"`).join(',');
           const priceResponse = await fetch(
             `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
           );
           if (priceResponse.ok) {
             const priceData = await priceResponse.json();
             for (const item of priceData) {
-              const symbol = item.symbol.replace('USDT', '');
-              prices[symbol] = parseFloat(item.price);
+              const base = item.symbol.replace(/USDT$/, '');
+              const price = parseFloat(item.price);
+              prices[base] = price;
+              prices[base.toLowerCase()] = price;
+              prices[base + 'USDT'] = price;
+              prices[base.toLowerCase() + 'USDT'] = price;
             }
           }
         } catch (err) {
