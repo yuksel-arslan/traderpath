@@ -923,7 +923,7 @@ export default function AnalysisDetailsPage() {
                 <div className="divide-y divide-slate-100 dark:divide-slate-700/40">
                   {chainItems.map((item, i) => (
                     <div key={i} className="flex items-center justify-between px-4 py-2.5">
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 flex-shrink-0">
                         <div className={cn(
                           "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0",
                           item.status === true ? "bg-green-500" :
@@ -939,7 +939,7 @@ export default function AnalysisDetailsPage() {
                         </div>
                         <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{item.label}</span>
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-slate-400 text-right max-w-[50%] truncate" title={item.detail}>
+                      <span className="text-xs text-gray-500 dark:text-slate-400 text-right max-w-[55%] overflow-hidden break-words">
                         {item.detail}
                       </span>
                     </div>
