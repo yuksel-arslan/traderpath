@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CoinIcon } from '../../../components/common/CoinIcon';
-import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
 import {
   FileText,
   Trash2,

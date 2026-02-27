@@ -21,7 +21,7 @@ import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboar
 import { useMarketFilter, useBistSubSector } from '@/components/dashboard/CategoryBar';
 import { OpportunityRadar } from '@/components/dashboard/OpportunityRadar';
 import { SmartAlertsWidget } from '@/components/dashboard/SmartAlertsWidget';
-import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
+import { CoinIcon } from '../../../components/common/CoinIcon';
 import type { MarketType } from '@/components/dashboard/CategoryBar';
 
 // New Intelligence UI components
@@ -236,8 +236,6 @@ function ActiveTradeCard({
   const hasPnL = trade.unrealizedPnL != null;
   const pnl = trade.unrealizedPnL ?? 0;
   const isLong = trade.direction?.toLowerCase() === 'long';
-  const coinIcon = getCoinIcon(trade.symbol) || FALLBACK_COIN_ICON;
-
   return (
     <Link
       href={`/analyze/details/${trade.id}`}
@@ -245,7 +243,7 @@ function ActiveTradeCard({
     >
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
-          <img src={coinIcon} alt={trade.symbol} className="w-6 h-6 rounded-full" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON; }} />
+          <CoinIcon symbol={trade.symbol.replace(/USDT$/i, '')} size={24} />
           <span className="text-sm font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
             {trade.symbol.replace(/USDT$/i, '')}
           </span>

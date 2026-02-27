@@ -7,7 +7,6 @@
 import {
   getLogoUrl,
   getAssetLogo,
-  generateFallbackSvg,
   AssetClass,
 } from './asset-logos-cache';
 
@@ -21,8 +20,8 @@ export function getCoinIconUrl(symbol: string, _size: 'small' | 'large' = 'small
   return getLogoUrl(symbol);
 }
 
-// Fallback icon URL
-export const FALLBACK_COIN_ICON = generateFallbackSvg('?', '#4F46E5');
+// Empty fallback - no fake logo icons
+export const FALLBACK_COIN_ICON = '';
 
 // Get coin color
 export function getCoinColor(symbol: string): { bg: string; text: string } {
