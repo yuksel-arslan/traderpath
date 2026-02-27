@@ -207,62 +207,76 @@ const NAV_GROUPS: NavGroup[] = [
 function mapMacroMetrics(gl: Record<string, any> | null | undefined): MacroMetric[] {
   if (!gl) return [];
   const metrics: MacroMetric[] = [];
+
   if (gl.m2MoneySupply) {
     const val = Number(gl.m2MoneySupply.value ?? 0);
-    const growth = Number(gl.m2MoneySupply.yoyGrowth ?? 0);
+    const change = Number(gl.m2MoneySupply.change30d ?? 0);
     metrics.push({
       label: 'M2 Supply',
-      value: val > 0 ? `$${(val / 1e12).toFixed(1)}T` : 'N/A',
-      delta: growth,
-      signal: growth > 0 ? 'bullish' : 'bearish',
+      value: val > 0 ? `$${val.toFixed(1)}T` : 'N/A',
+      delta: change,
+      signal: change > 1 ? 'bullish' : change < -1 ? 'bearish' : 'neutral',
     });
   }
+
   if (gl.fedBalanceSheet) {
     const val = Number(gl.fedBalanceSheet.value ?? 0);
-    const change = Number(gl.fedBalanceSheet.monthlyChange ?? 0);
+    const change = Number(gl.fedBalanceSheet.change30d ?? 0);
+    const trend = gl.fedBalanceSheet.trend || 'stable';
     metrics.push({
       label: 'Fed BS',
-      value: val > 0 ? `$${(val / 1e12).toFixed(1)}T` : 'N/A',
+      value: val > 0 ? `$${val.toFixed(1)}T` : 'N/A',
       delta: change,
-      signal: change > 0 ? 'bullish' : change < -2 ? 'bearish' : 'neutral',
+      signal: trend === 'expanding' ? 'bullish' : trend === 'contracting' ? 'bearish' : 'neutral',
     });
   }
+
   if (gl.dxy) {
     const val = Number(gl.dxy.value ?? 0);
-    const change = Number(gl.dxy.weeklyChange ?? 0);
+    const change = Number(gl.dxy.change7d ?? 0);
+    const trend = gl.dxy.trend || 'stable';
     metrics.push({
       label: 'DXY',
       value: val > 0 ? val.toFixed(2) : 'N/A',
       delta: change,
-      signal: change < 0 ? 'bullish' : 'bearish',
+      signal: trend === 'weakening' ? 'bullish' : trend === 'strengthening' ? 'bearish' : 'neutral',
     });
   }
+
   if (gl.vix) {
     const val = Number(gl.vix.value ?? 0);
-    const change = Number(gl.vix.weeklyChange ?? 0);
+    const level = gl.vix.level || 'neutral';
     metrics.push({
       label: 'VIX',
       value: val > 0 ? val.toFixed(1) : 'N/A',
-      delta: change,
-      signal: val < 20 ? 'bullish' : val > 30 ? 'bearish' : 'neutral',
+      delta: 0,
+      signal: level === 'complacent' || level === 'neutral' ? 'bullish' : 'bearish',
     });
   }
+
   if (gl.yieldCurve) {
-    const us10y = Number(gl.yieldCurve.us10y ?? 0);
     const spread = Number(gl.yieldCurve.spread10y2y ?? 0);
-    metrics.push({
-      label: 'US10Y',
-      value: us10y > 0 ? `${us10y.toFixed(2)}%` : 'N/A',
-      delta: Number(gl.yieldCurve.weeklyChange10y ?? 0),
-      signal: 'neutral',
-    });
+    const inverted = gl.yieldCurve.inverted;
     metrics.push({
       label: 'Yield Curve',
-      value: spread > 0 ? `+${spread.toFixed(2)}` : spread.toFixed(2),
-      delta: Number(gl.yieldCurve.weeklyChangeSpread ?? 0),
-      signal: spread > 0 ? 'bullish' : 'bearish',
+      value: `${spread >= 0 ? '+' : ''}${spread.toFixed(2)}%`,
+      delta: spread,
+      signal: inverted ? 'bearish' : spread > 0.2 ? 'bullish' : 'neutral',
     });
   }
+
+  if (gl.netLiquidity) {
+    const val = Number(gl.netLiquidity.value ?? 0);
+    const change = Number(gl.netLiquidity.change30d ?? 0);
+    const trend = gl.netLiquidity.trend || 'stable';
+    metrics.push({
+      label: 'Net Liquidity',
+      value: val > 0 ? `$${val.toFixed(1)}T` : 'N/A',
+      delta: change,
+      signal: trend === 'expanding' ? 'bullish' : trend === 'contracting' ? 'bearish' : 'neutral',
+    });
+  }
+
   return metrics;
 }
 
@@ -288,13 +302,13 @@ function mapSectors(markets: any[] | null | undefined): SectorData[] {
     const marketName = String(m.market || '').charAt(0).toUpperCase() + String(m.market || '').slice(1).toLowerCase();
     for (const s of m.sectors) {
       if (!s) continue;
-      const flow = Number(s.flow ?? s.flow7d ?? s.weeklyFlow ?? 0);
+      const flow = Number(s.flow7d ?? s.flow ?? 0);
       sectors.push({
         name: String(s.name ?? ''),
         market: marketName,
         flow,
         dominance: Number(s.dominance ?? 0),
-        trending: flow > 1 ? 'up' : flow < -1 ? 'down' : 'flat',
+        trending: s.trending === 'up' ? 'up' : s.trending === 'down' ? 'down' : 'flat',
         topAssets: Array.isArray(s.topAssets) ? s.topAssets : [],
       });
     }
@@ -351,8 +365,8 @@ function mapVerdictData(data: Record<string, any> | null | undefined): VerdictDa
     },
     {
       label: 'USD Weakening',
-      passed: Number(gl?.dxy?.weeklyChange ?? 0) < 0,
-      detail: `DXY ${Number(gl?.dxy?.value ?? 0).toFixed(2)} (${Number(gl?.dxy?.weeklyChange ?? 0).toFixed(1)}% weekly)`,
+      passed: Number(gl?.dxy?.change7d ?? 0) < 0,
+      detail: `DXY ${Number(gl?.dxy?.value ?? 0).toFixed(2)} (${Number(gl?.dxy?.change7d ?? 0).toFixed(1)}% 7d)`,
     },
     {
       label: 'Capital Destination',
