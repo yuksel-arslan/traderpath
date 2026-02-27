@@ -1050,8 +1050,9 @@ Warn about potential traps and give protective advice.`;
       // Adds contextual intelligence on top of core analysis (non-blocking)
       let ragEnrichment: RAGEnrichmentResult | null = null;
       try {
-        // Determine research mode from request or default to 'fast'
-        const ragMode: ResearchMode = (body as Record<string, unknown>).ragMode as ResearchMode || 'fast';
+        // Determine research mode from request or default to 'news'
+        // 'news' mode calls Gemini for real market context (~$0.001 per analysis)
+        const ragMode: ResearchMode = (body as Record<string, unknown>).ragMode as ResearchMode || 'news';
         const assetClass = getAssetClass(body.symbol);
 
         // Build engine output for RAG orchestrator (read-only view of core analysis)

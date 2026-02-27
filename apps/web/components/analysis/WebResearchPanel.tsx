@@ -47,16 +47,11 @@ function getReliabilityTrackColor(reliability: number): string {
 export function WebResearchPanel({ research }: WebResearchPanelProps) {
   const [expanded, setExpanded] = useState(false);
 
-  if (!research) {
-    return (
-      <div className="rounded-lg border border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/30 p-4">
-        <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
-          <Search className="h-4 w-4" />
-          <span className="text-sm">No research data available</span>
-        </div>
-      </div>
-    );
-  }
+  // Hide panel entirely when no meaningful data
+  if (!research) return null;
+
+  const hasRealData = (research.summary && research.summary.length > 0) || (research.citations?.length ?? 0) > 0;
+  if (!hasRealData) return null;
 
   const modeStyle = MODE_STYLES[research.mode] || MODE_STYLES.fast;
   const citations = research.citations ?? [];

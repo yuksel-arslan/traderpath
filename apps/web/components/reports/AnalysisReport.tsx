@@ -2655,7 +2655,12 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
     }
 
     // MULTI-PAGE FORMAT - Detailed report (7 pages + optional RAG page)
-    const hasRAG = !!data.ragEnrichment;
+    // Only include RAG page when there's real research data (not empty placeholder)
+    const ragResearch = data.ragEnrichment?.research;
+    const hasRAG = !!data.ragEnrichment && !!(
+      (ragResearch?.summary && ragResearch.summary.length > 0) ||
+      (ragResearch?.citations && ragResearch.citations.length > 0)
+    );
     const totalPages = hasRAG ? 8 : 7;
 
     // Page 1: Executive Summary
