@@ -1044,12 +1044,14 @@ model Signal {
 
   // Trade Direction
   direction           String    @db.VarChar(10) // long, short
+  interval            String?   @db.VarChar(10) // Timeframe: 5m, 15m, 30m, 1h, 4h, 1d, 1W
 
   // Trade Plan (from 7-Step Analysis)
   entryPrice          Decimal   @map("entry_price") @db.Decimal(20, 8)
   stopLoss            Decimal   @map("stop_loss") @db.Decimal(20, 8)
   takeProfit1         Decimal   @map("take_profit_1") @db.Decimal(20, 8)
   takeProfit2         Decimal   @map("take_profit_2") @db.Decimal(20, 8)
+  takeProfit3         Decimal?  @map("take_profit_3") @db.Decimal(20, 8)
   riskRewardRatio     Decimal   @map("risk_reward_ratio") @db.Decimal(5, 2)
 
   // Analysis Results
@@ -1059,6 +1061,7 @@ model Signal {
   mlisRecommendation  String?   @map("mlis_recommendation") @db.VarChar(20) // STRONG_BUY, BUY, HOLD, SELL
   mlisConfidence      Int?      @map("mlis_confidence") // 0-100
   overallConfidence   Int       @map("overall_confidence") // 0-100 combined confidence
+  winRateEstimate     Int?      @map("win_rate_estimate") // 0-100 estimated win rate from trade plan
 
   // Capital Flow Context
   capitalFlowPhase    String    @map("capital_flow_phase") @db.VarChar(10) // early, mid, late, exit

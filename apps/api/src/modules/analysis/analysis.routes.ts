@@ -1299,6 +1299,166 @@ Warn about potential traps and give protective advice.`;
         }
       })();
 
+      // ===== Signal Auto-Publish: Confidence > 70% → add to Signals & notify subscribers =====
+      // Runs as fire-and-forget so the analysis response is not delayed
+      if (tradePlan && tradePlan.confidence > 70 && ['go', 'conditional_go'].includes(verdict.verdict)) {
+        (async () => {
+          try {
+            const { signalService } = await import('../signals/signal.service');
+            const { formatTelegramSignal } = await import('../signals/telegram-formatter');
+            const { signalSubscriptionService } = await import('../signals/signal-subscription.service');
+            const { notificationCenterService } = await import('../notifications/notification-center.service');
+
+            const assetClass = getAssetClass(body.symbol) as 'crypto' | 'stocks' | 'metals' | 'bonds';
+            const market = assetClass; // market equals assetClass
+
+            // Build signal direction
+            const signalDirection: 'long' | 'short' = tradePlan.direction?.toLowerCase() === 'short' ? 'short' : 'long';
+
+            // Calculate overall confidence (trade plan confidence already includes CF + MLIS adjustments)
+            const overallConfidence = Math.round(tradePlan.confidence);
+
+            // Check for duplicate signals (same symbol + direction within 4 hours)
+            const isDuplicate = await signalService.isDuplicateSignal(body.symbol, signalDirection, 4);
+            if (isDuplicate) {
+              logger.info({ symbol: body.symbol, direction: signalDirection }, '[Signal] Skipping - duplicate signal exists');
+              return;
+            }
+
+            // Build SignalData
+            const signalData = {
+              symbol: body.symbol,
+              assetClass,
+              market,
+              direction: signalDirection,
+              interval,
+              entryPrice: tradePlan.averageEntry || 0,
+              stopLoss: tradePlan.stopLoss?.price || 0,
+              takeProfit1: tradePlan.takeProfits?.[0]?.price || 0,
+              takeProfit2: tradePlan.takeProfits?.[1]?.price || 0,
+              takeProfit3: tradePlan.takeProfits?.[2]?.price || undefined,
+              riskRewardRatio: tradePlan.riskReward || 0,
+              classicVerdict: verdict.verdict.toUpperCase() as 'GO' | 'CONDITIONAL_GO',
+              classicScore: verdict.overallScore,
+              mlisConfirmation: mlisConfirmation?.confirmationStatus === 'CONFIRMED',
+              mlisRecommendation: mlisConfirmation?.mlisRecommendation as 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL' | undefined,
+              mlisConfidence: mlisConfirmation?.mlisConfidence,
+              overallConfidence,
+              winRateEstimate: tradePlan.winRateEstimate || undefined,
+              capitalFlowPhase: (capitalFlowModifier?.phase || 'mid') as 'early' | 'mid' | 'late' | 'exit',
+              capitalFlowBias: (capitalFlowModifier?.action === 'avoid' ? 'risk_off' : capitalFlowModifier?.action === 'analyze' ? 'risk_on' : 'neutral') as 'risk_on' | 'risk_off' | 'neutral',
+              sectorFlow: undefined,
+              classicAnalysisId: savedAnalysis.id,
+              mlisAnalysisId: savedAnalysis.id,
+            };
+
+            // Validate signal quality
+            const validation = signalService.validateSignalQuality(signalData);
+            if (!validation.valid) {
+              logger.info({ symbol: body.symbol, reasons: validation.reasons }, '[Signal] Quality validation failed');
+              return;
+            }
+
+            // Create the signal
+            const signalId = await signalService.createSignal(signalData);
+            if (!signalId) {
+              logger.warn({ symbol: body.symbol }, '[Signal] Signal creation returned empty ID (table missing?)');
+              return;
+            }
+
+            logger.info({ symbol: body.symbol, signalId, confidence: overallConfidence }, '[Signal] Auto-published from user analysis');
+
+            // Publish to Telegram channel (global)
+            const TELEGRAM_CHANNEL_ID = process.env['TELEGRAM_SIGNAL_CHANNEL_ID'];
+            const TELEGRAM_BOT_TOKEN = process.env['TELEGRAM_BOT_TOKEN'];
+            let telegramMessageId: string | undefined;
+
+            if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHANNEL_ID) {
+              try {
+                const message = formatTelegramSignal(signalData, signalId);
+                const response = await fetch(
+                  `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+                  {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      chat_id: TELEGRAM_CHANNEL_ID,
+                      text: message,
+                      parse_mode: 'HTML',
+                      disable_web_page_preview: true,
+                    }),
+                  }
+                );
+                const tgResult = await response.json() as { ok: boolean; result?: { message_id?: number }; description?: string };
+                if (tgResult.ok) {
+                  telegramMessageId = tgResult.result?.message_id?.toString();
+                }
+              } catch (tgErr) {
+                logger.warn({ error: tgErr }, '[Signal] Telegram channel publish failed');
+              }
+            }
+
+            // Mark signal as published
+            await signalService.markAsPublished(signalId, telegramMessageId);
+
+            // Notify subscribers who match this signal's criteria
+            const targetUsers = await signalService.getTargetUsers(signalData);
+
+            for (const prefs of targetUsers) {
+              try {
+                // Check subscription tier allows this market
+                const canReceive = await signalSubscriptionService.canReceiveSignals(prefs.user.id, market);
+                if (!canReceive) continue;
+
+                // In-app notification
+                await notificationCenterService.create({
+                  userId: prefs.user.id,
+                  type: 'SIGNAL',
+                  title: `New Signal: ${body.symbol} ${signalDirection.toUpperCase()}`,
+                  message: `${verdict.verdict.toUpperCase()} | Score ${verdict.overallScore}/10 | Confidence ${overallConfidence}%${tradePlan.winRateEstimate ? ` | Win Rate ${tradePlan.winRateEstimate}%` : ''} | Entry $${tradePlan.averageEntry}`,
+                  metadata: { signalId, symbol: body.symbol, direction: signalDirection, confidence: overallConfidence, winRate: tradePlan.winRateEstimate },
+                });
+
+                // Telegram notification to individual user
+                if (prefs.telegramEnabled && prefs.telegramChatId) {
+                  const { socialNotificationService: sns } = await import('../notifications/social-notification.service');
+                  const tgMessage = formatTelegramSignal(signalData, signalId);
+                  await sns.sendTelegramMessage(prefs.telegramChatId, tgMessage);
+                }
+
+                // Discord notification to individual user
+                if (prefs.discordEnabled && prefs.discordWebhookUrl) {
+                  const { socialNotificationService: sns } = await import('../notifications/social-notification.service');
+                  await sns.sendDiscordMessage(prefs.discordWebhookUrl, {
+                    title: `New Signal: ${body.symbol} ${signalDirection.toUpperCase()}`,
+                    description: `**${verdict.verdict.toUpperCase()}** | Score ${verdict.overallScore}/10`,
+                    color: signalDirection === 'long' ? 0x00F5A0 : 0xFF4757,
+                    fields: [
+                      { name: 'Confidence', value: `${overallConfidence}%`, inline: true },
+                      { name: 'Win Rate', value: `${tradePlan.winRateEstimate || 'N/A'}%`, inline: true },
+                      { name: 'R:R', value: `${tradePlan.riskReward || 'N/A'}`, inline: true },
+                      { name: 'Entry', value: `$${tradePlan.averageEntry}`, inline: true },
+                      { name: 'Stop Loss', value: `$${tradePlan.stopLoss?.price || 'N/A'}`, inline: true },
+                      { name: 'TP1', value: `$${tradePlan.takeProfits?.[0]?.price || 'N/A'}`, inline: true },
+                      { name: 'TP2', value: `$${tradePlan.takeProfits?.[1]?.price || 'N/A'}`, inline: true },
+                      ...(tradePlan.takeProfits?.[2]?.price ? [{ name: 'TP3', value: `$${tradePlan.takeProfits[2].price}`, inline: true }] : []),
+                    ],
+                  });
+                }
+
+                // Email notification disabled (email service cancelled)
+              } catch (subErr) {
+                logger.warn({ error: subErr, userId: prefs.user.id }, '[Signal] Subscriber notification failed');
+              }
+            }
+
+            logger.info({ signalId, subscribersNotified: targetUsers.length }, '[Signal] Subscriber notifications sent');
+          } catch (signalError) {
+            logger.error({ error: signalError, symbol: body.symbol }, '[Signal] Auto-publish failed');
+          }
+        })();
+      }
+
       // Build AI prompt based on whether trade plan exists
       const tradeTypeLabel = tradeType === 'scalping' ? 'scalping (15min-2h)' : tradeType === 'dayTrade' ? 'day trading (2-24 hours)' : 'swing trading (1-14 days)';
       let aiPrompt: string;
