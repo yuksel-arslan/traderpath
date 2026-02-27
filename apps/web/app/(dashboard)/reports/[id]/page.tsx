@@ -28,7 +28,7 @@ import {
   Image,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
-import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../lib/coin-icons';
+import { CoinIcon } from '../../../../components/common/CoinIcon';
 import { TradePlanChart } from '../../../../components/analysis/TradePlanChart';
 import { TradeDecisionVisual } from '../../../../components/analysis/TradeDecisionVisual';
 import { authFetch } from '../../../../lib/api';
@@ -425,14 +425,7 @@ export default function ReportViewPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
-              <img
-                src={getCoinIcon(report.symbol)}
-                alt={report.symbol}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-contain"
-                onError={(e) => {
-                  e.currentTarget.src = FALLBACK_COIN_ICON;
-                }}
-              />
+              <CoinIcon symbol={report.symbol.replace(/USDT$/i, '')} size={48} className="w-10 h-10 sm:w-12 sm:h-12" />
               <div>
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{report.symbol}/USDT Analysis</h1>
                 <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{report.generatedAt}</p>

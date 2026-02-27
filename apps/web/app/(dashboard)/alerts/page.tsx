@@ -16,7 +16,7 @@ import {
   RefreshCw,
   AlertCircle
 } from 'lucide-react';
-import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
+import { CoinIcon } from '../../../components/common/CoinIcon';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
 
@@ -300,14 +300,7 @@ export default function AlertsPage() {
             >
               <div className="flex items-center gap-3 sm:gap-4">
                 {/* Coin Icon */}
-                <img
-                  src={getCoinIcon(alert.symbol)}
-                  alt={alert.symbol}
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-contain"
-                  onError={(e) => {
-                    e.currentTarget.src = FALLBACK_COIN_ICON;
-                  }}
-                />
+                <CoinIcon symbol={alert.symbol.replace(/USDT$/i, '')} size={40} className="w-8 h-8 sm:w-10 sm:h-10" />
 
                 {/* Alert Info */}
                 <div>

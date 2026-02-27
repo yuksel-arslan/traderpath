@@ -73,7 +73,7 @@ const withPWA = require('next-pwa')({
     },
     {
       // Cache coin icons
-      urlPattern: /^https:\/\/(?:coin-images\.coingecko\.com|assets\.coingecko\.com|raw\.githubusercontent\.com|www\.cryptocompare\.com|logo\.clearbit\.com)\/.*/i,
+      urlPattern: /^https:\/\/(?:coin-images\.coingecko\.com|assets\.coingecko\.com|cdn\.jsdelivr\.net|assets\.coincap\.io|cryptofonts\.com|raw\.githubusercontent\.com|www\.cryptocompare\.com|logo\.clearbit\.com)\/.*/i,
       handler: 'CacheFirst',
       options: {
         cacheName: 'coin-icons',
@@ -253,6 +253,18 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'www.cryptocompare.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'assets.coincap.io',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cryptofonts.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.jsdelivr.net',
       },
     ],
   },

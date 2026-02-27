@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { cn } from '../../../../../lib/utils';
-import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../../lib/coin-icons';
+import { CoinIcon } from '../../../../../components/common/CoinIcon';
 import { TradePlanChart } from '../../../../../components/analysis/TradePlanChart';
 import { TradeDecisionVisual } from '../../../../../components/analysis/TradeDecisionVisual';
 import { WebResearchPanel } from '../../../../../components/analysis/WebResearchPanel';
@@ -449,14 +449,7 @@ export default function AnalysisDetailsPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
-              <img
-                src={getCoinIcon(analysis.symbol)}
-                alt={analysis.symbol}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-contain"
-                onError={(e) => {
-                  e.currentTarget.src = FALLBACK_COIN_ICON;
-                }}
-              />
+              <CoinIcon symbol={analysis.symbol.replace(/USDT$/i, '')} size={48} className="w-10 h-10 sm:w-12 sm:h-12" />
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{analysis.symbol}/USDT Analysis</h1>
