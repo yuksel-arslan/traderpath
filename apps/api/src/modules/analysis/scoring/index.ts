@@ -66,3 +66,15 @@ export { computeCorrelationPenalty, computeMarketPulseCorrelationPenalty, pearso
 
 // Bootstrap Confidence Interval
 export { bootstrapConfidenceInterval, confidenceFromCI } from './confidence-bootstrap';
+
+// Rolling Statistics Service
+export { computeRollingStats, computeRollingStatsMap, extractIndicatorArrays } from './rolling-stats.service';
+
+// Feature Adapter (engine results → closed-form input)
+export {
+  extractAllStepRawValues,
+  extractMLISScores,
+  extractTrapData,
+  hasCriticalSafetyIssue,
+  hasEconomicBlock,
+} from './feature-adapter';

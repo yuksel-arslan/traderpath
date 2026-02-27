@@ -12,6 +12,16 @@ import { Timeframe as TimeframeEnum } from './config/timeframe.enum';
 import { selectBundle, getBundleType } from './bundles';
 import { aggregateScores, quickStepScore, STEP_WEIGHTS } from './scoring';
 import {
+  aggregateWithMetaEnsemble,
+  extractAllStepRawValues,
+  extractTrapData,
+  hasCriticalSafetyIssue as checkCriticalSafety,
+  hasEconomicBlock as checkEconomicBlock,
+  computeMarketPulseCorrelationPenalty,
+  computeAllStepScores,
+} from './scoring';
+import type { ClosedFormAggregateResult } from './scoring';
+import {
   calculateStopLoss,
   calculateTakeProfits,
   calculatePositionSize,
@@ -2220,6 +2230,14 @@ interface FinalVerdictResult {
   // MLIS verdict downgrade tracking
   verdictDowngraded?: boolean;
   verdictDowngradeReason?: string;
+  // Closed-form meta-ensemble results
+  metaEnsemble?: {
+    probability: number;
+    calibratedProbability: number;
+    confidenceInterval: [number, number];
+    confidence: number;
+    logit: number;
+  };
 }
 
 // ===========================================
@@ -6064,51 +6082,85 @@ export const analysisEngine = {
       tradeType === 'scalping'   ? 'scalping' :
       tradeType === 'swing'      ? 'swing'    : 'day';
 
-    const stepScoreInputs = [
-      quickStepScore('marketPulse', marketPulse),
-      quickStepScore('assetScan',   assetScan),
-      quickStepScore('safetyCheck', safetyCheck),
-      quickStepScore('timing',      timing),
-      quickStepScore('trapCheck',   trapCheck),
-      ...(hasTradePlan && tradePlan
-        ? [quickStepScore('tradePlan', tradePlan)]
-        : []),
-    ];
+    // ── Closed-form meta-ensemble aggregation (production path) ──
+    // Extract raw feature values from engine step results
+    const rawValues = extractAllStepRawValues(
+      { marketPulse, assetScan, safetyCheck, timing, trapCheck },
+      tradePlan,
+    );
 
-    const aggregated = aggregateScores({
-      scores:      stepScoreInputs,
-      bundleType:  bundleTypeForScoring,
+    // Compute closed-form step scores with correlation penalty
+    const correlationPenalty = computeMarketPulseCorrelationPenalty();
+    const closedFormSteps = computeAllStepScores(
+      rawValues,
+      {}, // Rolling stats computed from candle data when available
+      { marketPulse: correlationPenalty },
+    );
+
+    // Build step scores for meta-ensemble (use closed-form when available, engine score as fallback)
+    const cfStepScores = {
+      marketPulse: closedFormSteps.marketPulse?.score ?? marketPulse.score,
+      assetScan: closedFormSteps.assetScan?.score ?? assetScan.score,
+      safetyCheck: closedFormSteps.safetyCheck?.score ?? safetyCheck.score,
+      timing: closedFormSteps.timing?.score ?? timing.score,
+      tradePlan: closedFormSteps.tradePlan?.score ?? (tradePlan?.score ?? 5),
+      trapCheck: closedFormSteps.trapCheck?.score ?? trapCheck.score,
+    };
+
+    // Run meta-ensemble aggregation
+    const trapData = extractTrapData(trapCheck);
+    const criticalSafety = checkCriticalSafety(safetyCheck);
+    const economicBlock = checkEconomicBlock(marketPulse);
+
+    const closedFormResult: ClosedFormAggregateResult = aggregateWithMetaEnsemble({
+      stepScores: cfStepScores,
+      trapData,
+      riskLevel: safetyCheck.riskLevel as 'low' | 'medium' | 'high' | 'critical',
+      riskScoreRaw: safetyCheck.contractSecurity?.riskScore,
+      bundleType: bundleTypeForScoring as 'scalping' | 'day' | 'swing',
       hasTradePlan,
+      hasCriticalSafetyIssue: criticalSafety,
+      hasEconomicBlock: economicBlock,
     });
 
-    // Map to legacy shape expected by FinalVerdictResult
-    const componentScores: FinalVerdictResult['componentScores'] = aggregated.componentScores.map(cs => ({
-      step:   cs.step === 'marketPulse' ? 'Market Pulse'  :
-              cs.step === 'assetScan'   ? 'Asset Scanner' :
-              cs.step === 'safetyCheck' ? 'Safety Check'  :
-              cs.step === 'timing'      ? 'Timing'        :
-              cs.step === 'trapCheck'   ? 'Trap Check'    :
-              cs.step === 'tradePlan'   ? 'Trade Plan'    : cs.step,
-      score:  cs.score,
-      weight: cs.weight,
+    // Use meta-ensemble results as primary
+    const overallScore = closedFormResult.overallScore;
+    const verdict = closedFormResult.verdict;
+
+    // Build component scores from closed-form step breakdowns
+    const stepNameMap: Record<string, string> = {
+      marketPulse: 'Market Pulse',
+      assetScan: 'Asset Scanner',
+      safetyCheck: 'Safety Check',
+      timing: 'Timing',
+      trapCheck: 'Trap Check',
+      tradePlan: 'Trade Plan',
+    };
+
+    const componentScores: FinalVerdictResult['componentScores'] = closedFormResult.ensemble.stepContributions.map(sc => ({
+      step: stepNameMap[sc.step] ?? sc.step,
+      score: cfStepScores[sc.step as keyof typeof cfStepScores] ?? 5,
+      weight: sc.weight,
     }));
 
-    const overallScore = aggregated.overallScore;
-
-    // Confidence factors - use reasons from preliminary verdict
+    // Confidence factors from meta-ensemble + preliminary verdict
     const confidenceFactors: FinalVerdictResult['confidenceFactors'] = preliminaryVerdict.reasons.map(r => ({
       factor: r.factor,
       positive: r.positive,
       impact: r.impact
     }));
 
+    // Add meta-ensemble confidence as a factor
+    confidenceFactors.push({
+      factor: `Meta-ensemble P(up)=${(closedFormResult.probability * 100).toFixed(1)}%, CI=[${(closedFormResult.confidenceInterval[0] * 100).toFixed(1)}%,${(closedFormResult.confidenceInterval[1] * 100).toFixed(1)}%]`,
+      positive: closedFormResult.probability > 0.55,
+      impact: closedFormResult.confidence > 70 ? 'high' : closedFormResult.confidence > 40 ? 'medium' : 'low',
+    });
+
     // Add trade plan specific factors
     if (hasTradePlan && tradePlan && tradePlan.riskReward >= 2.5) {
       confidenceFactors.push({ factor: `Good R:R ratio (${tradePlan.riskReward})`, positive: true, impact: 'medium' });
     }
-
-    // Use verdict from preliminary verdict (decision was already made)
-    const verdict = preliminaryVerdict.verdict;
 
     // Generate recommendation
     let recommendation = '';
@@ -6170,6 +6222,13 @@ export const analysisEngine = {
       hasTradePlan,
       aiSummary,
       tokenomicsInsight,
+      metaEnsemble: {
+        probability: closedFormResult.probability,
+        calibratedProbability: closedFormResult.calibratedProbability,
+        confidenceInterval: closedFormResult.confidenceInterval,
+        confidence: closedFormResult.confidence,
+        logit: closedFormResult.logit,
+      },
     };
   },
 
