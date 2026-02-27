@@ -497,6 +497,53 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
+  // Lightweight 30-second refresh for live prices (Active Trades PnL)
+  useEffect(() => {
+    const livePriceInterval = setInterval(async () => {
+      try {
+        const res = await authFetch('/api/analysis/live-prices');
+        if (res.ok) {
+          const data = await res.json();
+          const analyses = data.data?.analyses || [];
+          const updated: RecentAnalysis[] = analyses.map((a: Record<string, unknown>) => {
+            const rawVerdict = (typeof a.verdict === 'string' ? a.verdict : '').toLowerCase().replace(/[^a-z_]/g, '');
+            let verdict: RecentAnalysis['verdict'] = 'wait';
+            if (rawVerdict === 'go' || rawVerdict === 'go!') verdict = 'go';
+            else if (rawVerdict === 'conditional_go' || rawVerdict === 'conditionalgo') verdict = 'conditional_go';
+            else if (rawVerdict === 'avoid' || rawVerdict === 'no_go' || rawVerdict === 'nogo') verdict = 'avoid';
+
+            let tradeType: TradeType | undefined;
+            if (a.interval === '5m' || a.interval === '15m') tradeType = 'scalping';
+            else if (a.interval === '1h' || a.interval === '4h') tradeType = 'dayTrade';
+            else if (a.interval === '1d' || a.interval === '1D') tradeType = 'swing';
+
+            let outcome: RecentAnalysis['outcome'] = 'pending';
+            if (a.outcome === 'tp1_hit' || a.outcome === 'tp2_hit' || a.outcome === 'tp3_hit') outcome = 'correct';
+            else if (a.outcome === 'sl_hit') outcome = 'incorrect';
+
+            return {
+              id: a.id as string,
+              symbol: a.symbol as string,
+              verdict,
+              score: (a.totalScore as number) || 0,
+              outcome,
+              unrealizedPnL: a.unrealizedPnL as number | undefined,
+              createdAt: a.createdAt as string,
+              direction: a.direction as string | undefined,
+              entryPrice: a.entryPrice as number | undefined,
+              currentPrice: a.currentPrice as number | undefined,
+              tradeType,
+              stopLoss: a.stopLoss as number | undefined,
+              takeProfit1: a.takeProfit1 as number | undefined,
+            };
+          });
+          setRecentAnalyses(updated);
+        }
+      } catch {}
+    }, 30_000);
+    return () => clearInterval(livePriceInterval);
+  }, []);
+
   // ===========================================
   // Chart + PnL calculations (preserved)
   // ===========================================

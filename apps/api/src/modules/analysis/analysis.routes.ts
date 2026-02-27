@@ -19,7 +19,7 @@ import { prisma } from '../../core/database';
 import { coinScoreCacheService, CoinScore } from './services/coin-score-cache.service';
 import { analyzeMLIS, MLISResult } from './services/mlis.service';
 import { logger } from '../../core/logger';
-import { fetchCandles, getAssetClass } from './providers/multi-asset-data-provider';
+import { fetchCandles, getAssetClass, fetchTicker } from './providers/multi-asset-data-provider';
 import { getCapitalFlowModifier, CapitalFlowModifier } from '../capital-flow/capital-flow.service';
 import {
   MarketType,
@@ -1663,28 +1663,50 @@ Explain the key risks and what conditions would need to change before trading th
         });
       }
 
-      // Extract unique symbols
+      // Extract unique symbols, separated by asset class
       const symbols = [...new Set(analyses.map(a => a.symbol as string))];
+      const cryptoSymbols = symbols.filter(s => getAssetClass(s) === 'crypto');
+      const nonCryptoSymbols = symbols.filter(s => getAssetClass(s) !== 'crypto');
 
-      // Fetch current prices from Binance
+      // Fetch prices from appropriate sources per asset class
       const prices: Record<string, number> = {};
-      try {
-        const pairs = symbols.map((s: string) => `"${s.toUpperCase()}USDT"`).join(',');
-        const response = await fetch(
-          `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
-        );
-        if (response.ok) {
-          const responseText = await response.text();
-          if (responseText && responseText.trim() !== '') {
-            const data = JSON.parse(responseText) as Array<{ symbol: string; price: string }>;
-            for (const item of data) {
-              const symbol = item.symbol.replace('USDT', '');
-              prices[symbol] = parseFloat(item.price);
+
+      // Crypto: Binance batch API
+      if (cryptoSymbols.length > 0) {
+        try {
+          const pairs = cryptoSymbols.map((s: string) => `"${s.toUpperCase()}USDT"`).join(',');
+          const response = await fetch(
+            `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
+          );
+          if (response.ok) {
+            const responseText = await response.text();
+            if (responseText && responseText.trim() !== '') {
+              const data = JSON.parse(responseText) as Array<{ symbol: string; price: string }>;
+              for (const item of data) {
+                const symbol = item.symbol.replace('USDT', '');
+                prices[symbol] = parseFloat(item.price);
+              }
             }
           }
+        } catch (err) {
+          logger.warn({ error: err }, 'Failed to fetch crypto prices from Binance');
         }
-      } catch (err) {
-        logger.warn({ error: err }, 'Failed to fetch prices');
+      }
+
+      // Non-crypto: Yahoo Finance via multi-asset provider
+      if (nonCryptoSymbols.length > 0) {
+        await Promise.all(
+          nonCryptoSymbols.map(async (sym) => {
+            try {
+              const ticker = await fetchTicker(sym);
+              if (ticker?.price) {
+                prices[sym.toUpperCase().replace('.IS', '')] = ticker.price;
+              }
+            } catch (err) {
+              logger.warn({ error: err, symbol: sym }, 'Failed to fetch non-crypto price');
+            }
+          })
+        );
       }
 
       // Calculate next candle close time based on intervals present
@@ -1721,7 +1743,8 @@ Explain the key risks and what conditions would need to change before trading th
 
         const entryPrice = tradePlan?.averageEntry as number || tradePlan?.entryPrice as number || null;
         const direction = (tradePlan?.direction as string || 'long').toLowerCase();
-        const currentPrice = prices[a.symbol] || null;
+        const sym = (a.symbol as string).toUpperCase().replace('USDT', '').replace('.IS', '');
+        const currentPrice = prices[sym] || prices[a.symbol] || null;
 
         let unrealizedPnL: number | null = null;
         if (entryPrice && entryPrice > 0 && currentPrice) {
