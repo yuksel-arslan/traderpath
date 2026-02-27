@@ -46,7 +46,6 @@ import { MarketFlow } from '../../../components/terminal/MarketFlow';
 import { RotationMatrix } from '../../../components/terminal/RotationMatrix';
 import { SectorActivity } from '../../../components/terminal/SectorActivity';
 import { AIRecommendation } from '../../../components/terminal/AIRecommendation';
-import { AssetTable } from '../../../components/terminal/AssetTable';
 import { RunAnalysis } from '../../../components/terminal/RunAnalysis';
 import {
   TradeHeader,
@@ -162,7 +161,6 @@ type SortDir = 'asc' | 'desc';
 
 type SectionId =
   | 'l1' | 'l2' | 'rotation' | 'l3' | 'l4'
-  | 'l5'
   | 'analysis'
   | 'l7';
 
@@ -191,7 +189,6 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: 'Asset Analysis',
     items: [
-      { id: 'l5', label: 'Asset Table', tag: '' },
       { id: 'analysis', label: 'Run Analysis', tag: '' },
     ],
   },
@@ -851,17 +848,6 @@ function ContentPanel({
           verdict={verdict}
           onAssetClick={onAssetChipClick}
           onAnalyze={onAnalyze}
-        />
-      );
-    case 'l5':
-      return (
-        <AssetTable
-          assets={screenerData}
-          selectedSymbol={selectedAsset?.symbol ?? null}
-          onSelect={onAssetSelect}
-          recommendedSymbols={recommendedSymbols}
-          onAnalyze={onAnalyze}
-          onVisualize={onVisualize}
         />
       );
     case 'analysis':

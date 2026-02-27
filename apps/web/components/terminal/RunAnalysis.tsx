@@ -96,11 +96,10 @@ export function RunAnalysis({
     setSelectedSymbols((prev) => prev.filter((s) => s !== sym));
   }, []);
 
-  // Quick add: filter out already-selected + duplicates
+  // Quick add: filter out already-selected + deduplicate
   const availableSymbols = useMemo(
     () =>
-      screenerData
-        .map((a) => a.symbol.toUpperCase())
+      [...new Set(screenerData.map((a) => a.symbol.toUpperCase()))]
         .filter((s) => !selectedSymbols.includes(s))
         .slice(0, 10),
     [screenerData, selectedSymbols]
