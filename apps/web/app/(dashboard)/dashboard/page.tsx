@@ -126,6 +126,22 @@ interface GlobalLiquidity {
   vix: { value: number; level: 'extreme_fear' | 'fear' | 'neutral' | 'complacent' };
 }
 
+interface SectorFlow {
+  name: string;
+  flow7d: number;
+  trending: 'up' | 'down' | 'stable';
+  topAssets: string[];
+}
+
+interface SuggestedAsset {
+  symbol: string;
+  name: string;
+  market: string;
+  sector?: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  reason: string;
+}
+
 interface MarketFlow {
   market: 'crypto' | 'stocks' | 'bonds' | 'metals';
   flow7d: number;
@@ -133,6 +149,7 @@ interface MarketFlow {
   phase: 'early' | 'mid' | 'late' | 'exit';
   daysInPhase: number;
   rotationSignal: 'entering' | 'stable' | 'exiting' | null;
+  sectors?: SectorFlow[];
 }
 
 interface FlowRecommendation {
@@ -141,6 +158,8 @@ interface FlowRecommendation {
   action: 'analyze' | 'wait' | 'avoid';
   confidence: number;
   reason: string;
+  sectors?: string[];
+  suggestedAssets?: SuggestedAsset[];
 }
 
 interface CapitalFlowSummary {
@@ -661,7 +680,7 @@ export default function DashboardPage() {
 
         {/* ROW 2: Flow → Action Pipeline (full width) */}
         <div id="tour-flow-chain">
-          <FlowChain capitalFlow={capitalFlow} recentAnalyses={recentAnalyses} />
+          <FlowChain capitalFlow={capitalFlow} />
         </div>
 
         {/* Market filters moved inside OpportunityRadar */}
