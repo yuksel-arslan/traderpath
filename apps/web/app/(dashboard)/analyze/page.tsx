@@ -168,6 +168,7 @@ export default function AutomatedAnalysisPage() {
   const [manualSymbol, setManualSymbol] = useState('');
   const [filter, setFilter] = useState('All');
   const [reportDrawerId, setReportDrawerId] = useState<string | null>(null);
+  const [timeframe, setTimeframe] = useState<'5m' | '15m' | '30m' | '1h' | '4h' | '1d'>('4h');
   const pipelineRef = useRef<HTMLDivElement>(null);
 
   // ── Data fetching ─────────────────────────
@@ -422,6 +423,19 @@ export default function AutomatedAnalysisPage() {
                 )}
               </div>
               <div className="mt-3">
+                <label className="text-[10px] block mb-1.5 text-gray-400 dark:text-white/30">Timeframe</label>
+                <div className="flex gap-1">
+                  {([['15m', 'Scalp'], ['1h', 'Day'], ['4h', 'Day'], ['1d', 'Swing']] as const).map(([tf, type]) => (
+                    <button key={tf} onClick={() => setTimeframe(tf)}
+                      className={cn('flex-1 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all', timeframe === tf ? 'text-white' : 'bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-white/40 hover:bg-gray-100 dark:hover:bg-white/[0.08]')}
+                      style={timeframe === tf ? { background: 'linear-gradient(135deg, #00F5A0, #00D4FF)' } : undefined}>
+                      <span className="block">{tf.toUpperCase()}</span>
+                      <span className="block text-[9px] opacity-60">{type}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-3">
                 <Link href="/analyze/tailored" className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs rounded-lg border border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-white/40 hover:bg-gray-100 dark:hover:bg-white/[0.05] transition-colors">
                   <Target className="w-3.5 h-3.5" /> Tailored Analysis
                 </Link>
@@ -571,7 +585,7 @@ export default function AutomatedAnalysisPage() {
 
       {/* Analysis Dialog */}
       {showAnalysisDialog && selectedAsset && (
-        <AnalysisDialog isOpen={showAnalysisDialog} symbol={selectedAsset.symbol} coinName={selectedAsset.name || selectedAsset.symbol} timeframe="4h" capitalFlowContext={capitalFlowContextPayload}
+        <AnalysisDialog isOpen={showAnalysisDialog} symbol={selectedAsset.symbol} coinName={selectedAsset.name || selectedAsset.symbol} timeframe={timeframe} capitalFlowContext={capitalFlowContextPayload}
           onClose={() => { setShowAnalysisDialog(false); setPipelineStep('complete'); fetchDailyPassStatus(); fetchAnalyses(); }}
           onComplete={() => { setShowAnalysisDialog(false); setPipelineStep('complete'); fetchDailyPassStatus(); fetchAnalyses(); }}
           onReportReady={(id) => { setShowAnalysisDialog(false); setPipelineStep('complete'); fetchDailyPassStatus(); fetchAnalyses(); setReportDrawerId(id); }} />
