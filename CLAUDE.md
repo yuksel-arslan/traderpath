@@ -281,6 +281,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-26 | Header/Footer: bg-background ile sayfa rengi eşitleme | Navbar `bg-white/bg-[#0A0A0A]` → `bg-background`, Footer `bg-slate-50/bg-[#0B1121]` → `bg-background`, Dashboard header `bg-card/80` → `bg-background/80`, Dashboard footer `bg-card/50` → `bg-background` |
 | 2026-02-26 | Auth Layout: Marketing paneli kaldırıldı | Sol taraftaki %50 marketing paneli kaldırıldı, logo formun üstüne küçük (sm) yerleştirildi, tek kolonlu centered layout |
 | 2026-02-26 | LivePreview: Perspective Tilt 3D layout | Kartlar perspective(1200px) + rotateY(±3deg) ile açılı yerleşim, hover'da düzleşir + scale(1.03) + translateZ(20px), cubic-bezier geçiş |
+| 2026-02-27 | Auth Layout: Dynamic gradient arka plan | Dashboard bg-background eşleşmesi + 4 animasyonlu gradient orb (teal/coral) + grain texture overlay, light/dark mod desteği |
 
 ---
 
@@ -317,6 +318,7 @@ Kullanıcı Hakları Aktif:
 | 2026-02-26 | 1) Landing page logo alignment: Navbar container `px-4` → `pl-0 pr-4` ile logo sol tarafa dayandı. 2) Dashboard crash fix: OpportunityRadar.tsx'de `primaryMarket` değişkeni kullanımdan önce tanımlanmıyordu (temporal dead zone), tanım filtreleme kodunun üstüne taşındı. |
 | 2026-02-26 | 1) Header/Footer arka plan rengi sayfa background'u ile eşitlendi: Navbar, Footer, Dashboard header/footer hepsi `bg-background` kullanıyor. 2) Auth (login/register) layout yeniden tasarlandı: Sol marketing paneli kaldırıldı, logo formun üstüne küçük yerleştirildi, tek kolonlu centered layout. |
 | 2026-02-27 | 1) Analiz kırılma hatası düzeltildi: Duplicate analysis check'te `timeframe` → `interval` Prisma alan adı düzeltmesi. 2) Frontend/Backend kredi tutarsızlıkları: 7 dosyada fiyat bilgileri backend Daily Pass model ile eşitlendi (DAILY_PASS_COSTS 5/5/10→25/25/100, pricing page, terms, help, CoinSelector, concierge, SERVICE_CREDITS). |
+| 2026-02-27 | Auth layout arka planı dashboard ile eşitlendi (`bg-background`) ve kurumsal renklerde (teal/coral) dinamik gradient arka plan eklendi. 4 animasyonlu gradient orb (authGradient1-4), mesh gradient base, grain texture overlay. Light ve dark mod desteği. |
 
 ---
 
