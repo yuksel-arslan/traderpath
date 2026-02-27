@@ -46,13 +46,15 @@ const PHASE_DOT: Record<string, string> = {
 const MARKET_LABEL: Record<string, string> = {
   crypto: 'Crypto',
   stocks: 'Stocks',
+  bist: 'BIST',
   metals: 'Metals',
   bonds: 'Bonds',
 };
 
 function matchesFilter(market: string, selectedMarkets: string[]): boolean {
   if (market === 'crypto' && selectedMarkets.includes('crypto')) return true;
-  if (market === 'stocks' && (selectedMarkets.includes('bist') || selectedMarkets.includes('forex'))) return true;
+  if (market === 'stocks' && selectedMarkets.includes('forex')) return true;
+  if (market === 'bist' && selectedMarkets.includes('bist')) return true;
   if (market === 'metals' && selectedMarkets.includes('metals')) return true;
   if (market === 'bonds' && selectedMarkets.includes('bonds')) return true;
   return false;
