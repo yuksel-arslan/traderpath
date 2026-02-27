@@ -45,6 +45,7 @@ const directNav = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Terminal', href: '/terminal', icon: Monitor },
   { name: 'Analyze', href: '/analyze', icon: BarChart3 },
+  { name: 'Reports', href: '/reports', icon: FileText },
   { name: 'Signals', href: '/signals', icon: Activity },
 ];
 
@@ -55,7 +56,6 @@ const dropdownNav = [
     icon: Settings,
     items: [
       { name: 'Concierge', href: '/concierge', icon: Bot },
-      { name: 'Reports', href: '/reports', icon: FileText },
       { name: 'Methodology', href: '/methodology', icon: FlaskConical },
       { name: 'Smart Alerts', href: '/alerts/smart', icon: ShieldAlert },
       { name: 'Scheduled', href: '/scheduled', icon: Calendar },
