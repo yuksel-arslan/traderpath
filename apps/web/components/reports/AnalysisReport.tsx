@@ -330,6 +330,36 @@ function getVerdictAction(v: { action?: string; verdict?: string } | undefined):
   return v?.action || v?.verdict || '';
 }
 
+/**
+ * Verdict-aware pulse dot for page headers.
+ * GO/CONDITIONAL_GO → green, WAIT → amber, AVOID → red.
+ * Rendered as a solid dot with a glow halo (frozen pulse frame).
+ */
+function verdictPulseDot(verdict: string | undefined): string {
+  const v = (typeof verdict === 'string' ? verdict : '').toLowerCase().replace(/-/g, '_');
+  let color: string;
+  let glowColor: string;
+  if (v === 'go') {
+    color = '#4ade80';
+    glowColor = 'rgba(74, 222, 128, 0.35)';
+  } else if (v.includes('conditional')) {
+    color = '#fbbf24';
+    glowColor = 'rgba(251, 191, 36, 0.35)';
+  } else if (v === 'avoid' || v === 'no_go' || v === 'stop') {
+    color = '#f87171';
+    glowColor = 'rgba(248, 113, 113, 0.35)';
+  } else {
+    // WAIT or unknown
+    color = '#fbbf24';
+    glowColor = 'rgba(251, 191, 36, 0.25)';
+  }
+
+  return `<span style="display:inline-block;position:relative;width:10px;height:10px;vertical-align:middle;margin-right:6px;">` +
+    `<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;background:${glowColor};"></span>` +
+    `<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:${color};box-shadow:0 0 6px ${color}, 0 0 10px ${glowColor};"></span>` +
+    `</span>`;
+}
+
 function formatIndicatorValue(value: number | string | null | undefined): string {
   if (value === null || value === undefined) return '-';
   if (typeof value === 'string') return value;
@@ -407,7 +437,7 @@ const styles = `
   .brand-trade { color: #f87171; }
   .brand-path { color: #14B8A6; }
   .header-center { text-align: center; }
-  .report-title { font-size: 11px; font-weight: 600; color: #f1f5f9; text-transform: uppercase; letter-spacing: 1px; }
+  .report-title { font-size: 11px; font-weight: 600; color: #f1f5f9; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; }
   .report-subtitle { font-size: 8px; color: #9ca3af; margin-top: 2px; }
   .header-right { text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
   .asset-logo { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
@@ -935,7 +965,7 @@ function generatePageTradePlan(data: AnalysisReportData, totalPages: number): st
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Trade Plan</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Trade Plan</div>
         <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
@@ -1035,7 +1065,7 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Tokenomics Analysis</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Tokenomics Analysis</div>
         <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
@@ -1239,7 +1269,7 @@ function generatePageSteps12(data: AnalysisReportData, totalPages: number): stri
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Analysis Steps 1-2</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Analysis Steps 1-2</div>
         <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
@@ -1405,7 +1435,7 @@ function generatePageSteps34(data: AnalysisReportData, totalPages: number): stri
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Analysis Steps 3-4</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Analysis Steps 3-4</div>
         <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
@@ -1567,7 +1597,7 @@ function generatePageSteps56(data: AnalysisReportData, totalPages: number): stri
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Analysis Steps 5-6</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Analysis Steps 5-6</div>
         <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
@@ -1735,7 +1765,7 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Final Verdict</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Final Verdict</div>
         <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
@@ -2066,7 +2096,7 @@ function generatePageRAG(data: AnalysisReportData, totalPages: number): string {
   <div class="page">
     <!-- Header -->
     <div style="text-align:center;padding:12px 0 15px;border-bottom:2px solid #1a1a1a;margin-bottom:12px;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f1f5f9;">RAG Intelligence Layer</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f1f5f9;">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}RAG Intelligence Layer</div>
       <div style="font-size:7px;color:#666;margin-top:3px;display:flex;align-items:center;justify-content:center;gap:4px;">
         ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" style="width:14px;height:14px;border-radius:50%;object-fit:cover;" />` : ''}
         <span>${data.symbol} | Page 8 of ${totalPages}</span>
@@ -2655,7 +2685,12 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
     }
 
     // MULTI-PAGE FORMAT - Detailed report (7 pages + optional RAG page)
-    const hasRAG = !!data.ragEnrichment;
+    // Only include RAG page when there's real research data (not empty placeholder)
+    const ragResearch = data.ragEnrichment?.research;
+    const hasRAG = !!data.ragEnrichment && !!(
+      (ragResearch?.summary && ragResearch.summary.length > 0) ||
+      (ragResearch?.citations && ragResearch.citations.length > 0)
+    );
     const totalPages = hasRAG ? 8 : 7;
 
     // Page 1: Executive Summary

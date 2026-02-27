@@ -20,7 +20,6 @@ import {
   Zap,
   Activity,
   Calendar,
-  Mail,
   Loader2,
   ChevronDown,
   Layers,
@@ -233,13 +232,6 @@ export default function ReportsPage() {
     } catch (error) {
       console.error('Failed to delete analysis:', error);
     }
-  };
-
-  // Send report via email - redirects to analysis details page for full screenshot
-  const handleSendEmail = (report: Report) => {
-    // Redirect to analysis details page with email=true parameter
-    // The details page will capture the full screenshot and send the email
-    router.push(`/analyze/details/${report.id}?email=true`);
   };
 
   // Navigate to AI Expert with report context
@@ -900,14 +892,6 @@ Could you share your risk assessment and recommendations based on this analysis?
                       <span className="hidden sm:inline">AI Expert</span>
                     </button>
                   )}
-                  {/* Email */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleSendEmail(report); }}
-                    className="p-1.5 rounded-lg text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/60 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-all"
-                    title="Send Email"
-                  >
-                    <Mail className="w-4 h-4" />
-                  </button>
                   {/* Delete */}
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDelete(report.id); }}
