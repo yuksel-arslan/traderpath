@@ -674,31 +674,6 @@ Could you share your risk assessment and recommendations based on this analysis?
                   : {}
               }
             >
-              {/* Status Badge - Top Right */}
-              {isActive && (
-                <div className="absolute top-3 right-3">
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: 'rgba(0,212,255,0.1)', color: '#00D4FF' }}>
-                    <span className="w-1.5 h-1.5 rounded-full animate-ping" style={{ background: '#00D4FF' }} />
-                    LIVE
-                  </span>
-                </div>
-              )}
-              {report.outcome === 'correct' && (
-                <div className="absolute top-3 right-3">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: 'rgba(0,245,160,0.1)', color: '#00F5A0' }}>
-                    <CheckCircle2 className="w-3 h-3" />
-                    TP HIT
-                  </span>
-                </div>
-              )}
-              {report.outcome === 'incorrect' && (
-                <div className="absolute top-3 right-3">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: 'rgba(255,71,87,0.1)', color: '#FF4757' }}>
-                    <XCircle className="w-3 h-3" />
-                    SL HIT
-                  </span>
-                </div>
-              )}
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 {/* Report Info */}
                 <div className="flex items-center gap-4 min-w-0">
@@ -707,7 +682,7 @@ Could you share your risk assessment and recommendations based on this analysis?
                       <Globe className="w-6 h-6 text-white" />
                     </div>
                   ) : (
-                    <CoinIcon symbol={report.symbol} size={48} className="shrink-0" />
+                    <CoinIcon symbol={report.symbol.replace(/USDT$/i, '')} size={48} className="shrink-0" />
                   )}
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
