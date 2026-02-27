@@ -1012,7 +1012,7 @@ export default function ConciergePage() {
                 </div>
                 <div>
                   <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Analysis Cost</p>
-                  <p className="text-xl font-bold text-neutral-900 dark:text-white">25 credits</p>
+                  <p className="text-xl font-bold text-neutral-900 dark:text-white">Daily Pass</p>
                 </div>
               </div>
               <p className="text-xs text-neutral-500 dark:text-neutral-400">

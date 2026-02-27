@@ -521,9 +521,9 @@ export default function PricingPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {[
                       { Icon: Globe, title: 'Global Capital Flow', desc: 'Layer 1-2: Track money flow across markets', badge: 'FREE', badgeColor: 'emerald' },
-                      { Icon: Layers, title: 'Sector Analysis', desc: 'Layer 3: Drill down into market sectors', badge: '5 credits/use', badgeColor: 'slate' },
-                      { Icon: Brain, title: 'AI Recommendations', desc: 'Layer 4: BUY/SELL signals with confidence scores', badge: '5 credits/use', badgeColor: 'slate' },
-                      { Icon: BarChart3, title: 'Asset Analysis', desc: '7-Step + MLIS Pro analysis', badge: '10 credits/analysis', badgeColor: 'slate' },
+                      { Icon: Layers, title: 'Sector Analysis', desc: 'Layer 3: Drill down into market sectors', badge: '25 credits/day', badgeColor: 'slate' },
+                      { Icon: Brain, title: 'AI Recommendations', desc: 'Layer 4: BUY/SELL signals with confidence scores', badge: '25 credits/day', badgeColor: 'slate' },
+                      { Icon: BarChart3, title: 'Asset Analysis', desc: '7-Step + MLIS Pro (10 analyses/day)', badge: '100 credits/day', badgeColor: 'slate' },
                       { Icon: Bot, title: 'AI Expert Consultation', desc: '3 free questions per analysis, then 5 credits each', badge: null, badgeColor: null },
                       { Icon: FileText, title: 'PDF Reports', desc: 'Download and share detailed analysis reports', badge: null, badgeColor: null },
                       { Icon: Bell, title: 'Price Alerts', desc: 'Get notified when price targets are hit', badge: null, badgeColor: null },

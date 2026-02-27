@@ -225,18 +225,16 @@ export const CREDIT_PACKAGES: CreditPackageConfig[] = [
 // =============================================================================
 
 export const SERVICE_CREDITS = {
-  // Capital Flow extra analysis (L3 + L4)
-  CAPITAL_FLOW_L3_L4: 5,
+  // Daily Pass costs (must match daily-pass.service.ts DAILY_PASS_CONFIG)
+  CAPITAL_FLOW_L3_DAILY: 25,
+  CAPITAL_FLOW_L4_DAILY: 25,
+  ASSET_ANALYSIS_DAILY: 100, // Includes up to 10 analyses/day
 
-  // Asset Analysis (7-Step or MLIS Pro)
-  SEVEN_STEP_ANALYSIS: 10,
-  MLIS_PRO_ANALYSIS: 10,
-
-  // AI Features
+  // AI Features (per-use)
   AI_EXPERT_QUESTION: 5,
   AI_CONCIERGE_MESSAGE: 5,
 
-  // Reports
+  // Reports (per-use)
   EMAIL_REPORT: 5,
   PDF_REPORT: 5,
   PRICE_ALERT: 1,

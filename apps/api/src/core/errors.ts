@@ -387,12 +387,16 @@ export function errorHandler(
   }
 
   // Handle unknown errors
+  // Log the full error for debugging in production
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[GlobalErrorHandler] Unhandled error:', error.message, error.stack);
+  }
   return reply.status(statusCode).send({
     success: false,
     error: {
       code: 'INTERNAL_001',
       message: process.env.NODE_ENV === 'production'
-        ? 'An unexpected error occurred'
+        ? `An unexpected error occurred: ${error.message || 'Unknown'}`
         : error.message,
     },
   });
