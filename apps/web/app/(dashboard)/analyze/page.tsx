@@ -342,9 +342,30 @@ export default function AutomatedAnalysisPage() {
   const getStepIndex = (step: PipelineStep): number => { const idx = PIPELINE_STEPS.findIndex(s => s.key === step); return idx >= 0 ? idx : -1; };
   const currentStepIdx = getStepIndex(pipelineStep);
 
-  const trendingAssets = aiRecommendation?.recommendedAssets?.slice(0, 4).map(a => ({ symbol: a.symbol, score: a.confidence, change: a.direction === 'BUY' ? '+' : '-', flow: a.reason.slice(0, 20) })) || analyses.slice(0, 4).map(a => ({ symbol: a.symbol.replace(/USDT$/i, ''), score: a.score ?? 0 }));
+  // Deduplicate trending assets by symbol
+  const trendingAssets = (() => {
+    const raw = aiRecommendation?.recommendedAssets?.map(a => ({ symbol: a.symbol, score: a.confidence, change: a.direction === 'BUY' ? '+' : '-', flow: a.reason.slice(0, 20) }))
+      || analyses.map(a => ({ symbol: a.symbol.replace(/USDT$/i, ''), score: a.score ?? 0 }));
+    const seen = new Set<string>();
+    return raw.filter(a => {
+      const key = a.symbol.toUpperCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 4);
+  })();
 
-  const filteredRecent = filter === 'All' ? analyses : analyses.filter(a => {
+  // Deduplicate recent analyses by symbol (keep most recent per symbol)
+  const uniqueAnalyses = (() => {
+    const seen = new Set<string>();
+    return analyses.filter(a => {
+      if (seen.has(a.symbol)) return false;
+      seen.add(a.symbol);
+      return true;
+    });
+  })();
+
+  const filteredRecent = filter === 'All' ? uniqueAnalyses : uniqueAnalyses.filter(a => {
     if (filter === 'GO') return a.verdict === 'go';
     if (filter === 'COND') return a.verdict === 'conditional_go';
     if (filter === 'AVOID') return a.verdict === 'avoid';
