@@ -808,7 +808,7 @@ Warn about potential traps and give protective advice.`;
       where: {
         userId,
         symbol: body.symbol,
-        timeframe: interval,
+        interval: interval,
         createdAt: { gte: recentDuplicateCutoff },
       },
       select: {
