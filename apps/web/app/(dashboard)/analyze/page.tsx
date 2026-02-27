@@ -176,6 +176,7 @@ export default function AutomatedAnalysisPage() {
   const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
   const [completedAnalysisIds, setCompletedAnalysisIds] = useState<string[]>([]);
   const [showBatchResults, setShowBatchResults] = useState(false);
+  const [reportDrawerId, setReportDrawerId] = useState<string | null>(null);
 
   // ── Data fetching ─────────────────────────
   const fetchDailyPassStatus = useCallback(async () => {
