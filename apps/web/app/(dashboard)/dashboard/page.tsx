@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { getApiUrl, authFetch } from '../../../lib/api';
 import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
-import { CategoryBar, useMarketFilter, useBistSubSector } from '@/components/dashboard/CategoryBar';
+import { useMarketFilter, useBistSubSector } from '@/components/dashboard/CategoryBar';
 import { OpportunityRadar } from '@/components/dashboard/OpportunityRadar';
 import { SmartAlertsWidget } from '@/components/dashboard/SmartAlertsWidget';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
@@ -559,16 +559,6 @@ export default function DashboardPage() {
 
   const periodPnL = calculatePeriodPnL();
 
-  // Equity curve from performance data
-  const equityCurve = useMemo(() => {
-    if (!performanceData?.daily?.length) return [];
-    let cumulative = 100;
-    return performanceData.daily.map((d) => {
-      cumulative += d.realized || 0;
-      return cumulative;
-    });
-  }, [performanceData]);
-
   // Filtered analyses
   const filteredAnalyses = useMemo(
     () => recentAnalyses.filter((a) => selectedMarkets.includes(detectMarketType(a.symbol))),
@@ -665,7 +655,7 @@ export default function DashboardPage() {
             setPnlViewMode={setPnlViewMode}
             winRate={winRate}
             totalTrades={totalTrades}
-            equityCurve={equityCurve}
+            performanceData={performanceData}
           />
         </div>
 
@@ -674,13 +664,7 @@ export default function DashboardPage() {
           <FlowChain capitalFlow={capitalFlow} recentAnalyses={recentAnalyses} />
         </div>
 
-        {/* Market Filter */}
-        <CategoryBar
-          selected={selectedMarkets}
-          onChange={setSelectedMarkets}
-          bistSubSector={bistSubSector}
-          onBistSubSectorChange={setBistSubSector}
-        />
+        {/* Market filters moved inside OpportunityRadar */}
 
         {/* If no data, show empty state */}
         {!hasData ? (
@@ -696,6 +680,7 @@ export default function DashboardPage() {
                   <OpportunityRadar
                     capitalFlow={capitalFlow}
                     selectedMarkets={selectedMarkets}
+                    onMarketChange={setSelectedMarkets}
                   />
                 </div>
               </div>
@@ -782,10 +767,9 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* RIGHT: Alerts + Quick Actions */}
+              {/* RIGHT: Alerts */}
               <div className="space-y-4">
                 <SmartAlertsWidget />
-                <IntelligenceQuickActions />
               </div>
             </div>
 
@@ -822,6 +806,9 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
+
+            {/* Quick Actions (full width) */}
+            <IntelligenceQuickActions />
           </>
         )}
 
