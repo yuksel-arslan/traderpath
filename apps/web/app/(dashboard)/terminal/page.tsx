@@ -435,9 +435,13 @@ function calculateTradePlan(asset: ScreenerAsset): TradePlan {
 function L7TradeVisualizer({
   selectedAsset,
   tradePlan,
+  analyzedAssets,
+  onAssetSelect,
 }: {
   selectedAsset: ScreenerAsset | null;
   tradePlan: TradePlan | null;
+  analyzedAssets: ScreenerAsset[];
+  onAssetSelect: (asset: ScreenerAsset) => void;
 }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -671,9 +675,37 @@ function L7TradeVisualizer({
     };
   }, [mounted, selectedAsset, tradePlan, resolvedPlan, resolvedTheme, analysisCreatedAt]);
 
+  const assetDropdown = analyzedAssets.length > 0 ? (
+    <div
+      className="rounded-xl p-3 mb-3"
+      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+    >
+      <label className="text-[10px] uppercase tracking-widest text-gray-400 dark:text-white/40 block mb-1.5">
+        Analyzed Assets
+      </label>
+      <select
+        value={selectedAsset?.symbol ?? ''}
+        onChange={(e) => {
+          const asset = analyzedAssets.find(a => a.symbol === e.target.value);
+          if (asset) onAssetSelect(asset);
+        }}
+        className="w-full rounded-lg px-3 py-2 text-xs font-mono bg-transparent text-gray-900 dark:text-white appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#00D4FF]/40"
+        style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+      >
+        {!selectedAsset && <option value="">Select an asset...</option>}
+        {analyzedAssets.map((a) => (
+          <option key={a.symbol} value={a.symbol} className="bg-white dark:bg-[#0a0a0a]">
+            {a.symbol} — Score: {a.aiScore} — {a.verdict} ({a.direction})
+          </option>
+        ))}
+      </select>
+    </div>
+  ) : null;
+
   if (!selectedAsset) {
     return (
       <section>
+        {assetDropdown}
         <div
           className="rounded-xl h-[300px] sm:h-[400px] flex items-center justify-center"
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
@@ -689,6 +721,9 @@ function L7TradeVisualizer({
 
   return (
     <section>
+      {/* Analyzed asset dropdown */}
+      {assetDropdown}
+
       {/* Trade Header with ScoreRing + VerdictBadge */}
       <TradeHeader asset={selectedAsset} />
 
@@ -864,6 +899,8 @@ function ContentPanel({
         <L7TradeVisualizer
           selectedAsset={selectedAsset}
           tradePlan={tradePlan}
+          analyzedAssets={screenerData.filter(a => a.analysisId)}
+          onAssetSelect={onAssetSelect}
         />
       );
     default:
