@@ -36,6 +36,7 @@ import { MarketContextPanel } from '@/components/analyze/MarketContextPanel';
 import { TrendingAssets } from '@/components/analyze/TrendingAssets';
 import { AnalysisPipelineCard } from '@/components/analyze/AnalysisPipelineCard';
 import { RecentAnalysisRow } from '@/components/analyze/RecentAnalysisRow';
+import { AnalysisReportDrawer } from '@/components/analyze/AnalysisReportDrawer';
 
 // Lazy load components
 const CoinIcon = dynamic(
@@ -166,6 +167,7 @@ export default function AutomatedAnalysisPage() {
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const [manualSymbol, setManualSymbol] = useState('');
   const [filter, setFilter] = useState('All');
+  const [reportDrawerId, setReportDrawerId] = useState<string | null>(null);
   const pipelineRef = useRef<HTMLDivElement>(null);
 
   // ── Data fetching ─────────────────────────
@@ -554,8 +556,12 @@ export default function AutomatedAnalysisPage() {
       {showAnalysisDialog && selectedAsset && (
         <AnalysisDialog isOpen={showAnalysisDialog} symbol={selectedAsset.symbol} coinName={selectedAsset.name || selectedAsset.symbol} timeframe="4h" capitalFlowContext={capitalFlowContextPayload}
           onClose={() => { setShowAnalysisDialog(false); setPipelineStep('complete'); fetchDailyPassStatus(); fetchAnalyses(); }}
-          onComplete={() => { setShowAnalysisDialog(false); setPipelineStep('complete'); fetchDailyPassStatus(); fetchAnalyses(); }} />
+          onComplete={() => { setShowAnalysisDialog(false); setPipelineStep('complete'); fetchDailyPassStatus(); fetchAnalyses(); }}
+          onReportReady={(id) => { setShowAnalysisDialog(false); setPipelineStep('complete'); fetchDailyPassStatus(); fetchAnalyses(); setReportDrawerId(id); }} />
       )}
+
+      {/* Analysis Report Drawer - slides up from bottom after analysis completes */}
+      <AnalysisReportDrawer analysisId={reportDrawerId} onClose={() => setReportDrawerId(null)} />
     </div>
   );
 }
