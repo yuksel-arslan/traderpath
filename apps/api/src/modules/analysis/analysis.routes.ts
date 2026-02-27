@@ -6226,12 +6226,14 @@ Explain the key risks and what conditions would need to change before trading th
     symbol: z.string().min(1),
     interval: z.enum(['5m', '15m', '30m', '1h', '4h', '1d']).default('1h'),
     limit: z.coerce.number().min(10).max(500).default(100),
+    // Optional: fetch candles up to this timestamp (ms) for historical analysis viewing
+    endTime: z.coerce.number().optional(),
   });
 
   app.get('/chart/candles', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const query = chartCandlesSchema.parse(request.query);
-      const { symbol, interval, limit } = query;
+      const { symbol, interval, limit, endTime } = query;
 
       // Clean symbol (remove USDT suffix if present for display)
       let cleanSymbol = symbol.toUpperCase().trim();
@@ -6245,10 +6247,11 @@ Explain the key risks and what conditions would need to change before trading th
 
       // Detect asset class
       const assetClass = getAssetClass(cleanSymbol);
-      logger.info({ symbol: cleanSymbol, assetClass, interval, limit }, 'Chart candles request');
+      logger.info({ symbol: cleanSymbol, assetClass, interval, limit, endTime }, 'Chart candles request');
 
       // Fetch candles using multi-asset provider
-      const candles = await fetchCandles(cleanSymbol, interval, limit);
+      // If endTime is specified, fetch candles up to that timestamp (for historical analysis charts)
+      const candles = await fetchCandles(cleanSymbol, interval, limit, endTime);
 
       // Transform to frontend format
       const chartData = candles.map(c => ({
