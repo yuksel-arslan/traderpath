@@ -2338,14 +2338,19 @@ function generateReportHtmlEmail(
               <table width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td align="center">
-                    <div style="display: inline-block; background-color: ${isLong ? '#10b981' : '#ef4444'}20; border-radius: 50px; padding: 15px 30px;">
-                      <span style="font-size: 36px; font-weight: bold; color: ${isLong ? '#10b981' : '#ef4444'};">
-                        ${score}/100
-                      </span>
-                      <span style="display: block; color: ${isLong ? '#10b981' : '#ef4444'}; font-size: 16px; font-weight: 600; margin-top: 5px;">
-                        ${isLong ? 'LONG' : 'SHORT'} - ${action}
-                      </span>
-                    </div>
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto; background-color: ${isLong ? '#10b981' : '#ef4444'}20; border-radius: 50px;">
+                      <tr>
+                        <td style="padding: 15px 30px; text-align: center;">
+                          <span style="font-size: 36px; font-weight: bold; color: ${isLong ? '#10b981' : '#ef4444'};">
+                            ${score}/100
+                          </span>
+                          <br/>
+                          <span style="color: ${isLong ? '#10b981' : '#ef4444'}; font-size: 16px; font-weight: 600;">
+                            ${isLong ? 'LONG' : 'SHORT'} - ${action}
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
@@ -2397,9 +2402,9 @@ function generateReportHtmlEmail(
               <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
                 Analysis Summary
               </h2>
-              <table width="100%" cellspacing="10" cellpadding="0">
+              <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse: separate; border-spacing: 0;">
                 <tr>
-                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
+                  <td width="48%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
                     <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Current Price</span>
                     <div style="color: #ffffff; font-size: 16px; font-weight: 600; margin-top: 4px;">
                       ${formatPrice(currentPrice)}
@@ -2408,7 +2413,8 @@ function generateReportHtmlEmail(
                       </span>
                     </div>
                   </td>
-                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
+                  <td width="4%"></td>
+                  <td width="48%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
                     <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">RSI</span>
                     <div style="color: #ffffff; font-size: 16px; font-weight: 600; margin-top: 4px;">
                       ${rsi?.toFixed(0) || 'N/A'}
@@ -2418,29 +2424,33 @@ function generateReportHtmlEmail(
                     </div>
                   </td>
                 </tr>
+                <tr><td colspan="3" style="height: 8px;"></td></tr>
                 <tr>
-                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
+                  <td width="48%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
                     <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Fear & Greed</span>
                     <div style="color: #ffffff; font-size: 16px; font-weight: 600; margin-top: 4px;">
                       ${fearGreedIndex || 'N/A'}
                       <span style="color: #94a3b8; font-size: 12px;">${fearGreedLabel || ''}</span>
                     </div>
                   </td>
-                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
+                  <td width="4%"></td>
+                  <td width="48%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
                     <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">BTC Dominance</span>
                     <div style="color: #ffffff; font-size: 16px; font-weight: 600; margin-top: 4px;">
                       ${btcDominance?.toFixed(1) || 'N/A'}%
                     </div>
                   </td>
                 </tr>
+                <tr><td colspan="3" style="height: 8px;"></td></tr>
                 <tr>
-                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
+                  <td width="48%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
                     <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Risk Level</span>
                     <div style="color: ${riskLevel === 'low' ? '#10b981' : riskLevel === 'high' ? '#ef4444' : '#f59e0b'}; font-size: 16px; font-weight: 600; margin-top: 4px; text-transform: uppercase;">
                       ${riskLevel || 'N/A'}
                     </div>
                   </td>
-                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
+                  <td width="4%"></td>
+                  <td width="48%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
                     <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Timing</span>
                     <div style="color: ${tradeNow ? '#10b981' : '#f59e0b'}; font-size: 16px; font-weight: 600; margin-top: 4px;">
                       ${tradeNow ? 'Good Entry' : 'Wait'}
@@ -2459,8 +2469,8 @@ function generateReportHtmlEmail(
                 AI Expert Review
               </h2>
               <div style="background-color: #334155; border-radius: 8px; padding: 15px; border-left: 4px solid #f59e0b;">
-                <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">
-                  ${convertScoreTo100Scale(data.aiExpertComment)}
+                <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0; word-break: break-word; word-wrap: break-word;">
+                  ${convertScoreTo100Scale(data.aiExpertComment).replace(/\n/g, '<br/>')}
                 </p>
               </div>
             </td>
