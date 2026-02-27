@@ -102,6 +102,8 @@ interface AnalysisHistoryResponse {
       symbol: string;
       interval: string;
       totalScore: number | null;
+      method: string | null;
+      outcome: string | null;
       verdict: string;
       hasTradePlan: boolean;
       direction: string | null;
@@ -120,6 +122,42 @@ interface AnalysisHistoryResponse {
       offset: number;
     };
   };
+}
+
+// Map interval to trade type based on CLAUDE.md rules
+function getTradeTypeFromInterval(interval: string): TradeType {
+  switch (interval) {
+    case '5m':
+    case '15m':
+      return 'scalping';
+    case '30m':
+    case '1h':
+    case '2h':
+    case '4h':
+      return 'dayTrade';
+    case '1d':
+    case '1W':
+      return 'swing';
+    default:
+      return 'dayTrade';
+  }
+}
+
+// Map DB outcome values to frontend outcome values
+function mapOutcome(outcome: string | null): 'correct' | 'incorrect' | 'pending' | null {
+  if (!outcome) return null;
+  switch (outcome) {
+    case 'tp1_hit':
+    case 'tp2_hit':
+    case 'tp3_hit':
+      return 'correct';
+    case 'sl_hit':
+      return 'incorrect';
+    case 'pending':
+      return 'pending';
+    default:
+      return null;
+  }
 }
 
 // Date filter options
@@ -181,6 +219,9 @@ export default function ReportsPage() {
             verdict: analysis.verdict || 'N/A',
             score: analysis.totalScore ? Number(analysis.totalScore) : 0, // Score is already 0-10 scale from backend
             direction: analysis.direction,
+            tradeType: analysis.symbol === 'CAPITAL_FLOW' ? 'capital_flow' as TradeType : getTradeTypeFromInterval(analysis.interval),
+            method: (analysis.method || 'classic') as AnalysisMethod,
+            outcome: mapOutcome(analysis.outcome),
             interval: analysis.interval,
             hasTradePlan: analysis.hasTradePlan,
             entryPrice: analysis.entryPrice || undefined,
@@ -777,6 +818,11 @@ Could you share your risk assessment and recommendations based on this analysis?
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
+                      {report.interval && (
+                        <span className="ml-2 text-gray-300 dark:text-white/20">
+                          {report.interval}
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
