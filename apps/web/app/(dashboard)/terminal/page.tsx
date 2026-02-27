@@ -25,6 +25,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useRouter } from 'next/navigation';
 import {
   createChart,
   ColorType,
@@ -45,7 +46,6 @@ import { MarketFlow } from '../../../components/terminal/MarketFlow';
 import { RotationMatrix } from '../../../components/terminal/RotationMatrix';
 import { SectorActivity } from '../../../components/terminal/SectorActivity';
 import { AIRecommendation } from '../../../components/terminal/AIRecommendation';
-import { AssetTable } from '../../../components/terminal/AssetTable';
 import { RunAnalysis } from '../../../components/terminal/RunAnalysis';
 import {
   TradeHeader,
@@ -161,7 +161,6 @@ type SortDir = 'asc' | 'desc';
 
 type SectionId =
   | 'l1' | 'l2' | 'rotation' | 'l3' | 'l4'
-  | 'l5'
   | 'analysis'
   | 'l7';
 
@@ -190,7 +189,6 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: 'Asset Analysis',
     items: [
-      { id: 'l5', label: 'Asset Table', tag: '' },
       { id: 'analysis', label: 'Run Analysis', tag: '' },
     ],
   },
@@ -437,9 +435,13 @@ function calculateTradePlan(asset: ScreenerAsset): TradePlan {
 function L7TradeVisualizer({
   selectedAsset,
   tradePlan,
+  analyzedAssets,
+  onAssetSelect,
 }: {
   selectedAsset: ScreenerAsset | null;
   tradePlan: TradePlan | null;
+  analyzedAssets: ScreenerAsset[];
+  onAssetSelect: (asset: ScreenerAsset) => void;
 }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -673,9 +675,37 @@ function L7TradeVisualizer({
     };
   }, [mounted, selectedAsset, tradePlan, resolvedPlan, resolvedTheme, analysisCreatedAt]);
 
+  const assetDropdown = analyzedAssets.length > 0 ? (
+    <div
+      className="rounded-xl p-3 mb-3"
+      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+    >
+      <label className="text-[10px] uppercase tracking-widest text-gray-400 dark:text-white/40 block mb-1.5">
+        Analyzed Assets
+      </label>
+      <select
+        value={selectedAsset?.symbol ?? ''}
+        onChange={(e) => {
+          const asset = analyzedAssets.find(a => a.symbol === e.target.value);
+          if (asset) onAssetSelect(asset);
+        }}
+        className="w-full rounded-lg px-3 py-2 text-xs font-mono bg-transparent text-gray-900 dark:text-white appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#00D4FF]/40"
+        style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+      >
+        {!selectedAsset && <option value="">Select an asset...</option>}
+        {analyzedAssets.map((a) => (
+          <option key={a.symbol} value={a.symbol} className="bg-white dark:bg-[#0a0a0a]">
+            {a.symbol} — Score: {a.aiScore} — {a.verdict} ({a.direction})
+          </option>
+        ))}
+      </select>
+    </div>
+  ) : null;
+
   if (!selectedAsset) {
     return (
       <section>
+        {assetDropdown}
         <div
           className="rounded-xl h-[300px] sm:h-[400px] flex items-center justify-center"
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
@@ -691,6 +721,9 @@ function L7TradeVisualizer({
 
   return (
     <section>
+      {/* Analyzed asset dropdown */}
+      {assetDropdown}
+
       {/* Trade Header with ScoreRing + VerdictBadge */}
       <TradeHeader asset={selectedAsset} />
 
@@ -849,17 +882,7 @@ function ContentPanel({
         <AIRecommendation
           verdict={verdict}
           onAssetClick={onAssetChipClick}
-        />
-      );
-    case 'l5':
-      return (
-        <AssetTable
-          assets={screenerData}
-          selectedSymbol={selectedAsset?.symbol ?? null}
-          onSelect={onAssetSelect}
-          recommendedSymbols={recommendedSymbols}
           onAnalyze={onAnalyze}
-          onVisualize={onVisualize}
         />
       );
     case 'analysis':
@@ -876,6 +899,8 @@ function ContentPanel({
         <L7TradeVisualizer
           selectedAsset={selectedAsset}
           tradePlan={tradePlan}
+          analyzedAssets={screenerData.filter(a => a.analysisId)}
+          onAssetSelect={onAssetSelect}
         />
       );
     default:
@@ -902,6 +927,7 @@ export default function TestPage() {
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
 
   // Navigation
+  const router = useRouter();
   const [activeSection, setActiveSection] = useState<SectionId>('l1');
   const [marketFilter, setMarketFilter] = useState('All');
 
@@ -992,8 +1018,8 @@ export default function TestPage() {
   }, [screenerData, handleAssetSelect]);
 
   const handleAnalyze = useCallback((symbol: string) => {
-    setActiveSection('analysis');
-  }, []);
+    router.push(`/analyze?symbol=${encodeURIComponent(symbol)}`);
+  }, [router]);
 
   const handleVisualize = useCallback((symbol: string) => {
     const asset = screenerData.find(a => a.symbol.toUpperCase() === symbol.toUpperCase());
