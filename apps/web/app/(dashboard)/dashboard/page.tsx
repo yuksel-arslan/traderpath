@@ -233,6 +233,7 @@ function ActiveTradeCard({
   isCounterFlow: boolean;
 }) {
   const verdict = VERDICT_CONFIG[trade.verdict] ?? VERDICT_CONFIG.wait;
+  const hasPnL = trade.unrealizedPnL != null;
   const pnl = trade.unrealizedPnL ?? 0;
   const isLong = trade.direction?.toLowerCase() === 'long';
   const coinIcon = getCoinIcon(trade.symbol) || FALLBACK_COIN_ICON;
@@ -266,11 +267,11 @@ function ActiveTradeCard({
         <span
           className="text-sm font-bold"
           style={{
-            color: pnl >= 0 ? '#00F5A0' : '#FF4757',
+            color: hasPnL ? (pnl >= 0 ? '#00F5A0' : '#FF4757') : '#9CA3AF',
             fontFamily: "'JetBrains Mono', monospace",
           }}
         >
-          {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}%
+          {hasPnL ? `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%` : 'N/A'}
         </span>
       </div>
 
@@ -584,7 +585,7 @@ export default function DashboardPage() {
     [recentAnalyses, selectedMarkets]
   );
   const activeTrades = useMemo(
-    () => filteredAnalyses.filter((t) => t.outcome === 'pending'),
+    () => filteredAnalyses.filter((t) => t.outcome === 'pending' && t.entryPrice && t.direction),
     [filteredAnalyses]
   );
 
