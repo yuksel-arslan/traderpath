@@ -446,6 +446,7 @@ function L7TradeVisualizer({
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [resolvedPlan, setResolvedPlan] = useState<TradePlan | null>(null);
+  const [analysisCreatedAt, setAnalysisCreatedAt] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -455,6 +456,7 @@ function L7TradeVisualizer({
   useEffect(() => {
     if (!selectedAsset?.analysisId) {
       setResolvedPlan(tradePlan);
+      setAnalysisCreatedAt(null);
       return;
     }
 
@@ -465,6 +467,12 @@ function L7TradeVisualizer({
         if (!res.ok || cancelled) { setResolvedPlan(tradePlan); return; }
         const json = await res.json();
         const analysis = json?.data;
+
+        // Store analysis creation time for anchoring chart to correct candle
+        if (analysis?.createdAt && !cancelled) {
+          setAnalysisCreatedAt(analysis.createdAt);
+        }
+
         const step5 = analysis?.step5Result;
         if (step5 && !cancelled) {
           const dir = (step5.direction?.toUpperCase() === 'SHORT') ? 'SHORT' : 'LONG';
@@ -542,9 +550,13 @@ function L7TradeVisualizer({
       chartRef.current = chart;
 
       // Fetch real candle data from API
+      // If viewing a historical analysis, fetch candles up to the analysis time
+      const endTimeParam = analysisCreatedAt
+        ? `&endTime=${new Date(analysisCreatedAt).getTime()}`
+        : '';
       let candles: CandlestickData<Time>[] = [];
       try {
-        const res = await authFetch(`/api/analysis/chart/candles?symbol=${encodeURIComponent(selectedAsset.symbol)}&interval=1h&limit=100`);
+        const res = await authFetch(`/api/analysis/chart/candles?symbol=${encodeURIComponent(selectedAsset.symbol)}&interval=1h&limit=100${endTimeParam}`);
         if (res.ok) {
           const json = await res.json();
           const raw = json?.data?.candles ?? json?.data ?? json ?? [];
@@ -591,14 +603,22 @@ function L7TradeVisualizer({
         series.createPriceLine({ price: activePlan.tp2, color: '#84CC16', lineWidth: 1, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: 'TP2' });
       }
 
-      // Forecast Path — starts from the LAST candle and extends 48h into the future only
+      // Forecast Path — starts from the analysis-time candle (historical) or LAST candle (live)
       const isLong = selectedAsset.direction === 'LONG';
       const score = selectedAsset.aiScore;
       const pctMove = (score / 100) * 8;
 
-      const lastCandle = candles[candles.length - 1];
-      const forecastStartPrice = lastCandle.close;
-      const forecastStartTime = lastCandle.time as number;
+      // For historical analyses, anchor to the analysis-time candle
+      let anchorCandle = candles[candles.length - 1];
+      if (analysisCreatedAt && candles.length > 0) {
+        const analysisTs = new Date(analysisCreatedAt).getTime() / 1000;
+        for (const c of candles) {
+          if ((c.time as number) <= analysisTs) anchorCandle = c;
+          else break;
+        }
+      }
+      const forecastStartPrice = anchorCandle.close;
+      const forecastStartTime = anchorCandle.time as number;
       const forecastDuration = 48 * 3600; // 48 hours forward
       const forecastSteps = 60;
 
@@ -651,7 +671,7 @@ function L7TradeVisualizer({
       cleanupFn?.();
       if (chart) { chart.remove(); chart = null; chartRef.current = null; }
     };
-  }, [mounted, selectedAsset, tradePlan, resolvedPlan, resolvedTheme]);
+  }, [mounted, selectedAsset, tradePlan, resolvedPlan, resolvedTheme, analysisCreatedAt]);
 
   if (!selectedAsset) {
     return (

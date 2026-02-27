@@ -83,7 +83,7 @@ const BINANCE_INTERVAL_MAP: Record<string, string> = {
   '1d': '1d',
 };
 
-async function fetchBinanceCandles(symbol: string, interval: string, limit: number = 500): Promise<OHLCV[]> {
+async function fetchBinanceCandles(symbol: string, interval: string, limit: number = 500, endTime?: number): Promise<OHLCV[]> {
   const binanceInterval = BINANCE_INTERVAL_MAP[interval] || '4h';
 
   // Normalize symbol: remove any suffix and add USDT
@@ -97,11 +97,14 @@ async function fetchBinanceCandles(symbol: string, interval: string, limit: numb
   }
   const binanceSymbol = `${normalizedSymbol}USDT`;
 
-  const cacheKey = `binance:candles:${binanceSymbol}:${binanceInterval}:${limit}`;
+  const cacheKey = `binance:candles:${binanceSymbol}:${binanceInterval}:${limit}:${endTime || 'latest'}`;
   const cached = getCached<OHLCV[]>(cacheKey);
   if (cached) return cached;
 
-  const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${binanceInterval}&limit=${limit}`;
+  let url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${binanceInterval}&limit=${limit}`;
+  if (endTime) {
+    url += `&endTime=${endTime}`;
+  }
   const response = await fetchWithRetry(url);
   const data = await response.json();
 
@@ -446,28 +449,41 @@ function cryptoToYahooSymbol(symbol: string): string {
 export async function fetchCandles(
   symbol: string,
   interval: string,
-  limit: number = 500
+  limit: number = 500,
+  endTime?: number
 ): Promise<CandleData[]> {
   const assetClass = detectAssetClass(symbol);
 
-  console.log(`[MultiAssetProvider] Fetching candles for ${symbol} (${assetClass}) - interval: ${interval}`);
+  console.log(`[MultiAssetProvider] Fetching candles for ${symbol} (${assetClass}) - interval: ${interval}${endTime ? ` endTime: ${new Date(endTime).toISOString()}` : ''}`);
 
   try {
     if (assetClass === 'crypto') {
       try {
-        return await fetchBinanceCandles(symbol, interval, limit);
+        return await fetchBinanceCandles(symbol, interval, limit, endTime);
       } catch (binanceError) {
         // Binance failed (HTTP 451 geo-block, rate limit, etc.) — fallback to Yahoo Finance
         const errMsg = binanceError instanceof Error ? binanceError.message : String(binanceError);
         console.warn(`[MultiAssetProvider] Binance failed for ${symbol}: ${errMsg}. Falling back to Yahoo Finance.`);
         const yahooSymbol = cryptoToYahooSymbol(symbol);
-        return await fetchYahooCandles(yahooSymbol, interval, limit);
+        const candles = await fetchYahooCandles(yahooSymbol, interval, limit);
+        // For Yahoo fallback, filter by endTime manually if specified
+        if (endTime && candles.length > 0) {
+          const filtered = candles.filter(c => c.timestamp <= endTime);
+          return filtered.slice(-limit);
+        }
+        return candles;
       }
     } else {
       // stocks, bonds, metals, bist - use Yahoo Finance
       // BIST symbols use .IS suffix (e.g., THYAO.IS, GARAN.IS)
       const resolved = resolveSymbol(symbol);
-      return await fetchYahooCandles(resolved.normalized, interval, limit);
+      const candles = await fetchYahooCandles(resolved.normalized, interval, limit);
+      // For Yahoo, filter by endTime manually if specified
+      if (endTime && candles.length > 0) {
+        const filtered = candles.filter(c => c.timestamp <= endTime);
+        return filtered.slice(-limit);
+      }
+      return candles;
     }
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);

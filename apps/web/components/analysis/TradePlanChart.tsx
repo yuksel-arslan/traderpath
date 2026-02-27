@@ -152,7 +152,7 @@ export function TradePlanChart({
   const analysisMarkerTimeRef = useRef<Time | null>(null); // Time of candle closest to analysis creation
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [livePrice, setLivePrice] = useState<number | null>(null); // Live price from latest candle
+  const [livePrice, setLivePrice] = useState<number | null>(null); // Price at analysis time (or latest if no analysisTime)
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -282,7 +282,7 @@ export function TradePlanChart({
       }
     };
 
-    // Current price line - use live price from latest candle if available
+    // Price line — shows the price at analysis time (historical) or current price (live)
     const displayPrice = livePrice || currentPrice;
     if (displayPrice > 0) {
       addPriceLine({
@@ -291,7 +291,7 @@ export function TradePlanChart({
         lineWidth: 2,
         lineStyle: LineStyle.Solid,
         axisLabelVisible: true,
-        title: 'Current',
+        title: analysisTime ? 'Price@Analysis' : 'Current',
       });
     }
 
@@ -428,7 +428,7 @@ export function TradePlanChart({
       }
     }
 
-  }, [loading, entries, stopLoss, takeProfits, currentPrice, livePrice, support, resistance, forecastBands]);
+  }, [loading, entries, stopLoss, takeProfits, currentPrice, livePrice, support, resistance, forecastBands, analysisTime]);
 
   const fetchKlineData = async (
     sym: string,
@@ -443,8 +443,12 @@ export function TradePlanChart({
       // Use TraderPath API which supports multiple asset classes (crypto, stocks, metals, bonds)
       // This routes to Binance for crypto and Yahoo Finance for stocks/metals/bonds
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io';
+      // For historical analyses, fetch candles up to the analysis time (not latest)
+      const endTimeParam = analysisTime
+        ? `&endTime=${new Date(analysisTime).getTime()}`
+        : '';
       const response = await fetch(
-        `${apiBaseUrl}/api/analysis/chart/candles?symbol=${encodeURIComponent(sym)}&interval=${interval}&limit=100`
+        `${apiBaseUrl}/api/analysis/chart/candles?symbol=${encodeURIComponent(sym)}&interval=${interval}&limit=100${endTimeParam}`
       );
 
       if (!response.ok) {
@@ -478,7 +482,7 @@ export function TradePlanChart({
           const analysisTimestamp = new Date(analysisTime).getTime() / 1000;
 
           // Find the candle with time closest to (but not after) analysis time
-          let closestCandle = candleData[0];
+          let closestCandle = candleData[candleData.length - 1]; // Default to last candle
           for (const candle of candleData) {
             const candleTime = candle.time as number;
             if (candleTime <= analysisTimestamp) {
@@ -488,16 +492,14 @@ export function TradePlanChart({
             }
           }
           analysisMarkerTimeRef.current = closestCandle.time;
+          // Use the analysis-time candle's close as the reference price
+          setLivePrice(closestCandle.close);
         } else {
           // No analysis time provided - use last candle (for new/live analysis)
-          analysisMarkerTimeRef.current = candleData[candleData.length - 1].time;
+          const lastCandle = candleData[candleData.length - 1];
+          analysisMarkerTimeRef.current = lastCandle.time;
+          setLivePrice(lastCandle.close);
         }
-      }
-
-      // Update live price from last candle's close
-      if (candleData.length > 0) {
-        const lastCandle = candleData[candleData.length - 1];
-        setLivePrice(lastCandle.close);
       }
 
       // Guard chart operations with try-catch in case of disposal
