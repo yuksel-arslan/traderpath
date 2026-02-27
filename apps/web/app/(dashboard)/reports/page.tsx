@@ -439,25 +439,30 @@ Could you share your risk assessment and recommendations based on this analysis?
     <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
       <div className="max-w-[1400px] mx-auto py-6 px-4 sm:px-6 space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(0,245,160,0.1)' }}>
-              <FileText className="w-5 h-5" style={{ color: '#00F5A0' }} />
+        <header className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
+              <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">Reports</h1>
-              <p className="text-xs text-gray-500 dark:text-white/40">Analysis history &middot; Live tracking</p>
-            </div>
+            <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
+              REPORTS
+            </span>
           </div>
-          <button
-            onClick={() => fetchReports()}
-            disabled={isLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] hover:border-gray-300 dark:hover:border-white/[0.12] transition-all text-gray-600 dark:text-white/60 disabled:opacity-50"
-          >
-            <RefreshCw className={cn("w-3.5 h-3.5", isLoading && "animate-spin")} />
-            Refresh
-          </button>
-        </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-gray-400 dark:text-white/40 uppercase tracking-wider hidden sm:inline">
+              Analysis History
+            </span>
+            <button
+              onClick={() => fetchReports()}
+              disabled={isLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] hover:border-gray-300 dark:hover:border-white/[0.12] transition-all text-gray-600 dark:text-white/60 disabled:opacity-50"
+            >
+              <RefreshCw className={cn("w-3.5 h-3.5", isLoading && "animate-spin")} />
+              Refresh
+            </button>
+          </div>
+        </header>
 
         {/* Filters */}
         <div className="rounded-xl p-4 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">

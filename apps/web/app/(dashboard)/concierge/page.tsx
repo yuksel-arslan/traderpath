@@ -43,7 +43,7 @@ import { UpgradeCard } from '@/components/modals/UpgradePrompt';
 // Lazy load TradePlanChart
 const TradePlanChart = dynamic(
   () => import('@/components/analysis/TradePlanChart').then(mod => ({ default: mod.TradePlanChart })),
-  { ssr: false, loading: () => <div className="h-[300px] bg-neutral-200 dark:bg-neutral-800/50 rounded-xl animate-pulse" /> }
+  { ssr: false, loading: () => <div className="h-[300px] bg-gray-200 dark:bg-white/[0.03] rounded-xl animate-pulse" /> }
 );
 
 // Types
@@ -108,13 +108,13 @@ function LayerBreadcrumb({ activeLayer = 0 }: { activeLayer?: number }) {
             "flex items-center gap-1 px-2 py-1 rounded-lg transition-all",
             activeLayer >= layer.num
               ? "bg-teal-100 dark:bg-teal-500/20 text-teal-700 dark:text-teal-400"
-              : "text-neutral-400 dark:text-neutral-500"
+              : "text-gray-400 dark:text-white/40"
           )}>
             <layer.icon className="w-3 h-3" />
             <span className="font-medium">L{layer.num}</span>
           </div>
           {idx < layers.length - 1 && (
-            <ArrowRight className="w-3 h-3 text-neutral-300 dark:text-neutral-600 mx-0.5" />
+            <ArrowRight className="w-3 h-3 text-gray-300 dark:text-white/20 mx-0.5" />
           )}
         </div>
       ))}
@@ -137,7 +137,7 @@ function FlowIndicator({ flow, label }: { flow: number; label: string }) {
         {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
         {isPositive ? '+' : ''}{safeFlow.toFixed(1)}%
       </div>
-      <span className="text-xs text-neutral-400 dark:text-neutral-500">{label}</span>
+      <span className="text-xs text-gray-400 dark:text-white/40">{label}</span>
     </div>
   );
 }
@@ -186,7 +186,7 @@ function MarketFlowCard({
         "relative flex flex-col items-center p-3 rounded-xl border transition-all hover:scale-[1.02]",
         isRecommended
           ? "bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-500/10 dark:to-emerald-500/10 border-teal-300 dark:border-teal-500/30 shadow-lg shadow-teal-500/10"
-          : "bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-white/20"
+          : "bg-white dark:bg-[#0A0A0A] border-gray-200 dark:border-white/[0.06] hover:border-gray-300 dark:hover:border-white/20"
       )}
     >
       {isRecommended && (
@@ -195,7 +195,7 @@ function MarketFlowCard({
         </div>
       )}
       <span className="text-2xl mb-1">{marketIcons[market] || '📊'}</span>
-      <span className="text-xs font-bold text-neutral-900 dark:text-white uppercase">{market}</span>
+      <span className="text-xs font-bold text-gray-900 dark:text-white uppercase">{market}</span>
       <FlowIndicator flow={flow7d} label="7d" />
       <PhaseBadge phase={phase} />
     </button>
@@ -246,13 +246,13 @@ function QuickCommand({
       onClick={onClick}
       className={cn(
         "group relative flex items-center gap-2 px-3 py-2 rounded-xl",
-        "bg-gradient-to-r backdrop-blur-sm border border-neutral-200 dark:border-neutral-800 shadow-sm",
+        "bg-gradient-to-r backdrop-blur-sm border border-gray-200 dark:border-white/[0.06] shadow-sm",
         "hover:scale-[1.02] hover:shadow-lg transition-all duration-200",
         gradient
       )}
     >
-      <Icon className="w-4 h-4 text-neutral-700 dark:text-white/80" />
-      <span className="text-sm font-semibold text-neutral-900 dark:text-white/90">{label}</span>
+      <Icon className="w-4 h-4 text-gray-700 dark:text-white/80" />
+      <span className="text-sm font-semibold text-gray-900 dark:text-white/90">{label}</span>
       {badge && (
         <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-white rounded">
           {badge}
@@ -556,7 +556,7 @@ export default function ConciergePage() {
       case 'risk_off':
         return { icon: TrendingDown, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-500/20', label: 'Risk Off' };
       default:
-        return { icon: Activity, color: 'text-neutral-500 dark:text-neutral-400', bg: 'bg-neutral-100 dark:bg-neutral-500/20', label: 'Neutral' };
+        return { icon: Activity, color: 'text-gray-500 dark:text-white/30', bg: 'bg-gray-100 dark:bg-gray-500/20', label: 'Neutral' };
     }
   };
 
@@ -565,17 +565,17 @@ export default function ConciergePage() {
   // Show upgrade prompt if user doesn't have access
   if (!featureLoading && !hasConciergeAccess) {
     return (
-      <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white overflow-hidden">
+      <div className="h-screen flex flex-col bg-white dark:bg-[#0A0A0A] text-gray-900 dark:text-white overflow-hidden">
         <div className="max-w-xl mx-auto px-4 py-12">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 mb-4 shadow-xl">
               <Bot className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-neutral-900 dark:text-white mb-2">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
               AI Concierge
             </h1>
-            <p className="text-neutral-500 dark:text-neutral-400">
+            <p className="text-gray-500 dark:text-white/30">
               Your Capital Flow aware trading assistant
             </p>
           </div>
@@ -592,33 +592,33 @@ export default function ConciergePage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white overflow-hidden">
-      <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 flex flex-col h-full">
+    <div className="h-screen flex flex-col bg-white dark:bg-[#0A0A0A] text-gray-900 dark:text-white overflow-hidden">
+      <div className="max-w-[1400px] mx-auto w-full px-4 sm:px-6 flex flex-col h-full">
         {/* Header */}
         <div className="shrink-0 pt-4 pb-3">
-          <div className="flex items-center justify-between">
+          <header className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
                 <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
               </div>
-              <span className="text-sm font-sans font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
+              <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
                 CONCIERGE
               </span>
-              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
+              <span className="text-[10px] text-gray-400 dark:text-white/40 uppercase tracking-wider">
                 AI-powered · Capital Flow
               </span>
             </div>
             {credits !== null && (
-              <span className="text-[11px] font-sans text-neutral-400">
-                <span className="text-neutral-900 dark:text-white font-semibold">{credits.toLocaleString()}</span> credits
+              <span className="text-[11px] text-gray-400 dark:text-white/40">
+                <span className="text-gray-900 dark:text-white font-semibold">{credits.toLocaleString()}</span> credits
               </span>
             )}
-          </div>
+          </header>
 
           {/* Capital Flow Summary Bar */}
           {!flowLoading && capitalFlow && Array.isArray(capitalFlow.markets) && capitalFlow.markets.length > 0 && capitalFlow.recommendation && (
-            <div className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
+            <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
               <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                 {/* Global Liquidity Status */}
                 <div className="flex items-center gap-3 flex-shrink-0">
@@ -626,12 +626,12 @@ export default function ConciergePage() {
                     {biasDisplay && <biasDisplay.icon className={cn("w-5 h-5", biasDisplay.color)} />}
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500">Global Liquidity</p>
+                    <p className="text-xs font-medium text-gray-400 dark:text-white/40">Global Liquidity</p>
                     <p className={cn("font-bold", biasDisplay?.color)}>{biasDisplay?.label}</p>
                   </div>
                 </div>
 
-                <div className="hidden lg:block w-px h-10 bg-neutral-200 dark:bg-neutral-800" />
+                <div className="hidden lg:block w-px h-10 bg-gray-200 dark:bg-white/[0.05]" />
 
                 {/* Market Flows */}
                 <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -647,7 +647,7 @@ export default function ConciergePage() {
                   ))}
                 </div>
 
-                <div className="hidden lg:block w-px h-10 bg-neutral-200 dark:bg-neutral-800" />
+                <div className="hidden lg:block w-px h-10 bg-gray-200 dark:bg-white/[0.05]" />
 
                 {/* Recommendation */}
                 <div className="flex items-center gap-3 flex-shrink-0">
@@ -668,8 +668,8 @@ export default function ConciergePage() {
                     )}
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500">Recommendation</p>
-                    <p className="font-bold text-neutral-900 dark:text-white capitalize">
+                    <p className="text-xs font-medium text-gray-400 dark:text-white/40">Recommendation</p>
+                    <p className="font-bold text-gray-900 dark:text-white capitalize">
                       {capitalFlow.recommendation?.action || 'wait'} {String(capitalFlow.recommendation?.primaryMarket || 'market').toUpperCase()}
                     </p>
                   </div>
@@ -679,8 +679,8 @@ export default function ConciergePage() {
           )}
 
           {flowLoading && (
-            <div className="p-4 rounded-xl bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 animate-pulse">
-              <div className="h-16 bg-neutral-200 dark:bg-neutral-700 rounded-xl" />
+            <div className="p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] animate-pulse">
+              <div className="h-16 bg-gray-200 dark:bg-white/[0.08] rounded-xl" />
             </div>
           )}
         </div>
@@ -689,21 +689,21 @@ export default function ConciergePage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Chat Area */}
           <div className="lg:col-span-3">
-            <div className="rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+            <div className="rounded-xl bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/[0.06] overflow-hidden">
               {/* Messages */}
               <div className="h-[450px] overflow-y-auto p-4 space-y-3">
                 {/* Welcome State */}
                 {messages.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-full text-center">
-                    <Bot className="w-8 h-8 text-neutral-300 dark:text-neutral-600 mb-3" />
+                    <Bot className="w-8 h-8 text-gray-300 dark:text-white/20 mb-3" />
 
-                    <h2 className="text-sm font-sans font-semibold text-neutral-900 dark:text-white mb-1">
+                    <h2 className="text-sm font-sans font-semibold text-gray-900 dark:text-white mb-1">
                       Follow the Money Flow
                     </h2>
-                    <p className="text-[10px] text-neutral-400 max-w-sm mb-1">
+                    <p className="text-[10px] text-gray-400 max-w-sm mb-1">
                       Capital Flow → AI Recommendation → Analysis → Trade Plan
                     </p>
-                    <p className="text-xs text-neutral-500 max-w-md mb-4">
+                    <p className="text-xs text-gray-500 max-w-md mb-4">
                       {capitalFlow?.recommendation?.reasoning || 'Start with capital flow to discover where money is moving, then drill down to trade plans.'}
                     </p>
 
@@ -735,7 +735,7 @@ export default function ConciergePage() {
                       "max-w-[85%] rounded-xl px-4 py-3",
                       msg.role === 'user'
                         ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white"
-                        : "bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800"
+                        : "bg-gray-100 dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.06]"
                     )}>
                       {msg.role === 'assistant' && (
                         <div className="flex items-center gap-2 mb-2">
@@ -743,11 +743,11 @@ export default function ConciergePage() {
                           <span className="text-xs font-semibold text-teal-600 dark:text-teal-400">AI Concierge</span>
                         </div>
                       )}
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-neutral-700 dark:text-neutral-200">{msg.content}</p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-700 dark:text-white/80">{msg.content}</p>
 
                       {/* Verdict Card */}
                       {msg.data?.verdict && (
-                        <div className="mt-4 p-4 rounded-xl bg-white dark:bg-black/20 border border-neutral-200 dark:border-neutral-800">
+                        <div className="mt-4 p-4 rounded-xl bg-white dark:bg-black/20 border border-gray-200 dark:border-white/[0.06]">
                           <div className="flex items-center justify-between mb-3">
                             <VerdictBadge verdict={msg.data.verdict} score={msg.data.score} />
                             {msg.data.direction && typeof msg.data.direction === 'string' && (
@@ -819,7 +819,7 @@ export default function ConciergePage() {
                             if (entryPrice <= 0 || slPrice <= 0) return null;
 
                             return (
-                              <div className="mt-4 rounded-xl overflow-hidden bg-neutral-50 dark:bg-neutral-900/50">
+                              <div className="mt-4 rounded-xl overflow-hidden bg-gray-50 dark:bg-white/[0.03]">
                                 <TradePlanChart
                                   symbol="Analysis"
                                   direction={dir}
@@ -858,14 +858,14 @@ export default function ConciergePage() {
                 {/* Loading */}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3">
+                    <div className="bg-gray-100 dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.06] rounded-xl px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="flex gap-1">
                           <div className="w-2 h-2 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '0ms' }} />
                           <div className="w-2 h-2 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '150ms' }} />
                           <div className="w-2 h-2 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
-                        <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Analyzing flows...</span>
+                        <span className="text-sm font-medium text-gray-500 dark:text-white/30">Analyzing flows...</span>
                       </div>
                     </div>
                   </div>
@@ -890,14 +890,14 @@ export default function ConciergePage() {
               </div>
 
               {/* Input Area */}
-              <div className="p-3 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/30">
+              <div className="p-3 border-t border-gray-200 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.03]">
                 {messages.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
                     {getSmartCommands().slice(0, 3).map((cmd, i) => (
                       <button
                         key={i}
                         onClick={() => sendMessage(cmd.command)}
-                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-neutral-950 hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 transition-colors"
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#0A0A0A] hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/30 border border-gray-200 dark:border-white/[0.06] transition-colors"
                       >
                         {cmd.label}
                       </button>
@@ -916,7 +916,7 @@ export default function ConciergePage() {
                       "p-3 rounded-xl transition-all border",
                       isListening
                         ? "bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse border-red-400"
-                        : "bg-white dark:bg-neutral-950 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-white/10 border-neutral-200 dark:border-neutral-800"
+                        : "bg-white dark:bg-[#0A0A0A] text-gray-500 dark:text-white/30 hover:bg-gray-50 dark:hover:bg-white/10 border-gray-200 dark:border-white/[0.06]"
                     )}
                   >
                     {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
@@ -928,7 +928,7 @@ export default function ConciergePage() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder="Capital flow, recommendations, or analyze an asset..."
-                    className="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-colors"
+                    className="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/[0.06] text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-colors"
                     disabled={isLoading}
                   />
 
@@ -939,7 +939,7 @@ export default function ConciergePage() {
                       "p-3 rounded-xl transition-all",
                       input.trim() && !isLoading
                         ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/30 hover:shadow-xl"
-                        : "bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed"
+                        : "bg-gray-200 dark:bg-white/[0.05] text-gray-400 cursor-not-allowed"
                     )}
                   >
                     <Send className="w-5 h-5" />
@@ -961,8 +961,8 @@ export default function ConciergePage() {
                   <Layers className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="font-bold text-neutral-900 dark:text-white">Capital Flow Radar</p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">See full 4-layer analysis</p>
+                  <p className="font-bold text-gray-900 dark:text-white">Capital Flow Radar</p>
+                  <p className="text-xs text-gray-500 dark:text-white/30">See full 4-layer analysis</p>
                 </div>
               </div>
               <div className="flex items-center text-teal-600 dark:text-teal-400 text-sm font-medium group-hover:translate-x-1 transition-transform">
@@ -971,12 +971,12 @@ export default function ConciergePage() {
             </Link>
 
             {/* Flow Philosophy */}
-            <div className="p-4 rounded-xl bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
-              <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-3 flex items-center gap-2">
+            <div className="p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                 <Globe className="w-4 h-4 text-teal-500" />
                 Follow The Money
               </h3>
-              <div className="space-y-2 text-xs text-neutral-500 dark:text-neutral-400">
+              <div className="space-y-2 text-xs text-gray-500 dark:text-white/30">
                 <p><span className="font-semibold text-teal-600 dark:text-teal-400">L1:</span> Global Liquidity (Fed, DXY, VIX)</p>
                 <p><span className="font-semibold text-teal-600 dark:text-teal-400">L2:</span> Market Flows (Crypto, Stocks...)</p>
                 <p><span className="font-semibold text-teal-600 dark:text-teal-400">L3:</span> Sector Drill-Down</p>
@@ -985,8 +985,8 @@ export default function ConciergePage() {
             </div>
 
             {/* Phase Legend */}
-            <div className="p-4 rounded-xl bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
-              <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-3">Market Phases</h3>
+            <div className="p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Market Phases</h3>
               <div className="space-y-2">
                 {[
                   { phase: 'early', label: 'EARLY', desc: 'Best entry', color: 'text-emerald-600 dark:text-emerald-400' },
@@ -997,7 +997,7 @@ export default function ConciergePage() {
                   <div key={item.phase} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <PhaseBadge phase={item.phase} />
-                      <span className="text-xs text-neutral-500 dark:text-neutral-400">{item.desc}</span>
+                      <span className="text-xs text-gray-500 dark:text-white/30">{item.desc}</span>
                     </div>
                   </div>
                 ))}
@@ -1011,11 +1011,11 @@ export default function ConciergePage() {
                   <Zap className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Analysis Cost</p>
-                  <p className="text-xl font-bold text-neutral-900 dark:text-white">Daily Pass</p>
+                  <p className="text-xs font-medium text-gray-500 dark:text-white/30">Analysis Cost</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">Daily Pass</p>
                 </div>
               </div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              <p className="text-xs text-gray-500 dark:text-white/30">
                 Flow questions and insights are free!
               </p>
             </div>

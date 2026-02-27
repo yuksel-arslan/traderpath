@@ -664,6 +664,22 @@ export default function DashboardPage() {
 
       <div className="max-w-[1400px] mx-auto py-6 px-4 sm:px-6 space-y-4">
 
+        {/* Page Header */}
+        <header className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
+              <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
+            </div>
+            <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
+              DASHBOARD
+            </span>
+          </div>
+          <span className="text-[10px] text-gray-400 dark:text-white/40 uppercase tracking-wider">
+            Decision Engine
+          </span>
+        </header>
+
         {/* ROW 1: Primary Decision + System Performance */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div id="tour-decision">
