@@ -11,6 +11,22 @@ interface FlowStep {
   score: number;
 }
 
+interface SuggestedAsset {
+  symbol: string;
+  name: string;
+  market: string;
+  sector?: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  reason: string;
+}
+
+interface SectorFlow {
+  name: string;
+  flow7d: number;
+  trending: 'up' | 'down' | 'stable';
+  topAssets: string[];
+}
+
 interface FlowChainProps {
   capitalFlow: {
     liquidityBias: 'risk_on' | 'risk_off' | 'neutral';
@@ -19,6 +35,7 @@ interface FlowChainProps {
       flow7d: number;
       phase: string;
       rotationSignal: string | null;
+      sectors?: SectorFlow[];
     }[];
     recommendation: {
       primaryMarket: string;
@@ -27,9 +44,9 @@ interface FlowChainProps {
       confidence: number;
       reason: string;
       sectors?: string[];
+      suggestedAssets?: SuggestedAsset[];
     };
   } | null;
-  recentAnalyses: { symbol: string; direction?: string; score: number; entryPrice?: number; stopLoss?: number; takeProfit1?: number }[];
 }
 
 const statusColors: Record<string, string> = {
@@ -40,8 +57,7 @@ const statusColors: Record<string, string> = {
 };
 
 function buildFlowSteps(
-  capitalFlow: FlowChainProps['capitalFlow'],
-  recentAnalyses: FlowChainProps['recentAnalyses']
+  capitalFlow: FlowChainProps['capitalFlow']
 ): FlowStep[] {
   if (!capitalFlow) {
     return [
@@ -60,20 +76,50 @@ function buildFlowSteps(
     : '--';
   const flowScore = Math.min(100, Math.max(0, Math.round(capitalFlow.recommendation.confidence)));
 
+  // Sector: Use recommended sector name from capital flow
   const sectorName = capitalFlow.recommendation.sectors?.[0] || capitalFlow.recommendation.primaryMarket || '--';
   const sectorScore = Math.min(100, Math.max(0, flowScore - 5));
 
-  const topAnalysis = recentAnalyses[0];
-  const assetSymbol = topAnalysis?.symbol?.replace(/USDT$/i, '') || '--';
-  const assetScore = topAnalysis?.score || 0;
+  // Find matching sector data from the primary market to get trending info
+  const primaryMarketData = capitalFlow.markets.find(
+    (m) => m.market === capitalFlow.recommendation.primaryMarket
+  );
+  const matchingSector = primaryMarketData?.sectors?.find(
+    (s) => s.name === sectorName
+  );
+  const sectorTrending = matchingSector?.trending;
+  const sectorStatus: FlowStep['status'] = sectorTrending === 'up' ? 'bullish' : sectorTrending === 'down' ? 'bearish' : biasStatus;
 
-  const hasPlan = topAnalysis && topAnalysis.entryPrice;
+  // Asset: Use suggestedAssets from capital flow recommendation (NOT recent analyses)
+  const suggestedAssets = capitalFlow.recommendation.suggestedAssets || [];
+  const topAsset = suggestedAssets[0];
+
+  // Fallback: if no suggestedAssets, try topAssets from the matching sector
+  const fallbackAsset = !topAsset && matchingSector?.topAssets?.[0]
+    ? matchingSector.topAssets[0]
+    : null;
+
+  const assetSymbol = topAsset?.symbol?.replace(/USDT$/i, '') || fallbackAsset || '--';
+  const assetRisk = topAsset?.riskLevel;
+  const assetConfidence = assetRisk === 'low' ? 80 : assetRisk === 'medium' ? 60 : assetRisk === 'high' ? 40 : 0;
+  const assetScore = topAsset ? Math.min(100, Math.max(0, assetConfidence)) : 0;
+  const assetSector = topAsset?.sector || sectorName;
+  const assetDetail = topAsset
+    ? `${assetSector} · ${topAsset.riskLevel} risk`
+    : fallbackAsset
+      ? `${sectorName} sector top asset`
+      : 'No recommendation';
+
+  // Trade Plan: Use capital flow recommendation action and direction
+  const action = capitalFlow.recommendation.action;
+  const hasPlan = topAsset && action !== 'avoid';
   const planValue = hasPlan
-    ? `${topAnalysis.direction?.toUpperCase() || 'LONG'} ${assetSymbol}`
-    : '--';
-  const planDetail = hasPlan
-    ? `Entry $${topAnalysis.entryPrice} | SL $${topAnalysis.stopLoss || '--'} | TP $${topAnalysis.takeProfit1 || '--'}`
-    : 'Run analysis for trade plan';
+    ? `${action.toUpperCase()} ${assetSymbol}`
+    : action === 'avoid'
+      ? 'AVOID'
+      : '--';
+  const planDetail = topAsset?.reason?.slice(0, 50) || capitalFlow.recommendation.reason?.slice(0, 50) || 'Run capital flow analysis';
+  const planStatus: FlowStep['status'] = action === 'analyze' ? 'ready' : action === 'wait' ? 'neutral' : 'bearish';
 
   return [
     {
@@ -87,32 +133,34 @@ function buildFlowSteps(
     {
       id: 'sector',
       label: 'Sector',
-      status: biasStatus,
+      status: sectorStatus,
       value: sectorName,
-      detail: capitalFlow.recommendation.reason?.slice(0, 40) || 'Sector rotation data',
+      detail: matchingSector
+        ? `${matchingSector.trending} trend · ${matchingSector.flow7d >= 0 ? '+' : ''}${matchingSector.flow7d.toFixed(1)}% 7d`
+        : capitalFlow.recommendation.reason?.slice(0, 40) || 'Sector rotation data',
       score: sectorScore,
     },
     {
       id: 'asset',
       label: 'Top Asset',
-      status: assetScore >= 70 ? 'bullish' : assetScore >= 40 ? 'neutral' : 'bearish',
+      status: assetScore >= 60 ? 'bullish' : assetScore >= 40 ? 'neutral' : topAsset ? 'bearish' : 'neutral',
       value: assetSymbol,
-      detail: topAnalysis ? `Score: ${assetScore}/100` : 'No recent analysis',
+      detail: assetDetail,
       score: assetScore,
     },
     {
       id: 'plan',
       label: 'Trade Plan',
-      status: hasPlan ? 'ready' : 'neutral',
+      status: hasPlan ? planStatus : 'neutral',
       value: planValue,
       detail: planDetail,
-      score: hasPlan ? assetScore : 0,
+      score: hasPlan ? flowScore : 0,
     },
   ];
 }
 
-export function FlowChain({ capitalFlow, recentAnalyses }: FlowChainProps) {
-  const steps = buildFlowSteps(capitalFlow, recentAnalyses);
+export function FlowChain({ capitalFlow }: FlowChainProps) {
+  const steps = buildFlowSteps(capitalFlow);
 
   return (
     <div className="rounded-xl p-5 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
