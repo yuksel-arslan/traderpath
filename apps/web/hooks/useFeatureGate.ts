@@ -16,8 +16,7 @@ export type GatedFeature =
   | 'automation'
   | 'rewards'
   | 'scheduled_reports'
-  | 'pdf_reports'
-  | 'email_reports';
+  | 'pdf_reports';
 
 // Map features to their required subscription properties
 const FEATURE_MAP: Record<GatedFeature, {
@@ -33,7 +32,6 @@ const FEATURE_MAP: Record<GatedFeature, {
   rewards: { subscriptionKey: 'rewards', minimumTier: 'free' },
   scheduled_reports: { subscriptionKey: 'automation', minimumTier: 'starter' },
   pdf_reports: { subscriptionKey: 'reportsExport', minimumTier: 'starter' },
-  email_reports: { subscriptionKey: 'reportsExport', minimumTier: 'starter' },
 };
 
 // Tier hierarchy for comparison

@@ -128,7 +128,8 @@
 |-----|--------|----------------|-----------------|-------------|
 | AI Expert Sohbet | 3 | 3 soru/analiz | 5 kredi/soru | `Analysis.aiExpertQuestionsUsed` |
 | PDF İndirme | 2 | 2 indirme/analiz | 5 kredi/indirme | `Analysis.pdfDownloadsUsed` |
-| Email Gönderme | 2 | 2 email/analiz | 5 kredi/email | `Analysis.emailsSentUsed` |
+
+> **Not:** Email ile rapor gönderme kaldırıldı. Raporlar sadece PDF olarak indirilebilir. İşlem sonuçları (TP/SL hit) otomatik email ile bildirilir.
 ### Trade Type Completion Bonus (Otomatik)
 
 | Trade Type | Bonus Kredi | Açıklama |
@@ -157,13 +158,12 @@ Trade Type Bonus Eklenir:
     ↓
 Signal Auto-Publish (Confidence > 70% ve GO/COND_GO ise):
     ├── Signal DB'ye kaydedilir
-    ├── Telegram kanalına yayınlanır
-    └── Abonelere bildirim gönderilir (Telegram + Discord)
+    ├── Telegram kanalına yayınlanır (sadece Signal aboneleri)
+    └── Discord'a bildirim gönderilir (sadece Signal aboneleri)
     ↓
 Kullanıcı Hakları Aktif:
     ├── 3x AI Expert sohbet (ücretsiz)
-    ├── 2x PDF indirme (ücretsiz)
-    └── 2x Email gönderme (ücretsiz)
+    └── 2x PDF indirme (ücretsiz)
 ```
 
 ### Kod Lokasyonları
