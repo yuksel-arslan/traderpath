@@ -119,6 +119,24 @@ interface PerformanceData {
   };
 }
 
+interface PlatformPerformanceDay {
+  date: string;
+  realized: number;
+  trades: number;
+  cumulative: number;
+}
+
+interface PlatformPerformanceData {
+  daily: PlatformPerformanceDay[];
+  summary: {
+    totalRealizedPnL: number;
+    totalTrades: number;
+    period: number;
+    allTimeTotalPnL: number;
+    allTimeTotalTrades: number;
+  };
+}
+
 interface GlobalLiquidity {
   fedBalanceSheet: { value: number; change30d: number; trend: 'expanding' | 'contracting' | 'stable' };
   m2MoneySupply: { value: number; change30d: number; yoyGrowth: number };
@@ -327,6 +345,7 @@ export default function DashboardPage() {
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [recentAnalyses, setRecentAnalyses] = useState<RecentAnalysis[]>([]);
   const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
+  const [platformPerformanceData, setPlatformPerformanceData] = useState<PlatformPerformanceData | null>(null);
   const [capitalFlow, setCapitalFlow] = useState<CapitalFlowSummary | null>(null);
   const [signalStats, setSignalStats] = useState<SignalStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -350,6 +369,7 @@ export default function DashboardPage() {
               setUserStats(data.userStats);
               setRecentAnalyses(data.recentAnalyses);
               setPerformanceData(data.performanceData || null);
+              setPlatformPerformanceData(data.platformPerformanceData || null);
               setCapitalFlow(data.capitalFlow || null);
               setSignalStats(data.signalStats || null);
               setLoading(false);
@@ -359,7 +379,7 @@ export default function DashboardPage() {
         } catch {}
       }
 
-      const [creditsRes, platformRes, statsRes, livePricesRes, perfHistoryRes, capitalFlowRes, signalStatsRes] =
+      const [creditsRes, platformRes, statsRes, livePricesRes, perfHistoryRes, capitalFlowRes, signalStatsRes, platformPerfRes] =
         await Promise.all([
           authFetch('/api/user/credits'),
           fetch(getApiUrl('/api/analysis/platform-stats')),
@@ -368,6 +388,7 @@ export default function DashboardPage() {
           authFetch('/api/analysis/performance-history?days=30'),
           authFetch('/api/capital-flow/summary'),
           authFetch('/api/v1/signals/stats'),
+          fetch(getApiUrl('/api/analysis/platform-performance-history?days=30')),
         ]);
 
       let newCredits = 0;
@@ -375,6 +396,7 @@ export default function DashboardPage() {
       let newUserStats: UserStats | null = null;
       let newRecentAnalyses: RecentAnalysis[] = [];
       let newPerformanceData: PerformanceData | null = null;
+      let newPlatformPerformanceData: PlatformPerformanceData | null = null;
       let newCapitalFlow: CapitalFlowSummary | null = null;
       let newSignalStats: SignalStats | null = null;
 
@@ -440,6 +462,14 @@ export default function DashboardPage() {
         setPerformanceData(newPerformanceData);
       }
 
+      if (platformPerfRes.ok) {
+        const data = await platformPerfRes.json();
+        if (data.success && data.data) {
+          newPlatformPerformanceData = data.data;
+          setPlatformPerformanceData(newPlatformPerformanceData);
+        }
+      }
+
       if (capitalFlowRes.ok) {
         const data = await capitalFlowRes.json();
         newCapitalFlow = data.data || null;
@@ -490,6 +520,7 @@ export default function DashboardPage() {
               userStats: newUserStats,
               recentAnalyses: newRecentAnalyses,
               performanceData: newPerformanceData,
+              platformPerformanceData: newPlatformPerformanceData,
               capitalFlow: newCapitalFlow,
               signalStats: newSignalStats,
             },
@@ -624,6 +655,50 @@ export default function DashboardPage() {
 
   const periodPnL = calculatePeriodPnL();
 
+  // Platform-wide P/L calculation for System Performance
+  const calculatePlatformPeriodPnL = () => {
+    if (!platformPerformanceData?.daily?.length) return 0;
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    if (pnlViewMode === 'daily') {
+      return platformPerformanceData.daily.find((d) => d.date === todayStr)?.realized || 0;
+    }
+    if (pnlViewMode === 'weekly') {
+      return Array(7).fill(null).reduce((sum, _, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (6 - i));
+        const key = d.toISOString().split('T')[0];
+        const dayData = platformPerformanceData.daily.find((x) => x.date === key);
+        return sum + (dayData?.realized || 0);
+      }, 0);
+    }
+    return platformPerformanceData.summary?.totalRealizedPnL || 0;
+  };
+
+  const platformPeriodPnL = calculatePlatformPeriodPnL();
+  const platformWinRate = platformStats?.accuracy?.overall ?? 0;
+  const platformTotalTrades = platformPerformanceData?.summary?.totalTrades ?? platformStats?.platform?.totalAnalyses ?? 0;
+
+  // Map platform data to PerformanceData shape for ProfitTracker
+  const platformPerfAsPerformanceData: PerformanceData | null = platformPerformanceData
+    ? {
+        daily: platformPerformanceData.daily.map((d) => ({
+          date: d.date,
+          realized: d.realized,
+          unrealized: 0,
+          total: d.realized,
+          trades: d.trades,
+          cumulative: d.cumulative,
+        })),
+        summary: {
+          totalRealizedPnL: platformPerformanceData.summary.totalRealizedPnL,
+          totalTrades: platformPerformanceData.summary.totalTrades,
+          activeTrades: 0,
+          winRate: platformWinRate,
+        },
+      }
+    : null;
+
   // Filtered analyses
   const filteredAnalyses = useMemo(
     () => recentAnalyses.filter((a) => selectedMarkets.includes(detectMarketType(a.symbol))),
@@ -731,12 +806,12 @@ export default function DashboardPage() {
             <PrimaryDecision capitalFlow={capitalFlow} />
           </div>
           <ProfitTracker
-            periodPnL={periodPnL}
+            periodPnL={platformPeriodPnL}
             pnlViewMode={pnlViewMode}
             setPnlViewMode={setPnlViewMode}
-            winRate={winRate}
-            totalTrades={totalTrades}
-            performanceData={performanceData}
+            winRate={platformWinRate}
+            totalTrades={platformTotalTrades}
+            performanceData={platformPerfAsPerformanceData}
           />
         </div>
 
@@ -766,14 +841,14 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* CENTER: Performance Chart + Active Trades */}
+              {/* CENTER: My Performance Chart + Active Trades */}
               <div className="space-y-4">
-                {/* Performance Chart */}
+                {/* My Performance Chart */}
                 <div className="rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
                   <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/[0.06]">
                     <div>
                       <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        Performance
+                        My Performance
                       </h3>
                       <p className="text-xs text-gray-500 dark:text-white/40 mt-0.5">
                         {pnlViewMode === 'daily' ? "Today's" : pnlViewMode === 'weekly' ? '7-day' : '30-day'} returns
