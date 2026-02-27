@@ -17,6 +17,7 @@ import {
   getMarketAnalysis
 } from './capital-flow.service';
 import { MarketType, MarketFlow } from './types';
+import { calculateRegimeScore } from './scoring';
 import { prisma } from '../../core/database';
 import { authenticate } from '../../core/auth/middleware';
 
@@ -465,6 +466,42 @@ export async function capitalFlowRoutes(app: FastifyInstance) {
       return reply.status(500).send({
         success: false,
         error: 'Failed to save capital flow report',
+      });
+    }
+  });
+
+  /**
+   * GET /api/capital-flow/regime-score
+   *
+   * Returns the unified Regime Score across all layers:
+   *   L1 — GLRS  (Global Liquidity Regime Score, 0–100)
+   *   L2 — FVR   (Flow Velocity & Rotation per market)
+   *   L3 — SCI   (Sector Concentration Index)
+   *   Lead-Lag   (Cross-correlation matrix)
+   *
+   * All scores are mathematically derived, backtestable,
+   * and regime-aware.
+   *
+   * Public endpoint — no authentication required.
+   */
+  app.get('/regime-score', async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const [globalLiquidity, markets] = await Promise.all([
+        getGlobalLiquidity(),
+        getAllMarketFlows(),
+      ]);
+
+      const regimeScore = calculateRegimeScore(globalLiquidity, markets);
+
+      return reply.send({
+        success: true,
+        data: regimeScore,
+      });
+    } catch (error) {
+      console.error('[CapitalFlow] Error calculating regime score:', error);
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to calculate regime score',
       });
     }
   });
