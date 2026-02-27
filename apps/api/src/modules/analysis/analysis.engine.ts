@@ -14,6 +14,7 @@ import { aggregateScores, quickStepScore, STEP_WEIGHTS } from './scoring';
 import {
   aggregateWithMetaEnsemble,
   extractAllStepRawValues,
+  extractMLISScores,
   extractTrapData,
   hasCriticalSafetyIssue as checkCriticalSafety,
   hasEconomicBlock as checkEconomicBlock,
@@ -6112,8 +6113,32 @@ export const analysisEngine = {
     const criticalSafety = checkCriticalSafety(safetyCheck);
     const economicBlock = checkEconomicBlock(marketPulse);
 
+    // MLIS integration: run ML analysis and feed into meta-ensemble (60/40 split)
+    const mlisTimeframe =
+      tradeType === 'scalping' ? '15m' :
+      tradeType === 'swing'   ? '1d'  : '4h';
+
+    let mlisScores: {
+      technical: number;
+      momentum: number;
+      volatility: number;
+      volume: number;
+      sentiment?: number;
+      onchain?: number;
+    } | undefined;
+
+    try {
+      const mlisResult = await analyzeMLIS(symbol, mlisTimeframe);
+      if (mlisResult && mlisResult.layers) {
+        mlisScores = extractMLISScores(mlisResult);
+      }
+    } catch {
+      // MLIS failure is non-critical — continue with 7-Step only (100% allocation)
+    }
+
     const closedFormResult: ClosedFormAggregateResult = aggregateWithMetaEnsemble({
       stepScores: cfStepScores,
+      mlisScores,
       trapData,
       riskLevel: safetyCheck.riskLevel as 'low' | 'medium' | 'high' | 'critical',
       riskScoreRaw: safetyCheck.contractSecurity?.riskScore,
