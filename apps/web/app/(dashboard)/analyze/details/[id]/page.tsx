@@ -140,8 +140,6 @@ export default function AnalysisDetailsPage() {
   }, [analysisId]);
 
   // Auto-PDF handler for ?pdf=true parameter
-              (clonedElement as HTMLElement).style.overflow = 'visible';
-  // Auto-PDF handler for ?pdf=true parameter
   const handleAutoPdf = useCallback(async () => {
     if (!pageRef.current || !analysis || autoPdfTriggered.current) return;
 
