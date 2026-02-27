@@ -554,6 +554,7 @@ function serializeSignal(signal: any) {
     mlisRecommendation: signal.mlisRecommendation,
     mlisConfidence: signal.mlisConfidence,
     overallConfidence: signal.overallConfidence,
+    winRateEstimate: signal.winRateEstimate ?? null,
     qualityScore: signal.qualityScore ?? null,
     qualityData: signal.qualityData ?? null,
     capitalFlowPhase: signal.capitalFlowPhase,

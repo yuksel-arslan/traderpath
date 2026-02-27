@@ -130,7 +130,7 @@ ${marketEmoji} <b>${signal.symbol}</b> | ${direction}${qs ? ` | ${getQualityBadg
 ${verdictEmoji} Classic: <b>${signal.classicVerdict}</b> (${signal.classicScore.toFixed(1)}/10)
 🤖 MLIS Pro: ${getMLISBadge(signal.mlisConfirmation, signal.mlisRecommendation)}
 🎯 Confidence: <b>${signal.overallConfidence}%</b> ${getConfidenceBadge(signal.overallConfidence)}
-${qualitySection}
+${signal.winRateEstimate ? `📊 Win Rate: <b>${signal.winRateEstimate}%</b>\n` : ''}${qualitySection}
 <b>━━━ Capital Flow ━━━</b>
 ${phaseEmoji} Phase: <b>${signal.capitalFlowPhase.toUpperCase()}</b>
 🌊 Bias: <b>${signal.capitalFlowBias.replace('_', ' ').toUpperCase()}</b>

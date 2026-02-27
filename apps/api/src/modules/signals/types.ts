@@ -23,6 +23,7 @@ export interface SignalData {
   mlisRecommendation?: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
   mlisConfidence?: number;
   overallConfidence: number;
+  winRateEstimate?: number;
 
   // Capital Flow Context
   capitalFlowPhase: 'early' | 'mid' | 'late' | 'exit';

@@ -66,6 +66,7 @@ export class SignalService {
           mlisRecommendation: data.mlisRecommendation,
           mlisConfidence: data.mlisConfidence,
           overallConfidence: data.overallConfidence,
+          winRateEstimate: data.winRateEstimate ?? null,
           capitalFlowPhase: data.capitalFlowPhase,
           capitalFlowBias: data.capitalFlowBias,
           sectorFlow: data.sectorFlow,

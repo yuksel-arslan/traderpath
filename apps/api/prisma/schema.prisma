@@ -1059,6 +1059,7 @@ model Signal {
   mlisRecommendation  String?   @map("mlis_recommendation") @db.VarChar(20) // STRONG_BUY, BUY, HOLD, SELL
   mlisConfidence      Int?      @map("mlis_confidence") // 0-100
   overallConfidence   Int       @map("overall_confidence") // 0-100 combined confidence
+  winRateEstimate     Int?      @map("win_rate_estimate") // 0-100 estimated win rate from trade plan
 
   // Capital Flow Context
   capitalFlowPhase    String    @map("capital_flow_phase") @db.VarChar(10) // early, mid, late, exit

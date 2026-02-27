@@ -190,6 +190,7 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
           mlisRecommendation: analysisResult.mlisRecommendation,
           mlisConfidence: analysisResult.mlisConfidence,
           overallConfidence,
+          winRateEstimate: analysisResult.tradePlan?.winRateEstimate || undefined,
           capitalFlowPhase: recommendation.phase,
           capitalFlowBias: capitalFlowSummary.liquidityBias || 'neutral',
           sectorFlow: asset.sectorFlow,

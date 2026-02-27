@@ -1342,6 +1342,7 @@ Warn about potential traps and give protective advice.`;
               mlisRecommendation: mlisConfirmation?.mlisRecommendation as 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL' | undefined,
               mlisConfidence: mlisConfirmation?.mlisConfidence,
               overallConfidence,
+              winRateEstimate: tradePlan.winRateEstimate || undefined,
               capitalFlowPhase: (capitalFlowModifier?.phase || 'mid') as 'early' | 'mid' | 'late' | 'exit',
               capitalFlowBias: (capitalFlowModifier?.action === 'avoid' ? 'risk_off' : capitalFlowModifier?.action === 'analyze' ? 'risk_on' : 'neutral') as 'risk_on' | 'risk_off' | 'neutral',
               sectorFlow: undefined,
@@ -1412,8 +1413,8 @@ Warn about potential traps and give protective advice.`;
                   userId: prefs.user.id,
                   type: 'SIGNAL',
                   title: `New Signal: ${body.symbol} ${signalDirection.toUpperCase()}`,
-                  message: `${verdict.verdict.toUpperCase()} | Score ${verdict.overallScore}/10 | Confidence ${overallConfidence}% | Entry $${tradePlan.averageEntry}`,
-                  metadata: { signalId, symbol: body.symbol, direction: signalDirection },
+                  message: `${verdict.verdict.toUpperCase()} | Score ${verdict.overallScore}/10 | Confidence ${overallConfidence}%${tradePlan.winRateEstimate ? ` | Win Rate ${tradePlan.winRateEstimate}%` : ''} | Entry $${tradePlan.averageEntry}`,
+                  metadata: { signalId, symbol: body.symbol, direction: signalDirection, confidence: overallConfidence, winRate: tradePlan.winRateEstimate },
                 });
 
                 // Telegram notification to individual user
@@ -1428,13 +1429,15 @@ Warn about potential traps and give protective advice.`;
                   const { socialNotificationService: sns } = await import('../notifications/social-notification.service');
                   await sns.sendDiscordMessage(prefs.discordWebhookUrl, {
                     title: `New Signal: ${body.symbol} ${signalDirection.toUpperCase()}`,
-                    description: `**${verdict.verdict.toUpperCase()}** | Score ${verdict.overallScore}/10 | Confidence ${overallConfidence}%`,
+                    description: `**${verdict.verdict.toUpperCase()}** | Score ${verdict.overallScore}/10`,
                     color: signalDirection === 'long' ? 0x00F5A0 : 0xFF4757,
                     fields: [
+                      { name: 'Confidence', value: `${overallConfidence}%`, inline: true },
+                      { name: 'Win Rate', value: `${tradePlan.winRateEstimate || 'N/A'}%`, inline: true },
+                      { name: 'R:R', value: `${tradePlan.riskReward || 'N/A'}`, inline: true },
                       { name: 'Entry', value: `$${tradePlan.averageEntry}`, inline: true },
                       { name: 'Stop Loss', value: `$${tradePlan.stopLoss?.price || 'N/A'}`, inline: true },
                       { name: 'TP1', value: `$${tradePlan.takeProfits?.[0]?.price || 'N/A'}`, inline: true },
-                      { name: 'R:R', value: `${tradePlan.riskReward || 'N/A'}`, inline: true },
                     ],
                   });
                 }
