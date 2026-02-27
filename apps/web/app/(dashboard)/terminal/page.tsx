@@ -25,6 +25,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useRouter } from 'next/navigation';
 import {
   createChart,
   ColorType,
@@ -849,6 +850,7 @@ function ContentPanel({
         <AIRecommendation
           verdict={verdict}
           onAssetClick={onAssetChipClick}
+          onAnalyze={onAnalyze}
         />
       );
     case 'l5':
@@ -902,6 +904,7 @@ export default function TestPage() {
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
 
   // Navigation
+  const router = useRouter();
   const [activeSection, setActiveSection] = useState<SectionId>('l1');
   const [marketFilter, setMarketFilter] = useState('All');
 
@@ -992,8 +995,8 @@ export default function TestPage() {
   }, [screenerData, handleAssetSelect]);
 
   const handleAnalyze = useCallback((symbol: string) => {
-    setActiveSection('analysis');
-  }, []);
+    router.push(`/analyze?symbol=${encodeURIComponent(symbol)}`);
+  }, [router]);
 
   const handleVisualize = useCallback((symbol: string) => {
     const asset = screenerData.find(a => a.symbol.toUpperCase() === symbol.toUpperCase());

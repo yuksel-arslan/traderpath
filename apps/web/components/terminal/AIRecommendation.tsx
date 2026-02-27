@@ -30,16 +30,19 @@ interface VerdictData {
 interface AIRecommendationProps {
   verdict: VerdictData;
   onAssetClick?: (symbol: string) => void;
+  onAnalyze?: (symbol: string) => void;
 }
 
 function SignalCard({
   opportunity,
   type,
   onAssetClick,
+  onAnalyze,
 }: {
   opportunity: VerdictOpportunity;
   type: 'buy' | 'sell';
   onAssetClick?: (symbol: string) => void;
+  onAnalyze?: (symbol: string) => void;
 }) {
   const isBuy = type === 'buy';
   const color = isBuy ? '#00F5A0' : '#FF4757';
@@ -138,11 +141,26 @@ function SignalCard({
           ))}
         </div>
       )}
+
+      {/* Analyze button */}
+      {opportunity.suggestedAssets.length > 0 && onAnalyze && (
+        <button
+          onClick={() => onAnalyze(opportunity.suggestedAssets[0])}
+          className="w-full mt-1 py-1.5 rounded-lg text-[11px] font-semibold tracking-wide transition-all duration-200 hover:brightness-110"
+          style={{
+            background: `${color}15`,
+            color,
+            border: `1px solid ${color}30`,
+          }}
+        >
+          Analyze
+        </button>
+      )}
     </div>
   );
 }
 
-export function AIRecommendation({ verdict, onAssetClick }: AIRecommendationProps) {
+export function AIRecommendation({ verdict, onAssetClick, onAnalyze }: AIRecommendationProps) {
   const passedCount = verdict.gates.filter((g) => g.passed).length;
   const totalGates = verdict.gates.length;
 
@@ -243,7 +261,7 @@ export function AIRecommendation({ verdict, onAssetClick }: AIRecommendationProp
       {/* BUY / SELL signal cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {verdict.buy ? (
-          <SignalCard opportunity={verdict.buy} type="buy" onAssetClick={onAssetClick} />
+          <SignalCard opportunity={verdict.buy} type="buy" onAssetClick={onAssetClick} onAnalyze={onAnalyze} />
         ) : (
           <div
             className="rounded-xl p-4 flex items-center justify-center"
@@ -258,7 +276,7 @@ export function AIRecommendation({ verdict, onAssetClick }: AIRecommendationProp
           </div>
         )}
         {verdict.sell ? (
-          <SignalCard opportunity={verdict.sell} type="sell" onAssetClick={onAssetClick} />
+          <SignalCard opportunity={verdict.sell} type="sell" onAssetClick={onAssetClick} onAnalyze={onAnalyze} />
         ) : (
           <div
             className="rounded-xl p-4 flex items-center justify-center"
