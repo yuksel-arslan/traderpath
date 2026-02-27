@@ -110,8 +110,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=no_token', baseUrl));
     }
 
-    // Create response with redirect to terminal
-    const response = NextResponse.redirect(new URL('/terminal', baseUrl));
+    // Create response with redirect to dashboard
+    const response = NextResponse.redirect(new URL('/dashboard', baseUrl));
 
     // Clear PKCE cookies
     response.cookies.set('twitter_code_verifier', '', { maxAge: 0 });

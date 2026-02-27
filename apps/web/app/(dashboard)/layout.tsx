@@ -7,7 +7,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
-  TrendingUp,
   Gift,
   Bell,
   Settings,
@@ -47,7 +46,6 @@ const directNav = [
   { name: 'Terminal', href: '/terminal', icon: Monitor },
   { name: 'Analyze', href: '/analyze', icon: BarChart3 },
   { name: 'Signals', href: '/signals', icon: Activity },
-  { name: 'Trades', href: '/trades', icon: TrendingUp },
 ];
 
 // Dropdown navigation groups
@@ -58,7 +56,7 @@ const dropdownNav = [
     items: [
       { name: 'Concierge', href: '/concierge', icon: Bot },
       { name: 'Reports', href: '/reports', icon: FileText },
-      { name: 'Backtest', href: '/methodology', icon: FlaskConical },
+      { name: 'Methodology', href: '/methodology', icon: FlaskConical },
       { name: 'Smart Alerts', href: '/alerts/smart', icon: ShieldAlert },
       { name: 'Scheduled', href: '/scheduled', icon: Calendar },
       { name: 'Notifications', href: '/notifications', icon: Inbox },
