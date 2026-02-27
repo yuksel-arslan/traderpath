@@ -108,6 +108,7 @@ export interface DetailedReportData {
     reasons: string[];
   };
   chartImage?: string;
+  assetLogoUrl?: string; // Asset's own logo (e.g. BTC, ETH icon) as data URI or URL
 }
 
 // ===========================================
@@ -274,9 +275,10 @@ const commonStyles = `
   .logo { font-size: 16px; font-weight: bold; }
   .logo-red { color: #dc2626; }
   .logo-green { color: #16a34a; }
-  .header-info { text-align: right; }
-  .header-symbol { font-size: 14px; font-weight: bold; }
+  .header-info { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+  .header-symbol { font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 6px; }
   .header-type { font-size: 9px; color: #64748b; }
+  .asset-logo { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
 
   /* Section */
   .section { margin-bottom: 15px; }
@@ -376,7 +378,10 @@ function generateCoverPage(data: DetailedReportData): string {
         <div style="font-size: 8px; color: #64748b;">Detailed Analysis Report</div>
       </div>
       <div class="header-info">
-        <div class="header-symbol">${data.symbol}/USDT</div>
+        <div class="header-symbol">
+          ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" class="asset-logo" />` : ''}
+          ${data.symbol}/USDT
+        </div>
         <div class="header-type">${getTradeTypeName(data.tradeType)} Analysis</div>
         <div style="font-size: 8px; color: #94a3b8;">${data.generatedAt}</div>
       </div>
@@ -497,7 +502,10 @@ function generateStepDetailPage(data: DetailedReportData, step: DetailedStepData
     <div class="header">
       <div>
         <div class="logo"><span class="logo-red">Trade</span><span class="logo-green">Path</span></div>
-        <div style="font-size: 8px; color: #64748b;">${data.symbol}/USDT • Detailed Analysis</div>
+        <div style="font-size: 8px; color: #64748b; display: flex; align-items: center; gap: 4px;">
+          ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" style="width: 14px; height: 14px; border-radius: 50%; object-fit: cover;" />` : ''}
+          <span>${data.symbol}/USDT • Detailed Analysis</span>
+        </div>
       </div>
       <div class="header-info">
         <div style="font-size: 11px; font-weight: bold;">Step ${step.stepNumber}: ${step.stepName}</div>
@@ -633,7 +641,10 @@ function generateIndicatorChartsPage(data: DetailedReportData, step: DetailedSte
     <div class="header">
       <div>
         <div class="logo"><span class="logo-red">Trade</span><span class="logo-green">Path</span></div>
-        <div style="font-size: 8px; color: #64748b;">${data.symbol}/USDT • Indicator Charts</div>
+        <div style="font-size: 8px; color: #64748b; display: flex; align-items: center; gap: 4px;">
+          ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" style="width: 14px; height: 14px; border-radius: 50%; object-fit: cover;" />` : ''}
+          <span>${data.symbol}/USDT • Indicator Charts</span>
+        </div>
       </div>
       <div class="header-info">
         <div style="font-size: 11px; font-weight: bold;">Step ${step.stepNumber}: ${step.stepName}</div>
@@ -717,6 +728,28 @@ async function renderPageToCanvas(html: string): Promise<HTMLCanvasElement | nul
 }
 
 export async function generateDetailedReport(data: DetailedReportData): Promise<{ base64: string; fileName: string } | void> {
+  // Fetch asset logo for PDF rendering
+  if (!data.assetLogoUrl) {
+    try {
+      const { getLogoUrlAsync } = await import('../../lib/asset-logos-cache');
+      const logoUrl = await getLogoUrlAsync(data.symbol.replace(/USDT$/i, ''));
+      if (logoUrl.startsWith('data:')) {
+        data.assetLogoUrl = logoUrl;
+      } else {
+        const response = await fetch(logoUrl, { mode: 'cors' });
+        if (response.ok) {
+          const blob = await response.blob();
+          data.assetLogoUrl = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = () => resolve('');
+            reader.readAsDataURL(blob);
+          }) || undefined;
+        }
+      }
+    } catch { /* Logo fetch failed, continue without it */ }
+  }
+
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'pt',
