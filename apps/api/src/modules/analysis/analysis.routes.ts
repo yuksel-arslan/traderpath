@@ -19,7 +19,7 @@ import { prisma } from '../../core/database';
 import { coinScoreCacheService, CoinScore } from './services/coin-score-cache.service';
 import { analyzeMLIS, MLISResult } from './services/mlis.service';
 import { logger } from '../../core/logger';
-import { fetchCandles, getAssetClass } from './providers/multi-asset-data-provider';
+import { fetchCandles, getAssetClass, fetchTicker } from './providers/multi-asset-data-provider';
 import { getCapitalFlowModifier, CapitalFlowModifier } from '../capital-flow/capital-flow.service';
 import {
   MarketType,
@@ -1669,7 +1669,7 @@ Explain the key risks and what conditions would need to change before trading th
       const normalizeSymbol = (s: string) => s.toUpperCase().replace(/USDT$/i, '');
       const symbols = [...new Set(rawSymbols.map(normalizeSymbol))];
 
-      // Fetch current prices from Binance
+      // Fetch prices from appropriate sources per asset class
       const prices: Record<string, number> = {};
       try {
         const pairs = symbols.map((s: string) => `"${s}USDT"`).join(',');
@@ -1690,6 +1690,8 @@ Explain the key risks and what conditions would need to change before trading th
               prices[base.toLowerCase() + 'USDT'] = price;
             }
           }
+        } catch (err) {
+          logger.warn({ error: err }, 'Failed to fetch crypto prices from Binance');
         }
       } catch (err) {
         logger.warn({ error: err }, 'Failed to fetch prices from Binance');
