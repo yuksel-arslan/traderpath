@@ -69,7 +69,7 @@ export interface WebResearchResult {
 
   // Content
   citations: Citation[];
-  summary: string;
+  summary: string | null;
   keyFindings: string[];       // 3-5 bullet points
   riskFactors: string[];
   catalysts: string[];

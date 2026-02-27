@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowUpRight, ArrowDownRight, Zap, Minus } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface MarketFlow {
   market: string;
@@ -12,6 +13,8 @@ interface MarketFlow {
   rotationSignal: string | null;
 }
 
+type MarketType = 'crypto' | 'bist' | 'forex' | 'metals' | 'bonds';
+
 interface OpportunityRadarProps {
   capitalFlow: {
     markets: MarketFlow[];
@@ -21,8 +24,17 @@ interface OpportunityRadarProps {
       action: string;
     };
   } | null;
-  selectedMarkets: string[];
+  selectedMarkets: MarketType[];
+  onMarketChange?: (markets: MarketType[]) => void;
 }
+
+const FILTER_OPTIONS: { id: MarketType; label: string; icon: string }[] = [
+  { id: 'crypto', label: 'Crypto', icon: '₿' },
+  { id: 'bist', label: 'BIST', icon: 'İ' },
+  { id: 'forex', label: 'Stocks', icon: '$' },
+  { id: 'metals', label: 'Metals', icon: '⬡' },
+  { id: 'bonds', label: 'Bonds', icon: '📄' },
+];
 
 const PHASE_CONFIG: Record<string, { label: string; textColor: string; bgColor: string }> = {
   early: { label: 'EARLY', textColor: 'text-green-700 dark:text-green-400', bgColor: 'bg-green-50 dark:bg-green-500/10' },
@@ -40,7 +52,7 @@ const MARKET_META: Record<string, { icon: string; label: string; desc: string }>
 
 function matchesFilter(market: string, selectedMarkets: string[]): boolean {
   if (market === 'crypto'  && selectedMarkets.includes('crypto'))  return true;
-  if (market === 'stocks'  && (selectedMarkets.includes('bist') || selectedMarkets.includes('stocks'))) return true;
+  if (market === 'stocks'  && (selectedMarkets.includes('bist') || selectedMarkets.includes('forex'))) return true;
   if (market === 'metals'  && selectedMarkets.includes('metals'))  return true;
   if (market === 'bonds'   && selectedMarkets.includes('bonds'))   return true;
   return false;
@@ -69,11 +81,44 @@ function RotationSignal({ signal }: { signal: string | null }) {
   );
 }
 
-export function OpportunityRadar({ capitalFlow, selectedMarkets }: OpportunityRadarProps) {
+export function OpportunityRadar({ capitalFlow, selectedMarkets, onMarketChange }: OpportunityRadarProps) {
+  const toggleMarket = (market: MarketType) => {
+    if (!onMarketChange) return;
+    if (selectedMarkets.includes(market)) {
+      if (selectedMarkets.length === 1) return; // don't deselect all
+      onMarketChange(selectedMarkets.filter((m) => m !== market));
+    } else {
+      onMarketChange([...selectedMarkets, market]);
+    }
+  };
+
   if (!capitalFlow?.markets?.length) {
     return (
       <div className="border border-gray-200 dark:border-gray-800 rounded-lg p-6 bg-white dark:bg-[#111111]">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Opportunity Radar</h3>
+        {/* Filters even in empty state */}
+        {onMarketChange && (
+          <div className="flex flex-wrap gap-1.5 mt-3 mb-3">
+            {FILTER_OPTIONS.map((opt) => {
+              const isActive = selectedMarkets.includes(opt.id);
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => toggleMarket(opt.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all select-none',
+                    isActive
+                      ? 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/40'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-400 border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700'
+                  )}
+                >
+                  <span className="text-xs">{opt.icon}</span>
+                  <span>{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
         <p className="text-sm text-gray-500">No market data available.</p>
       </div>
     );
@@ -98,17 +143,43 @@ export function OpportunityRadar({ capitalFlow, selectedMarkets }: OpportunityRa
     <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-[#111111]">
 
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-        <div>
-          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Opportunity Radar</h3>
-          <p className="text-sm text-gray-500 mt-0.5">Capital Flow recommended markets</p>
+      <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Opportunity Radar</h3>
+            <p className="text-sm text-gray-500 mt-0.5">Capital Flow recommended markets</p>
+          </div>
+          <Link
+            href="/flow"
+            className="text-sm font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            All markets &rarr;
+          </Link>
         </div>
-        <Link
-          href="/flow"
-          className="text-sm font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-        >
-          All markets →
-        </Link>
+
+        {/* Market filter pills */}
+        {onMarketChange && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {FILTER_OPTIONS.map((opt) => {
+              const isActive = selectedMarkets.includes(opt.id);
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => toggleMarket(opt.id)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all select-none',
+                    isActive
+                      ? 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/40'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-400 border border-transparent hover:bg-gray-200 dark:hover:bg-gray-700'
+                  )}
+                >
+                  <span className="text-xs">{opt.icon}</span>
+                  <span>{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── MOBILE: card list ── */}

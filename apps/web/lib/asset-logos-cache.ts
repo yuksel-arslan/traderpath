@@ -287,7 +287,7 @@ export function clearLogosCache(): void {
  * Detect asset class from symbol
  */
 export function detectAssetClass(symbol: string): AssetClass {
-  const upper = symbol.toUpperCase();
+  const upper = symbol.toUpperCase().replace(/USDT$|USD$|BUSD$|USDC$/, '');
 
   // Check memory cache first
   if (memoryCache) {
@@ -336,7 +336,8 @@ export function detectAssetClass(symbol: string): AssetClass {
  * Get logo info for a symbol (synchronous - uses cache)
  */
 export function getAssetLogo(symbol: string, assetClass?: AssetClass): CachedLogoInfo {
-  const upper = symbol.toUpperCase();
+  // Strip common trading pair suffixes (SOLUSDT → SOL, BTCUSD → BTC)
+  const upper = symbol.toUpperCase().replace(/USDT$|USD$|BUSD$|USDC$/, '');
   const detectedClass = assetClass || detectAssetClass(upper);
 
   // Try memory cache
@@ -506,13 +507,14 @@ export function generateFallbackSvg(symbol: string, color: string = DEFAULT_COLO
  * Get logo URL for a symbol - returns actual URL or generated SVG
  */
 export function getLogoUrl(symbol: string, assetClass?: AssetClass): string {
-  const logoInfo = getAssetLogo(symbol, assetClass);
+  const cleanSymbol = symbol.toUpperCase().replace(/USDT$|USD$|BUSD$|USDC$/, '');
+  const logoInfo = getAssetLogo(cleanSymbol, assetClass);
 
   if (logoInfo.logoUrl && logoInfo.logoUrl.length > 0) {
     return logoInfo.logoUrl;
   }
 
-  return generateFallbackSvg(symbol, logoInfo.color);
+  return generateFallbackSvg(cleanSymbol, logoInfo.color);
 }
 
 /**

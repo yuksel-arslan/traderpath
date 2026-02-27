@@ -25,6 +25,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useRouter } from 'next/navigation';
 import {
   createChart,
   ColorType,
@@ -45,7 +46,6 @@ import { MarketFlow } from '../../../components/terminal/MarketFlow';
 import { RotationMatrix } from '../../../components/terminal/RotationMatrix';
 import { SectorActivity } from '../../../components/terminal/SectorActivity';
 import { AIRecommendation } from '../../../components/terminal/AIRecommendation';
-import { AssetTable } from '../../../components/terminal/AssetTable';
 import { RunAnalysis } from '../../../components/terminal/RunAnalysis';
 import {
   TradeHeader,
@@ -161,7 +161,6 @@ type SortDir = 'asc' | 'desc';
 
 type SectionId =
   | 'l1' | 'l2' | 'rotation' | 'l3' | 'l4'
-  | 'l5'
   | 'analysis'
   | 'l7';
 
@@ -190,7 +189,6 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: 'Asset Analysis',
     items: [
-      { id: 'l5', label: 'Asset Table', tag: '' },
       { id: 'analysis', label: 'Run Analysis', tag: '' },
     ],
   },
@@ -209,62 +207,76 @@ const NAV_GROUPS: NavGroup[] = [
 function mapMacroMetrics(gl: Record<string, any> | null | undefined): MacroMetric[] {
   if (!gl) return [];
   const metrics: MacroMetric[] = [];
+
   if (gl.m2MoneySupply) {
     const val = Number(gl.m2MoneySupply.value ?? 0);
-    const growth = Number(gl.m2MoneySupply.yoyGrowth ?? 0);
+    const change = Number(gl.m2MoneySupply.change30d ?? 0);
     metrics.push({
       label: 'M2 Supply',
-      value: val > 0 ? `$${(val / 1e12).toFixed(1)}T` : 'N/A',
-      delta: growth,
-      signal: growth > 0 ? 'bullish' : 'bearish',
+      value: val > 0 ? `$${val.toFixed(1)}T` : 'N/A',
+      delta: change,
+      signal: change > 1 ? 'bullish' : change < -1 ? 'bearish' : 'neutral',
     });
   }
+
   if (gl.fedBalanceSheet) {
     const val = Number(gl.fedBalanceSheet.value ?? 0);
-    const change = Number(gl.fedBalanceSheet.monthlyChange ?? 0);
+    const change = Number(gl.fedBalanceSheet.change30d ?? 0);
+    const trend = gl.fedBalanceSheet.trend || 'stable';
     metrics.push({
       label: 'Fed BS',
-      value: val > 0 ? `$${(val / 1e12).toFixed(1)}T` : 'N/A',
+      value: val > 0 ? `$${val.toFixed(1)}T` : 'N/A',
       delta: change,
-      signal: change > 0 ? 'bullish' : change < -2 ? 'bearish' : 'neutral',
+      signal: trend === 'expanding' ? 'bullish' : trend === 'contracting' ? 'bearish' : 'neutral',
     });
   }
+
   if (gl.dxy) {
     const val = Number(gl.dxy.value ?? 0);
-    const change = Number(gl.dxy.weeklyChange ?? 0);
+    const change = Number(gl.dxy.change7d ?? 0);
+    const trend = gl.dxy.trend || 'stable';
     metrics.push({
       label: 'DXY',
       value: val > 0 ? val.toFixed(2) : 'N/A',
       delta: change,
-      signal: change < 0 ? 'bullish' : 'bearish',
+      signal: trend === 'weakening' ? 'bullish' : trend === 'strengthening' ? 'bearish' : 'neutral',
     });
   }
+
   if (gl.vix) {
     const val = Number(gl.vix.value ?? 0);
-    const change = Number(gl.vix.weeklyChange ?? 0);
+    const level = gl.vix.level || 'neutral';
     metrics.push({
       label: 'VIX',
       value: val > 0 ? val.toFixed(1) : 'N/A',
-      delta: change,
-      signal: val < 20 ? 'bullish' : val > 30 ? 'bearish' : 'neutral',
+      delta: 0,
+      signal: level === 'complacent' || level === 'neutral' ? 'bullish' : 'bearish',
     });
   }
+
   if (gl.yieldCurve) {
-    const us10y = Number(gl.yieldCurve.us10y ?? 0);
     const spread = Number(gl.yieldCurve.spread10y2y ?? 0);
-    metrics.push({
-      label: 'US10Y',
-      value: us10y > 0 ? `${us10y.toFixed(2)}%` : 'N/A',
-      delta: Number(gl.yieldCurve.weeklyChange10y ?? 0),
-      signal: 'neutral',
-    });
+    const inverted = gl.yieldCurve.inverted;
     metrics.push({
       label: 'Yield Curve',
-      value: spread > 0 ? `+${spread.toFixed(2)}` : spread.toFixed(2),
-      delta: Number(gl.yieldCurve.weeklyChangeSpread ?? 0),
-      signal: spread > 0 ? 'bullish' : 'bearish',
+      value: `${spread >= 0 ? '+' : ''}${spread.toFixed(2)}%`,
+      delta: spread,
+      signal: inverted ? 'bearish' : spread > 0.2 ? 'bullish' : 'neutral',
     });
   }
+
+  if (gl.netLiquidity) {
+    const val = Number(gl.netLiquidity.value ?? 0);
+    const change = Number(gl.netLiquidity.change30d ?? 0);
+    const trend = gl.netLiquidity.trend || 'stable';
+    metrics.push({
+      label: 'Net Liquidity',
+      value: val > 0 ? `$${val.toFixed(1)}T` : 'N/A',
+      delta: change,
+      signal: trend === 'expanding' ? 'bullish' : trend === 'contracting' ? 'bearish' : 'neutral',
+    });
+  }
+
   return metrics;
 }
 
@@ -290,13 +302,13 @@ function mapSectors(markets: any[] | null | undefined): SectorData[] {
     const marketName = String(m.market || '').charAt(0).toUpperCase() + String(m.market || '').slice(1).toLowerCase();
     for (const s of m.sectors) {
       if (!s) continue;
-      const flow = Number(s.flow ?? s.flow7d ?? s.weeklyFlow ?? 0);
+      const flow = Number(s.flow7d ?? s.flow ?? 0);
       sectors.push({
         name: String(s.name ?? ''),
         market: marketName,
         flow,
         dominance: Number(s.dominance ?? 0),
-        trending: flow > 1 ? 'up' : flow < -1 ? 'down' : 'flat',
+        trending: s.trending === 'up' ? 'up' : s.trending === 'down' ? 'down' : 'flat',
         topAssets: Array.isArray(s.topAssets) ? s.topAssets : [],
       });
     }
@@ -353,8 +365,8 @@ function mapVerdictData(data: Record<string, any> | null | undefined): VerdictDa
     },
     {
       label: 'USD Weakening',
-      passed: Number(gl?.dxy?.weeklyChange ?? 0) < 0,
-      detail: `DXY ${Number(gl?.dxy?.value ?? 0).toFixed(2)} (${Number(gl?.dxy?.weeklyChange ?? 0).toFixed(1)}% weekly)`,
+      passed: Number(gl?.dxy?.change7d ?? 0) < 0,
+      detail: `DXY ${Number(gl?.dxy?.value ?? 0).toFixed(2)} (${Number(gl?.dxy?.change7d ?? 0).toFixed(1)}% 7d)`,
     },
     {
       label: 'Capital Destination',
@@ -437,9 +449,13 @@ function calculateTradePlan(asset: ScreenerAsset): TradePlan {
 function L7TradeVisualizer({
   selectedAsset,
   tradePlan,
+  analyzedAssets,
+  onAssetSelect,
 }: {
   selectedAsset: ScreenerAsset | null;
   tradePlan: TradePlan | null;
+  analyzedAssets: ScreenerAsset[];
+  onAssetSelect: (asset: ScreenerAsset) => void;
 }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -673,9 +689,37 @@ function L7TradeVisualizer({
     };
   }, [mounted, selectedAsset, tradePlan, resolvedPlan, resolvedTheme, analysisCreatedAt]);
 
+  const assetDropdown = analyzedAssets.length > 0 ? (
+    <div
+      className="rounded-xl p-3 mb-3"
+      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+    >
+      <label className="text-[10px] uppercase tracking-widest text-gray-400 dark:text-white/40 block mb-1.5">
+        Analyzed Assets
+      </label>
+      <select
+        value={selectedAsset?.symbol ?? ''}
+        onChange={(e) => {
+          const asset = analyzedAssets.find(a => a.symbol === e.target.value);
+          if (asset) onAssetSelect(asset);
+        }}
+        className="w-full rounded-lg px-3 py-2 text-xs font-mono bg-transparent text-gray-900 dark:text-white appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#00D4FF]/40"
+        style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+      >
+        {!selectedAsset && <option value="">Select an asset...</option>}
+        {analyzedAssets.map((a) => (
+          <option key={a.symbol} value={a.symbol} className="bg-white dark:bg-[#0a0a0a]">
+            {a.symbol} — Score: {a.aiScore} — {a.verdict} ({a.direction})
+          </option>
+        ))}
+      </select>
+    </div>
+  ) : null;
+
   if (!selectedAsset) {
     return (
       <section>
+        {assetDropdown}
         <div
           className="rounded-xl h-[300px] sm:h-[400px] flex items-center justify-center"
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
@@ -691,6 +735,9 @@ function L7TradeVisualizer({
 
   return (
     <section>
+      {/* Analyzed asset dropdown */}
+      {assetDropdown}
+
       {/* Trade Header with ScoreRing + VerdictBadge */}
       <TradeHeader asset={selectedAsset} />
 
@@ -849,17 +896,7 @@ function ContentPanel({
         <AIRecommendation
           verdict={verdict}
           onAssetClick={onAssetChipClick}
-        />
-      );
-    case 'l5':
-      return (
-        <AssetTable
-          assets={screenerData}
-          selectedSymbol={selectedAsset?.symbol ?? null}
-          onSelect={onAssetSelect}
-          recommendedSymbols={recommendedSymbols}
           onAnalyze={onAnalyze}
-          onVisualize={onVisualize}
         />
       );
     case 'analysis':
@@ -876,6 +913,8 @@ function ContentPanel({
         <L7TradeVisualizer
           selectedAsset={selectedAsset}
           tradePlan={tradePlan}
+          analyzedAssets={screenerData.filter(a => a.analysisId)}
+          onAssetSelect={onAssetSelect}
         />
       );
     default:
@@ -902,6 +941,7 @@ export default function TestPage() {
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
 
   // Navigation
+  const router = useRouter();
   const [activeSection, setActiveSection] = useState<SectionId>('l1');
   const [marketFilter, setMarketFilter] = useState('All');
 
@@ -992,8 +1032,8 @@ export default function TestPage() {
   }, [screenerData, handleAssetSelect]);
 
   const handleAnalyze = useCallback((symbol: string) => {
-    setActiveSection('analysis');
-  }, []);
+    router.push(`/analyze?symbol=${encodeURIComponent(symbol)}`);
+  }, [router]);
 
   const handleVisualize = useCallback((symbol: string) => {
     const asset = screenerData.find(a => a.symbol.toUpperCase() === symbol.toUpperCase());

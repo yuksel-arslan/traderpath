@@ -24,7 +24,6 @@ import {
   Crosshair,
   Check,
   FileText,
-  Mail,
   Zap,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -113,15 +112,6 @@ export default function AnalysisDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-  const [whatsappSent, setWhatsappSent] = useState(false);
-  const [whatsappPhoneModal, setWhatsappPhoneModal] = useState(false);
-  const [whatsappPhone, setWhatsappPhone] = useState('');
-  const [whatsappSending, setWhatsappSending] = useState(false);
-  const [autoEmailInProgress, setAutoEmailInProgress] = useState(false);
-  const [autoEmailDone, setAutoEmailDone] = useState(false);
-  const autoEmailTriggered = useRef(false);
   const [autoPdfInProgress, setAutoPdfInProgress] = useState(false);
   const [autoPdfDone, setAutoPdfDone] = useState(false);
   const autoPdfTriggered = useRef(false);
@@ -149,90 +139,6 @@ export default function AnalysisDetailsPage() {
     fetchAnalysis();
   }, [analysisId]);
 
-  // Auto-email handler for ?email=true parameter
-  const handleAutoEmail = useCallback(async () => {
-    if (!pageRef.current || !analysis || autoEmailTriggered.current) return;
-
-    autoEmailTriggered.current = true;
-    setAutoEmailInProgress(true);
-
-    try {
-      // Wait for chart to render
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Snapshot canvases to static images so html2canvas can capture them
-      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
-
-      let canvas: HTMLCanvasElement;
-      try {
-        canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
-          scale: 1.5,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          windowWidth: 1200,
-          onclone: (clonedDoc) => {
-            // Force light mode in the cloned document
-            clonedDoc.documentElement.classList.remove('dark');
-            const clonedElement = clonedDoc.querySelector('[data-export-container]');
-            if (clonedElement) {
-              (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-              (clonedElement as HTMLElement).style.color = '#111827';
-              clonedElement.classList.remove('dark');
-            }
-          },
-        });
-      } finally {
-        restoreCanvases();
-      }
-
-      const imageBase64 = canvas.toDataURL('image/jpeg', 0.80);
-
-      // Send via email
-      const response = await authFetch('/api/reports/email-screenshot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          analysisId: analysis.id,
-          symbol: analysis.symbol,
-          interval: analysis.interval,
-          screenshot: imageBase64,
-          score: analysis.totalScore,
-          direction: analysis.step5Result?.direction || analysis.step7Result?.direction || 'long',
-        }),
-      });
-
-      if (response.ok) {
-        setAutoEmailDone(true);
-        setEmailSent(true);
-        // Dismiss overlay after 2 seconds - let user stay on page
-        setTimeout(() => {
-          setAutoEmailInProgress(false);
-        }, 2000);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        const msg = errorData?.error?.message || errorData?.message || `Email failed (${response.status})`;
-        console.error('Auto email send failed:', response.status, errorData);
-        alert(msg);
-        setAutoEmailInProgress(false);
-      }
-    } catch (err) {
-      console.error('Failed to auto send email:', err);
-      alert('Failed to send email: ' + (err instanceof Error ? err.message : 'Unknown error'));
-      setAutoEmailInProgress(false);
-    }
-  }, [analysis]);
-
-  // Trigger auto-email when analysis is loaded and email=true parameter is present
-  useEffect(() => {
-    const shouldAutoEmail = searchParams.get('email') === 'true';
-    if (shouldAutoEmail && analysis && !loading && !autoEmailTriggered.current) {
-      handleAutoEmail();
-    }
-  }, [searchParams, analysis, loading, handleAutoEmail]);
-
   // Auto-PDF handler for ?pdf=true parameter
   const handleAutoPdf = useCallback(async () => {
     if (!pageRef.current || !analysis || autoPdfTriggered.current) return;
@@ -253,22 +159,21 @@ export default function AnalysisDetailsPage() {
       let canvas: HTMLCanvasElement;
       try {
         canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#0A0A0A',
           scale: 2,
           logging: false,
           useCORS: true,
           allowTaint: true,
           windowWidth: 1400,
           onclone: (clonedDoc) => {
-            // Force light mode in the cloned document
-            clonedDoc.documentElement.classList.remove('dark');
+            // Force dark mode in the cloned document
+            clonedDoc.documentElement.classList.add('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-              (clonedElement as HTMLElement).style.color = '#111827';
+              (clonedElement as HTMLElement).style.backgroundColor = '#0A0A0A';
+              (clonedElement as HTMLElement).style.color = '#e5e7eb';
               (clonedElement as HTMLElement).style.padding = '24px';
-              clonedElement.classList.remove('dark');
             }
           },
         });
@@ -309,7 +214,7 @@ export default function AnalysisDetailsPage() {
     }
   }, [searchParams, analysis, loading, handleAutoPdf]);
 
-  // Download PDF (light mode capture)
+  // Download PDF (dark mode capture)
   const handleDownloadPdf = async () => {
     if (!pageRef.current || downloadingPdf || !analysis) return;
 
@@ -326,7 +231,7 @@ export default function AnalysisDetailsPage() {
       let canvas: HTMLCanvasElement;
       try {
         canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#0A0A0A',
           scale: 2,
           logging: false,
           useCORS: true,
@@ -335,14 +240,13 @@ export default function AnalysisDetailsPage() {
           removeContainer: true,
           imageTimeout: 5000,
           onclone: (clonedDoc) => {
-            // Force light mode in the cloned document
-            clonedDoc.documentElement.classList.remove('dark');
+            // Force dark mode in the cloned document
+            clonedDoc.documentElement.classList.add('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-              (clonedElement as HTMLElement).style.color = '#111827';
-              clonedElement.classList.remove('dark');
+              (clonedElement as HTMLElement).style.backgroundColor = '#0A0A0A';
+              (clonedElement as HTMLElement).style.color = '#e5e7eb';
             }
           },
         });
@@ -367,155 +271,6 @@ export default function AnalysisDetailsPage() {
       alert('Failed to download PDF: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setDownloadingPdf(false);
-    }
-  };
-
-  // Send Email with PDF attachment
-  const handleEmailReport = async () => {
-    if (!pageRef.current || sendingEmail || !analysis) return;
-
-    setSendingEmail(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Dynamic import jsPDF
-      const { jsPDF } = await import('jspdf');
-
-      // Snapshot canvases to static images so html2canvas can capture them
-      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
-
-      let canvas: HTMLCanvasElement;
-      try {
-        canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
-          scale: 2,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          foreignObjectRendering: false,
-          removeContainer: true,
-          imageTimeout: 5000,
-          onclone: (clonedDoc) => {
-            // Force light mode in the cloned document
-            clonedDoc.documentElement.classList.remove('dark');
-            const clonedElement = clonedDoc.querySelector('[data-export-container]');
-            if (clonedElement) {
-              (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-              (clonedElement as HTMLElement).style.color = '#111827';
-              clonedElement.classList.remove('dark');
-            }
-          },
-        });
-      } finally {
-        restoreCanvases();
-      }
-
-      // Generate PDF
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
-      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-
-      // Get PDF as base64
-      const pdfBase64 = pdf.output('datauristring').split(',')[1];
-
-      // Send email with PDF attachment
-      const response = await authFetch('/api/reports/email-pdf-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          analysisId: analysis.id,
-          symbol: analysis.symbol,
-          interval: analysis.interval,
-          pdfBase64,
-          score: analysis.totalScore,
-          direction: analysis.step5Result?.direction || analysis.step7Result?.direction || 'long',
-          verdict: typeof step7.verdict === 'string' ? step7.verdict.toUpperCase() : 'WAIT',
-        }),
-      });
-
-      if (response.ok) {
-        setEmailSent(true);
-        setTimeout(() => setEmailSent(false), 3000);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        const msg = errorData?.error?.message || errorData?.message || `Email failed (${response.status})`;
-        console.error('Email send failed:', response.status, errorData);
-        alert(msg);
-      }
-    } catch (err) {
-      console.error('Failed to send email:', err);
-      alert('Failed to send email: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    } finally {
-      setSendingEmail(false);
-    }
-  };
-
-  // Send via WhatsApp - captures screenshot and sends via Twilio
-  const handleWhatsAppReport = async (phoneNumber: string) => {
-    if (!pageRef.current || whatsappSending || !analysis || !phoneNumber) return;
-
-    setWhatsappSending(true);
-    setWhatsappPhoneModal(false);
-    try {
-      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
-
-      let canvas: HTMLCanvasElement;
-      try {
-        canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#0A0A0A',
-          scale: 2,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          windowWidth: 1200,
-          onclone: (clonedDoc) => {
-            clonedDoc.documentElement.classList.add('dark');
-            const clonedElement = clonedDoc.querySelector('[data-export-container]');
-            if (clonedElement) {
-              (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#0A0A0A';
-              (clonedElement as HTMLElement).style.color = '#e5e7eb';
-            }
-          },
-        });
-      } finally {
-        restoreCanvases();
-      }
-
-      const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
-
-      const response = await authFetch('/api/reports/whatsapp-screenshot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          analysisId: analysis.id,
-          symbol: analysis.symbol,
-          interval: analysis.interval || '4h',
-          screenshot: imageBase64,
-          score: analysis.totalScore || 0,
-          direction: analysis.step5Result?.direction || analysis.step7Result?.direction || 'long',
-          phoneNumber,
-        }),
-      });
-
-      if (response.ok) {
-        setWhatsappSent(true);
-        setTimeout(() => setWhatsappSent(false), 3000);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('WhatsApp send failed:', response.status, errorData);
-        alert(errorData?.error?.message || 'Failed to send WhatsApp message. Please try again.');
-      }
-    } catch (err) {
-      console.error('Failed to send WhatsApp:', err);
-      alert('Failed to send WhatsApp message');
-    } finally {
-      setWhatsappSending(false);
     }
   };
 
@@ -620,89 +375,6 @@ export default function AnalysisDetailsPage() {
 
   return (
     <>
-      {/* WhatsApp phone number modal */}
-      {whatsappPhoneModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setWhatsappPhoneModal(false)}>
-          <div className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-gray-800 rounded-lg p-6 shadow-sm max-w-sm mx-4 w-full" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-[#25D366]/10 flex items-center justify-center">
-                <svg className="w-5 h-5 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Send via WhatsApp</h3>
-                <p className="text-sm text-gray-500">Report screenshot will be sent</p>
-              </div>
-            </div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
-              Phone Number
-            </label>
-            <input
-              type="tel"
-              value={whatsappPhone}
-              onChange={(e) => setWhatsappPhone(e.target.value)}
-              placeholder="+905551234567"
-              className="w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-[#111111] text-gray-900 dark:text-gray-100 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition-colors mb-1"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && whatsappPhone.trim()) {
-                  handleWhatsAppReport(whatsappPhone.trim());
-                }
-              }}
-            />
-            <p className="text-xs text-gray-400 mb-4">Include country code (e.g., +90 for Turkey)</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setWhatsappPhoneModal(false)}
-                className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium px-4 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleWhatsAppReport(whatsappPhone.trim())}
-                disabled={!whatsappPhone.trim()}
-                className="bg-[#25D366] hover:bg-[#20bd5a] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-md transition-colors"
-              >
-                Send Report
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* WhatsApp sending overlay */}
-      {whatsappSending && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-gray-800 rounded-lg p-8 shadow-sm text-center max-w-md mx-4">
-            <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-[#25D366]" />
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Sending via WhatsApp...</h2>
-            <p className="text-sm text-gray-500">Capturing report screenshot and sending to WhatsApp...</p>
-          </div>
-        </div>
-      )}
-
-      {/* Auto-email overlay - shows on top of page content */}
-      {autoEmailInProgress && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl text-center max-w-md mx-4">
-            {autoEmailDone ? (
-              <>
-                <div className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
-                  <Check className="w-8 h-8 text-green-500" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Email Sent!</h2>
-                <p className="text-gray-500 dark:text-slate-400">Your analysis screenshot has been sent to your email. Redirecting...</p>
-              </>
-            ) : (
-              <>
-                <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-teal-500" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Sending Email...</h2>
-                <p className="text-gray-500 dark:text-slate-400">Capturing full analysis screenshot and sending to your email...</p>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Auto-PDF overlay - shows on top of page content */}
       {autoPdfInProgress && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -735,50 +407,19 @@ export default function AnalysisDetailsPage() {
               <span>Back to Analyze</span>
             </Link>
 
-            {/* Download PDF and Email Report Buttons */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleDownloadPdf}
-                disabled={downloadingPdf}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg"
-              >
-                {downloadingPdf ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <FileText className="w-4 h-4" />
-                )}
-                <span>{downloadingPdf ? 'Generating...' : 'Download PDF'}</span>
-              </button>
-              <button
-                onClick={handleEmailReport}
-                disabled={sendingEmail}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50",
-                  emailSent
-                    ? "bg-green-500 text-white"
-                    : "bg-slate-700 hover:bg-slate-600 text-white"
-                )}
-              >
-                {sendingEmail ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : emailSent ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <Mail className="w-4 h-4" />
-                )}
-                <span>{sendingEmail ? 'Sending...' : emailSent ? 'Sent!' : 'Email Report'}</span>
-              </button>
-
-              {/* WhatsApp Share Button */}
-              <button
-                onClick={() => setWhatsappPhoneModal(true)}
-                disabled={whatsappSending}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition bg-[#25D366] hover:bg-[#1ebe5a] disabled:opacity-50 text-white"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                <span>{whatsappSending ? 'Sending...' : whatsappSent ? 'Sent!' : 'WhatsApp'}</span>
-              </button>
-            </div>
+            {/* Download PDF Button */}
+            <button
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg"
+            >
+              {downloadingPdf ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileText className="w-4 h-4" />
+              )}
+              <span>{downloadingPdf ? 'Generating...' : 'Download PDF'}</span>
+            </button>
           </div>
 
         {/* Main Card */}

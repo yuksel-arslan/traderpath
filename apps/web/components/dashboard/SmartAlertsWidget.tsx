@@ -3,6 +3,7 @@
 // ===========================================
 // SmartAlertsWidget — Dashboard compact widget
 // Polls GET /api/smart-alerts?limit=3 every 60s
+// Also fetches scan status for liveness indicator
 // Full list at /alerts/smart
 // ===========================================
 
@@ -23,6 +24,12 @@ interface SmartAlert {
     severity?: 'INFO' | 'WARNING' | 'CRITICAL';
     market?: string;
   };
+}
+
+interface ScanStatus {
+  lastRun: string | null;
+  isRunning: boolean;
+  snapshotExists: boolean;
 }
 
 type Severity = 'INFO' | 'WARNING' | 'CRITICAL';
@@ -75,16 +82,48 @@ function AlertSkeleton() {
   );
 }
 
+function ScanStatusBadge({ status }: { status: ScanStatus | null }) {
+  if (!status) return null;
+
+  const lastRun = status.lastRun ? new Date(status.lastRun) : null;
+  const minutesAgo = lastRun ? Math.floor((Date.now() - lastRun.getTime()) / 60_000) : null;
+  const isActive = minutesAgo !== null && minutesAgo < 30;
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+      <span className="text-[10px] text-gray-400">
+        {status.isRunning
+          ? 'Scanning...'
+          : minutesAgo !== null
+            ? minutesAgo < 1 ? 'Scanned just now' : `Scanned ${minutesAgo}m ago`
+            : 'Inactive'}
+      </span>
+    </div>
+  );
+}
+
 export function SmartAlertsWidget() {
   const [alerts, setAlerts] = useState<SmartAlert[]>([]);
+  const [scanStatus, setScanStatus] = useState<ScanStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function fetchAlerts() {
+  async function fetchData() {
     try {
-      const res = await authFetch('/api/smart-alerts?limit=3');
-      if (!res.ok) return;
-      const json = await res.json();
-      setAlerts(json?.data?.alerts ?? []);
+      const [alertsRes, statusRes] = await Promise.all([
+        authFetch('/api/smart-alerts?limit=3'),
+        authFetch('/api/smart-alerts/status'),
+      ]);
+
+      if (alertsRes.ok) {
+        const json = await alertsRes.json();
+        setAlerts(json?.data?.alerts ?? []);
+      }
+
+      if (statusRes.ok) {
+        const json = await statusRes.json();
+        setScanStatus(json?.data ?? null);
+      }
     } catch {
       // Non-critical — dashboard must not break if alerts fail
     } finally {
@@ -93,8 +132,8 @@ export function SmartAlertsWidget() {
   }
 
   useEffect(() => {
-    fetchAlerts();
-    const timer = setInterval(fetchAlerts, POLL_INTERVAL_MS);
+    fetchData();
+    const timer = setInterval(fetchData, POLL_INTERVAL_MS);
     return () => clearInterval(timer);
   }, []);
 
@@ -103,25 +142,30 @@ export function SmartAlertsWidget() {
   return (
     <div className="border border-gray-200 dark:border-gray-800 rounded-lg bg-white dark:bg-[#111111]">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-        <div className="flex items-center gap-2.5">
-          <Bell className="w-4 h-4 text-gray-400" />
-          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-            Smart Alerts
-          </h3>
-          {unreadCount > 0 && (
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold">
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          )}
+      <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <Bell className="w-4 h-4 text-gray-400" />
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              Smart Alerts
+            </h3>
+            {unreadCount > 0 && (
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </div>
+          <Link
+            href="/alerts/smart"
+            className="flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            All alerts
+            <ChevronRight className="w-3 h-3" />
+          </Link>
         </div>
-        <Link
-          href="/alerts/smart"
-          className="flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-        >
-          All alerts
-          <ChevronRight className="w-3 h-3" />
-        </Link>
+        <div className="mt-1.5">
+          <ScanStatusBadge status={scanStatus} />
+        </div>
       </div>
 
       {/* Body */}
@@ -138,11 +182,16 @@ export function SmartAlertsWidget() {
           <p className="text-xs text-gray-400 mt-1">
             Alerts fire when L1–L4 conditions change.
           </p>
+          {scanStatus?.lastRun && (
+            <p className="text-[10px] text-gray-400 mt-2">
+              Last scan: {formatTime(scanStatus.lastRun)}
+            </p>
+          )}
           <Link
             href="/alerts/smart/settings"
             className="inline-block mt-3 text-xs font-medium text-teal-500 hover:text-teal-600 transition-colors"
           >
-            Configure preferences →
+            Configure preferences &rarr;
           </Link>
         </div>
       ) : (
@@ -152,15 +201,14 @@ export function SmartAlertsWidget() {
             const cfg = SEVERITY_CONFIG[severity] ?? SEVERITY_CONFIG.INFO;
             const { Icon } = cfg;
             const layer = alert.metadata?.layer;
-            const isLast = idx === alerts.length - 1;
 
             return (
               <Link
                 key={alert.id}
                 href="/alerts/smart"
                 className={`flex items-start gap-3 px-6 py-4 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.02] ${
-                  !isLast ? '' : ''
-                } ${!alert.read ? 'bg-gray-50/40 dark:bg-white/[0.015]' : ''}`}
+                  !alert.read ? 'bg-gray-50/40 dark:bg-white/[0.015]' : ''
+                }`}
               >
                 {/* Icon */}
                 <div

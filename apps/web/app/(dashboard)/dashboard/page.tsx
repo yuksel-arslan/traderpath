@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { getApiUrl, authFetch } from '../../../lib/api';
 import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
-import { CategoryBar, useMarketFilter, useBistSubSector } from '@/components/dashboard/CategoryBar';
+import { useMarketFilter, useBistSubSector } from '@/components/dashboard/CategoryBar';
 import { OpportunityRadar } from '@/components/dashboard/OpportunityRadar';
 import { SmartAlertsWidget } from '@/components/dashboard/SmartAlertsWidget';
 import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
@@ -126,6 +126,22 @@ interface GlobalLiquidity {
   vix: { value: number; level: 'extreme_fear' | 'fear' | 'neutral' | 'complacent' };
 }
 
+interface SectorFlow {
+  name: string;
+  flow7d: number;
+  trending: 'up' | 'down' | 'stable';
+  topAssets: string[];
+}
+
+interface SuggestedAsset {
+  symbol: string;
+  name: string;
+  market: string;
+  sector?: string;
+  riskLevel: 'low' | 'medium' | 'high';
+  reason: string;
+}
+
 interface MarketFlow {
   market: 'crypto' | 'stocks' | 'bonds' | 'metals';
   flow7d: number;
@@ -133,6 +149,7 @@ interface MarketFlow {
   phase: 'early' | 'mid' | 'late' | 'exit';
   daysInPhase: number;
   rotationSignal: 'entering' | 'stable' | 'exiting' | null;
+  sectors?: SectorFlow[];
 }
 
 interface FlowRecommendation {
@@ -141,6 +158,8 @@ interface FlowRecommendation {
   action: 'analyze' | 'wait' | 'avoid';
   confidence: number;
   reason: string;
+  sectors?: string[];
+  suggestedAssets?: SuggestedAsset[];
 }
 
 interface CapitalFlowSummary {
@@ -214,6 +233,7 @@ function ActiveTradeCard({
   isCounterFlow: boolean;
 }) {
   const verdict = VERDICT_CONFIG[trade.verdict] ?? VERDICT_CONFIG.wait;
+  const hasPnL = trade.unrealizedPnL != null;
   const pnl = trade.unrealizedPnL ?? 0;
   const isLong = trade.direction?.toLowerCase() === 'long';
   const coinIcon = getCoinIcon(trade.symbol) || FALLBACK_COIN_ICON;
@@ -247,11 +267,11 @@ function ActiveTradeCard({
         <span
           className="text-sm font-bold"
           style={{
-            color: pnl >= 0 ? '#00F5A0' : '#FF4757',
+            color: hasPnL ? (pnl >= 0 ? '#00F5A0' : '#FF4757') : '#9CA3AF',
             fontFamily: "'JetBrains Mono', monospace",
           }}
         >
-          {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}%
+          {hasPnL ? `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%` : 'N/A'}
         </span>
       </div>
 
@@ -606,23 +626,13 @@ export default function DashboardPage() {
 
   const periodPnL = calculatePeriodPnL();
 
-  // Equity curve from performance data
-  const equityCurve = useMemo(() => {
-    if (!performanceData?.daily?.length) return [];
-    let cumulative = 100;
-    return performanceData.daily.map((d) => {
-      cumulative += d.realized || 0;
-      return cumulative;
-    });
-  }, [performanceData]);
-
   // Filtered analyses
   const filteredAnalyses = useMemo(
     () => recentAnalyses.filter((a) => selectedMarkets.includes(detectMarketType(a.symbol))),
     [recentAnalyses, selectedMarkets]
   );
   const activeTrades = useMemo(
-    () => filteredAnalyses.filter((t) => t.outcome === 'pending'),
+    () => filteredAnalyses.filter((t) => t.outcome === 'pending' && t.entryPrice && t.direction),
     [filteredAnalyses]
   );
 
@@ -701,6 +711,22 @@ export default function DashboardPage() {
 
       <div className="max-w-[1400px] mx-auto py-6 px-4 sm:px-6 space-y-4">
 
+        {/* Page Header */}
+        <header className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
+              <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
+            </div>
+            <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
+              DASHBOARD
+            </span>
+          </div>
+          <span className="text-[10px] text-gray-400 dark:text-white/40 uppercase tracking-wider">
+            Decision Engine
+          </span>
+        </header>
+
         {/* ROW 1: Primary Decision + System Performance */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div id="tour-decision">
@@ -712,22 +738,16 @@ export default function DashboardPage() {
             setPnlViewMode={setPnlViewMode}
             winRate={winRate}
             totalTrades={totalTrades}
-            equityCurve={equityCurve}
+            performanceData={performanceData}
           />
         </div>
 
         {/* ROW 2: Flow → Action Pipeline (full width) */}
         <div id="tour-flow-chain">
-          <FlowChain capitalFlow={capitalFlow} recentAnalyses={recentAnalyses} />
+          <FlowChain capitalFlow={capitalFlow} />
         </div>
 
-        {/* Market Filter */}
-        <CategoryBar
-          selected={selectedMarkets}
-          onChange={setSelectedMarkets}
-          bistSubSector={bistSubSector}
-          onBistSubSectorChange={setBistSubSector}
-        />
+        {/* Market filters moved inside OpportunityRadar */}
 
         {/* If no data, show empty state */}
         {!hasData ? (
@@ -743,6 +763,7 @@ export default function DashboardPage() {
                   <OpportunityRadar
                     capitalFlow={capitalFlow}
                     selectedMarkets={selectedMarkets}
+                    onMarketChange={setSelectedMarkets}
                   />
                 </div>
               </div>
@@ -829,10 +850,9 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* RIGHT: Alerts + Quick Actions */}
+              {/* RIGHT: Alerts */}
               <div className="space-y-4">
                 <SmartAlertsWidget />
-                <IntelligenceQuickActions />
               </div>
             </div>
 
@@ -869,6 +889,9 @@ export default function DashboardPage() {
                 </div>
               </div>
             )}
+
+            {/* Quick Actions (full width) */}
+            <IntelligenceQuickActions />
           </>
         )}
 
