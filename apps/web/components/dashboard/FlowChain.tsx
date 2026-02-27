@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
 import { ScoreRing, PulseDot, FlowArrow } from '@/components/ui/intelligence';
 import { CoinIcon } from '@/components/common/CoinIcon';
 
@@ -12,6 +11,10 @@ interface FlowStep {
   value: string;
   detail: string;
   score: number;
+  /** Compact asset names for the "Top Asset" step */
+  assetNames?: string[];
+  /** BUY / SELL / WAIT / AVOID for the "Trade Plan" step */
+  direction?: 'BUY' | 'SELL' | 'WAIT' | 'AVOID';
 }
 
 interface SuggestedAsset {
@@ -59,10 +62,11 @@ const statusColors: Record<string, string> = {
   ready: '#00D4FF',
 };
 
-const riskColors: Record<string, { text: string; bg: string }> = {
-  low: { text: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-500/10' },
-  medium: { text: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-500/10' },
-  high: { text: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-500/10' },
+const directionConfig: Record<string, { color: string; bg: string }> = {
+  BUY:   { color: '#00F5A0', bg: 'rgba(0,245,160,0.12)' },
+  SELL:  { color: '#FF4757', bg: 'rgba(255,71,87,0.12)' },
+  WAIT:  { color: '#FFB800', bg: 'rgba(255,184,0,0.12)' },
+  AVOID: { color: '#FF4757', bg: 'rgba(255,71,87,0.12)' },
 };
 
 function buildFlowSteps(
@@ -121,16 +125,34 @@ function buildFlowSteps(
         ? `${sectorName} sector top asset`
         : 'No recommendation';
 
+  // Collect asset names for compact display inside the Top Asset card
+  const allAssetNames = suggestedAssets.length > 0
+    ? suggestedAssets.slice(0, 5).map((a) => a.symbol.replace(/USDT$/i, ''))
+    : matchingSector?.topAssets?.slice(0, 5).map((a) => a.replace(/USDT$/i, '')) || [];
+
   // Trade Plan: Use capital flow recommendation action and direction
   const action = capitalFlow.recommendation.action;
   const hasPlan = topAsset && action !== 'avoid';
+
+  // Determine trade direction: BUY/SELL/WAIT/AVOID
+  let direction: FlowStep['direction'] = 'WAIT';
+  if (action === 'avoid') {
+    direction = 'AVOID';
+  } else if (action === 'wait') {
+    direction = 'WAIT';
+  } else if (action === 'analyze') {
+    direction = bias === 'risk_on' ? 'BUY' : bias === 'risk_off' ? 'SELL' : 'WAIT';
+  }
+
   const planValue = hasPlan
-    ? `${action.toUpperCase()} ${assetSymbol}`
-    : action === 'avoid'
+    ? `${direction} ${assetSymbol}`
+    : direction === 'AVOID'
       ? 'AVOID'
-      : '--';
+      : direction === 'WAIT'
+        ? 'WAIT'
+        : '--';
   const planDetail = topAsset?.reason?.slice(0, 50) || capitalFlow.recommendation.reason?.slice(0, 50) || 'Run capital flow analysis';
-  const planStatus: FlowStep['status'] = action === 'analyze' ? 'ready' : action === 'wait' ? 'neutral' : 'bearish';
+  const planStatus: FlowStep['status'] = direction === 'BUY' ? 'bullish' : direction === 'SELL' ? 'bearish' : direction === 'WAIT' ? 'neutral' : 'bearish';
 
   return [
     {
@@ -158,6 +180,7 @@ function buildFlowSteps(
       value: assetSymbol,
       detail: assetDetail,
       score: assetScore,
+      assetNames: allAssetNames,
     },
     {
       id: 'plan',
@@ -166,43 +189,14 @@ function buildFlowSteps(
       value: planValue,
       detail: planDetail,
       score: hasPlan ? flowScore : 0,
+      direction,
     },
   ];
 }
 
-function getTopAssets(capitalFlow: FlowChainProps['capitalFlow']): SuggestedAsset[] {
-  if (!capitalFlow) return [];
-
-  const suggested = capitalFlow.recommendation.suggestedAssets || [];
-  if (suggested.length > 0) return suggested.slice(0, 5);
-
-  // Fallback: collect topAssets from sectors of the primary market
-  const primaryMarketData = capitalFlow.markets.find(
-    (m) => m.market === capitalFlow.recommendation.primaryMarket
-  );
-  if (!primaryMarketData?.sectors) return [];
-
-  const fallbacks: SuggestedAsset[] = [];
-  for (const sector of primaryMarketData.sectors) {
-    for (const symbol of sector.topAssets || []) {
-      if (fallbacks.length >= 5) break;
-      fallbacks.push({
-        symbol: symbol.replace(/USDT$/i, ''),
-        name: symbol.replace(/USDT$/i, ''),
-        market: capitalFlow.recommendation.primaryMarket,
-        sector: sector.name,
-        riskLevel: 'medium',
-        reason: `${sector.name} sector top asset`,
-      });
-    }
-    if (fallbacks.length >= 5) break;
-  }
-  return fallbacks;
-}
 
 export function FlowChain({ capitalFlow }: FlowChainProps) {
   const steps = buildFlowSteps(capitalFlow);
-  const topAssets = getTopAssets(capitalFlow);
 
   return (
     <div className="rounded-xl p-5 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
@@ -235,6 +229,37 @@ export function FlowChain({ capitalFlow }: FlowChainProps) {
               <div className="text-[11px] mt-1 text-gray-500 dark:text-white/40 truncate">
                 {step.detail}
               </div>
+
+              {/* Asset names inline */}
+              {step.assetNames && step.assetNames.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {step.assetNames.map((name) => (
+                    <Link
+                      key={name}
+                      href={`/analyze?symbol=${name}USDT&timeframe=4h`}
+                      className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.08] text-[10px] font-medium text-gray-600 dark:text-white/60 hover:bg-white/[0.12] hover:text-gray-900 dark:hover:text-white transition-colors"
+                    >
+                      <CoinIcon symbol={name} size={14} />
+                      {name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+
+              {/* Direction badge */}
+              {step.direction && (
+                <div className="mt-2">
+                  <span
+                    className="inline-block text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider"
+                    style={{
+                      color: directionConfig[step.direction]?.color || '#FFB800',
+                      background: directionConfig[step.direction]?.bg || 'rgba(255,184,0,0.12)',
+                    }}
+                  >
+                    {step.direction}
+                  </span>
+                </div>
+              )}
             </div>
             {i < steps.length - 1 && <FlowArrow color={statusColors[step.status]} />}
           </div>
@@ -263,6 +288,37 @@ export function FlowChain({ capitalFlow }: FlowChainProps) {
               <div className="text-[11px] mt-1 text-gray-500 dark:text-white/40">
                 {step.detail}
               </div>
+
+              {/* Asset names inline */}
+              {step.assetNames && step.assetNames.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {step.assetNames.map((name) => (
+                    <Link
+                      key={name}
+                      href={`/analyze?symbol=${name}USDT&timeframe=4h`}
+                      className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/[0.08] text-[10px] font-medium text-gray-600 dark:text-white/60 active:bg-white/[0.12] transition-colors"
+                    >
+                      <CoinIcon symbol={name} size={14} />
+                      {name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+
+              {/* Direction badge */}
+              {step.direction && (
+                <div className="mt-2">
+                  <span
+                    className="inline-block text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider"
+                    style={{
+                      color: directionConfig[step.direction]?.color || '#FFB800',
+                      background: directionConfig[step.direction]?.bg || 'rgba(255,184,0,0.12)',
+                    }}
+                  >
+                    {step.direction}
+                  </span>
+                </div>
+              )}
             </div>
             {i < steps.length - 1 && (
               <div className="flex justify-center py-1">
@@ -277,112 +333,6 @@ export function FlowChain({ capitalFlow }: FlowChainProps) {
         ))}
       </div>
 
-      {/* TOP ASSETS — shown below the pipeline */}
-      {topAssets.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/[0.06]">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] font-medium uppercase tracking-widest text-gray-500 dark:text-white/40">
-              Top Assets
-            </span>
-            <span className="text-[10px] text-gray-400 dark:text-white/30">
-              {topAssets.length} recommended
-            </span>
-          </div>
-
-          {/* Desktop: horizontal row */}
-          <div className="hidden sm:grid grid-cols-5 gap-2">
-            {topAssets.map((asset) => {
-              const clean = asset.symbol.replace(/USDT$/i, '');
-              const risk = riskColors[asset.riskLevel] || riskColors.medium;
-              const confidence = asset.riskLevel === 'low' ? 80 : asset.riskLevel === 'medium' ? 60 : 40;
-
-              return (
-                <Link
-                  key={clean}
-                  href={`/analyze?symbol=${clean}USDT&timeframe=4h`}
-                  className="group rounded-lg p-3 transition-all hover:scale-[1.02]"
-                  style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <CoinIcon symbol={clean} size={24} />
-                    <div className="min-w-0 flex-1">
-                      <span
-                        className="text-sm font-bold text-gray-900 dark:text-white block truncate"
-                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                      >
-                        {clean}
-                      </span>
-                    </div>
-                    <ScoreRing score={confidence} size={28} strokeWidth={2.5} color={confidence >= 70 ? '#00F5A0' : confidence >= 50 ? '#FFB800' : '#FF4757'} />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${risk.text} ${risk.bg}`}>
-                      {asset.riskLevel}
-                    </span>
-                    <div className="flex items-center gap-0.5 text-[10px] font-medium text-gray-400 dark:text-white/30 group-hover:text-[#00D4FF] transition-colors">
-                      Analyze
-                      <ArrowRight className="w-3 h-3" />
-                    </div>
-                  </div>
-
-                  {asset.sector && (
-                    <p className="text-[10px] text-gray-400 dark:text-white/25 mt-1.5 truncate">
-                      {asset.sector}
-                    </p>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Mobile: vertical list */}
-          <div className="sm:hidden space-y-2">
-            {topAssets.map((asset) => {
-              const clean = asset.symbol.replace(/USDT$/i, '');
-              const risk = riskColors[asset.riskLevel] || riskColors.medium;
-              const confidence = asset.riskLevel === 'low' ? 80 : asset.riskLevel === 'medium' ? 60 : 40;
-
-              return (
-                <Link
-                  key={clean}
-                  href={`/analyze?symbol=${clean}USDT&timeframe=4h`}
-                  className="flex items-center gap-3 rounded-lg p-3 transition-all active:scale-[0.98]"
-                  style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                  }}
-                >
-                  <CoinIcon symbol={clean} size={28} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="text-sm font-bold text-gray-900 dark:text-white"
-                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                      >
-                        {clean}
-                      </span>
-                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${risk.text} ${risk.bg}`}>
-                        {asset.riskLevel}
-                      </span>
-                    </div>
-                    {asset.sector && (
-                      <p className="text-[10px] text-gray-400 dark:text-white/30 truncate mt-0.5">
-                        {asset.sector}
-                      </p>
-                    )}
-                  </div>
-                  <ScoreRing score={confidence} size={28} strokeWidth={2.5} color={confidence >= 70 ? '#00F5A0' : confidence >= 50 ? '#FFB800' : '#FF4757'} />
-                  <ArrowRight className="w-4 h-4 text-gray-400 dark:text-white/30" />
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
