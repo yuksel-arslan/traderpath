@@ -37,6 +37,7 @@ import { TrendingAssets } from '@/components/analyze/TrendingAssets';
 import { AnalysisPipelineCard } from '@/components/analyze/AnalysisPipelineCard';
 import { RecentAnalysisRow } from '@/components/analyze/RecentAnalysisRow';
 import { AnalysisReportDrawer } from '@/components/analyze/AnalysisReportDrawer';
+import { BatchResultsDrawer } from '@/components/analyze/BatchResultsDrawer';
 
 // Lazy load components
 const CoinIcon = dynamic(
@@ -171,6 +172,12 @@ export default function AutomatedAnalysisPage() {
   const [timeframe, setTimeframe] = useState<'5m' | '15m' | '30m' | '1h' | '4h' | '1d'>('4h');
   const pipelineRef = useRef<HTMLDivElement>(null);
 
+  // Batch analysis state
+  const [analysisQueue, setAnalysisQueue] = useState<AIRecommendedAsset[]>([]);
+  const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
+  const [completedAnalysisIds, setCompletedAnalysisIds] = useState<string[]>([]);
+  const [showBatchResults, setShowBatchResults] = useState(false);
+
   // ── Data fetching ─────────────────────────
   const fetchDailyPassStatus = useCallback(async () => {
     try {
@@ -243,8 +250,11 @@ export default function AutomatedAnalysisPage() {
       const recommendation = recData.data as AIRecommendation;
       setAiRecommendation(recommendation);
       if (!recommendation.canProceed || recommendation.recommendedAssets.length === 0) { setPipelineStep('warning'); setPipelineRunning(false); return; }
-      const topAsset = [...recommendation.recommendedAssets].sort((a, b) => b.confidence - a.confidence)[0];
-      setSelectedAsset(topAsset);
+      const sortedAssets = [...recommendation.recommendedAssets].sort((a, b) => b.confidence - a.confidence).slice(0, 5);
+      setAnalysisQueue(sortedAssets);
+      setCurrentQueueIndex(0);
+      setCompletedAnalysisIds([]);
+      setSelectedAsset(sortedAssets[0]);
       await new Promise(r => setTimeout(r, 600));
 
       setPipelineStep('asset_analysis');
@@ -511,18 +521,54 @@ export default function AutomatedAnalysisPage() {
                     {!aiRecommendation ? <div className="flex items-center gap-3 py-3"><Loader2 className="w-5 h-5 animate-spin text-amber-500" /><span className="text-sm text-gray-500 dark:text-white/40">AI analyzing assets...</span></div> : (
                       <div>
                         {aiRecommendation.warnings.length > 0 && <div className="mb-2 space-y-1">{aiRecommendation.warnings.map((w, i) => <div key={i} className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />{w}</div>)}</div>}
+                        {/* Batch progress indicator */}
+                        {analysisQueue.length > 1 && pipelineStep === 'asset_analysis' && (
+                          <div className="mb-2">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] font-medium text-gray-500 dark:text-white/40">
+                                Batch Analysis: {completedAnalysisIds.length}/{analysisQueue.length}
+                              </span>
+                              <span className="text-[10px] font-bold text-[#00F5A0]">
+                                {Math.round((completedAnalysisIds.length / analysisQueue.length) * 100)}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-gray-200 dark:bg-white/[0.06] overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${(completedAnalysisIds.length / analysisQueue.length) * 100}%`,
+                                  background: 'linear-gradient(135deg, #00F5A0, #00D4FF)',
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
                         <div className="flex gap-2 overflow-x-auto pb-1">
                           {aiRecommendation.recommendedAssets.slice(0, 6).map(asset => {
-                            const isTop = selectedAsset?.symbol === asset.symbol;
+                            const isCurrent = selectedAsset?.symbol === asset.symbol;
+                            const queueIdx = analysisQueue.findIndex(q => q.symbol === asset.symbol);
+                            const isDone = queueIdx >= 0 && queueIdx < currentQueueIndex;
+                            const isAnalyzing = isCurrent && pipelineStep === 'asset_analysis';
                             const isBuy = asset.direction === 'BUY';
                             return (
-                              <div key={`${asset.symbol}-${asset.direction}`} className={cn('flex-shrink-0 p-3 rounded-xl border min-w-[130px] transition-all', isTop ? isBuy ? 'border-[#00F5A0]/50 bg-[#00F5A0]/5 ring-1 ring-[#00F5A0]/30' : 'border-[#FF4757]/50 bg-[#FF4757]/5 ring-1 ring-[#FF4757]/30' : 'border-gray-200 dark:border-white/[0.06]')}>
+                              <div key={`${asset.symbol}-${asset.direction}`} className={cn(
+                                'flex-shrink-0 p-3 rounded-xl border min-w-[130px] transition-all',
+                                isDone ? 'border-[#00F5A0]/40 bg-[#00F5A0]/5' :
+                                isAnalyzing ? 'border-violet-500/50 bg-violet-500/5 ring-1 ring-violet-500/30' :
+                                isCurrent && !analysisQueue.length ? (isBuy ? 'border-[#00F5A0]/50 bg-[#00F5A0]/5 ring-1 ring-[#00F5A0]/30' : 'border-[#FF4757]/50 bg-[#FF4757]/5 ring-1 ring-[#FF4757]/30') :
+                                'border-gray-200 dark:border-white/[0.06]'
+                              )}>
                                 <div className="flex items-center gap-2 mb-1.5">
-                                  <CoinIcon symbol={asset.symbol} size={24} />
+                                  {isDone ? <Check className="w-5 h-5 text-[#00F5A0]" /> : <CoinIcon symbol={asset.symbol} size={24} />}
                                   <span className="text-sm font-bold text-gray-900 dark:text-white">{asset.symbol}</span>
                                   <span className={cn('px-1.5 py-0.5 rounded text-[9px] font-bold ml-auto', isBuy ? 'text-[#00F5A0] bg-[#00F5A0]/10' : 'text-[#FF4757] bg-[#FF4757]/10')}>{asset.direction}</span>
                                 </div>
-                                <div className="text-[10px] text-gray-500 dark:text-white/35">Conf: {asset.confidence}%{isTop && <span className="ml-2 text-[#00F5A0] font-bold">SELECTED</span>}</div>
+                                <div className="text-[10px] text-gray-500 dark:text-white/35">
+                                  Conf: {asset.confidence}%
+                                  {isDone && <span className="ml-2 text-[#00F5A0] font-bold">DONE</span>}
+                                  {isAnalyzing && <span className="ml-2 text-violet-500 font-bold animate-pulse">ANALYZING</span>}
+                                  {isCurrent && !isAnalyzing && !isDone && analysisQueue.length <= 1 && <span className="ml-2 text-[#00F5A0] font-bold">SELECTED</span>}
+                                </div>
                               </div>
                             );
                           })}
@@ -532,7 +578,17 @@ export default function AutomatedAnalysisPage() {
                   </div>
                 )}
 
-                {pipelineStep === 'asset_analysis' && selectedAsset && !showAnalysisDialog && <div className="flex items-center gap-3 py-3"><Loader2 className="w-5 h-5 animate-spin text-violet-500" /><span className="text-sm text-gray-500 dark:text-white/40">Launching analysis on <span className="font-bold text-gray-900 dark:text-white">{selectedAsset.symbol}</span>...</span></div>}
+                {pipelineStep === 'asset_analysis' && selectedAsset && !showAnalysisDialog && (
+                  <div className="flex items-center gap-3 py-3">
+                    <Loader2 className="w-5 h-5 animate-spin text-violet-500" />
+                    <span className="text-sm text-gray-500 dark:text-white/40">
+                      {analysisQueue.length > 1
+                        ? <>Analyzing <span className="font-bold text-gray-900 dark:text-white">{selectedAsset.symbol}</span> ({currentQueueIndex + 1}/{analysisQueue.length})...</>
+                        : <>Launching analysis on <span className="font-bold text-gray-900 dark:text-white">{selectedAsset.symbol}</span>...</>
+                      }
+                    </span>
+                  </div>
+                )}
 
                 {/* Warning */}
                 {pipelineStep === 'warning' && (
@@ -561,9 +617,25 @@ export default function AutomatedAnalysisPage() {
                   <div className="rounded-lg p-4 border border-[#00F5A0]/30 bg-[#00F5A0]/5">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #00F5A0, #00D4FF)' }}><Check className="w-5 h-5 text-white" /></div>
-                      <div><h3 className="text-sm font-bold" style={{ color: '#00F5A0' }}>Analysis Complete</h3><p className="text-xs text-gray-500 dark:text-white/40">Report saved. View it below.</p></div>
+                      <div>
+                        <h3 className="text-sm font-bold" style={{ color: '#00F5A0' }}>Analysis Complete</h3>
+                        <p className="text-xs text-gray-500 dark:text-white/40">
+                          {completedAnalysisIds.length > 1
+                            ? `${completedAnalysisIds.length} assets analyzed. View results below.`
+                            : 'Report saved. View it below.'}
+                        </p>
+                      </div>
                     </div>
-                    <button onClick={() => { setPipelineStep('idle'); setAiRecommendation(null); setSelectedAsset(null); setCapitalFlow(null); }} className="px-4 py-2 rounded-lg text-xs font-semibold transition-all hover:scale-105" style={{ background: 'linear-gradient(135deg, #00F5A0, #00D4FF)', color: '#0A0B0F' }}>Run Another Analysis</button>
+                    <div className="flex gap-2">
+                      {completedAnalysisIds.length > 1 && (
+                        <button onClick={() => setShowBatchResults(true)} className="px-4 py-2 rounded-lg text-xs font-semibold transition-all hover:scale-105" style={{ background: 'linear-gradient(135deg, #00F5A0, #00D4FF)', color: '#0A0B0F' }}>
+                          View All Results ({completedAnalysisIds.length})
+                        </button>
+                      )}
+                      <button onClick={() => { setPipelineStep('idle'); setAiRecommendation(null); setSelectedAsset(null); setCapitalFlow(null); setAnalysisQueue([]); setCurrentQueueIndex(0); setCompletedAnalysisIds([]); }} className={cn('px-4 py-2 rounded-lg text-xs font-semibold transition-all hover:scale-105', completedAnalysisIds.length > 1 ? 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/50' : '')} style={completedAnalysisIds.length <= 1 ? { background: 'linear-gradient(135deg, #00F5A0, #00D4FF)', color: '#0A0B0F' } : undefined}>
+                        Run Another Analysis
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -586,13 +658,74 @@ export default function AutomatedAnalysisPage() {
       {/* Analysis Dialog */}
       {showAnalysisDialog && selectedAsset && (
         <AnalysisDialog isOpen={showAnalysisDialog} symbol={selectedAsset.symbol} coinName={selectedAsset.name || selectedAsset.symbol} timeframe={timeframe} capitalFlowContext={capitalFlowContextPayload}
-          onClose={() => { setShowAnalysisDialog(false); setPipelineStep('complete'); fetchDailyPassStatus(); fetchAnalyses(); }}
-          onComplete={() => { setShowAnalysisDialog(false); setPipelineStep('complete'); fetchDailyPassStatus(); fetchAnalyses(); }}
-          onReportReady={(id) => { setShowAnalysisDialog(false); setPipelineStep('complete'); fetchDailyPassStatus(); fetchAnalyses(); setReportDrawerId(id); }} />
+          onClose={() => {
+            setShowAnalysisDialog(false);
+            if (analysisQueue.length <= 1) {
+              // Single manual analysis — mark complete
+              setPipelineStep('complete');
+              fetchDailyPassStatus();
+              fetchAnalyses();
+            } else {
+              // Batch mode — user closed or duplicate skipped, move to next
+              const nextIndex = currentQueueIndex + 1;
+              if (nextIndex < analysisQueue.length) {
+                setCurrentQueueIndex(nextIndex);
+                setSelectedAsset(analysisQueue[nextIndex]);
+                setTimeout(() => setShowAnalysisDialog(true), 800);
+              } else {
+                // Queue exhausted
+                setPipelineStep('complete');
+                fetchDailyPassStatus();
+                fetchAnalyses();
+                if (completedAnalysisIds.length > 1) {
+                  setShowBatchResults(true);
+                } else if (completedAnalysisIds.length === 1) {
+                  setReportDrawerId(completedAnalysisIds[0]);
+                }
+              }
+            }
+          }}
+          onComplete={() => {
+            if (analysisQueue.length <= 1) {
+              setShowAnalysisDialog(false);
+              setPipelineStep('complete');
+              fetchDailyPassStatus();
+              fetchAnalyses();
+            }
+          }}
+          onReportReady={(id) => {
+            setShowAnalysisDialog(false);
+            const newCompleted = [...completedAnalysisIds, id];
+            setCompletedAnalysisIds(newCompleted);
+
+            const nextIndex = currentQueueIndex + 1;
+            if (nextIndex < analysisQueue.length) {
+              // Move to next asset in queue
+              setCurrentQueueIndex(nextIndex);
+              setSelectedAsset(analysisQueue[nextIndex]);
+              // Small delay to let dialog reset fully before reopening
+              setTimeout(() => {
+                setShowAnalysisDialog(true);
+              }, 800);
+            } else {
+              // All assets analyzed — show batch results
+              setPipelineStep('complete');
+              fetchDailyPassStatus();
+              fetchAnalyses();
+              if (newCompleted.length > 1) {
+                setShowBatchResults(true);
+              } else if (newCompleted.length === 1) {
+                setReportDrawerId(newCompleted[0]);
+              }
+            }
+          }} />
       )}
 
-      {/* Analysis Report Drawer - slides up from bottom after analysis completes */}
+      {/* Analysis Report Drawer - slides up from bottom after single analysis completes */}
       <AnalysisReportDrawer analysisId={reportDrawerId} onClose={() => setReportDrawerId(null)} />
+
+      {/* Batch Results Drawer - slides up after all queued analyses complete */}
+      <BatchResultsDrawer analysisIds={completedAnalysisIds} isOpen={showBatchResults} onClose={() => setShowBatchResults(false)} />
     </div>
   );
 }

@@ -498,18 +498,19 @@ export function AnalysisDialog({
       });
 
       if (response.ok) {
-        const responseData = await response.json();
+        await response.json();
         setReportSaved(true);
-        if (responseData?.data?.analysisId) {
-          setSavedAnalysisId(responseData.data.analysisId);
-        } else if (reportAnalysisId) {
+        // Only set savedAnalysisId if not already set from /api/analysis/full response
+        // The reports endpoint may return a report ID (not analysis ID), which would
+        // cause the report drawer to fetch a non-existent analysis
+        if (!savedAnalysisId) {
           setSavedAnalysisId(reportAnalysisId);
         }
       }
     } catch (error) {
       console.error('Failed to auto-save report:', error);
     }
-  }, [completedSteps.length, results, symbol, reportSaved, tradeType, timeframe]);
+  }, [completedSteps.length, results, symbol, reportSaved, savedAnalysisId, tradeType, timeframe]);
 
   // Auto-save when 7 steps complete (step 8 ML confirmation doesn't block saving)
   useEffect(() => {
