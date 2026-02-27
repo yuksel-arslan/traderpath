@@ -4,12 +4,7 @@
 
 ### Her Commit Öncesi:
 1. Bu dosyayı kontrol et
-2. Yaptığın değişiklik bir fix ise → "Çözülen Bug'lar" tablosuna HEMEN ekle
-3. Eklemeden commit YAPMA
-
-### Her Session Sonunda:
-1. "Son Güncellemeler"e bugünün tarihiyle özet yaz
-2. Yazmadan session'ı KAPATMA
+2. Kurallara uygunluğu doğrula
 
 > ⚠️ Bu kuralları asla atlama.
 
@@ -201,9 +196,6 @@ Kullanıcı Hakları Aktif:
 
 ---
 
-
----
-
 ## 🎨 UI Kararları
 
 | Tarih | Karar | Neden |
@@ -285,51 +277,11 @@ Kullanıcı Hakları Aktif:
 
 ---
 
-
-## 🐛 Çözülen Bug'lar
-
-| Tarih | Bug | Kök Neden | Çözüm | Dosyalar |
-|-------|-----|-----------|-------|----------|
-| 2026-02-24 | Login "Server is temporarily unavailable" | `next.config.js` env fallback `http://localhost:4000` → build time'da inline edilince `route.ts`'deki production fallback (`https://api.traderpath.io`) asla çalışmıyor | 1) `next.config.js` fallback'i production-aware yapıldı 2) Tüm 16 auth route'a localhost safety check eklendi | `next.config.js`, `apps/web/app/api/auth/*/route.ts` (16 dosya) |
-| 2026-02-24 | Login hala "Server is temporarily unavailable" gösteriyor | 3 kök neden: 1) `login/route.ts` backend hata mesajını maskeliyor → gerçek hatayı gizliyor 2) Trailing slash koruması yok → `API_URL/` varsa `//api/auth/login` oluyor 3) Diagnostik endpoint yok → backend erişimi test edilemiyor | 1) Backend error maskeleme kaldırıldı, gerçek hata pass-through yapılıyor 2) Tüm 16 auth route + `next.config.js`'e trailing slash strip eklendi 3) `/api/debug/health` diagnostık endpoint oluşturuldu 4) Kapsamlı error loglama eklendi | `login/route.ts`, `next.config.js`, tüm auth route'lar, yeni `debug/health/route.ts` |
-| 2026-02-26 | Confidence 6800% gösteriyor (68 olmalı) | Frontend `confidence * 100` yapıyor ama API zaten 0-100 döndürüyor → 68 * 100 = 6800 | 1) 4 frontend dosyadan `* 100` kaldırıldı 2) Backend `preliminaryVerdict.confidence` 0-100'e clamp edildi | `PrimaryDecision.tsx`, `MarketContextPanel.tsx`, `FlowChain.tsx`, `analysis.engine.ts` |
-| 2026-02-26 | Dashboard PnL Chart günlük view sahte veri gösteriyor | 1D modu günün PnL'ini 8 saatlik slota lineer interpolasyon yapıyor → gerçek intra-day veri yok | Tüm view modları (1D/7D/30D) aynı gerçek günlük API verisini kullanacak şekilde birleştirildi | `dashboard/page.tsx` |
-| 2026-02-26 | Opportunity Radar tüm marketleri gösteriyor | Filtre sadece user selection'a bakıyor, CF önerisini dikkate almıyor | Exit-phase ve negatif flow marketler filtrelendi, primary market önce gösteriliyor | `OpportunityRadar.tsx` |
-| 2026-02-26 | Trade Visualizer forecast çizgisi geçmişe bakıyor + Entry/SL/TP 0.00 | 1) Forecast `entryIdx` en yakın fiyatlı geçmiş mumu buluyor → forecast geçmişten başlıyor 2) Trade plan her zaman sentetik `calculateTradePlan()` kullanıyor, analiz sonucu bağlanmamış | 1) Forecast SADECE son mumdan başlayıp +48h ileriye çiziliyor 2) `analysisId` varsa API'den gerçek entry/SL/TP çekiliyor (`resolvedPlan` state) 3) Chart + TradeLevelCards + RiskMetrics `resolvedPlan` kullanıyor | `terminal/page.tsx` |
-| 2026-02-26 | Landing "Intelligence in Action" kırık image tag'leri | PNG görseller referanslanıyor ama `public/images/landing/` dizini ve dosyaları yok → kırık image icon gösteriliyor | 1) 4 adet detaylı SVG placeholder oluşturuldu (dashboard/terminal/analyzer/visualizer) 2) `img` → Next.js `Image` component 3) `aspect-video` 16:9 ratio 4) `loading="lazy"` 5) Hover scale animasyonu 6) Gradient fallback korundu | `LivePreview.tsx`, `public/images/landing/*.svg` |
-| 2026-02-26 | Dashboard crash: "Cannot access 'i' before initialization" | `OpportunityRadar.tsx` satır 86'da `primaryMarket` değişkeni kullanılıyor ama satır 95'te tanımlanıyor → JavaScript temporal dead zone hatası | `const primaryMarket` tanımı filtreleme kodunun üstüne taşındı | `OpportunityRadar.tsx` |
-| 2026-02-26 | Analysis "An unexpected error occurred" | `multi-asset-data-provider.ts`'de `fetchYahooCandles` insufficient data throw, `fetchYahooTicker` no data throw, `fetchCandles/fetchTicker` catch re-throw → global error handler production'da mesajı maskeliyor | 1) `fetchYahooCandles` throw→return mevcut veri 2) `fetchYahooTicker` fetch hatası+boş response→fallback 3) `fetchCandles/fetchTicker` catch→fallback return 4) `analysis.routes.ts` her adıma individual error wrapping+detaylı loglama | `multi-asset-data-provider.ts`, `analysis.routes.ts` |
-| 2026-02-27 | Analysis "Analysis setup failed" — Prisma `timeframe` field not found | Duplicate analysis check (satır 811) `timeframe: interval` kullanıyor ama Prisma şemasındaki alan adı `interval` → `Unknown argument 'timeframe'` Prisma hatası → outer catch `ANALYSIS_SETUP_ERROR` döndürüyor | `timeframe: interval` → `interval: interval` düzeltildi | `analysis.routes.ts` |
-| 2026-02-27 | Frontend/Backend kredi tutarsızlıkları | Frontend `DAILY_PASS_COSTS` (5/5/10), `FEATURE_COSTS`, pricing page, terms, help, concierge — tümü eski per-use fiyatları gösteriyordu. Backend Daily Pass model (25/25/100) ile uyumsuz | Frontend 7 dosyada fiyatlar backend `DAILY_PASS_CONFIG` ile eşitlendi. Backend `SERVICE_CREDITS` da güncellenmiş | `pricing-config.ts`, `pricing/page.tsx`, `terms/page.tsx`, `help/page.tsx`, `CoinSelector.tsx`, `concierge/page.tsx`, `subscription-tiers.ts` |
-| 2026-02-27 | Eski analiz raporlarında tahmin ve işlem planı son mumdan başlıyor (analiz anı yerine) | 1) `chart/candles` API her zaman güncel mumları döndürüyor → eski analiz zamanı kayıp 2) `TradePlanChart` `livePrice` son mumdan alıyor → analiz anındaki fiyat yok 3) Terminal forecast `candles[last]` kullanıyor → tarihsel analiz anchor'ı yok | 1) Backend `chart/candles` API'ye `endTime` parametresi eklendi (Binance native, Yahoo post-filter) 2) `TradePlanChart` `analysisTime` varsa o mumun kapanışını kullanıyor, mumları `endTime` ile çekiyor 3) Terminal `L7TradeVisualizer` `analysisCreatedAt` state eklendi, forecast+chart analiz zamanından anchor'lanıyor | `analysis.routes.ts`, `multi-asset-data-provider.ts`, `TradePlanChart.tsx`, `terminal/page.tsx` |
-
----
-
-## 📝 Son Güncellemeler
-
-| Tarih | Özet |
-|-------|------|
-| 2026-02-24 | Login "temporarily unavailable" bug fix: `next.config.js` env fallback çakışması düzeltildi. Tüm auth route'lara production localhost safety check eklendi. |
-| 2026-02-24 | Login hata maskeleme fix: Backend hata mesajları artık kullanıcıya iletiliyor. Trailing slash koruması eklendi. `/api/debug/health` diagnostik endpoint oluşturuldu. |
-| 2026-02-26 | Dashboard + Analyze sayfaları "Decision Engine" konseptiyle yeniden tasarlandı. 5 paylaşılan intelligence UI bileşeni (ScoreRing, PulseDot, FlowArrow, Sparkline, VerdictBadge), 5 dashboard alt bileşeni (PrimaryDecision, ProfitTracker, FlowChain, AgentPanel, IntelligenceQuickActions), 4 analyze alt bileşeni (MarketContextPanel, TrendingAssets, AnalysisPipelineCard, RecentAnalysisRow) oluşturuldu. Tüm mevcut API bağlantıları ve veri akışları korundu. |
-| 2026-02-26 | Terminal sayfası "Decision Engine Control Room" konseptiyle yeniden tasarlandı. 2700 satırlık monolitik dosya 9 bileşene ayrıldı: TerminalSummaryBar, TerminalSidebar, GlobalLiquidity, MarketFlow, RotationMatrix, SectorActivity, AIRecommendation, AssetTable, RunAnalysis, TradeVisualizerMetrics. Her bölümde TerminalSummaryBar özet barı eklendi. Sidebar SELECTED bölümü ScoreRing+VerdictBadge ile zenginleştirildi. L3'e heatmap/list toggle, L4'e decision bar + gate check list, AssetTable'a verdict filter + action butonları, RunAnalysis'e INP fix + tahmin + duplicate fix, TradeVisualizer'a risk metrics + forecast panel eklendi. TradingView chart'a dokunulmadı. Tüm API bağlantıları ve veri akışları korundu. |
-| 2026-02-26 | Landing page 13-section content overhaul: Hero mesajı güncellendi ("See Where Smart Money Moves"), 6 yeni bileşen oluşturuldu (ProblemSolution, Pipeline, ComparisonTable, LivePreview, ThreeServices, SocialProof), FlowAccordion katman açıklamaları güncellendi, PricingSection (Free/Pro/Enterprise kredi bazlı), PerformanceChart metrik grid + disclaimer eklendi, Stats Bar etiketleri güncellendi, Final CTA güncellendi, Footer "default" variant'a geçirildi. Mevcut gradient animasyonlar ve chart'a dokunulmadı. |
-| 2026-02-26 | Bug fixler ve UX iyileştirmeleri: 1) Confidence 6800% → 68% düzeltildi (4 dosya `*100` kaldırıldı + backend clamp). 2) PnL Chart daily view sahte interpolasyon kaldırıldı, tüm modlar gerçek günlük veri kullanıyor. 3) Duplicate analysis warning: aynı asset+timeframe 4 saat içinde → 409 uyarısı, View Existing / Analyze Again seçenekleri. 4) AnalysisDialog results drawer: mobilde alttan yukarı, desktopda sağdan sola. 5) Opportunity Radar: CF-recommended marketler, exit-phase gizleniyor. |
-| 2026-02-26 | Trade Visualizer forecast fix: 1) Forecast çizgisi artık SADECE son mumdan +48h ileriye çiziliyor (geçmişe bakma sorunu düzeltildi). 2) Entry/SL/TP artık `analysisId` varsa gerçek analiz sonucundan çekiliyor (`resolvedPlan` state). 3) Chart price lines + TradeLevelCards + RiskMetrics hepsi `resolvedPlan` kullanıyor. |
-| 2026-02-26 | 1) Landing page logo alignment: Navbar container `px-4` → `pl-0 pr-4` ile logo sol tarafa dayandı. 2) Dashboard crash fix: OpportunityRadar.tsx'de `primaryMarket` değişkeni kullanımdan önce tanımlanmıyordu (temporal dead zone), tanım filtreleme kodunun üstüne taşındı. |
-| 2026-02-26 | 1) Header/Footer arka plan rengi sayfa background'u ile eşitlendi: Navbar, Footer, Dashboard header/footer hepsi `bg-background` kullanıyor. 2) Auth (login/register) layout yeniden tasarlandı: Sol marketing paneli kaldırıldı, logo formun üstüne küçük yerleştirildi, tek kolonlu centered layout. |
-| 2026-02-27 | 1) Analiz kırılma hatası düzeltildi: Duplicate analysis check'te `timeframe` → `interval` Prisma alan adı düzeltmesi. 2) Frontend/Backend kredi tutarsızlıkları: 7 dosyada fiyat bilgileri backend Daily Pass model ile eşitlendi (DAILY_PASS_COSTS 5/5/10→25/25/100, pricing page, terms, help, CoinSelector, concierge, SERVICE_CREDITS). |
-| 2026-02-27 | Auth layout arka planı dashboard ile eşitlendi (`bg-background`) ve kurumsal renklerde (teal/coral) dinamik gradient arka plan eklendi. 4 animasyonlu gradient orb (authGradient1-4), mesh gradient base, grain texture overlay. Light ve dark mod desteği. |
-
----
-
 ## 🤖 Claude Code Talimatları
 
 1. **Session başında** bu dosyayı oku
 2. **Kod yazarken** yukarıdaki kurallara uy
-3. **Bug fix sonrası** → HEMEN "Çözülen Bug'lar" tablosuna ekle
-4. **UI kararı sonrası** → HEMEN "UI Kararları" tablosuna ekle
-5. **Session sonunda** → "Son Güncellemeler"e tarihle özet yaz
-6. **Commit öncesi** → Bu dosya güncellendi mi kontrol et
-7. **Microservice değişikliğinde** ilgili SERVICE.md'yi güncelle
-8. **Önemli değişiklikler için** → PR hazırla ve kullanıcıya link ver
+3. **UI kararı sonrası** → HEMEN "UI Kararları" tablosuna ekle
+4. **Commit öncesi** → Bu dosya güncellendi mi kontrol et
+5. **Microservice değişikliğinde** ilgili SERVICE.md'yi güncelle
+6. **Önemli değişiklikler için** → PR hazırla ve kullanıcıya link ver
