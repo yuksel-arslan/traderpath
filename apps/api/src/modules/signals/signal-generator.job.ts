@@ -179,10 +179,12 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
           assetClass: asset.assetClass,
           market: asset.market,
           direction: recommendation.direction === 'BUY' ? 'long' : 'short',
+          interval: '1d', // Default for cron-generated signals
           entryPrice: analysisResult.tradePlan?.averageEntry || 0,
           stopLoss: analysisResult.tradePlan?.stopLoss?.price || 0,
           takeProfit1: analysisResult.tradePlan?.takeProfits?.[0]?.price || 0,
           takeProfit2: analysisResult.tradePlan?.takeProfits?.[1]?.price || 0,
+          takeProfit3: analysisResult.tradePlan?.takeProfits?.[2]?.price || undefined,
           riskRewardRatio: analysisResult.tradePlan?.riskReward || 0,
           classicVerdict: analysisResult.verdict,
           classicScore: analysisResult.totalScore,

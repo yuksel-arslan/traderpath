@@ -1331,10 +1331,12 @@ Warn about potential traps and give protective advice.`;
               assetClass,
               market,
               direction: signalDirection,
+              interval,
               entryPrice: tradePlan.averageEntry || 0,
               stopLoss: tradePlan.stopLoss?.price || 0,
               takeProfit1: tradePlan.takeProfits?.[0]?.price || 0,
               takeProfit2: tradePlan.takeProfits?.[1]?.price || 0,
+              takeProfit3: tradePlan.takeProfits?.[2]?.price || undefined,
               riskRewardRatio: tradePlan.riskReward || 0,
               classicVerdict: verdict.verdict.toUpperCase() as 'GO' | 'CONDITIONAL_GO',
               classicScore: verdict.overallScore,
@@ -1438,6 +1440,8 @@ Warn about potential traps and give protective advice.`;
                       { name: 'Entry', value: `$${tradePlan.averageEntry}`, inline: true },
                       { name: 'Stop Loss', value: `$${tradePlan.stopLoss?.price || 'N/A'}`, inline: true },
                       { name: 'TP1', value: `$${tradePlan.takeProfits?.[0]?.price || 'N/A'}`, inline: true },
+                      { name: 'TP2', value: `$${tradePlan.takeProfits?.[1]?.price || 'N/A'}`, inline: true },
+                      ...(tradePlan.takeProfits?.[2]?.price ? [{ name: 'TP3', value: `$${tradePlan.takeProfits[2].price}`, inline: true }] : []),
                     ],
                   });
                 }

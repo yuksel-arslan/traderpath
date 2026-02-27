@@ -77,72 +77,53 @@ const getQualityBadge = (score: number | undefined): string => {
  */
 export function formatTelegramSignal(signal: SignalData, signalId: string, qualityEnrichment?: SignalQualityEnrichment): string {
   const directionEmoji = DIRECTION_EMOJI[signal.direction];
-  const verdictEmoji = VERDICT_EMOJI[signal.classicVerdict] || '❓';
   const marketEmoji = MARKET_EMOJI[signal.market as keyof typeof MARKET_EMOJI] || '📊';
-  const phaseEmoji = PHASE_EMOJI[signal.capitalFlowPhase] || '🌿';
 
   const direction = signal.direction.toUpperCase();
   const rr = signal.riskRewardRatio.toFixed(2);
 
   // Calculate potential profit/loss percentages
-  const entryToTp1 = ((signal.takeProfit1 - signal.entryPrice) / signal.entryPrice * 100);
-  const entryToTp2 = ((signal.takeProfit2 - signal.entryPrice) / signal.entryPrice * 100);
-  const entryToSl = ((signal.stopLoss - signal.entryPrice) / signal.entryPrice * 100);
+  const calcPercent = (target: number) => {
+    const raw = ((target - signal.entryPrice) / signal.entryPrice * 100);
+    return signal.direction === 'long' ? raw : -raw;
+  };
+  const slPercent = calcPercent(signal.stopLoss);
+  const tp1Percent = calcPercent(signal.takeProfit1);
+  const tp2Percent = calcPercent(signal.takeProfit2);
 
-  // For short positions, flip the percentages
-  const tp1Percent = signal.direction === 'long' ? entryToTp1 : -entryToTp1;
-  const tp2Percent = signal.direction === 'long' ? entryToTp2 : -entryToTp2;
-  const slPercent = signal.direction === 'long' ? entryToSl : -entryToSl;
+  // TP3 line (only if exists)
+  const tp3Line = signal.takeProfit3
+    ? `\n🎯 TP3: <code>${formatPrice(signal.takeProfit3)}</code> (+${calcPercent(signal.takeProfit3).toFixed(1)}%)`
+    : '';
 
-  // Quality score section
-  const qs = qualityEnrichment?.qualityScore;
-  const qualitySection = qs ? `
-<b>━━━ Quality Score ━━━</b>
-📊 Score: <b>${getQualityBadge(qs.qualityScore)}</b>
-  L1-L4 Alignment: ${qs.breakdown.l1l4Alignment}%
-  Technical: ${qs.breakdown.technicalStrength}%
-  Momentum: ${qs.breakdown.momentum}%
-  Volatility: ${qs.breakdown.volatilityAdjusted}%
-` : '';
-
-  // Forecast bands section
-  const bands = qualityEnrichment?.forecastBands;
-  const forecastSection = bands && bands.length > 0 ? `
-<b>━━━ Price Forecast ━━━</b>
-${bands.map(b => `${b.timeframe}: P10 ${formatPrice(b.p10)} (${b.p10Percent >= 0 ? '+' : ''}${b.p10Percent.toFixed(1)}%) | P50 ${formatPrice(b.p50)} (${b.p50Percent >= 0 ? '+' : ''}${b.p50Percent.toFixed(1)}%) | P90 ${formatPrice(b.p90)} (${b.p90Percent >= 0 ? '+' : ''}${b.p90Percent.toFixed(1)}%)`).join('\n')}
-` : '';
+  // Timeframe line
+  const timeLine = signal.interval ? ` | ${signal.interval}` : '';
 
   const message = `
 ${directionEmoji} <b>TraderPath Signal</b> ${directionEmoji}
 
 <b>━━━━━━━━━━━━━━━━━━━━</b>
 
-${marketEmoji} <b>${signal.symbol}</b> | ${direction}${qs ? ` | ${getQualityBadge(qs.qualityScore)}` : ''}
+${marketEmoji} <b>${signal.symbol}</b> | ${direction}${timeLine}
+
+<b>━━━ Metrics ━━━</b>
+🎯 Confidence: <b>${signal.overallConfidence}%</b> ${getConfidenceBadge(signal.overallConfidence)}
+📊 Win Rate: <b>${signal.winRateEstimate != null ? signal.winRateEstimate + '%' : 'N/A'}</b>
+⚖️ R:R = <b>${rr}</b>
 
 <b>━━━ Trade Plan ━━━</b>
 📍 Entry: <code>${formatPrice(signal.entryPrice)}</code>
-🛑 Stop Loss: <code>${formatPrice(signal.stopLoss)}</code> (${slPercent.toFixed(1)}%)
+🛑 SL: <code>${formatPrice(signal.stopLoss)}</code> (${slPercent.toFixed(1)}%)
 🎯 TP1: <code>${formatPrice(signal.takeProfit1)}</code> (+${tp1Percent.toFixed(1)}%)
-🎯 TP2: <code>${formatPrice(signal.takeProfit2)}</code> (+${tp2Percent.toFixed(1)}%)
-⚖️ R:R = <b>${rr}</b>
+🎯 TP2: <code>${formatPrice(signal.takeProfit2)}</code> (+${tp2Percent.toFixed(1)}%)${tp3Line}
 
-<b>━━━ Analysis ━━━</b>
-${verdictEmoji} Classic: <b>${signal.classicVerdict}</b> (${signal.classicScore.toFixed(1)}/10)
-🤖 MLIS Pro: ${getMLISBadge(signal.mlisConfirmation, signal.mlisRecommendation)}
-🎯 Confidence: <b>${signal.overallConfidence}%</b> ${getConfidenceBadge(signal.overallConfidence)}
-${signal.winRateEstimate ? `📊 Win Rate: <b>${signal.winRateEstimate}%</b>\n` : ''}${qualitySection}
-<b>━━━ Capital Flow ━━━</b>
-${phaseEmoji} Phase: <b>${signal.capitalFlowPhase.toUpperCase()}</b>
-🌊 Bias: <b>${signal.capitalFlowBias.replace('_', ' ').toUpperCase()}</b>
-${signal.sectorFlow ? `📊 Sector Flow: <b>${signal.sectorFlow > 0 ? '+' : ''}${signal.sectorFlow.toFixed(1)}%</b>` : ''}
-${forecastSection}
 <b>━━━━━━━━━━━━━━━━━━━━</b>
 
 ⏰ ${new Date().toUTCString()}
-🆔 Signal ID: <code>${signalId.slice(0, 8)}</code>
+🆔 <code>${signalId.slice(0, 8)}</code>
 
-<i>This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. Past performance does not guarantee future results.</i>
-<i>📊 Powered by TraderPath.io</i>
+<i>Not financial advice. Past performance does not guarantee future results.</i>
+<i>📊 TraderPath.io</i>
 `.trim();
 
   return message;

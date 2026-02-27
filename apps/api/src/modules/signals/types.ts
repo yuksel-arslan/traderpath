@@ -8,12 +8,14 @@ export interface SignalData {
   assetClass: 'crypto' | 'stocks' | 'metals' | 'bonds';
   market: string;
   direction: 'long' | 'short';
+  interval?: string; // Timeframe: 5m, 15m, 30m, 1h, 4h, 1d, 1W
 
   // Trade Plan
   entryPrice: number;
   stopLoss: number;
   takeProfit1: number;
   takeProfit2: number;
+  takeProfit3?: number;
   riskRewardRatio: number;
 
   // Analysis Results
