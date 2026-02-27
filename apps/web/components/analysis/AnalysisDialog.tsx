@@ -518,53 +518,25 @@ export function AnalysisDialog({
     }
   }, [completedSteps.length, saveReportToDatabase]);
 
-  // After report saved: open report drawer (if onReportReady) or redirect to details page
+  // After report saved: wait for celebration animation then auto-open report page
   useEffect(() => {
     if (reportSaved && savedAnalysisId && !pdfGeneratedRef.current) {
       pdfGeneratedRef.current = true;
       setPdfGenerating(true);
 
-      // Wait for celebration modal to finish before showing report
+      // Wait for celebration modal to finish before navigating
       const celebrationWaitTime = 5500; // 1500ms delay + 4000ms display time
 
-      const verifyAndShow = async () => {
-        await new Promise(resolve => setTimeout(resolve, celebrationWaitTime));
-
-        if (onReportReady) {
-          // Open report drawer on the same page
-          onClose();
-          onReportReady(savedAnalysisId);
-          return;
-        }
-
-        // Fallback: redirect to details page
-        const maxAttempts = 5;
-        const delayMs = 500;
-
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          try {
-            const token = await getAuthToken();
-            const response = await fetch(getApiUrl(`/api/analysis/${savedAnalysisId}`), {
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
-            });
-
-            if (response.ok) {
-              onClose();
-              router.push(`/analyze/details/${savedAnalysisId}`);
-              return;
-            }
-          } catch {
-            // Ignore errors, keep polling
-          }
-
-          await new Promise(resolve => setTimeout(resolve, delayMs));
-        }
-
+      const timer = setTimeout(() => {
         onClose();
-        router.push(`/analyze/details/${savedAnalysisId}`);
-      };
+        if (onReportReady) {
+          onReportReady(savedAnalysisId);
+        } else {
+          router.push(`/analyze/details/${savedAnalysisId}`);
+        }
+      }, celebrationWaitTime);
 
-      verifyAndShow();
+      return () => clearTimeout(timer);
     }
   }, [reportSaved, savedAnalysisId, router, onClose, onReportReady]);
 

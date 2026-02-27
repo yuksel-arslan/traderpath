@@ -36,8 +36,6 @@ import { MarketContextPanel } from '@/components/analyze/MarketContextPanel';
 import { TrendingAssets } from '@/components/analyze/TrendingAssets';
 import { AnalysisPipelineCard } from '@/components/analyze/AnalysisPipelineCard';
 import { RecentAnalysisRow } from '@/components/analyze/RecentAnalysisRow';
-import { AnalysisReportDrawer } from '@/components/analyze/AnalysisReportDrawer';
-
 // Lazy load components
 const CoinIcon = dynamic(
   () => import('../../../components/common/CoinIcon').then(mod => ({ default: mod.CoinIcon })),
@@ -167,7 +165,6 @@ export default function AutomatedAnalysisPage() {
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const [manualSymbol, setManualSymbol] = useState('');
   const [filter, setFilter] = useState('All');
-  const [reportDrawerId, setReportDrawerId] = useState<string | null>(null);
   const [timeframe, setTimeframe] = useState<'5m' | '15m' | '30m' | '1h' | '4h' | '1d'>('4h');
   const pipelineRef = useRef<HTMLDivElement>(null);
 
@@ -588,11 +585,8 @@ export default function AutomatedAnalysisPage() {
         <AnalysisDialog isOpen={showAnalysisDialog} symbol={selectedAsset.symbol} coinName={selectedAsset.name || selectedAsset.symbol} timeframe={timeframe} capitalFlowContext={capitalFlowContextPayload}
           onClose={() => { setShowAnalysisDialog(false); setPipelineStep('complete'); fetchDailyPassStatus(); fetchAnalyses(); }}
           onComplete={() => { setShowAnalysisDialog(false); setPipelineStep('complete'); fetchDailyPassStatus(); fetchAnalyses(); }}
-          onReportReady={(id) => { setShowAnalysisDialog(false); setPipelineStep('complete'); fetchDailyPassStatus(); fetchAnalyses(); setReportDrawerId(id); }} />
+          onReportReady={(id) => { setShowAnalysisDialog(false); setPipelineStep('complete'); fetchDailyPassStatus(); fetchAnalyses(); router.push(`/analyze/details/${id}`); }} />
       )}
-
-      {/* Analysis Report Drawer - slides up from bottom after analysis completes */}
-      <AnalysisReportDrawer analysisId={reportDrawerId} onClose={() => setReportDrawerId(null)} />
     </div>
   );
 }
