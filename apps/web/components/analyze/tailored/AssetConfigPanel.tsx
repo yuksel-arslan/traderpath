@@ -14,7 +14,9 @@ const CoinIcon = dynamic(
 );
 
 const TIMEFRAMES: { value: Timeframe; label: string; type: string }[] = [
+  { value: '5m', label: '5m', type: 'Scalp' },
   { value: '15m', label: '15m', type: 'Scalp' },
+  { value: '30m', label: '30m', type: 'Day' },
   { value: '1h', label: '1H', type: 'Day' },
   { value: '4h', label: '4H', type: 'Day' },
   { value: '1d', label: '1D', type: 'Swing' },

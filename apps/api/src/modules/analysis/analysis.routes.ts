@@ -873,19 +873,19 @@ Warn about potential traps and give protective advice.`;
           logger.error({ err, step: 'marketPulse' }, '[Analysis] Step 1 failed');
           throw new Error(`Step 1 (Market Pulse) failed: ${err instanceof Error ? err.message : String(err)}`);
         }),
-        analysisEngine.scanAsset(body.symbol, tradeType).catch(err => {
+        analysisEngine.scanAsset(body.symbol, tradeType, interval).catch(err => {
           logger.error({ err, step: 'scanAsset', symbol: body.symbol }, '[Analysis] Step 2 failed');
           throw new Error(`Step 2 (Asset Scan) failed for ${body.symbol}: ${err instanceof Error ? err.message : String(err)}`);
         }),
-        analysisEngine.safetyCheck(body.symbol, tradeType).catch(err => {
+        analysisEngine.safetyCheck(body.symbol, tradeType, interval).catch(err => {
           logger.error({ err, step: 'safetyCheck', symbol: body.symbol }, '[Analysis] Step 3 failed');
           throw new Error(`Step 3 (Safety Check) failed for ${body.symbol}: ${err instanceof Error ? err.message : String(err)}`);
         }),
-        analysisEngine.timingAnalysis(body.symbol, tradeType).catch(err => {
+        analysisEngine.timingAnalysis(body.symbol, tradeType, interval).catch(err => {
           logger.error({ err, step: 'timing', symbol: body.symbol }, '[Analysis] Step 4 failed');
           throw new Error(`Step 4 (Timing) failed for ${body.symbol}: ${err instanceof Error ? err.message : String(err)}`);
         }),
-        analysisEngine.trapCheck(body.symbol, tradeType).catch(err => {
+        analysisEngine.trapCheck(body.symbol, tradeType, interval).catch(err => {
           logger.error({ err, step: 'trapCheck', symbol: body.symbol }, '[Analysis] Step 5 failed');
           throw new Error(`Step 5 (Trap Check) failed for ${body.symbol}: ${err instanceof Error ? err.message : String(err)}`);
         }),

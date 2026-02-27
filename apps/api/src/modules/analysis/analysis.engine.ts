@@ -1364,26 +1364,76 @@ interface TradeTypeTimeframes {
 
 const TRADE_TYPE_TIMEFRAMES: Record<TradeType, TradeTypeTimeframes> = {
   scalping: {
-    primary: '1m',
-    secondary: '5m',
+    primary: '5m',
+    secondary: '1m',
     confirmation: '15m',
-    candleCounts: { primary: 100, secondary: 50, confirmation: 30 },
+    candleCounts: { primary: 1000, secondary: 200, confirmation: 100 },
   },
   dayTrade: {
-    primary: '15m',
+    primary: '4h',
     secondary: '1h',
-    confirmation: '4h',
-    candleCounts: { primary: 96, secondary: 48, confirmation: 24 },
+    confirmation: '1d',
+    candleCounts: { primary: 500, secondary: 200, confirmation: 50 },
   },
   swing: {
-    primary: '4h',
-    secondary: '1d',
+    primary: '1d',
+    secondary: '4h',
     confirmation: '1w',
-    candleCounts: { primary: 90, secondary: 60, confirmation: 12 },
+    candleCounts: { primary: 250, secondary: 100, confirmation: 50 },
   },
 };
 
-function getTimeframesForTradeType(tradeType: TradeType = 'dayTrade'): TradeTypeTimeframes {
+// Interval-specific timeframe mapping per CLAUDE.md spec
+// The user's selected interval becomes the PRIMARY analysis timeframe
+// Secondary = lower timeframe for detail, Confirmation = higher timeframe for trend
+const INTERVAL_TIMEFRAMES: Record<string, TradeTypeTimeframes> = {
+  '5m': {
+    primary: '5m',
+    secondary: '1m',
+    confirmation: '15m',
+    candleCounts: { primary: 1000, secondary: 200, confirmation: 100 },
+  },
+  '15m': {
+    primary: '15m',
+    secondary: '5m',
+    confirmation: '1h',
+    candleCounts: { primary: 1000, secondary: 200, confirmation: 100 },
+  },
+  '30m': {
+    primary: '30m',
+    secondary: '15m',
+    confirmation: '4h',
+    candleCounts: { primary: 500, secondary: 200, confirmation: 50 },
+  },
+  '1h': {
+    primary: '1h',
+    secondary: '15m',
+    confirmation: '4h',
+    candleCounts: { primary: 500, secondary: 200, confirmation: 50 },
+  },
+  '4h': {
+    primary: '4h',
+    secondary: '1h',
+    confirmation: '1d',
+    candleCounts: { primary: 500, secondary: 200, confirmation: 50 },
+  },
+  '1d': {
+    primary: '1d',
+    secondary: '4h',
+    confirmation: '1w',
+    candleCounts: { primary: 250, secondary: 100, confirmation: 50 },
+  },
+};
+
+/**
+ * Get timeframe configuration for analysis.
+ * When interval is provided, uses the user's selected interval as primary timeframe.
+ * Falls back to trade-type defaults when no interval is specified.
+ */
+function getTimeframesForTradeType(tradeType: TradeType = 'dayTrade', interval?: string): TradeTypeTimeframes {
+  if (interval && INTERVAL_TIMEFRAMES[interval]) {
+    return INTERVAL_TIMEFRAMES[interval];
+  }
   return TRADE_TYPE_TIMEFRAMES[tradeType] || TRADE_TYPE_TIMEFRAMES.dayTrade;
 }
 
@@ -3828,8 +3878,8 @@ export const analysisEngine = {
   // =========================================
   // Step 2: Asset Scanner (2 credits)
   // =========================================
-  async scanAsset(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<AssetScanResult> {
-    const tf = getTimeframesForTradeType(tradeType);
+  async scanAsset(symbol: string, tradeType: TradeType = 'dayTrade', interval?: string): Promise<AssetScanResult> {
+    const tf = getTimeframesForTradeType(tradeType, interval);
 
     // Detect asset class for conditional analysis
     const assetClass = getAssetClass(symbol);
@@ -4117,8 +4167,8 @@ export const analysisEngine = {
   // =========================================
   // Step 3: Safety Check (5 credits)
   // =========================================
-  async safetyCheck(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<SafetyCheckResult> {
-    const tf = getTimeframesForTradeType(tradeType);
+  async safetyCheck(symbol: string, tradeType: TradeType = 'dayTrade', interval?: string): Promise<SafetyCheckResult> {
+    const tf = getTimeframesForTradeType(tradeType, interval);
 
     // Detect asset class for conditional analysis
     const assetClass = getAssetClass(symbol);
@@ -4522,8 +4572,8 @@ export const analysisEngine = {
   // =========================================
   // Step 4: Timing (3 credits)
   // =========================================
-  async timingAnalysis(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<TimingResult> {
-    const tf = getTimeframesForTradeType(tradeType);
+  async timingAnalysis(symbol: string, tradeType: TradeType = 'dayTrade', interval?: string): Promise<TimingResult> {
+    const tf = getTimeframesForTradeType(tradeType, interval);
 
     const [ticker, candlesPrimary, candlesSecondary] = await Promise.all([
       fetch24hTicker(symbol),
@@ -4756,8 +4806,8 @@ export const analysisEngine = {
   // =========================================
   // Step 5: Trade Plan (5 credits)
   // =========================================
-  async tradePlan(symbol: string, accountSize: number = 10000, tradeType: TradeType = 'dayTrade'): Promise<TradePlanResult> {
-    const tf = getTimeframesForTradeType(tradeType);
+  async tradePlan(symbol: string, accountSize: number = 10000, tradeType: TradeType = 'dayTrade', interval?: string): Promise<TradePlanResult> {
+    const tf = getTimeframesForTradeType(tradeType, interval);
 
     const [ticker, candlesPrimary] = await Promise.all([
       fetch24hTicker(symbol),
@@ -4908,7 +4958,7 @@ export const analysisEngine = {
       score,
       // Legacy compatibility fields
       sources: {
-        direction: ['4H Trend Analysis'],
+        direction: [`${tf.primary.toUpperCase()} Trend Analysis`],
         entries: ['Current price', 'DCA level', 'Support/Resistance'],
         stopLoss: ['ATR calculation'],
         targets: ['R:R calculation'],
@@ -4926,8 +4976,8 @@ export const analysisEngine = {
   // =========================================
   // Step 6: Trap Check (5 credits)
   // =========================================
-  async trapCheck(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<TrapCheckResult> {
-    const tf = getTimeframesForTradeType(tradeType);
+  async trapCheck(symbol: string, tradeType: TradeType = 'dayTrade', interval?: string): Promise<TrapCheckResult> {
+    const tf = getTimeframesForTradeType(tradeType, interval);
 
     const [ticker, candlesPrimary, candlesSecondary] = await Promise.all([
       fetch24hTicker(symbol),
