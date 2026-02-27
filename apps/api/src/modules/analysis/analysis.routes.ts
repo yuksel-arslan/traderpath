@@ -1677,21 +1677,23 @@ Explain the key risks and what conditions would need to change before trading th
           `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
         );
         if (response.ok) {
-          const responseText = await response.text();
-          if (responseText && responseText.trim() !== '') {
-            const data = JSON.parse(responseText) as Array<{ symbol: string; price: string }>;
-            for (const item of data) {
-              const base = item.symbol.replace(/USDT$/, '');
-              const price = parseFloat(item.price);
-              // Store with multiple key formats for robust lookup
-              prices[base] = price;
-              prices[base.toLowerCase()] = price;
-              prices[base + 'USDT'] = price;
-              prices[base.toLowerCase() + 'USDT'] = price;
+          try {
+            const responseText = await response.text();
+            if (responseText && responseText.trim() !== '') {
+              const data = JSON.parse(responseText) as Array<{ symbol: string; price: string }>;
+              for (const item of data) {
+                const base = item.symbol.replace(/USDT$/, '');
+                const price = parseFloat(item.price);
+                // Store with multiple key formats for robust lookup
+                prices[base] = price;
+                prices[base.toLowerCase()] = price;
+                prices[base + 'USDT'] = price;
+                prices[base.toLowerCase() + 'USDT'] = price;
+              }
             }
+          } catch (err) {
+            logger.warn({ error: err }, 'Failed to fetch crypto prices from Binance');
           }
-        } catch (err) {
-          logger.warn({ error: err }, 'Failed to fetch crypto prices from Binance');
         }
       } catch (err) {
         logger.warn({ error: err }, 'Failed to fetch prices from Binance');
