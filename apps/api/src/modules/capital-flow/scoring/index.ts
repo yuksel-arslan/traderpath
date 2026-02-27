@@ -31,6 +31,7 @@ export type {
 
 // L1: GLRS
 export { calculateGLRS, isGLRSTradeFavorable, getDefaultGLRSWeights } from './glrs.service';
+export type { GLRSHistoricalContext } from './glrs.service';
 
 // L2: FVR
 export { calculateFVR } from './fvr.service';
@@ -47,6 +48,29 @@ export { calculateLeadLagMatrix } from './lead-lag.service';
 
 // Unified Orchestrator
 export { calculateRegimeScore } from './regime-score.service';
+
+// Risk Overlay (VaR + regime-aware position sizing)
+export { computeRiskOverlay, candlesToLogReturns, regimeAdjustedKelly } from './risk-overlay.service';
+export type {
+  RiskOverlayInput,
+  RiskOverlayResult,
+  VaRMetrics,
+  PositionSizeOverlay,
+  DrawdownState,
+  RegimeRiskProfile,
+} from './risk-overlay.types';
+
+// Backtest engine
+export type {
+  BacktestConfig,
+  BacktestResult,
+  BacktestMetrics,
+  BacktestTrade,
+  WalkForwardFold,
+} from './backtest.types';
+
+// Pipeline (real-time scoring)
+export { runRegimePipeline, getCachedRegimeScore, getLastRegimeChange, getRegimeHistory } from './regime-pipeline.service';
 
 // Statistics utilities (for backtesting and custom analysis)
 export {
