@@ -2373,6 +2373,12 @@ Explain the key risks and what conditions would need to change before trading th
       let allTimeClassicPnL = 0;
       let allTimeMlisPnL = 0;
 
+      // Track wins/losses for winRate and avgRR
+      let allTimeWins = 0;
+      let allTimeLosses = 0;
+      let allTimeWinPnLSum = 0;
+      let allTimeLossPnLSum = 0;
+
       allClosedAnalyses.forEach(analysis => {
         const pnl = calculatePnL(analysis);
         if (pnl !== 0) {
@@ -2383,10 +2389,29 @@ Explain the key risks and what conditions would need to change before trading th
             allTimeClassicPnL += pnl;
           }
         }
+        // Win/loss tracking for all trades with outcomes
+        const isWin = analysis.outcome === 'tp1_hit' || analysis.outcome === 'tp2_hit' || analysis.outcome === 'tp3_hit';
+        if (isWin) {
+          allTimeWins++;
+          allTimeWinPnLSum += Math.abs(pnl);
+        } else {
+          allTimeLosses++;
+          allTimeLossPnLSum += Math.abs(pnl);
+        }
       });
 
       const allTimeTotalPnL = Number(allTimePnLSum.toFixed(1));
       const allTimeTotalTrades = allClosedAnalyses.length;
+
+      // Win rate = TP hits / total closed * 100
+      const winRate = allTimeTotalTrades > 0
+        ? Number(((allTimeWins / allTimeTotalTrades) * 100).toFixed(1))
+        : 0;
+
+      // Average R:R = avg win P/L / avg loss P/L
+      const avgWin = allTimeWins > 0 ? allTimeWinPnLSum / allTimeWins : 0;
+      const avgLoss = allTimeLosses > 0 ? allTimeLossPnLSum / allTimeLosses : 0;
+      const avgRR = avgLoss > 0 ? Number((avgWin / avgLoss).toFixed(2)) : 0;
 
       return reply.send({
         success: true,
@@ -2400,6 +2425,8 @@ Explain the key risks and what conditions would need to change before trading th
             classicTrades,
             mlisTrades,
             period: days,
+            winRate,
+            avgRR,
             // All-time totals (same as platform-stats)
             allTimeTotalPnL,
             allTimeTotalTrades,

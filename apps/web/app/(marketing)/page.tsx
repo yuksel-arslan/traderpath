@@ -195,8 +195,8 @@ function PerformanceChart() {
 
           setPnl(summary.allTimeTotalPnL ?? summary.totalRealizedPnL ?? 0);
           setTrades(summary.allTimeTotalTrades ?? summary.totalTrades ?? 0);
-          setWinRate(summary.winRate ?? summary.accuracy ?? 0);
-          setAvgRR(summary.avgRR ?? summary.averageRR ?? 0);
+          setWinRate(summary.winRate ?? 0);
+          setAvgRR(summary.avgRR ?? 0);
           setMaxDrawdown(summary.maxDrawdown ?? 0);
 
           if (daily.length > 0) {
@@ -212,6 +212,8 @@ function PerformanceChart() {
               return { name: label, value: Number(cum.toFixed(2)) };
             });
             setData(points);
+            // Sync badge P/L with chart's final cumulative value
+            setPnl(Number(cum.toFixed(1)));
             if (dd > 0 && maxDrawdown === 0) setMaxDrawdown(Number(dd.toFixed(1)));
           }
           setReady(true);

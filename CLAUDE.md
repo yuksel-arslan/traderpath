@@ -265,6 +265,8 @@ Kullanıcı Hakları Aktif:
 | 2026-02-26 | Auth Layout: Marketing paneli kaldırıldı | Sol taraftaki %50 marketing paneli kaldırıldı, logo formun üstüne küçük (sm) yerleştirildi, tek kolonlu centered layout |
 | 2026-02-26 | LivePreview: Perspective Tilt 3D layout | Kartlar perspective(1200px) + rotateY(±3deg) ile açılı yerleşim, hover'da düzleşir + scale(1.03) + translateZ(20px), cubic-bezier geçiş |
 | 2026-02-27 | Auth Layout: Dynamic gradient arka plan | Dashboard bg-background eşleşmesi + 4 animasyonlu gradient orb (teal/coral) + grain texture overlay, light/dark mod desteği |
+| 2026-02-27 | Dashboard: System Performance → Platform-wide veri | ProfitTracker artık platform-performance-history API'den tüm kullanıcıların P/L verilerini gösteriyor |
+| 2026-02-27 | Dashboard: Performance → My Performance | Ortadaki PnLChart "My Performance" olarak yeniden adlandırıldı - kullanıcıya özel veri gösterir |
 
 ---
 

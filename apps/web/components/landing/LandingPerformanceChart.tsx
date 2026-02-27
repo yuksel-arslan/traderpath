@@ -261,10 +261,9 @@ export default function LandingPerformanceChart() {
     }
   }, [rawData, rawDataClassic, rawDataMlis, viewMode]);
 
-  // For monthly view, show all-time P/L to match dashboard
-  // For daily/weekly, show period-specific P/L
+  // Always show period-specific P/L that matches the chart
   const periodPnL = hasChartData
-    ? (viewMode === 'monthly' ? allTimePnL : calculatePeriodPnL(rawData, viewMode))
+    ? calculatePeriodPnL(rawData, viewMode)
     : allTimePnL;
 
   if (loading) {
@@ -408,11 +407,11 @@ export default function LandingPerformanceChart() {
 
           {/* P/L Badge - Always shows all-time total */}
           <div className={`px-2.5 py-1 rounded-lg font-bold text-sm ${
-            allTimePnL >= 0
+            periodPnL >= 0
               ? 'bg-emerald-500/20 text-emerald-500'
               : 'bg-red-500/20 text-red-500'
           }`}>
-            {allTimePnL >= 0 ? '+' : ''}{allTimePnL.toFixed(1)}%
+            {periodPnL >= 0 ? '+' : ''}{periodPnL.toFixed(1)}%
           </div>
         </div>
       </div>
