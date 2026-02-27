@@ -327,6 +327,7 @@ interface AnalysisDialogProps {
   coinName: string;
   timeframe: Timeframe;
   onComplete?: () => void;
+  onReportReady?: (analysisId: string) => void;
   capitalFlowContext?: CapitalFlowContextPayload;
 }
 
@@ -369,6 +370,7 @@ export function AnalysisDialog({
   coinName,
   timeframe,
   onComplete,
+  onReportReady,
   capitalFlowContext,
 }: AnalysisDialogProps) {
   // Derive trade type from timeframe
@@ -516,23 +518,28 @@ export function AnalysisDialog({
     }
   }, [completedSteps.length, saveReportToDatabase]);
 
-  // Auto-redirect to analysis details after celebration modal
-  // Wait for celebration modal to display (1.5s delay + 4s display = 5.5s total)
+  // After report saved: open report drawer (if onReportReady) or redirect to details page
   useEffect(() => {
     if (reportSaved && savedAnalysisId && !pdfGeneratedRef.current) {
       pdfGeneratedRef.current = true;
       setPdfGenerating(true);
 
-      // Wait for celebration modal to finish before redirecting
-      // Celebration shows after 1.5s and displays for ~4s
+      // Wait for celebration modal to finish before showing report
       const celebrationWaitTime = 5500; // 1500ms delay + 4000ms display time
 
-      const verifyAndRedirect = async () => {
-        // First wait for celebration modal to finish
+      const verifyAndShow = async () => {
         await new Promise(resolve => setTimeout(resolve, celebrationWaitTime));
 
+        if (onReportReady) {
+          // Open report drawer on the same page
+          onClose();
+          onReportReady(savedAnalysisId);
+          return;
+        }
+
+        // Fallback: redirect to details page
         const maxAttempts = 5;
-        const delayMs = 500; // 500ms between attempts (faster polling after celebration)
+        const delayMs = 500;
 
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
           try {
@@ -542,7 +549,6 @@ export function AnalysisDialog({
             });
 
             if (response.ok) {
-              // Analysis found in database, redirect to details page
               onClose();
               router.push(`/analyze/details/${savedAnalysisId}`);
               return;
@@ -551,18 +557,16 @@ export function AnalysisDialog({
             // Ignore errors, keep polling
           }
 
-          // Wait before next attempt
           await new Promise(resolve => setTimeout(resolve, delayMs));
         }
 
-        // If still not found after max attempts, redirect anyway (fallback)
         onClose();
         router.push(`/analyze/details/${savedAnalysisId}`);
       };
 
-      verifyAndRedirect();
+      verifyAndShow();
     }
-  }, [reportSaved, savedAnalysisId, router, onClose]);
+  }, [reportSaved, savedAnalysisId, router, onClose, onReportReady]);
 
   // Run full analysis
   const handleStartAnalysis = async () => {
