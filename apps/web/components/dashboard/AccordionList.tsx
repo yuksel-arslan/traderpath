@@ -21,7 +21,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { getCoinIcon, FALLBACK_COIN_ICON } from '../../lib/coin-icons';
+import { CoinIcon } from '../common/CoinIcon';
 
 // Lazy load PnL chart
 const PnLChart = dynamic(
@@ -342,12 +342,7 @@ function ActiveTradeCard({ trade, counterFlow }: { trade: RecentAnalysis; counte
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <img
-            src={getCoinIcon(trade.symbol)}
-            alt={trade.symbol}
-            className="w-5 h-5 rounded-full"
-            onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON; }}
-          />
+          <CoinIcon symbol={trade.symbol.replace(/USDT$/i, '')} size={20} />
           <span className="font-bold text-white text-sm tracking-tight">{trade.symbol}</span>
         </div>
         <span className={cn('px-1.5 py-0.5 rounded-lg text-[10px] font-bold', vc.bg)}>{vc.text}</span>

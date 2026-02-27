@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getLogoUrl, getAssetLogo, loadLogosCache, isCacheLoaded, AssetClass } from '../../lib/asset-logos-cache';
 
 interface CoinIconProps {
@@ -12,8 +12,24 @@ interface CoinIconProps {
 }
 
 /**
+ * Get alternative CDN URLs for a crypto symbol
+ * Used as fallbacks when primary CoinGecko URL fails
+ */
+function getFallbackCdnUrls(symbol: string): string[] {
+  const clean = symbol.toUpperCase().replace(/USDT$|USD$|BUSD$|USDC$/, '');
+  const lower = clean.toLowerCase();
+
+  return [
+    // CoinCap CDN - very reliable
+    `https://assets.coincap.io/assets/icons/${lower}@2x.png`,
+    // CryptoFonts CDN
+    `https://cryptofonts.com/img/icons/${lower}.svg`,
+  ];
+}
+
+/**
  * CoinIcon component - displays asset logo with caching
- * Fetches logos from API cache, falls back to generated SVG
+ * Fetches logos from API cache, falls back to alternative CDNs, then generated SVG
  */
 export function CoinIcon({
   symbol,
@@ -23,10 +39,13 @@ export function CoinIcon({
   showFallback = true,
 }: CoinIconProps) {
   const [iconUrl, setIconUrl] = useState<string>(() => getLogoUrl(symbol, assetClass));
-  const [hasError, setHasError] = useState(false);
+  const errorCountRef = useRef(0);
   const [isLoading, setIsLoading] = useState(!isCacheLoaded());
 
   useEffect(() => {
+    // Reset error count when symbol changes
+    errorCountRef.current = 0;
+
     // Load cache if not already loaded
     if (!isCacheLoaded()) {
       setIsLoading(true);
@@ -40,12 +59,18 @@ export function CoinIcon({
     }
   }, [symbol, assetClass]);
 
-  // Handle image load error - fallback to generated SVG
+  // Handle image load error - try alternative CDNs before falling back to SVG
   const handleError = () => {
-    if (!hasError) {
-      setHasError(true);
+    const fallbackUrls = getFallbackCdnUrls(symbol);
+    const currentAttempt = errorCountRef.current;
+    errorCountRef.current += 1;
+
+    if (currentAttempt < fallbackUrls.length) {
+      // Try next fallback CDN
+      setIconUrl(fallbackUrls[currentAttempt]);
+    } else {
+      // All CDNs failed, use generated SVG
       const logoInfo = getAssetLogo(symbol, assetClass);
-      // Use generated SVG as fallback
       const svg = generateFallbackSvg(symbol, logoInfo.color);
       setIconUrl(svg);
     }
