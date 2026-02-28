@@ -17,7 +17,6 @@ import {
   ChevronDown,
   Server,
   Bot,
-  Calendar,
   FileText,
   Inbox,
   Monitor,
@@ -53,7 +52,6 @@ const dropdownNav = [
     items: [
       { name: 'Price Alerts', href: '/alerts', icon: Bell },
       { name: 'Notifications', href: '/notifications', icon: Inbox },
-      { name: 'Scheduled', href: '/scheduled', icon: Calendar },
       { name: 'Methodology', href: '/methodology', icon: FlaskConical },
     ],
   },

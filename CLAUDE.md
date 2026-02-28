@@ -286,10 +286,12 @@ Kullanıcı Hakları Aktif:
 | 2026-02-28 | İletişim: WhatsApp kaldırıldı | Telegram + Discord + Resend Free yeterli, WhatsApp $50-150/ay tasarruf |
 | 2026-02-28 | Email: Resend Pro → Free Tier | Sadece auth emailleri (doğrulama, şifre sıfırlama) için Free Tier yeterli (3,000/ay) |
 | 2026-02-28 | Nav: Primary → Concierge, Dashboard, Analyzer, Terminal, Reports | Concierge öne çıktı, Analyze→Analyzer, Signals kaldırıldı |
-| 2026-02-28 | Nav: More dropdown → Price Alerts, Notifications, Scheduled, Methodology | Smart Alerts kaldırıldı (Notifications'a merge), Scheduled eklendi |
+| 2026-02-28 | Nav: More dropdown → Price Alerts, Notifications, Methodology | Smart Alerts kaldırıldı (Notifications'a merge) |
 | 2026-02-28 | Signals sayfası kaldırıldı | Signal bildirimleri Notifications sayfasından SIGNAL filtresiyle görüntülenir |
 | 2026-02-28 | Smart Alerts → Notifications merge | ALERT tipi bildirimler artık L1-L4 layer, severity, market badge'leri gösteriyor |
 | 2026-02-28 | Notifications: Zenginleştirilmiş ALERT/SIGNAL kartları | ALERT: layer icon + severity badge + market + action. SIGNAL: direction + confidence badge |
+| 2026-02-28 | Analyzer: 3-tab layout (Auto / Tailored / Scheduled) | analyze/layout.tsx ile tab navigasyonu, Scheduled artık Analyzer'ın parçası |
+| 2026-02-28 | Analyzer: Scheduled /analyze/scheduled'a taşındı | More dropdown'dan kaldırıldı, Analyzer tab olarak erişilir |
 
 ---
 

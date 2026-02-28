@@ -10,7 +10,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import Link from 'next/link';
 import {
   Globe,
   Brain,
@@ -23,7 +22,6 @@ import {
   Check,
   AlertTriangle,
   Shield,
-  Target,
   RefreshCw,
   ChevronRight,
 } from 'lucide-react';
@@ -389,25 +387,7 @@ export default function AutomatedAnalysisPage() {
   // RENDER
   // ═══════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
-      <div className="max-w-[1400px] mx-auto py-6 px-4 sm:px-6 space-y-4">
-
-        {/* Page Header */}
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
-              <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
-            </div>
-            <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
-              ANALYZE
-            </span>
-          </div>
-          <span className="text-[10px] text-gray-400 dark:text-white/40 uppercase tracking-wider">
-            7-Step Analysis
-          </span>
-        </header>
-
+    <div className="max-w-[1400px] mx-auto pb-6 px-4 sm:px-6 space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
 
           {/* ─── LEFT PANEL ──────────────────── */}
@@ -444,11 +424,6 @@ export default function AutomatedAnalysisPage() {
                     </button>
                   ))}
                 </div>
-              </div>
-              <div className="mt-3">
-                <Link href="/analyze/tailored" className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs rounded-lg border border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-white/40 hover:bg-gray-100 dark:hover:bg-white/[0.05] transition-colors">
-                  <Target className="w-3.5 h-3.5" /> Tailored Analysis
-                </Link>
               </div>
             </div>
 
