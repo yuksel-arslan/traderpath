@@ -322,7 +322,7 @@ function PerformanceChart() {
 
 const LANDING_PLANS = [
   {
-    name: 'Report Subscription',
+    name: 'Intelligent Report',
     icon: '📊',
     price: '$6.99',
     period: '/week',
@@ -338,7 +338,7 @@ const LANDING_PLANS = [
     ],
   },
   {
-    name: 'Analysis Subscription',
+    name: 'Capital Flow & Analysis',
     icon: '🔬',
     price: '$6.99',
     period: '/week',

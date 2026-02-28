@@ -270,13 +270,13 @@ export default function PricingPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              {/* Report Subscription Flow */}
+              {/* Intelligent Report Subscription Flow */}
               <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
                     <FileText className="w-5 h-5 text-violet-600 dark:text-violet-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Report Subscription</h3>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Intelligent Report</h3>
                 </div>
                 <div className="space-y-4">
                   {[
@@ -297,13 +297,13 @@ export default function PricingPage() {
                 </div>
               </div>
 
-              {/* Analysis Subscription Flow */}
+              {/* Capital Flow & Asset Analysis Subscription Flow */}
               <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                     <BarChart3 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Analysis Subscription</h3>
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Capital Flow & Analysis</h3>
                 </div>
                 <div className="space-y-4">
                   {[
@@ -409,7 +409,7 @@ export default function PricingPage() {
               {[
                 {
                   q: 'What is the difference between the two subscriptions?',
-                  a: 'Report Subscription delivers daily reports to you automatically via Telegram & Discord. Analysis Subscription gives you 7 analyses per week to run yourself with any method (AI Concierge, Automatic, or Tailored), plus 5 AI Expert questions per analysis.',
+                  a: 'Intelligent Report Subscription delivers daily reports to you automatically via Telegram & Discord. Capital Flow & Asset Analysis Subscription gives you 7 analyses per week to run yourself with any method (AI Concierge, Automatic, or Tailored), plus 5 AI Expert questions per analysis.',
                 },
                 {
                   q: 'Can I subscribe to both plans?',

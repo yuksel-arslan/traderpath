@@ -28,7 +28,7 @@ export const WEEKLY_PLANS: WeeklyPlan[] = [
   {
     id: 'report_weekly',
     planType: 'REPORT_WEEKLY',
-    name: 'Report Subscription',
+    name: 'Intelligent Report Subscription',
     description: 'Receive daily professional reports automatically',
     price: 6.99,
     priceDisplay: '$6.99/week',
@@ -49,7 +49,7 @@ export const WEEKLY_PLANS: WeeklyPlan[] = [
   {
     id: 'analysis_weekly',
     planType: 'ANALYSIS_WEEKLY',
-    name: 'Analysis Subscription',
+    name: 'Capital Flow & Asset Analysis Subscription',
     description: 'Run your own analyses with AI Expert support',
     price: 6.99,
     priceDisplay: '$6.99/week',

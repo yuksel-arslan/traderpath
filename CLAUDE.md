@@ -138,8 +138,8 @@
 
 | Plan | Fiyat | Kota | İçerik |
 |------|-------|------|--------|
-| **Report Subscription** | $6.99/hafta | 7 rapor/hafta (1/gün) | Executive Summary veya Detailed Analysis, Snapshot PNG, Telegram+Discord delivery |
-| **Analysis Subscription** | $6.99/hafta | 7 analiz/hafta | Full analiz + 5 AI Expert soru/analiz, AI Concierge/Auto/Tailored |
+| **Intelligent Report Subscription** | $6.99/hafta | 7 rapor/hafta (1/gün) | Executive Summary veya Detailed Analysis, Snapshot PNG, Telegram+Discord delivery |
+| **Capital Flow & Asset Analysis Subscription** | $6.99/hafta | 7 analiz/hafta | Full analiz + 5 AI Expert soru/analiz, AI Concierge/Auto/Tailored |
 
 > **Not:** Her iki plana aynı anda abone olunabilir ($13.98/hafta toplam). Kota her hafta yenilenir. 3 ücretsiz analiz kayıt bonusu devam eder.
 ### Trade Type Completion Bonus (Otomatik)
@@ -302,8 +302,8 @@ Kullanıcı Hakları Aktif:
 | 2026-02-28 | Analyzer: 3-tab layout (Auto / Tailored / Scheduled) | analyze/layout.tsx ile tab navigasyonu, Scheduled artık Analyzer'ın parçası |
 | 2026-02-28 | Analyzer: Scheduled /analyze/scheduled'a taşındı | More dropdown'dan kaldırıldı, Analyzer tab olarak erişilir |
 | 2026-02-28 | Pricing: Haftalık abonelik modeli | Eski karmaşık paketler (Explorer/Trader/Pro/Elite + Report Standard/Pro + Platform Starter/Pro/Elite) → 2 basit haftalık plan |
-| 2026-02-28 | Pricing: Report Subscription $6.99/hafta | 7 rapor/hafta (günde 1), Executive Summary veya Detailed Analysis, Telegram + Discord Snapshot PNG delivery |
-| 2026-02-28 | Pricing: Analysis Subscription $6.99/hafta | 7 analiz/hafta + analiz başına 5 AI Expert soru, AI Concierge/Auto/Tailored yöntemler, aynı fiyat |
+| 2026-02-28 | Pricing: Intelligent Report Subscription $6.99/hafta | 7 rapor/hafta (günde 1), Executive Summary veya Detailed Analysis, Telegram + Discord Snapshot PNG delivery |
+| 2026-02-28 | Pricing: Capital Flow & Asset Analysis Subscription $6.99/hafta | 7 analiz/hafta + analiz başına 5 AI Expert soru, AI Concierge/Auto/Tailored yöntemler, aynı fiyat |
 | 2026-02-28 | Pricing: Her iki plana abone olunabilir | Report + Analysis birlikte $13.98/hafta, 14 toplam (7 rapor + 7 analiz) |
 | 2026-02-28 | Pricing: Birim fiyat $1.00 | $6.99 / 7 = $1.00 per analiz veya rapor — %98 tasarruf (geleneksel analist $75-140) |
 | 2026-02-28 | Pricing: /pricing sayfası 2 kart layout | Tab toggle kaldırıldı, 2 yan yana kart (violet=Report, emerald=Analysis) + How It Works + Value Comparison + FAQ |
