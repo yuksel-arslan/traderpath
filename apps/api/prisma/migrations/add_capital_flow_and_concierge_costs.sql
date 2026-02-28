@@ -13,8 +13,17 @@ ADD COLUMN IF NOT EXISTS credit_cost_ai_concierge INT DEFAULT 5;
 -- Asset Analysis: 10 credits (was 25)
 UPDATE cost_settings SET credit_cost_full_analysis = 10 WHERE id = 'default' AND credit_cost_full_analysis = 25;
 
--- MLIS Pro Analysis: 10 credits (was 35)
-UPDATE cost_settings SET credit_cost_mlis_pro_analysis = 10 WHERE id = 'default' AND credit_cost_mlis_pro_analysis = 35;
+-- MLIS Pro Analysis: 10 credits (was 35) - only if column exists
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'cost_settings'
+        AND column_name = 'credit_cost_mlis_pro_analysis'
+    ) THEN
+        UPDATE cost_settings SET credit_cost_mlis_pro_analysis = 10 WHERE id = 'default' AND credit_cost_mlis_pro_analysis = 35;
+    END IF;
+END $$;
 
 -- AI Expert: 5 credits (was 10)
 UPDATE cost_settings SET credit_cost_ai_expert = 5 WHERE id = 'default' AND credit_cost_ai_expert = 10;
