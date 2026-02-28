@@ -412,12 +412,8 @@ export default function PricingPage() {
                   a: 'Intelligent Report Subscription delivers daily reports to you automatically via Telegram & Discord. Capital Flow & Asset Analysis Subscription gives you 7 analyses per week to run yourself with any method (AI Concierge, Automatic, or Tailored), plus 5 AI Expert questions per analysis.',
                 },
                 {
-                  q: 'Can I subscribe to both plans?',
-                  a: 'Yes! You can have both subscriptions active at the same time. Get daily reports AND run your own analyses.',
-                },
-                {
                   q: 'What report types will I receive?',
-                  a: 'Both subscriptions produce Executive Summary (3-4 Snapshot PNGs with key metrics) or Detailed Analysis Report (6-8 Snapshot PNGs with full indicator data). Delivered inline via Telegram & Discord.',
+                  a: 'Each subscription produces Executive Summary (3-4 Snapshot PNGs with key metrics) or Detailed Analysis Report (6-8 Snapshot PNGs with full indicator data). Delivered inline via Telegram & Discord.',
                 },
                 {
                   q: 'How does the weekly billing work?',

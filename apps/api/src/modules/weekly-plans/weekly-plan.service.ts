@@ -127,11 +127,18 @@ export const weeklyPlanService = {
     const { userId, userEmail, planType, successUrl, cancelUrl } = params;
     const config = WEEKLY_PLAN_CONFIG[planType];
 
-    // Check if user already has this plan type active
-    const existingPlan = await this.getUserPlan(userId, planType);
-    if (existingPlan?.status === 'ACTIVE') {
-      throw new Error('You already have an active subscription for this plan type');
+    // Check if user already has ANY active weekly plan (only one plan allowed at a time)
+    const existingPlans = await this.getUserPlans(userId);
+    const activePlan = existingPlans.find((p) => p.status === 'ACTIVE');
+    if (activePlan) {
+      throw new Error(
+        activePlan.planType === planType
+          ? 'You already have an active subscription for this plan'
+          : 'You already have an active subscription. Please cancel it before switching plans.'
+      );
     }
+
+    const existingPlan = await this.getUserPlan(userId, planType);
 
     // Get or create Stripe customer
     let customerId = existingPlan?.stripeCustomerId;

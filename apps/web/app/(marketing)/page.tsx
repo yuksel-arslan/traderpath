@@ -448,24 +448,6 @@ function PricingSection() {
           </div>
         </div>
 
-        {/* Both Plans Callout */}
-        <div className="mb-8 p-5 rounded-xl border border-teal-200 dark:border-teal-500/20 bg-teal-50/50 dark:bg-teal-500/[0.03]">
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-teal-500/10 flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg>
-            </div>
-            <div className="flex-1 text-center sm:text-left">
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">Subscribe to Both for $27.98/week</div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Get daily reports AND run your own analyses. 14 total (7 reports + 7 analyses) with AI Expert chat included.
-              </p>
-            </div>
-            <Link href="/pricing" className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-teal-600 dark:text-teal-400 border border-teal-300 dark:border-teal-500/30 rounded-md hover:bg-teal-50 dark:hover:bg-teal-500/10 transition-colors">
-              Subscribe Now <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-        </div>
-
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link href="/register" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm font-medium bg-teal-500 hover:bg-teal-600 text-white rounded-md transition-colors">
