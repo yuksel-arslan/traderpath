@@ -12,7 +12,6 @@ import {
   Mic,
   MicOff,
   Send,
-  Sparkles,
   TrendingUp,
   TrendingDown,
   Target,
@@ -21,11 +20,14 @@ import {
   RefreshCw,
   Globe,
   Activity,
-  BarChart3,
   Clock,
   AlertTriangle,
   CheckCircle2,
   Crown,
+  ChevronRight,
+  Compass,
+  Zap,
+  BookOpen,
 } from 'lucide-react';
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
@@ -592,118 +594,148 @@ export default function ConciergePage() {
             <div className="flex-1 min-h-0 flex flex-col rounded-xl bg-card border border-border overflow-hidden">
               {/* Messages — flex-1 fills available space */}
               <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
-                {/* Welcome State — categorized command list */}
+                {/* Welcome State — 10 Smart Questions */}
                 {messages.length === 0 && (
                   <div className="flex flex-col h-full">
                     {/* Header */}
-                    <div className="text-center pt-4 sm:pt-6 pb-4 sm:pb-6">
-                      <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 mb-3 shadow-lg">
-                        <Bot className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                    <div className="text-center pt-4 sm:pt-8 pb-4 sm:pb-6">
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl">
+                        <Bot className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
                       </div>
-                      <h2 className="text-base sm:text-lg font-semibold text-foreground mb-1">
+                      <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1.5">
                         AI Concierge
                       </h2>
                       <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto">
-                        Select a command below, type your own, or speak using the microphone.
+                        Your capital flow-aware trading assistant. Ask anything about markets, analysis, and opportunities.
                       </p>
+
+                      {/* Feature badges */}
+                      <div className="flex items-center justify-center gap-2 sm:gap-3 mt-4 flex-wrap">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-teal-500/10 rounded-full text-teal-600 dark:text-teal-400 text-xs">
+                          <Globe className="w-3.5 h-3.5" />
+                          Capital Flow Intel
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-emerald-500/10 rounded-full text-emerald-600 dark:text-emerald-400 text-xs">
+                          <Zap className="w-3.5 h-3.5" />
+                          7-Step Analysis
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-amber-500/10 rounded-full text-amber-600 dark:text-amber-400 text-xs">
+                          <Compass className="w-3.5 h-3.5" />
+                          Opportunity Radar
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Command Categories */}
-                    <div className="flex-1 overflow-y-auto px-1 sm:px-2 space-y-4 sm:space-y-5 pb-4">
-                      {/* Analysis */}
-                      <div>
-                        <h3 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-                          <BarChart3 className="w-3.5 h-3.5 text-teal-500" />
-                          Analysis
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
+                    {/* 10 Smart Questions */}
+                    <div className="flex-1 overflow-y-auto px-1 sm:px-2 pb-4">
+                      <div className="max-w-2xl mx-auto">
+                        <div className="flex items-center justify-between mb-3 sm:mb-4">
+                          <p className="text-xs sm:text-sm font-medium text-muted-foreground">10 Smart Questions:</p>
+                          <span className="text-[10px] sm:text-xs text-muted-foreground bg-muted px-2 py-0.5 sm:py-1 rounded-full">
+                            Click to ask
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[420px] overflow-y-auto pr-1 sm:pr-2">
                           {[
-                            { label: 'Analyze BTC on 4h', command: 'Analyze BTC on 4h timeframe' },
-                            { label: 'Quick ETH analysis', command: 'Quick analysis of ETH' },
-                            { label: 'SOL 15m scalping', command: 'Analyze SOL 15m scalping' },
-                            { label: 'Best crypto to trade now', command: "What's the best crypto to trade right now?" },
-                          ].map((item) => (
-                            <button
-                              key={item.command}
-                              onClick={() => sendMessage(item.command)}
-                              className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-accent text-left transition-colors group"
-                            >
-                              <Sparkles className="w-3.5 h-3.5 text-teal-500 shrink-0" />
-                              <span className="text-xs sm:text-sm text-foreground group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">{item.label}</span>
-                            </button>
+                            {
+                              question: 'Where is capital flowing and which market should I focus on?',
+                              category: 'intelligence' as const,
+                            },
+                            {
+                              question: 'What should I trade right now based on capital flow data?',
+                              category: 'intelligence' as const,
+                            },
+                            {
+                              question: 'Analyze BTC on the 4-hour timeframe',
+                              category: 'analysis' as const,
+                            },
+                            {
+                              question: 'Run a quick ETH analysis for day trading',
+                              category: 'analysis' as const,
+                            },
+                            {
+                              question: 'Give me the top 5 highest probability coins right now',
+                              category: 'discovery' as const,
+                            },
+                            {
+                              question: 'Which sectors are showing the strongest momentum?',
+                              category: 'discovery' as const,
+                            },
+                            {
+                              question: 'Is it safe to trade today? Any high-impact economic events?',
+                              category: 'risk' as const,
+                            },
+                            {
+                              question: 'Show my recent analysis results and overall win rate',
+                              category: 'monitoring' as const,
+                            },
+                            {
+                              question: 'Set a price alert for BTC when it drops to $90,000',
+                              category: 'monitoring' as const,
+                            },
+                            {
+                              question: 'How does the 7-step analysis engine work?',
+                              category: 'education' as const,
+                            },
+                          ].map((item, i) => {
+                            const categoryStyles = {
+                              intelligence: { color: 'text-teal-500', bg: 'bg-teal-500/15', hoverBorder: 'hover:border-teal-500/40' },
+                              analysis: { color: 'text-emerald-500', bg: 'bg-emerald-500/15', hoverBorder: 'hover:border-emerald-500/40' },
+                              discovery: { color: 'text-amber-500', bg: 'bg-amber-500/15', hoverBorder: 'hover:border-amber-500/40' },
+                              risk: { color: 'text-orange-500', bg: 'bg-orange-500/15', hoverBorder: 'hover:border-orange-500/40' },
+                              monitoring: { color: 'text-cyan-500', bg: 'bg-cyan-500/15', hoverBorder: 'hover:border-cyan-500/40' },
+                              education: { color: 'text-violet-500', bg: 'bg-violet-500/15', hoverBorder: 'hover:border-violet-500/40' },
+                            };
+                            const style = categoryStyles[item.category];
+                            return (
+                              <button
+                                key={i}
+                                onClick={() => sendMessage(item.question)}
+                                className={cn(
+                                  "flex items-start gap-2.5 sm:gap-3 text-left px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl transition-all text-xs sm:text-sm",
+                                  "bg-card border border-border hover:shadow-lg hover:scale-[1.02]",
+                                  style.hoverBorder
+                                )}
+                              >
+                                <span className={cn(
+                                  "w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold flex-shrink-0",
+                                  style.bg,
+                                  style.color
+                                )}>
+                                  {i + 1}
+                                </span>
+                                <span className="flex-1 text-foreground leading-snug">{item.question}</span>
+                                <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Category Legend */}
+                        <div className="mt-4 sm:mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 sm:gap-x-4 sm:gap-y-2">
+                          {[
+                            { label: 'Intelligence', color: 'bg-teal-500', count: 2 },
+                            { label: 'Analysis', color: 'bg-emerald-500', count: 2 },
+                            { label: 'Discovery', color: 'bg-amber-500', count: 2 },
+                            { label: 'Risk', color: 'bg-orange-500', count: 1 },
+                            { label: 'Monitoring', color: 'bg-cyan-500', count: 2 },
+                            { label: 'Education', color: 'bg-violet-500', count: 1 },
+                          ].map((cat) => (
+                            <div key={cat.label} className="flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground">
+                              <div className={cn("w-2 h-2 rounded-full", cat.color)} />
+                              {cat.label}
+                            </div>
                           ))}
                         </div>
-                      </div>
 
-                      {/* Capital Flow */}
-                      <div>
-                        <h3 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-                          <Globe className="w-3.5 h-3.5 text-cyan-500" />
-                          Capital Flow
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
-                          {[
-                            { label: 'Where is money flowing?', command: 'Where is money flowing right now?' },
-                            { label: 'Strongest market inflow', command: 'Which market has the strongest inflow?' },
-                            { label: 'AI trade recommendation', command: 'What should I trade based on capital flow?' },
-                            { label: 'Market status', command: 'Show me the current market status' },
-                          ].map((item) => (
-                            <button
-                              key={item.command}
-                              onClick={() => sendMessage(item.command)}
-                              className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-accent text-left transition-colors group"
-                            >
-                              <Sparkles className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
-                              <span className="text-xs sm:text-sm text-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">{item.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Discovery */}
-                      <div>
-                        <h3 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-                          <Crown className="w-3.5 h-3.5 text-amber-500" />
-                          Discovery
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
-                          {[
-                            { label: 'Top 5 high-probability coins', command: 'Give me top 5 highest probability coins' },
-                            { label: 'Top movers today', command: 'Show me top movers today' },
-                            { label: 'Market sentiment', command: "What's the current market sentiment?" },
-                          ].map((item) => (
-                            <button
-                              key={item.command}
-                              onClick={() => sendMessage(item.command)}
-                              className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-accent text-left transition-colors group"
-                            >
-                              <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                              <span className="text-xs sm:text-sm text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">{item.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Alerts & Automation */}
-                      <div>
-                        <h3 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-                          <Activity className="w-3.5 h-3.5 text-rose-500" />
-                          Alerts & Automation
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
-                          {[
-                            { label: 'Set BTC price alert', command: 'Set a BTC alert when price drops to 55000' },
-                            { label: 'Morning briefing', command: 'Set my morning briefing to 11:00 AM every day' },
-                          ].map((item) => (
-                            <button
-                              key={item.command}
-                              onClick={() => sendMessage(item.command)}
-                              className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-accent text-left transition-colors group"
-                            >
-                              <Sparkles className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                              <span className="text-xs sm:text-sm text-foreground group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">{item.label}</span>
-                            </button>
-                          ))}
+                        {/* Pro tip */}
+                        <div className="mt-4 sm:mt-5 p-3 sm:p-4 bg-gradient-to-r from-teal-500/10 to-emerald-500/10 rounded-xl border border-teal-500/20">
+                          <div className="flex items-start gap-2 text-xs sm:text-sm">
+                            <BookOpen className="w-4 h-4 text-teal-500 flex-shrink-0 mt-0.5" />
+                            <span className="text-muted-foreground">
+                              You can also type naturally — <span className="text-teal-600 dark:text-teal-400 font-medium">&quot;Should I buy SOL?&quot;</span>, <span className="text-teal-600 dark:text-teal-400 font-medium">&quot;Para nereye akiyor?&quot;</span>, or use the microphone.
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
