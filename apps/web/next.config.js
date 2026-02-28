@@ -269,9 +269,8 @@ const nextConfig = {
     ],
   },
 
-  // Webpack configuration for @react-pdf/renderer
+  // Webpack configuration for client-side compatibility
   webpack: (config, { isServer }) => {
-    // Fix for @react-pdf/renderer in Next.js
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -281,7 +280,6 @@ const nextConfig = {
       };
     }
 
-    // Handle canvas module (used by react-pdf)
     config.resolve.alias = {
       ...config.resolve.alias,
       canvas: false,
@@ -289,9 +287,6 @@ const nextConfig = {
 
     return config;
   },
-
-  // Transpile @react-pdf packages
-  transpilePackages: ['@react-pdf/renderer', '@react-pdf/layout', '@react-pdf/pdfkit'],
 };
 
 module.exports = withPWA(nextConfig);
