@@ -475,6 +475,7 @@ export function AnalysisDialog({
         tradePlan: results[6],
         verdict: results[7],
         mlisConfirmation: results[8] || null,
+        ragEnrichment: results[9] || null,
         indicatorDetails: (results[2] as { indicatorDetails?: unknown })?.indicatorDetails || (results[3] as { indicatorDetails?: unknown })?.indicatorDetails,
       };
 
@@ -652,6 +653,7 @@ export function AnalysisDialog({
         6: steps.tradePlan || {},
         7: { ...steps.verdict, preliminaryVerdict: steps.preliminaryVerdict },
         8: analysisData.mlisConfirmation || null, // Step 8: ML Confirmation
+        9: analysisData.ragEnrichment || null, // Step 9: RAG Intelligence Layer
       };
 
       // Progressive reveal: show each step completing one-by-one
@@ -668,6 +670,12 @@ export function AnalysisDialog({
         setActiveStep(stepId);
         setResults(prev => ({ ...prev, [stepId]: allResults[stepId] }));
         setCompletedSteps(completedIds.slice(0, i + 1));
+      }
+
+      // Store RAG enrichment data (step 9) without progressive reveal
+      // so it's available when saveReportToDatabase fires
+      if (allResults[9]) {
+        setResults(prev => ({ ...prev, 9: allResults[9] }));
       }
 
       // Small pause on the last step so user sees completion

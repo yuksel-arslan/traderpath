@@ -229,9 +229,11 @@ const VALIDATION_RULES: ValidationRule[] = [
         return { passed: true, ruleId: 'capital_flow_direction', ruleName: 'Capital Flow Direction Alignment', category: 'capital_flow', severity: 'warn', message: 'No capital flow data available' };
       }
 
+      // Must match isCounterCapitalFlow() in multi-strategy.service.ts
       const isCounterFlow =
         (plan.direction === 'long' && ctx.capitalFlowBias === 'risk_off' && ctx.capitalFlowPhase === 'exit') ||
-        (plan.direction === 'short' && ctx.capitalFlowBias === 'risk_on' && ctx.capitalFlowPhase === 'early');
+        (plan.direction === 'short' && ctx.capitalFlowBias === 'risk_on' && ctx.capitalFlowPhase === 'early') ||
+        (plan.direction === 'long' && ctx.capitalFlowPhase === 'exit');
 
       return {
         passed: !isCounterFlow,
