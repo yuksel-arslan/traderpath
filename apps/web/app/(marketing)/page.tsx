@@ -317,74 +317,132 @@ function PerformanceChart() {
 }
 
 // ---------------------------------------------------------------------------
-// PRICING SECTION
+// PRICING SECTION — Package-Based Model
 // ---------------------------------------------------------------------------
+
+const LANDING_PACKAGES = [
+  { name: 'Explorer', analyses: 5, bonus: 0, price: '$9.99', perAnalysis: '$2.00', color: 'slate' as const, features: ['5 full analyses', '7-Step + MLIS Pro', 'PDF report per analysis'] },
+  { name: 'Trader', analyses: 20, bonus: 2, price: '$29.99', perAnalysis: '$1.36', color: 'teal' as const, popular: true, features: ['20 + 2 bonus analyses', '7-Step + MLIS Pro', 'Priority queue + PDF reports'] },
+  { name: 'Pro', analyses: 50, bonus: 5, price: '$59.99', perAnalysis: '$1.09', color: 'slate' as const, features: ['50 + 5 bonus analyses', '7-Step + MLIS Pro', 'Unlimited PDF + AI Expert'] },
+  { name: 'Elite', analyses: 150, bonus: 20, price: '$149.99', perAnalysis: '$0.88', color: 'slate' as const, features: ['150 + 20 bonus analyses', '7-Step + MLIS Pro', 'API access + everything'] },
+];
 
 function PricingSection() {
   return (
     <section className="py-12 md:py-20 border-t border-gray-200 dark:border-gray-800">
-      <div className="max-w-[900px] mx-auto px-4">
+      <div className="max-w-[1100px] mx-auto px-4">
+        {/* Header */}
         <div className="text-center mb-10">
           <div className="text-[10px] font-sans uppercase tracking-wider text-slate-400 mb-2">PRICING</div>
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">
-            Simple Credit-Based Pricing
+            Analysis Packages
           </h2>
-          <p className="text-sm text-slate-500">No subscriptions. No hidden fees. Buy credits, use anytime.</p>
+          <p className="text-sm text-slate-500 max-w-lg mx-auto">
+            Buy analyses, use anytime. No subscriptions required. Every analysis includes 7-Step + MLIS Pro AI engine, PDF report, and trade plan.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          {/* Free */}
-          <div className="rounded-xl p-6 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">FREE</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">25 Credits</div>
-            <p className="text-xs text-slate-500 mb-4">On signup, no credit card</p>
-            <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
-              {['1 full 7-Step analysis', 'Capital Flow view (read-only)', 'Full terminal access'].map((f) => (
-                <li key={f} className="flex items-center gap-2">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                  {f}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Pro */}
-          <div className="rounded-xl p-6 bg-white dark:bg-white/[0.03] border-2 border-teal-500 relative">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-teal-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-full">
-              Popular
+        {/* Free Trial Banner */}
+        <div className="mb-8 mx-auto max-w-md">
+          <div className="flex items-center justify-center gap-3 px-5 py-3 rounded-lg bg-teal-500/5 border border-teal-500/20">
+            <div className="w-8 h-8 rounded-full bg-teal-500/10 flex items-center justify-center flex-shrink-0">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg>
             </div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-teal-500 mb-2">PRO</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">500 Credits</div>
-            <p className="text-xs text-slate-500 mb-4">Best value for active traders</p>
-            <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
-              {['All 3 services', 'PDF + detailed reports', 'Telegram + Discord + Push alerts'].map((f) => (
-                <li key={f} className="flex items-center gap-2">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                  {f}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Enterprise */}
-          <div className="rounded-xl p-6 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">ENTERPRISE</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Custom</div>
-            <p className="text-xs text-slate-500 mb-4">For teams and institutions</p>
-            <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
-              {['Unlimited credits', 'API access', 'Dedicated support'].map((f) => (
-                <li key={f} className="flex items-center gap-2">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                  {f}
-                </li>
-              ))}
-            </ul>
+            <div>
+              <span className="text-sm font-semibold text-teal-600 dark:text-teal-400">3 Free Analyses</span>
+              <span className="text-xs text-slate-500 ml-2">on signup, no credit card required</span>
+            </div>
           </div>
         </div>
 
+        {/* Package Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {LANDING_PACKAGES.map((pkg) => (
+            <div
+              key={pkg.name}
+              className={`rounded-xl p-5 bg-white dark:bg-white/[0.03] relative transition-all duration-200 hover:shadow-md ${
+                pkg.popular
+                  ? 'border-2 border-teal-500 shadow-sm shadow-teal-500/10'
+                  : 'border border-gray-200 dark:border-white/[0.06]'
+              }`}
+            >
+              {pkg.popular && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-teal-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-full">
+                  Popular
+                </div>
+              )}
+              {/* Package Name */}
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3">{pkg.name}</div>
+
+              {/* Price */}
+              <div className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">{pkg.price}</div>
+              <div className="flex items-baseline gap-2 mb-3">
+                <span className="text-lg font-semibold text-teal-500">{pkg.analyses} analyses</span>
+                {pkg.bonus > 0 && (
+                  <span className="text-xs font-medium text-amber-500">+{pkg.bonus} bonus</span>
+                )}
+              </div>
+
+              {/* Per Analysis Cost */}
+              <div className="text-[11px] text-slate-500 mb-4 pb-3 border-b border-gray-100 dark:border-white/[0.06]">
+                {pkg.perAnalysis} per analysis
+              </div>
+
+              {/* Features */}
+              <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+                {pkg.features.map((f) => (
+                  <li key={f} className="flex items-center gap-2">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* What Every Analysis Includes */}
+        <div className="mb-8 p-5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/[0.06]">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3 text-center">Every Analysis Includes</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 max-w-2xl mx-auto">
+            {[
+              '7-Step Analysis (40+ indicators)',
+              'MLIS Pro AI Confirmation',
+              'Trade Plan (Entry/SL/TP)',
+              'PDF Report Download',
+              'Order Book Analysis',
+              'News & Sentiment Check',
+            ].map((item) => (
+              <div key={item} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Intelligence Reports Callout */}
+        <div className="mb-8 p-5 rounded-xl border border-purple-200 dark:border-purple-500/20 bg-purple-50/50 dark:bg-purple-500/[0.03]">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11a9 9 0 0 1 9 9" /><path d="M4 4a16 16 0 0 1 16 16" /><circle cx="5" cy="19" r="1" /></svg>
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <div className="text-sm font-semibold text-gray-900 dark:text-white">Intelligence Reports — from $29/mo</div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Daily professional reports with trade signals for up to 10 assets. Includes 7-Step analysis, PDF reports, and Telegram/Discord delivery.
+              </p>
+            </div>
+            <Link href="/pricing" className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-purple-600 dark:text-purple-400 border border-purple-300 dark:border-purple-500/30 rounded-md hover:bg-purple-50 dark:hover:bg-purple-500/10 transition-colors">
+              Learn More <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+        </div>
+
+        {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link href="/register" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm font-medium bg-teal-500 hover:bg-teal-600 text-white rounded-md transition-colors">
-            GET STARTED FREE <ArrowRight className="w-4 h-4" />
+            START WITH 3 FREE ANALYSES <ArrowRight className="w-4 h-4" />
           </Link>
           <Link href="/pricing" className="w-full sm:w-auto inline-flex items-center justify-center px-7 py-3 text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
             VIEW FULL PRICING
@@ -463,7 +521,7 @@ export default function LandingPage() {
               </Link>
             </div>
             <p className="text-[10px] font-sans text-slate-400 mt-5">
-              25 free credits &middot; No credit card &middot; Setup in 30 seconds
+              3 free analyses &middot; No credit card &middot; Setup in 30 seconds
             </p>
           </div>
         </section>
