@@ -13,7 +13,6 @@ import {
   MicOff,
   Send,
   TrendingUp,
-  TrendingDown,
   Target,
   ArrowRight,
   ExternalLink,
@@ -21,8 +20,6 @@ import {
   Globe,
   Activity,
   Clock,
-  AlertTriangle,
-  CheckCircle2,
   Crown,
   ChevronRight,
   Compass,
@@ -188,7 +185,6 @@ export default function ConciergePage() {
   const [speechSupported, setSpeechSupported] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
   const [capitalFlow, setCapitalFlow] = useState<CapitalFlowData | null>(null);
-  const [flowLoading, setFlowLoading] = useState(true);
   const [scanInProgress, setScanInProgress] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -204,7 +200,6 @@ export default function ConciergePage() {
   useEffect(() => {
     const fetchCapitalFlow = async () => {
       try {
-        setFlowLoading(true);
         const res = await authFetch('/api/capital-flow/summary');
         if (res.ok) {
           const data = await res.json();
@@ -214,8 +209,6 @@ export default function ConciergePage() {
         }
       } catch (error) {
         console.error('Failed to fetch capital flow:', error);
-      } finally {
-        setFlowLoading(false);
       }
     };
 
@@ -503,20 +496,6 @@ export default function ConciergePage() {
     return lastAssistant.content;
   }, [messages]);
 
-  // Get bias icon and color
-  const getBiasDisplay = (bias: string) => {
-    switch (bias) {
-      case 'risk_on':
-        return { icon: TrendingUp, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-500/20', label: 'Risk On' };
-      case 'risk_off':
-        return { icon: TrendingDown, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-500/20', label: 'Risk Off' };
-      default:
-        return { icon: Activity, color: 'text-gray-500 dark:text-white/30', bg: 'bg-gray-100 dark:bg-gray-500/20', label: 'Neutral' };
-    }
-  };
-
-  const biasDisplay = capitalFlow?.globalLiquidity?.bias ? getBiasDisplay(capitalFlow.globalLiquidity.bias) : null;
-
   // Show upgrade prompt if user doesn't have access
   if (!featureLoading && !hasConciergeAccess) {
     return (
@@ -573,80 +552,6 @@ export default function ConciergePage() {
             </div>
           </header>
 
-          {/* Capital Flow Summary Bar — compact on mobile */}
-          {!flowLoading && capitalFlow && Array.isArray(capitalFlow.markets) && capitalFlow.markets.length > 0 && capitalFlow.recommendation && (
-            <div className="mt-2 p-2 sm:p-3 rounded-xl bg-muted/50 border border-border">
-              {/* Mobile: horizontal scroll row */}
-              <div className="flex items-center gap-2 sm:hidden overflow-x-auto scrollbar-hide pb-1">
-                {/* Bias chip */}
-                <div className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shrink-0", biasDisplay?.bg)}>
-                  {biasDisplay && <biasDisplay.icon className={cn("w-3.5 h-3.5", biasDisplay.color)} />}
-                  <span className={cn("text-xs font-bold whitespace-nowrap", biasDisplay?.color)}>{biasDisplay?.label}</span>
-                </div>
-                {/* Recommendation chip */}
-                <div className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shrink-0",
-                  capitalFlow.recommendation?.action === 'analyze'
-                    ? "bg-emerald-100 dark:bg-emerald-500/20"
-                    : capitalFlow.recommendation?.action === 'wait'
-                    ? "bg-amber-100 dark:bg-amber-500/20"
-                    : "bg-red-100 dark:bg-red-500/20"
-                )}>
-                  <span className="text-xs font-bold text-foreground capitalize whitespace-nowrap">
-                    {capitalFlow.recommendation?.action || 'wait'} {String(capitalFlow.recommendation?.primaryMarket || '').toUpperCase()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Desktop: full layout */}
-              <div className="hidden sm:flex sm:flex-col lg:flex-row lg:items-center gap-4">
-                {/* Global Liquidity Status */}
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <div className={cn("p-2 rounded-lg", biasDisplay?.bg)}>
-                    {biasDisplay && <biasDisplay.icon className={cn("w-5 h-5", biasDisplay.color)} />}
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Global Liquidity</p>
-                    <p className={cn("font-bold", biasDisplay?.color)}>{biasDisplay?.label}</p>
-                  </div>
-                </div>
-
-                <div className="hidden lg:block w-px h-10 bg-border" />
-
-                {/* Recommendation */}
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <div className={cn(
-                    "p-2 rounded-lg",
-                    capitalFlow.recommendation?.action === 'analyze'
-                      ? "bg-emerald-100 dark:bg-emerald-500/20"
-                      : capitalFlow.recommendation?.action === 'wait'
-                      ? "bg-amber-100 dark:bg-amber-500/20"
-                      : "bg-red-100 dark:bg-red-500/20"
-                  )}>
-                    {capitalFlow.recommendation?.action === 'analyze' ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    ) : capitalFlow.recommendation?.action === 'wait' ? (
-                      <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                    ) : (
-                      <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Recommendation</p>
-                    <p className="font-bold text-foreground capitalize">
-                      {capitalFlow.recommendation?.action || 'wait'} {String(capitalFlow.recommendation?.primaryMarket || 'market').toUpperCase()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {flowLoading && (
-            <div className="mt-2 p-3 sm:p-4 rounded-xl bg-card border border-border animate-pulse">
-              <div className="h-10 sm:h-16 bg-muted rounded-xl" />
-            </div>
-          )}
         </div>
 
         {/* Main Content — flex-1 fills remaining space */}
@@ -689,7 +594,7 @@ export default function ConciergePage() {
                     </div>
 
                     {/* 10 Smart Questions */}
-                    <div className="flex-1 overflow-y-auto px-1 sm:px-2 pb-4">
+                    <div className="flex-1 px-1 sm:px-2 pb-4">
                       <div className="max-w-2xl mx-auto">
                         <div className="flex items-center justify-between mb-3 sm:mb-4">
                           <p className="text-xs sm:text-sm font-medium text-muted-foreground">10 Smart Questions:</p>
@@ -697,7 +602,7 @@ export default function ConciergePage() {
                             Click to ask
                           </span>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-[420px] overflow-y-auto pr-1 sm:pr-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                           {[
                             {
                               question: 'Where is capital flowing and which market should I focus on?',
