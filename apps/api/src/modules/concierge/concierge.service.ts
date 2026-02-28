@@ -2,7 +2,17 @@ import { prisma } from '../../core/database';
 import { creditService } from '../credits/credit.service';
 import { aiExpertService } from '../ai-expert/ai-expert.service';
 import { callGeminiWithRetry } from '../../core/gemini';
-import { INTENT_DETECTION_PROMPT, RESPONSE_TEMPLATES } from './system-prompt';
+import {
+  INTENT_DETECTION_PROMPT,
+  RESPONSE_TEMPLATES,
+  buildCapitalFlowSummaryContext,
+  buildCapitalFlowLiquidityContext,
+  buildCapitalFlowMarketsContext,
+  buildCapitalFlowRecommendationContext,
+  buildAnalysisResultContext,
+  buildSectorsContext,
+} from './system-prompt';
+import { synthesizeWithAI } from './response-synthesizer';
 import { coinScoreCacheService, CoinScore } from '../analysis/services/coin-score-cache.service';
 import * as capitalFlowService from '../capital-flow/capital-flow.service';
 import { translationService, SUPPORTED_LANGUAGES } from '../translation/translation.service';
@@ -971,19 +981,19 @@ class ConciergeService {
       switch (intent) {
         // ===== CAPITAL FLOW INTENTS =====
         case 'CAPITAL_FLOW_SUMMARY':
-          return await this.handleCapitalFlowSummary(detectedLanguage, creditBalance);
+          return await this.handleCapitalFlowSummary(detectedLanguage, creditBalance, message);
 
         case 'CAPITAL_FLOW_LIQUIDITY':
-          return await this.handleCapitalFlowLiquidity(detectedLanguage, creditBalance);
+          return await this.handleCapitalFlowLiquidity(detectedLanguage, creditBalance, message);
 
         case 'CAPITAL_FLOW_MARKETS':
-          return await this.handleCapitalFlowMarkets(detectedLanguage, creditBalance);
+          return await this.handleCapitalFlowMarkets(detectedLanguage, creditBalance, message);
 
         case 'CAPITAL_FLOW_SECTORS':
-          return await this.handleCapitalFlowSectors(market || 'crypto', detectedLanguage, creditBalance);
+          return await this.handleCapitalFlowSectors(market || 'crypto', detectedLanguage, creditBalance, message);
 
         case 'CAPITAL_FLOW_RECOMMENDATION':
-          return await this.handleCapitalFlowRecommendation(detectedLanguage, creditBalance, symbol);
+          return await this.handleCapitalFlowRecommendation(detectedLanguage, creditBalance, symbol, message);
 
         // ===== PLATFORM INTENTS =====
         case 'PLATFORM_INFO':
@@ -1116,65 +1126,61 @@ class ConciergeService {
 
   // ===== CAPITAL FLOW HANDLERS =====
 
-  private async handleCapitalFlowSummary(language: string, creditBalance: number): Promise<ConciergeResponse> {
+  private async handleCapitalFlowSummary(language: string, creditBalance: number, userMessage?: string): Promise<ConciergeResponse> {
     try {
       const summary = await capitalFlowService.getCapitalFlowSummary();
-
-      // Format global liquidity (English base)
       const liquidity = summary.globalLiquidity;
-      const liquidityText = `📊 LAYER 1: GLOBAL LIQUIDITY
+      const rec = summary.recommendation;
 
-Fed Balance Sheet: $${(liquidity.fedBalanceSheet.value / 1e12).toFixed(2)}T (${liquidity.fedBalanceSheet.change30d > 0 ? '+' : ''}${liquidity.fedBalanceSheet.change30d.toFixed(1)}% 30D)
-→ Status: ${liquidity.fedBalanceSheet.trend === 'expanding' ? 'Expanding ✅' : liquidity.fedBalanceSheet.trend === 'contracting' ? 'Contracting ⚠️' : 'Stable'}
+      // Build structured context for AI synthesis
+      const dataContext = buildCapitalFlowSummaryContext({
+        liquidityBias: summary.liquidityBias,
+        fedTrend: liquidity.fedBalanceSheet.trend,
+        dxyTrend: liquidity.dxy.trend,
+        dxyValue: liquidity.dxy.value,
+        vixValue: liquidity.vix.value,
+        vixLevel: liquidity.vix.level,
+        markets: summary.markets.map(m => ({
+          market: m.market,
+          flow7d: m.flow7d,
+          flow30d: m.flow30d,
+          phase: m.phase,
+          rotationSignal: m.rotationSignal,
+        })),
+        recommendation: {
+          action: rec.action,
+          primaryMarket: rec.primaryMarket,
+          confidence: rec.confidence,
+          reason: rec.reason,
+        },
+      });
 
-M2 Money Supply: $${(liquidity.m2MoneySupply.value / 1e12).toFixed(2)}T (YoY: ${liquidity.m2MoneySupply.yoyGrowth > 0 ? '+' : ''}${liquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%)
-
-DXY (Dollar): ${liquidity.dxy.value.toFixed(2)} (${liquidity.dxy.trend === 'weakening' ? 'Weakening → Risk-On ✅' : liquidity.dxy.trend === 'strengthening' ? 'Strengthening → Risk-Off ⚠️' : 'Stable'})
-
-VIX (Fear): ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level === 'complacent' ? 'Low → Calm Market' : liquidity.vix.level === 'fear' ? 'Elevated → Caution' : liquidity.vix.level === 'extreme_fear' ? 'High → Panic ⚠️' : 'Neutral'})
-
-Yield Curve (10Y-2Y): ${liquidity.yieldCurve.spread10y2y.toFixed(2)}bp ${liquidity.yieldCurve.inverted ? '⚠️ INVERTED (Recession signal)' : '✅ Normal'}`;
-
-      // Format market flows (English base)
+      // Template fallback
       const marketsText = summary.markets.map(m => {
         const phaseEmoji = m.phase === 'early' ? '🟢' : m.phase === 'mid' ? '🟡' : m.phase === 'late' ? '🟠' : '🔴';
         const flowSign = m.flow7d > 0 ? '+' : '';
-        return `${m.market.toUpperCase()}: ${flowSign}${m.flow7d.toFixed(1)}% 7D | ${phaseEmoji} ${m.phase.toUpperCase()} phase (${m.daysInPhase}D)`;
+        return `${m.market.toUpperCase()}: ${flowSign}${m.flow7d.toFixed(1)}% 7D | ${phaseEmoji} ${m.phase.toUpperCase()} (${m.daysInPhase}D)`;
       }).join('\n');
 
-      // Format recommendation (English base)
-      const rec = summary.recommendation;
-      const recText = `🎯 RECOMMENDATION: ${rec.primaryMarket.toUpperCase()} market (${rec.confidence}% confidence)
-Action: ${rec.action === 'analyze' ? '✅ ANALYZE' : rec.action === 'wait' ? '⏳ WAIT' : '⛔ AVOID'}
-${rec.reason}`;
+      const templateFallback = `🌐 **Capital Flow Radar**
 
-      const biasText = `\n📈 Liquidity Bias: ${summary.liquidityBias === 'risk_on' ? 'RISK-ON ✅' : summary.liquidityBias === 'risk_off' ? 'RISK-OFF ⚠️' : 'NEUTRAL'}`;
+📈 Liquidity Bias: **${summary.liquidityBias === 'risk_on' ? 'RISK-ON' : summary.liquidityBias === 'risk_off' ? 'RISK-OFF' : 'NEUTRAL'}**
+DXY: ${liquidity.dxy.value.toFixed(2)} (${liquidity.dxy.trend}) | VIX: ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level})
 
-      // Build English message
-      const messageEn = `═══════════════════════════════════
-CAPITAL FLOW RADAR 🌐
-"Where money flows, potential exists"
-═══════════════════════════════════
-
-${liquidityText}
-${biasText}
-
-═══════════════════════════════════
-📊 LAYER 2: MARKET FLOW
-═══════════════════════════════════
+📊 Market Flows:
 ${marketsText}
 
-═══════════════════════════════════
-${recText}
-═══════════════════════════════════
+🎯 Recommendation: **${rec.action.toUpperCase()} ${rec.primaryMarket.toUpperCase()}** (${rec.confidence}%)
+${rec.reason}`;
 
-💡 For more details:
-• "Global liquidity status" - Layer 1 detail
-• "Which market is leading?" - Layer 2 detail
-• "${rec.primaryMarket} sectors" - Layer 3 detail`;
-
-      // Translate to target language if needed (supports 18 languages)
-      const message = await this.translateIfNeeded(messageEn, language);
+      // AI-powered synthesis
+      const message = await synthesizeWithAI({
+        intent: 'CAPITAL_FLOW_SUMMARY',
+        userMessage: userMessage || 'Where is capital flowing?',
+        dataContext,
+        language,
+        templateFallback,
+      });
 
       return {
         success: true,
@@ -1201,46 +1207,44 @@ ${recText}
     }
   }
 
-  private async handleCapitalFlowLiquidity(language: string, creditBalance: number): Promise<ConciergeResponse> {
+  private async handleCapitalFlowLiquidity(language: string, creditBalance: number, userMessage?: string): Promise<ConciergeResponse> {
     try {
       const liquidity = await capitalFlowService.getGlobalLiquidity();
 
-      // Build English message
-      const messageEn = `═══════════════════════════════════
-📊 LAYER 1: GLOBAL LIQUIDITY
-═══════════════════════════════════
+      // Build structured context for AI synthesis
+      const dataContext = buildCapitalFlowLiquidityContext({
+        fedBalanceSheet: liquidity.fedBalanceSheet,
+        m2MoneySupply: liquidity.m2MoneySupply,
+        dxy: liquidity.dxy,
+        vix: liquidity.vix,
+        yieldCurve: liquidity.yieldCurve,
+      });
 
-🏦 FED BALANCE SHEET
-Value: $${(liquidity.fedBalanceSheet.value / 1e12).toFixed(2)} Trillion
-30D Change: ${liquidity.fedBalanceSheet.change30d > 0 ? '+' : ''}${liquidity.fedBalanceSheet.change30d.toFixed(2)}%
-Trend: ${liquidity.fedBalanceSheet.trend === 'expanding' ? '📈 EXPANDING (Liquidity increasing)' : liquidity.fedBalanceSheet.trend === 'contracting' ? '📉 CONTRACTING (Liquidity decreasing)' : '➡️ STABLE'}
+      // Template fallback
+      const conclusion = liquidity.fedBalanceSheet.trend === 'expanding' && liquidity.dxy.trend === 'weakening'
+        ? 'RISK-ON: Favorable for risk assets'
+        : liquidity.fedBalanceSheet.trend === 'contracting' || liquidity.dxy.trend === 'strengthening'
+        ? 'RISK-OFF: Safe havens preferred'
+        : 'MIXED signals: Cautious approach';
 
-💵 M2 MONEY SUPPLY
-Value: $${(liquidity.m2MoneySupply.value / 1e12).toFixed(2)} Trillion
-30D Change: ${liquidity.m2MoneySupply.change30d > 0 ? '+' : ''}${liquidity.m2MoneySupply.change30d.toFixed(2)}%
-YoY Growth: ${liquidity.m2MoneySupply.yoyGrowth > 0 ? '+' : ''}${liquidity.m2MoneySupply.yoyGrowth.toFixed(2)}%
+      const templateFallback = `📊 **Layer 1: Global Liquidity**
 
-💱 DXY (DOLLAR INDEX)
-Value: ${liquidity.dxy.value.toFixed(2)}
-7D Change: ${liquidity.dxy.change7d > 0 ? '+' : ''}${liquidity.dxy.change7d.toFixed(2)}%
-Trend: ${liquidity.dxy.trend === 'weakening' ? '📉 WEAKENING → Bullish for risk assets ✅' : liquidity.dxy.trend === 'strengthening' ? '📈 STRENGTHENING → Bearish for risk assets ⚠️' : '➡️ STABLE'}
+🏦 Fed: $${(liquidity.fedBalanceSheet.value / 1e12).toFixed(2)}T (${liquidity.fedBalanceSheet.trend})
+💵 M2: $${(liquidity.m2MoneySupply.value / 1e12).toFixed(2)}T (YoY: ${liquidity.m2MoneySupply.yoyGrowth > 0 ? '+' : ''}${liquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%)
+💱 DXY: ${liquidity.dxy.value.toFixed(2)} (${liquidity.dxy.trend})
+😱 VIX: ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level})
+📈 Yield Curve: ${liquidity.yieldCurve.spread10y2y.toFixed(2)}bp ${liquidity.yieldCurve.inverted ? '⚠️ INVERTED' : '✅ Normal'}
 
-😱 VIX (FEAR INDEX)
-Value: ${liquidity.vix.value.toFixed(2)}
-Level: ${liquidity.vix.level === 'complacent' ? '🟢 LOW (Calm market, complacency)' : liquidity.vix.level === 'fear' ? '🟡 ELEVATED (Rising concern)' : liquidity.vix.level === 'extreme_fear' ? '🔴 HIGH (Panic mode)' : '⚪ NEUTRAL'}
+📌 **${conclusion}**`;
 
-📈 YIELD CURVE (10Y-2Y)
-Spread: ${liquidity.yieldCurve.spread10y2y.toFixed(2)} basis points
-Status: ${liquidity.yieldCurve.inverted ? '⚠️ INVERTED - Recession signal!' : '✅ NORMAL CURVE'}
-Interpretation: ${liquidity.yieldCurve.interpretation}
-
-═══════════════════════════════════
-📌 CONCLUSION
-═══════════════════════════════════
-${liquidity.fedBalanceSheet.trend === 'expanding' && liquidity.dxy.trend === 'weakening' ? '✅ RISK-ON environment: Favorable for risk assets (crypto, stocks)' : liquidity.fedBalanceSheet.trend === 'contracting' || liquidity.dxy.trend === 'strengthening' ? '⚠️ RISK-OFF environment: Safe havens (bonds, gold) may be preferred' : '➡️ MIXED signals: Cautious approach recommended'}`;
-
-      // Translate to target language if needed (supports 18 languages)
-      const message = await this.translateIfNeeded(messageEn, language);
+      // AI-powered synthesis
+      const message = await synthesizeWithAI({
+        intent: 'CAPITAL_FLOW_LIQUIDITY',
+        userMessage: userMessage || 'Global liquidity status',
+        dataContext,
+        language,
+        templateFallback,
+      });
 
       return {
         success: true,
@@ -1267,50 +1271,48 @@ ${liquidity.fedBalanceSheet.trend === 'expanding' && liquidity.dxy.trend === 'we
     }
   }
 
-  private async handleCapitalFlowMarkets(language: string, creditBalance: number): Promise<ConciergeResponse> {
+  private async handleCapitalFlowMarkets(language: string, creditBalance: number, userMessage?: string): Promise<ConciergeResponse> {
     try {
       const markets = await capitalFlowService.getAllMarketFlows();
 
-      // Build English market cards
-      const marketCards = markets.map(m => {
-        const phaseEmoji = m.phase === 'early' ? '🟢' : m.phase === 'mid' ? '🟡' : m.phase === 'late' ? '🟠' : '🔴';
-        const rotationEmoji = m.rotationSignal === 'entering' ? '📥' : m.rotationSignal === 'exiting' ? '📤' : '➡️';
-        const flow7dSign = m.flow7d > 0 ? '+' : '';
-        const flow30dSign = m.flow30d > 0 ? '+' : '';
-
-        return `═══════════════════════════════════
-${m.market.toUpperCase()} MARKET
-═══════════════════════════════════
-📊 Flow (7D): ${flow7dSign}${m.flow7d.toFixed(2)}%
-📊 Flow (30D): ${flow30dSign}${m.flow30d.toFixed(2)}%
-🚀 Velocity: ${m.flowVelocity > 0 ? 'Accelerating ↑' : m.flowVelocity < 0 ? 'Decelerating ↓' : 'Stable'}
-
-${phaseEmoji} Phase: ${m.phase.toUpperCase()} (${m.daysInPhase} days)
-${rotationEmoji} Rotation: ${m.rotationSignal === 'entering' ? 'CAPITAL ENTERING' : m.rotationSignal === 'exiting' ? 'CAPITAL EXITING' : 'STABLE'}
-
-${m.phase === 'early' ? '✅ OPTIMAL ENTRY TIMING' : m.phase === 'mid' ? '⚠️ CAN ENTER (carefully)' : m.phase === 'late' ? '⛔ NEW ENTRY NOT RECOMMENDED' : '🚫 NEVER ENTER'}`;
+      // Build structured context for AI synthesis
+      const dataContext = buildCapitalFlowMarketsContext({
+        markets: markets.map(m => ({
+          market: m.market,
+          flow7d: m.flow7d,
+          flow30d: m.flow30d,
+          flowVelocity: m.flowVelocity,
+          phase: m.phase,
+          daysInPhase: m.daysInPhase,
+          rotationSignal: m.rotationSignal,
+        })),
       });
 
-      // Find best market
+      // Find best market for template
       const bestMarket = markets.reduce((best, m) =>
         m.flow7d > best.flow7d && (m.phase === 'early' || m.phase === 'mid') ? m : best
       , markets[0]);
 
-      // Build English message
-      const messageEn = `═══════════════════════════════════
-📊 LAYER 2: MARKET FLOW
-"Where is money going?"
-═══════════════════════════════════
+      // Template fallback
+      const marketLines = markets.map(m => {
+        const phaseEmoji = m.phase === 'early' ? '🟢' : m.phase === 'mid' ? '🟡' : m.phase === 'late' ? '🟠' : '🔴';
+        return `${phaseEmoji} **${m.market.toUpperCase()}**: ${m.flow7d > 0 ? '+' : ''}${m.flow7d.toFixed(1)}% 7D | ${m.phase.toUpperCase()} (${m.daysInPhase}D) | ${m.rotationSignal === 'entering' ? '📥 Entering' : m.rotationSignal === 'exiting' ? '📤 Exiting' : '➡️ Stable'}`;
+      }).join('\n');
 
-${marketCards.join('\n\n')}
+      const templateFallback = `📊 **Layer 2: Market Flow**
 
-═══════════════════════════════════
-🎯 BEST OPPORTUNITY: ${bestMarket.market.toUpperCase()}
-${bestMarket.flow7d > 0 ? `+${bestMarket.flow7d.toFixed(2)}% weekly inflow` : 'Relatively strong'} | ${bestMarket.phase.toUpperCase()} phase
-═══════════════════════════════════`;
+${marketLines}
 
-      // Translate to target language if needed (supports 18 languages)
-      const message = await this.translateIfNeeded(messageEn, language);
+🎯 **Best Opportunity:** ${bestMarket.market.toUpperCase()} — ${bestMarket.flow7d > 0 ? `+${bestMarket.flow7d.toFixed(1)}%` : 'Relatively strong'} | ${bestMarket.phase.toUpperCase()} phase`;
+
+      // AI-powered synthesis
+      const message = await synthesizeWithAI({
+        intent: 'CAPITAL_FLOW_MARKETS',
+        userMessage: userMessage || 'Which market is leading?',
+        dataContext,
+        language,
+        templateFallback,
+      });
 
       return {
         success: true,
@@ -1337,53 +1339,58 @@ ${bestMarket.flow7d > 0 ? `+${bestMarket.flow7d.toFixed(2)}% weekly inflow` : 'R
     }
   }
 
-  private async handleCapitalFlowSectors(market: string, language: string, creditBalance: number): Promise<ConciergeResponse> {
+  private async handleCapitalFlowSectors(market: string, language: string, creditBalance: number, userMessage?: string): Promise<ConciergeResponse> {
     try {
       const marketFlow = await capitalFlowService.getMarketFlow(market as 'crypto' | 'stocks' | 'bonds' | 'metals');
 
       if (!marketFlow.sectors || marketFlow.sectors.length === 0) {
-        const noDataMessage = await this.translateIfNeeded(
-          `No sector data available for ${market.toUpperCase()} market.`,
-          language
-        );
         return {
           success: true,
           intent: 'CAPITAL_FLOW_SECTORS',
-          message: noDataMessage,
+          message: `No sector data available for ${market.toUpperCase()} market.`,
           creditsSpent: 0,
           creditsRemaining: creditBalance,
           detectedLanguage: language,
         };
       }
 
-      // Build English sector cards
-      const sectorCards = marketFlow.sectors
-        .sort((a, b) => b.flow7d - a.flow7d)
-        .map((s, i) => {
-          const rankEmoji = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  ';
-          const flowSign = s.flow7d > 0 ? '+' : '';
-          return `${rankEmoji} ${s.name}: ${flowSign}${s.flow7d.toFixed(2)}% (7D) | 30D: ${s.flow30d > 0 ? '+' : ''}${s.flow30d.toFixed(2)}% | Dom: ${s.dominance.toFixed(1)}%`;
-        });
+      // Build structured context for AI synthesis
+      const sortedSectors = [...marketFlow.sectors].sort((a, b) => b.flow7d - a.flow7d);
+      const dataContext = buildSectorsContext({
+        market,
+        sectors: sortedSectors.map(s => ({
+          name: s.name,
+          flow7d: s.flow7d,
+          flow30d: s.flow30d,
+          dominance: s.dominance,
+          topAssets: s.topAssets || [],
+        })),
+      });
 
-      const topSector = marketFlow.sectors.sort((a, b) => b.flow7d - a.flow7d)[0];
+      const topSector = sortedSectors[0];
 
-      // Build English message
-      const messageEn = `═══════════════════════════════════
-📊 LAYER 3: ${market.toUpperCase()} SECTOR FLOW
-═══════════════════════════════════
+      // Template fallback
+      const sectorLines = sortedSectors.map((s, i) => {
+        const rankEmoji = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  ';
+        return `${rankEmoji} **${s.name}**: ${s.flow7d > 0 ? '+' : ''}${s.flow7d.toFixed(1)}% 7D | ${s.dominance.toFixed(1)}% dom`;
+      }).join('\n');
 
-${sectorCards.join('\n')}
+      const templateFallback = `📊 **Layer 3: ${market.toUpperCase()} Sectors**
 
-═══════════════════════════════════
-🎯 STRONGEST SECTOR: ${topSector.name}
-${topSector.flow7d > 0 ? `+${topSector.flow7d.toFixed(2)}% weekly inflow` : 'Relatively strong'}
-═══════════════════════════════════
+${sectorLines}
 
-💡 Next step: Analyze assets in this sector
-Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
+🎯 **Strongest:** ${topSector.name} — ${topSector.flow7d > 0 ? `+${topSector.flow7d.toFixed(1)}%` : 'Relatively strong'}
 
-      // Translate to target language if needed (supports 18 languages)
-      const message = await this.translateIfNeeded(messageEn, language);
+📌 Next Step: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
+
+      // AI-powered synthesis
+      const message = await synthesizeWithAI({
+        intent: 'CAPITAL_FLOW_SECTORS',
+        userMessage: userMessage || `${market} sectors`,
+        dataContext,
+        language,
+        templateFallback,
+      });
 
       return {
         success: true,
@@ -1410,162 +1417,60 @@ Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
     }
   }
 
-  private async handleCapitalFlowRecommendation(language: string, creditBalance: number, assetHint?: string): Promise<ConciergeResponse> {
+  private async handleCapitalFlowRecommendation(language: string, creditBalance: number, assetHint?: string, userMessage?: string): Promise<ConciergeResponse> {
     try {
       // Get full summary to access market flows
       const summary = await capitalFlowService.getCapitalFlowSummary();
       const recommendation = summary.recommendation;
 
-      // Find markets with positive and negative flows
-      const sortedMarkets = [...summary.markets].sort((a, b) => b.flow30d - a.flow30d);
-      const inflowMarket = sortedMarkets[0]; // Highest positive flow
-      const outflowMarket = sortedMarkets[sortedMarkets.length - 1]; // Lowest/negative flow
+      // Build structured context for AI synthesis
+      const dataContext = buildCapitalFlowRecommendationContext({
+        recommendation: {
+          action: recommendation.action,
+          primaryMarket: recommendation.primaryMarket,
+          confidence: recommendation.confidence,
+          reason: recommendation.reason,
+          suggestedAssets: recommendation.suggestedAssets,
+        },
+        liquidityBias: summary.liquidityBias,
+        markets: summary.markets.map(m => ({
+          market: m.market,
+          flow7d: m.flow7d,
+          flow30d: m.flow30d,
+          phase: m.phase,
+          rotationSignal: m.rotationSignal,
+        })),
+        assetHint,
+      });
 
-      // Market name translations
-      const marketNamesTr: Record<string, string> = {
-        crypto: 'Kripto',
-        stocks: 'Hisseler',
-        bonds: 'Bonolar',
-        metals: 'Metaller'
-      };
-
-      // If asset hint is provided, generate a dynamic response based on actual data
-      if (assetHint) {
-        // Determine asset market and names
-        let assetMarket = 'crypto';
-        let assetNameTr = assetHint;
-        let assetNameEn = assetHint;
-        let analysisSymbol = assetHint;
-        let assetEmojiIcon = '🪙';
-        let marketNameTr = 'Kripto';
-        let marketNameEn = 'Crypto';
-
-        if (assetHint === 'GOLD' || assetHint === 'SILVER') {
-          assetMarket = 'metals';
-          assetNameTr = assetHint === 'GOLD' ? 'Altın' : 'Gümüş';
-          assetNameEn = assetHint === 'GOLD' ? 'Gold' : 'Silver';
-          analysisSymbol = assetHint === 'GOLD' ? 'GLD' : 'SLV';
-          assetEmojiIcon = '🥇';
-          marketNameTr = 'Metal';
-          marketNameEn = 'Metals';
-        } else if (assetHint === 'STOCKS' || assetHint === 'SPY' || assetHint === 'QQQ' || assetHint === 'AAPL' || assetHint === 'MSFT' || assetHint === 'GOOGL' || assetHint === 'TSLA') {
-          assetMarket = 'stocks';
-          assetNameTr = assetHint === 'STOCKS' ? 'Hisse Senetleri' : assetHint;
-          assetNameEn = assetHint === 'STOCKS' ? 'Stocks' : assetHint;
-          analysisSymbol = assetHint === 'STOCKS' ? 'SPY' : assetHint;
-          assetEmojiIcon = '📈';
-          marketNameTr = 'Hisse';
-          marketNameEn = 'Stocks';
-        } else if (assetHint === 'BONDS' || assetHint === 'TLT' || assetHint === 'IEF' || assetHint === 'BND') {
-          assetMarket = 'bonds';
-          assetNameTr = assetHint === 'BONDS' ? 'Tahviller' : assetHint;
-          assetNameEn = assetHint === 'BONDS' ? 'Bonds' : assetHint;
-          analysisSymbol = assetHint === 'BONDS' ? 'TLT' : assetHint;
-          assetEmojiIcon = '📊';
-          marketNameTr = 'Tahvil';
-          marketNameEn = 'Bonds';
-        }
-
-        // Get actual flow data for the asset's market
-        const assetMarketFlow = summary.markets.find(m => m.market === assetMarket);
-        const flow30d = assetMarketFlow?.flow30d ?? 0;
-        const flowVelocity = assetMarketFlow?.flowVelocity ?? 0;
-        const phase = assetMarketFlow?.phase ?? 'mid';
-        const rotationSignal = assetMarketFlow?.rotationSignal ?? 'stable';
-
-        // Get inflow market data
-        const inflowFlow30d = inflowMarket?.flow30d ?? 0;
-        const inflowMarketNameTr = marketNamesTr[inflowMarket?.market || 'bonds'] || 'Bonolar';
-        const inflowMarketNameEn = inflowMarket?.market ? inflowMarket.market.charAt(0).toUpperCase() + inflowMarket.market.slice(1) : 'Bonds';
-
-        // Generate dynamic response based on actual data
-        const organicMessage = this.generateDataDrivenAssetResponse({
-          language,
-          assetNameTr,
-          assetNameEn,
-          assetEmojiIcon,
-          analysisSymbol,
-          marketNameTr,
-          marketNameEn,
-          flow30d,
-          flowVelocity,
-          phase,
-          rotationSignal,
-          inflowMarketNameTr,
-          inflowMarketNameEn,
-          inflowFlow30d,
-        });
-
-        return {
-          success: true,
-          intent: 'CAPITAL_FLOW_RECOMMENDATION',
-          message: organicMessage,
-          creditsSpent: 0,
-          creditsRemaining: creditBalance,
-          detectedLanguage: language,
-        };
-      }
-
-      // Determine next steps based on action (English base)
-      let nextSteps: string;
-      if (recommendation.action === 'analyze') {
-        nextSteps = `1. "${recommendation.primaryMarket} sectors" - Sector analysis
-2. Select an asset from strong sector
-3. "Analyze BTC" or "BTC mlis pro" - Asset analysis`;
-      } else if (recommendation.action === 'wait') {
-        nextSteps = `Wait for now:
-• Liquidity conditions uncertain
-• Clear direction signal pending
-• Monitor with "Where is money flowing?"`;
-      } else {
-        nextSteps = `Risk management advised:
-• Reduce positions
-• Tighten stop-losses
-• Consider safe havens (gold, bonds)`;
-      }
-
-      // Build action emoji, confidence bar, and asset advice
+      // Template fallback
       const actionEmoji = recommendation.action === 'analyze' ? '✅' : recommendation.action === 'wait' ? '⏳' : '⛔';
-      const confidencePercent = Math.min(100, Math.max(0, recommendation.confidence));
-      const filledBars = Math.round(confidencePercent / 10);
-      const confidenceBar = '█'.repeat(filledBars) + '░'.repeat(10 - filledBars);
+      let templateFallback = `🎯 **AI Recommendation**
 
-      // Generate asset-specific advice if we have suggested assets
-      let assetAdvice = '';
+${actionEmoji} **${recommendation.action.toUpperCase()} ${recommendation.primaryMarket.toUpperCase()}** (${recommendation.confidence}% confidence)
+
+${recommendation.reason}`;
+
       if (recommendation.suggestedAssets && recommendation.suggestedAssets.length > 0) {
         const assetList = recommendation.suggestedAssets
           .slice(0, 3)
-          .map(a => `• ${a.symbol} (${a.name}) - ${a.reason}`)
+          .map(a => `• **${a.symbol}** (${a.name}) — ${a.reason}`)
           .join('\n');
-        assetAdvice = language === 'tr'
-          ? `\n\n📌 ÖNERİLEN VARLIKLAR:\n${assetList}`
-          : `\n\n📌 SUGGESTED ASSETS:\n${assetList}`;
+        templateFallback += `\n\n📌 Suggested Assets:\n${assetList}`;
       }
 
-      // Build English message
-      const messageEn = `🎯 AI RECOMMENDATION
-"Where money flows, potential exists"
-
-📊 RECOMMENDED MARKET: ${recommendation.primaryMarket.toUpperCase()}
-
-${actionEmoji} ACTION: ${recommendation.action === 'analyze' ? 'ANALYZE' : recommendation.action === 'wait' ? 'WAIT' : 'AVOID'}
-
-📈 CONFIDENCE: ${recommendation.confidence}%
-[${confidenceBar}]
-
-💡 REASONING:
-${recommendation.reason}
-
-📌 NEXT STEPS:
-${nextSteps}`;
-
-      // Translate main message to target language if needed
-      let message = await this.translateIfNeeded(messageEn, language);
-
-      // Add asset-specific advice (already localized)
-      if (assetAdvice) {
-        message += assetAdvice;
+      if (assetHint) {
+        templateFallback += `\n\n📌 Next Step: "Analyze ${assetHint}" for detailed technical analysis`;
       }
+
+      // AI-powered synthesis
+      const message = await synthesizeWithAI({
+        intent: 'CAPITAL_FLOW_RECOMMENDATION',
+        userMessage: userMessage || `What should I trade?${assetHint ? ` Should I buy ${assetHint}?` : ''}`,
+        dataContext,
+        language,
+        templateFallback,
+      });
 
       return {
         success: true,
@@ -3551,8 +3456,6 @@ ${synthesis}`;
       const score = verdictResult.overallScore || 5;
       const direction = tradePlanResult?.direction || undefined;
 
-      const synthesis = this.generateNaturalResponse(upperSymbol, interval, verdict, score, language);
-
       // Build trade plan for response
       let tradePlan: any | undefined;
       if (tradePlanResult) {
@@ -3565,25 +3468,53 @@ ${synthesis}`;
         };
       }
 
-      // Localized labels
+      // Build structured context for AI synthesis
+      const tradeType_ = getTradeType(interval);
+      const tp1 = tradePlanResult?.takeProfits?.[0];
+      const tp2 = tradePlanResult?.takeProfits?.[1];
+      const dataContext = buildAnalysisResultContext({
+        symbol: upperSymbol,
+        interval,
+        tradeType: tradeType_,
+        verdict,
+        score,
+        direction: direction || 'unknown',
+        entry: Number(tradePlanResult?.averageEntry) || 0,
+        stopLoss: typeof tradePlanResult?.stopLoss === 'number' ? tradePlanResult.stopLoss : Number((tradePlanResult?.stopLoss as any)?.price) || 0,
+        takeProfit1: typeof tp1 === 'number' ? tp1 : Number(tp1?.price) || 0,
+        takeProfit2: typeof tp2 === 'number' ? tp2 : tp2?.price ? Number(tp2.price) : undefined,
+        riskReward: tradePlanResult?.riskReward || 0,
+        reasoning: verdictResult.aiSummary || verdictResult.recommendation || '',
+        stepResults: [
+          { step: 'Market Pulse', score: (marketPulse as Record<string, any>)?.score || 0, verdict: String((marketPulse as Record<string, any>)?.verdict || 'N/A'), summary: String((marketPulse as Record<string, any>)?.summary || '') },
+          { step: 'Asset Scanner', score: (assetScan as Record<string, any>)?.score || 0, verdict: String((assetScan as Record<string, any>)?.verdict || 'N/A'), summary: String((assetScan as Record<string, any>)?.summary || '') },
+          { step: 'Safety Check', score: (safetyCheck as Record<string, any>)?.score || 0, verdict: String((safetyCheck as Record<string, any>)?.verdict || 'N/A'), summary: String((safetyCheck as Record<string, any>)?.summary || '') },
+          { step: 'Timing', score: (timing as Record<string, any>)?.score || 0, verdict: String((timing as Record<string, any>)?.verdict || 'N/A'), summary: String((timing as Record<string, any>)?.summary || '') },
+          { step: 'Trap Check', score: (trapCheck as Record<string, any>)?.score || 0, verdict: String((trapCheck as Record<string, any>)?.verdict || 'N/A'), summary: String((trapCheck as Record<string, any>)?.summary || '') },
+        ],
+      });
+
+      // Template fallback
       const verdictLabel = verdict === 'GO' ? 'GO'
         : verdict === 'AVOID' ? (isTurkish ? 'KAÇIN' : 'AVOID')
         : verdict === 'CONDITIONAL_GO' ? (isTurkish ? 'ŞARTLI' : 'COND')
         : (isTurkish ? 'BEKLE' : 'WAIT');
 
-      const analysisMessage = isTurkish
-        ? `${upperSymbol} ${interval.toUpperCase()} Analizi
-
-Karar: ${verdictLabel}
-Skor: ${score}/10
-
-${synthesis}`
-        : `${upperSymbol} ${interval.toUpperCase()} Analysis
+      const templateFallback = `${upperSymbol} ${interval.toUpperCase()} Analysis
 
 Verdict: ${verdictLabel}
 Score: ${score}/10
 
-${synthesis}`;
+${this.generateNaturalResponse(upperSymbol, interval, verdict, score, language)}`;
+
+      // AI-powered synthesis for analysis results
+      const analysisMessage = await synthesizeWithAI({
+        intent: 'ANALYSIS',
+        userMessage: `Analyze ${upperSymbol} ${interval}`,
+        dataContext,
+        language,
+        templateFallback,
+      });
 
       return {
         success: true,
@@ -3596,7 +3527,7 @@ ${synthesis}`;
         score: score,
         direction: direction,
         tradePlan: tradePlan,
-        voltranSynthesis: synthesis,
+        voltranSynthesis: analysisMessage,
         detectedLanguage: language,
       };
 

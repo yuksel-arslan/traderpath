@@ -8,6 +8,8 @@ import {
   HelpResult,
   ConciergeResultData,
 } from './types';
+import { callGeminiWithRetry } from '../../core/gemini';
+import { AI_RESPONSE_SYNTHESIS_PROMPT } from './system-prompt';
 
 interface SynthesizeOptions {
   language: string;
@@ -365,5 +367,64 @@ export function synthesizeResponse(options: SynthesizeOptions): { message: strin
 
     default:
       return synthesizeError(getMessage(language, 'unknownIntent'), language);
+  }
+}
+
+// ===========================================
+// AI-POWERED RESPONSE SYNTHESIS
+// ===========================================
+
+/**
+ * Uses Gemini AI to generate an intelligent, contextual response
+ * based on raw data and the user's intent. Falls back to template
+ * if AI fails.
+ *
+ * @param intent - The detected intent type
+ * @param userMessage - The original user message
+ * @param dataContext - Structured data context string (from context builders)
+ * @param language - Response language code
+ * @param templateFallback - Pre-built template response to use if AI fails
+ * @returns AI-generated response string, or templateFallback on failure
+ */
+export async function synthesizeWithAI(params: {
+  intent: string;
+  userMessage: string;
+  dataContext: string;
+  language: string;
+  templateFallback: string;
+}): Promise<string> {
+  const { intent, userMessage, dataContext, language, templateFallback } = params;
+
+  try {
+    const prompt = AI_RESPONSE_SYNTHESIS_PROMPT
+      .replace('{LANGUAGE}', language === 'tr' ? 'Turkish' : 'English')
+      .replace('{INTENT}', intent)
+      .replace('{USER_MESSAGE}', userMessage.substring(0, 200))
+      .replace('{DATA_CONTEXT}', dataContext);
+
+    const response = await callGeminiWithRetry(
+      {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1000,
+        },
+      },
+      2,
+      'concierge_ai_synthesis',
+      'concierge'
+    );
+
+    const aiText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    if (aiText && aiText.length > 30) {
+      return aiText.trim();
+    }
+
+    // AI returned empty/short response — use template
+    return templateFallback;
+  } catch (error) {
+    console.error('[Concierge] AI synthesis failed, using template fallback:', error);
+    return templateFallback;
   }
 }
