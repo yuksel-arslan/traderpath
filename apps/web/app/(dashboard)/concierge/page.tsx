@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 import { UpgradeCard } from '@/components/modals/UpgradePrompt';
+import { StyledMessage } from '@/components/concierge';
 
 // Lazy load TradePlanChart
 const TradePlanChart = dynamic(
@@ -268,6 +269,7 @@ export default function ConciergePage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
   const [capitalFlow, setCapitalFlow] = useState<CapitalFlowData | null>(null);
   const [flowLoading, setFlowLoading] = useState(true);
@@ -325,17 +327,24 @@ export default function ConciergePage() {
   // Initialize speech recognition
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const SpeechRecognition = (window as unknown as Record<string, any>).SpeechRecognition || (window as unknown as Record<string, any>).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
+      const SpeechRecognitionClass = (window as unknown as Record<string, any>).SpeechRecognition || (window as unknown as Record<string, any>).webkitSpeechRecognition;
+      if (SpeechRecognitionClass) {
+        setSpeechSupported(true);
+        const recognition = new SpeechRecognitionClass();
         recognition.continuous = false;
-        recognition.interimResults = false;
+        recognition.interimResults = true;
         recognition.lang = navigator.language?.startsWith('tr') ? 'tr-TR' : 'en-US';
 
-        recognition.onresult = (event: { results: { [key: number]: { [key: number]: { transcript: string } } } }) => {
-          const text = event.results[0][0].transcript;
-          setInput(text);
-          setIsListening(false);
+        recognition.onresult = (event: { results: { length: number; [key: number]: { length: number; [key: number]: { transcript: string } } } }) => {
+          let transcript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            if (event.results[i]?.length > 0 && event.results[i][0]?.transcript) {
+              transcript += event.results[i][0].transcript;
+            }
+          }
+          if (transcript) {
+            setInput(transcript);
+          }
         };
 
         recognition.onerror = () => {
@@ -349,6 +358,12 @@ export default function ConciergePage() {
         recognitionRef.current = recognition;
       }
     }
+
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch { /* noop */ }
+      }
+    };
   }, []);
 
   // Auto-scroll
@@ -442,10 +457,11 @@ export default function ConciergePage() {
     setIsLoading(true);
 
     try {
+      const browserLang = typeof navigator !== 'undefined' ? navigator.language?.split('-')[0] || 'en' : 'en';
       const res = await authFetch('/api/concierge/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: messageText }),
+        body: JSON.stringify({ message: messageText, language: browserLang }),
       });
 
       const data = await res.json();
@@ -489,12 +505,18 @@ export default function ConciergePage() {
 
   // Toggle listening
   const toggleListening = () => {
+    if (!recognitionRef.current) return;
     if (isListening) {
-      recognitionRef.current?.stop();
+      recognitionRef.current.stop();
       setIsListening(false);
-    } else if (recognitionRef.current) {
-      recognitionRef.current.start();
-      setIsListening(true);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch {
+        // Already started or browser error
+        setIsListening(false);
+      }
     }
   };
 
@@ -745,7 +767,7 @@ export default function ConciergePage() {
                           <span className="text-xs font-semibold text-teal-600 dark:text-teal-400">AI Concierge</span>
                         </div>
                       )}
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-700 dark:text-white/80">{msg.content}</p>
+                      <StyledMessage content={msg.content} />
 
                       {/* Verdict Card */}
                       {msg.data?.verdict && (
@@ -860,14 +882,20 @@ export default function ConciergePage() {
                 {/* Loading */}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-gray-100 dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.06] rounded-xl px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex gap-1">
-                          <div className="w-2 h-2 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-2 h-2 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-2 h-2 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="bg-gradient-to-r from-teal-500/5 to-emerald-500/5 dark:from-teal-500/10 dark:to-emerald-500/10 border border-teal-500/20 rounded-xl px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <div className="w-8 h-8 rounded-full border-2 border-teal-500/30 border-t-teal-500 animate-spin" />
+                          <Bot className="w-4 h-4 text-teal-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                         </div>
-                        <span className="text-sm font-medium text-gray-500 dark:text-white/30">Analyzing flows...</span>
+                        <div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-white/70">Processing...</span>
+                          <div className="flex gap-1 mt-1">
+                            <div className="w-12 h-1 rounded-full bg-teal-500 animate-pulse" />
+                            <div className="w-8 h-1 rounded-full bg-teal-500/50 animate-pulse" style={{ animationDelay: '200ms' }} />
+                            <div className="w-4 h-1 rounded-full bg-teal-500/30 animate-pulse" style={{ animationDelay: '400ms' }} />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -911,18 +939,20 @@ export default function ConciergePage() {
                   onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
                   className="flex items-center gap-3"
                 >
-                  <button
-                    type="button"
-                    onClick={toggleListening}
-                    className={cn(
-                      "p-3 rounded-xl transition-all border",
-                      isListening
-                        ? "bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse border-red-400"
-                        : "bg-white dark:bg-[#0A0A0A] text-gray-500 dark:text-white/30 hover:bg-gray-50 dark:hover:bg-white/10 border-gray-200 dark:border-white/[0.06]"
-                    )}
-                  >
-                    {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                  </button>
+                  {speechSupported && (
+                    <button
+                      type="button"
+                      onClick={toggleListening}
+                      className={cn(
+                        "p-3 rounded-xl transition-all border",
+                        isListening
+                          ? "bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse border-red-400"
+                          : "bg-white dark:bg-[#0A0A0A] text-gray-500 dark:text-white/30 hover:bg-gray-50 dark:hover:bg-white/10 border-gray-200 dark:border-white/[0.06]"
+                      )}
+                    >
+                      {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                    </button>
+                  )}
 
                   <input
                     ref={inputRef}
