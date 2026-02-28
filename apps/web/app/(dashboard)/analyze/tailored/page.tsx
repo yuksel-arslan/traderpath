@@ -12,7 +12,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Search,
-  Target,
   Zap,
   Loader2,
   X,
@@ -22,11 +21,9 @@ import {
   Gem,
   Building2,
   Activity,
-  ArrowLeft,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
 import { authFetch, getAuthToken, getApiUrl } from '../../../../lib/api';
-import Link from 'next/link';
 import type { Timeframe } from '../../../../components/analysis/TradeTypeSelector';
 
 import { MarketPulseBar } from '../../../../components/analyze/tailored/MarketPulseBar';
@@ -34,6 +31,8 @@ import { TrendingStrip } from '../../../../components/analyze/tailored/TrendingS
 import { AssetCard } from '../../../../components/analyze/tailored/AssetCard';
 import { AssetConfigPanel } from '../../../../components/analyze/tailored/AssetConfigPanel';
 import { RecentAnalysesMobile } from '../../../../components/analyze/RecentAnalysesMobile';
+import { MarketContextPanel } from '../../../../components/analyze/MarketContextPanel';
+import { TrendingAssets } from '../../../../components/analyze/TrendingAssets';
 
 // Lazy load
 const AnalysisDialog = dynamic(
@@ -176,6 +175,7 @@ export default function TailoredAnalysisPage() {
   const [activeCategory, setActiveCategory] = useState<AssetCategory>('all');
   const [selectedAsset, setSelectedAsset] = useState<AssetItem | null>(null);
   const [timeframe, setTimeframe] = useState<Timeframe>('4h');
+  const [manualSymbol, setManualSymbol] = useState('');
 
   // Analysis dialog
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
@@ -248,6 +248,49 @@ export default function TailoredAnalysisPage() {
         verdict: normalizeVerdict(String(c.verdict ?? 'WAIT')),
       }));
   }, [topCoins]);
+
+  // Build trending assets for TrendingAssets panel
+  const trendingAssetsForPanel = useMemo(() => {
+    const raw = topCoins.slice(0, 4).map(c => ({
+      symbol: c.symbol,
+      score: Number(c.totalScore ?? c.reliabilityScore ?? c.score ?? 0),
+    }));
+    if (raw.length > 0) return raw;
+    const seen = new Set<string>();
+    return analyses
+      .filter(a => {
+        const key = a.symbol.toUpperCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 4)
+      .map(a => ({ symbol: a.symbol.replace(/USDT$/i, ''), score: a.score ?? 0 }));
+  }, [topCoins, analyses]);
+
+  // Build capitalFlow data for MarketContextPanel
+  const capitalFlowForPanel = useMemo(() => {
+    if (!cfData) return null;
+    return cfData as {
+      liquidityBias: 'risk_on' | 'risk_off' | 'neutral';
+      recommendation: { primaryMarket: string; confidence: number };
+      markets: { market: string; flow7d: number; phase: string }[];
+      globalLiquidity?: { vix?: { value: number; level: string }; dxy?: { value: number; trend: string } };
+    };
+  }, [cfData]);
+
+  // Handle manual symbol from Configure card
+  const handleManualSymbolAnalyze = useCallback((sym: string) => {
+    const symbol = sym.trim().toUpperCase();
+    if (!symbol) return;
+    const found = ASSET_CATALOG.find(a => a.symbol.toUpperCase() === symbol);
+    if (found) {
+      setSelectedAsset(found);
+    } else {
+      setSelectedAsset({ symbol, name: symbol, category: 'crypto' });
+    }
+    setManualSymbol('');
+  }, []);
 
   // Fetch daily pass status
   const fetchDailyPassStatus = useCallback(async () => {
@@ -474,180 +517,208 @@ export default function TailoredAnalysisPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0A0B0F]">
 
-      {/* Header */}
-      <div className="border-b border-slate-200 dark:border-white/5 bg-white dark:bg-[#0A0B0F]">
-        <div className="max-w-5xl mx-auto px-4 py-4 sm:py-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Link
-              href="/analyze"
-              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4 text-slate-500 dark:text-white/40" />
-            </Link>
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Target className="w-5 h-5 text-[#00D4FF]" />
-                Tailored Analysis
-              </h1>
-              <p className="text-xs text-slate-500 dark:text-white/40">Pick any asset, choose your timeframe, run analysis on your terms.</p>
-            </div>
+      {/* Search + Category Filter */}
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-4">
+        <div className="space-y-3">
+          {/* Search input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/30" />
+            <input
+              ref={searchRef}
+              type="text"
+              placeholder="Search assets... (BTC, AAPL, GLD, THYAO)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && customSearchSymbol) {
+                  handleSelectCustom();
+                }
+              }}
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.03] text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#00D4FF]/30 focus:border-[#00D4FF]/50"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2">
+                <X className="w-4 h-4 text-slate-400 dark:text-white/30 hover:text-slate-600 dark:hover:text-white/60" />
+              </button>
+            )}
           </div>
 
-          {/* Search + Category Filter */}
-          <div className="space-y-3">
-            {/* Search input */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/30" />
-              <input
-                ref={searchRef}
-                type="text"
-                placeholder="Search assets... (BTC, AAPL, GLD, THYAO)"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && customSearchSymbol) {
-                    handleSelectCustom();
-                  }
-                }}
-                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.03] text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#00D4FF]/30 focus:border-[#00D4FF]/50"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <X className="w-4 h-4 text-slate-400 dark:text-white/30 hover:text-slate-600 dark:hover:text-white/60" />
+          {/* Category tabs */}
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+            {CATEGORY_CONFIG.map(cat => {
+              const CatIcon = cat.icon;
+              const isCatActive = activeCategory === cat.key;
+              return (
+                <button
+                  key={cat.key}
+                  onClick={() => setActiveCategory(cat.key)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all',
+                    isCatActive
+                      ? 'text-white'
+                      : 'bg-slate-100 dark:bg-white/[0.04] text-slate-500 dark:text-white/40 hover:bg-slate-200 dark:hover:bg-white/[0.08]'
+                  )}
+                  style={isCatActive ? { background: 'linear-gradient(135deg, #00F5A0, #00D4FF)' } : undefined}
+                >
+                  <CatIcon className="w-3.5 h-3.5" />
+                  {cat.label}
                 </button>
-              )}
-            </div>
-
-            {/* Category tabs */}
-            <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
-              {CATEGORY_CONFIG.map(cat => {
-                const CatIcon = cat.icon;
-                const isActive = activeCategory === cat.key;
-                return (
-                  <button
-                    key={cat.key}
-                    onClick={() => setActiveCategory(cat.key)}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all',
-                      isActive
-                        ? 'text-white'
-                        : 'bg-slate-100 dark:bg-white/[0.04] text-slate-500 dark:text-white/40 hover:bg-slate-200 dark:hover:bg-white/[0.08]'
-                    )}
-                    style={isActive ? { background: 'linear-gradient(135deg, #00F5A0, #00D4FF)' } : undefined}
-                  >
-                    <CatIcon className="w-3.5 h-3.5" />
-                    {cat.label}
-                  </button>
-                );
-              })}
-            </div>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-[1400px] mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
 
-        {/* Market Pulse Bar */}
-        {marketPulse && (
-          <MarketPulseBar
-            regime={marketPulse.regime}
-            regimeConfidence={marketPulse.confidence}
-            topFlow={marketPulse.topFlow}
-            fearGreed={null}
-          />
-        )}
-
-        {/* Trending Strip */}
-        {!selectedAsset && trendingAssets.length > 0 && (
-          <TrendingStrip
-            assets={trendingAssets}
-            onSelect={handleSelectSymbol}
-          />
-        )}
-
-        {/* Selected Asset Config Panel */}
-        {selectedAsset && (
-          <AssetConfigPanel
-            symbol={selectedAsset.symbol}
-            name={selectedAsset.name}
-            price={selectedCoinData ? Number(selectedCoinData.currentPrice ?? selectedCoinData.price ?? 0) : undefined}
-            change24h={selectedCoinData ? Number(selectedCoinData.change24h ?? selectedCoinData.priceChange24h ?? 0) : undefined}
-            score={selectedCoinData ? Number(selectedCoinData.totalScore ?? selectedCoinData.reliabilityScore ?? selectedCoinData.score ?? 0) : undefined}
-            verdict={selectedCoinData ? String(selectedCoinData.verdict ?? '') : undefined}
-            timeframe={timeframe}
-            onTimeframeChange={setTimeframe}
-            onRun={runAnalysis}
-            onClose={() => setSelectedAsset(null)}
-            dailyPassStatus={dailyPassStatus}
-            purchasingPass={purchasingPass}
-            onPurchasePass={purchaseDailyPass}
-          />
-        )}
-
-        {/* Asset Grid */}
-        {!selectedAsset && (
-          <div>
-            {/* Custom symbol prompt when search doesn't match catalog */}
-            {customSearchSymbol && (
-              <button
-                onClick={handleSelectCustom}
-                className="w-full mb-4 p-3 rounded-xl text-left transition-all hover:scale-[1.01] border border-dashed border-[#00D4FF]/30 bg-[#00D4FF]/[0.03]"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#00D4FF]/10">
-                    <Zap className="w-4 h-4 text-[#00D4FF]" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-bold text-slate-900 dark:text-white block">
-                      Analyze &quot;{customSearchSymbol}&quot;
-                    </span>
-                    <span className="text-[10px] text-slate-500 dark:text-white/40">
-                      Custom symbol — press Enter or click to select
-                    </span>
-                  </div>
+          {/* ─── LEFT PANEL ──────────────────── */}
+          <div className="space-y-4">
+            {/* Configure */}
+            <div className="rounded-xl p-4 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
+              <span className="text-[10px] font-medium uppercase tracking-widest text-gray-500 dark:text-white/40">Configure</span>
+              <div className="mt-3">
+                <label className="text-[10px] block mb-1.5 text-gray-400 dark:text-white/30">Manual Symbol</label>
+                <div className="relative">
+                  <input type="text" value={manualSymbol} onChange={e => setManualSymbol(e.target.value.toUpperCase())}
+                    onKeyDown={e => { if (e.key === 'Enter' && manualSymbol.trim()) handleManualSymbolAnalyze(manualSymbol); }}
+                    className="w-full rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white outline-none transition-all focus:ring-1 focus:ring-[#00F5A0] bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08]"
+                    style={{ fontFamily: "'JetBrains Mono', monospace", caretColor: '#00F5A0' }} placeholder="BTC, SOL, ETH..." />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 dark:text-white/20">USDT</span>
                 </div>
-              </button>
+                {manualSymbol.trim() && (
+                  <button onClick={() => handleManualSymbolAnalyze(manualSymbol)}
+                    className="mt-2 w-full px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:scale-[1.02]"
+                    style={{ background: 'linear-gradient(135deg, #00F5A0, #00D4FF)', color: '#0A0B0F' }}>
+                    Analyze {manualSymbol}
+                  </button>
+                )}
+              </div>
+              <div className="mt-3">
+                <label className="text-[10px] block mb-1.5 text-gray-400 dark:text-white/30">Timeframe</label>
+                <div className="flex gap-1">
+                  {([['15m', 'Scalp'], ['1h', 'Day'], ['4h', 'Day'], ['1d', 'Swing']] as const).map(([tf, type]) => (
+                    <button key={tf} onClick={() => setTimeframe(tf as Timeframe)}
+                      className={cn('flex-1 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all', timeframe === tf ? 'text-white' : 'bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-white/40 hover:bg-gray-100 dark:hover:bg-white/[0.08]')}
+                      style={timeframe === tf ? { background: 'linear-gradient(135deg, #00F5A0, #00D4FF)' } : undefined}>
+                      <span className="block">{tf.toUpperCase()}</span>
+                      <span className="block text-[9px] opacity-60">{type}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <MarketContextPanel capitalFlow={capitalFlowForPanel} />
+            {trendingAssetsForPanel.length > 0 && <TrendingAssets assets={trendingAssetsForPanel} onSelect={sym => { setManualSymbol(sym); handleManualSymbolAnalyze(sym); }} />}
+          </div>
+
+          {/* ─── RIGHT PANEL ─────────────────── */}
+          <div className="lg:col-span-3 space-y-6">
+
+            {/* Market Pulse Bar */}
+            {marketPulse && (
+              <MarketPulseBar
+                regime={marketPulse.regime}
+                regimeConfidence={marketPulse.confidence}
+                topFlow={marketPulse.topFlow}
+                fearGreed={null}
+              />
+            )}
+
+            {/* Trending Strip */}
+            {!selectedAsset && trendingAssets.length > 0 && (
+              <TrendingStrip
+                assets={trendingAssets}
+                onSelect={handleSelectSymbol}
+              />
+            )}
+
+            {/* Selected Asset Config Panel */}
+            {selectedAsset && (
+              <AssetConfigPanel
+                symbol={selectedAsset.symbol}
+                name={selectedAsset.name}
+                price={selectedCoinData ? Number(selectedCoinData.currentPrice ?? selectedCoinData.price ?? 0) : undefined}
+                change24h={selectedCoinData ? Number(selectedCoinData.change24h ?? selectedCoinData.priceChange24h ?? 0) : undefined}
+                score={selectedCoinData ? Number(selectedCoinData.totalScore ?? selectedCoinData.reliabilityScore ?? selectedCoinData.score ?? 0) : undefined}
+                verdict={selectedCoinData ? String(selectedCoinData.verdict ?? '') : undefined}
+                timeframe={timeframe}
+                onTimeframeChange={setTimeframe}
+                onRun={runAnalysis}
+                onClose={() => setSelectedAsset(null)}
+                dailyPassStatus={dailyPassStatus}
+                purchasingPass={purchasingPass}
+                onPurchasePass={purchaseDailyPass}
+              />
             )}
 
             {/* Asset Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-              {filteredAssets.map(asset => {
-                const CatIcon = getCategoryIcon(asset.category);
-                const coinData = coinLookup.get(asset.symbol.toUpperCase());
-                return (
-                  <AssetCard
-                    key={asset.symbol}
-                    symbol={asset.symbol}
-                    name={asset.name}
-                    category={asset.category}
-                    categoryIcon={<CatIcon className="w-3 h-3 text-gray-400 dark:text-white/30" />}
-                    price={coinData ? Number(coinData.currentPrice ?? coinData.price ?? 0) : undefined}
-                    change24h={coinData ? Number(coinData.change24h ?? coinData.priceChange24h ?? 0) : undefined}
-                    score={coinData ? Number(coinData.totalScore ?? coinData.reliabilityScore ?? coinData.score ?? 0) : undefined}
-                    onClick={handleSelectSymbol}
-                  />
-                );
-              })}
-            </div>
+            {!selectedAsset && (
+              <div>
+                {/* Custom symbol prompt when search doesn't match catalog */}
+                {customSearchSymbol && (
+                  <button
+                    onClick={handleSelectCustom}
+                    className="w-full mb-4 p-3 rounded-xl text-left transition-all hover:scale-[1.01] border border-dashed border-[#00D4FF]/30 bg-[#00D4FF]/[0.03]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#00D4FF]/10">
+                        <Zap className="w-4 h-4 text-[#00D4FF]" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-bold text-slate-900 dark:text-white block">
+                          Analyze &quot;{customSearchSymbol}&quot;
+                        </span>
+                        <span className="text-[10px] text-slate-500 dark:text-white/40">
+                          Custom symbol — press Enter or click to select
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                )}
 
-            {filteredAssets.length === 0 && !customSearchSymbol && (
-              <div className="text-center py-12">
-                <Search className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-white/10" />
-                <p className="text-sm text-slate-500 dark:text-white/40">No assets match your search.</p>
-                <p className="text-xs text-slate-400 dark:text-white/30 mt-1">Try a different search term or type a custom symbol and press Enter.</p>
+                {/* Asset Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {filteredAssets.map(asset => {
+                    const CatIcon = getCategoryIcon(asset.category);
+                    const coinData = coinLookup.get(asset.symbol.toUpperCase());
+                    return (
+                      <AssetCard
+                        key={asset.symbol}
+                        symbol={asset.symbol}
+                        name={asset.name}
+                        category={asset.category}
+                        categoryIcon={<CatIcon className="w-3 h-3 text-gray-400 dark:text-white/30" />}
+                        price={coinData ? Number(coinData.currentPrice ?? coinData.price ?? 0) : undefined}
+                        change24h={coinData ? Number(coinData.change24h ?? coinData.priceChange24h ?? 0) : undefined}
+                        score={coinData ? Number(coinData.totalScore ?? coinData.reliabilityScore ?? coinData.score ?? 0) : undefined}
+                        onClick={handleSelectSymbol}
+                      />
+                    );
+                  })}
+                </div>
+
+                {filteredAssets.length === 0 && !customSearchSymbol && (
+                  <div className="text-center py-12">
+                    <Search className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-white/10" />
+                    <p className="text-sm text-slate-500 dark:text-white/40">No assets match your search.</p>
+                    <p className="text-xs text-slate-400 dark:text-white/30 mt-1">Try a different search term or type a custom symbol and press Enter.</p>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
 
-        {/* Recent Analyses */}
-        <RecentAnalysesMobile
-          analyses={analyses}
-          loading={analysesLoading}
-          onRefresh={fetchAnalyses}
-          onDelete={handleDelete}
-          onEmail={handleEmail}
-        />
+            {/* Recent Analyses */}
+            <RecentAnalysesMobile
+              analyses={analyses}
+              loading={analysesLoading}
+              onRefresh={fetchAnalyses}
+              onDelete={handleDelete}
+              onEmail={handleEmail}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Analysis Dialog */}

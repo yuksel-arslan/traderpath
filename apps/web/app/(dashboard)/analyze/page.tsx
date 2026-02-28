@@ -30,8 +30,6 @@ import { authFetch, getAuthToken, getApiUrl } from '../../../lib/api';
 
 // Intelligence UI
 import { PulseDot, VerdictBadge } from '@/components/ui/intelligence';
-import { MarketContextPanel } from '@/components/analyze/MarketContextPanel';
-import { TrendingAssets } from '@/components/analyze/TrendingAssets';
 import { AnalysisPipelineCard } from '@/components/analyze/AnalysisPipelineCard';
 import { RecentAnalysisRow } from '@/components/analyze/RecentAnalysisRow';
 import { AnalysisReportDrawer } from '@/components/analyze/AnalysisReportDrawer';
@@ -353,19 +351,6 @@ export default function AutomatedAnalysisPage() {
   const getStepIndex = (step: PipelineStep): number => { const idx = PIPELINE_STEPS.findIndex(s => s.key === step); return idx >= 0 ? idx : -1; };
   const currentStepIdx = getStepIndex(pipelineStep);
 
-  // Deduplicate trending assets by symbol
-  const trendingAssets = (() => {
-    const raw = aiRecommendation?.recommendedAssets?.map(a => ({ symbol: a.symbol, score: a.confidence, change: a.direction === 'BUY' ? '+' : '-', flow: a.reason.slice(0, 20) }))
-      || analyses.map(a => ({ symbol: a.symbol.replace(/USDT$/i, ''), score: a.score ?? 0 }));
-    const seen = new Set<string>();
-    return raw.filter(a => {
-      const key = a.symbol.toUpperCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    }).slice(0, 4);
-  })();
-
   // Deduplicate recent analyses by symbol (keep most recent per symbol)
   const uniqueAnalyses = (() => {
     const seen = new Set<string>();
@@ -388,56 +373,11 @@ export default function AutomatedAnalysisPage() {
   // ═══════════════════════════════════════════
   return (
     <div className="max-w-[1400px] mx-auto pb-6 px-4 sm:px-6 space-y-4">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
 
-          {/* ─── LEFT PANEL ──────────────────── */}
-          <div className="space-y-4">
-            {/* Configure */}
-            <div className="rounded-xl p-4 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
-              <span className="text-[10px] font-medium uppercase tracking-widest text-gray-500 dark:text-white/40">Configure</span>
-              <div className="mt-3">
-                <label className="text-[10px] block mb-1.5 text-gray-400 dark:text-white/30">Manual Symbol</label>
-                <div className="relative">
-                  <input type="text" value={manualSymbol} onChange={e => setManualSymbol(e.target.value.toUpperCase())}
-                    onKeyDown={e => { if (e.key === 'Enter' && manualSymbol.trim()) continueWithSymbol(manualSymbol); }}
-                    className="w-full rounded-lg px-3 py-2.5 text-sm text-gray-900 dark:text-white outline-none transition-all focus:ring-1 focus:ring-[#00F5A0] bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08]"
-                    style={{ fontFamily: "'JetBrains Mono', monospace", caretColor: '#00F5A0' }} placeholder="BTC, SOL, ETH..." />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 dark:text-white/20">USDT</span>
-                </div>
-                {manualSymbol.trim() && (
-                  <button onClick={() => continueWithSymbol(manualSymbol)}
-                    className="mt-2 w-full px-3 py-2 rounded-lg text-xs font-semibold transition-all hover:scale-[1.02]"
-                    style={{ background: 'linear-gradient(135deg, #00F5A0, #00D4FF)', color: '#0A0B0F' }}>
-                    Analyze {manualSymbol}
-                  </button>
-                )}
-              </div>
-              <div className="mt-3">
-                <label className="text-[10px] block mb-1.5 text-gray-400 dark:text-white/30">Timeframe</label>
-                <div className="flex gap-1">
-                  {([['15m', 'Scalp'], ['1h', 'Day'], ['4h', 'Day'], ['1d', 'Swing']] as const).map(([tf, type]) => (
-                    <button key={tf} onClick={() => setTimeframe(tf)}
-                      className={cn('flex-1 px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all', timeframe === tf ? 'text-white' : 'bg-white dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] text-gray-500 dark:text-white/40 hover:bg-gray-100 dark:hover:bg-white/[0.08]')}
-                      style={timeframe === tf ? { background: 'linear-gradient(135deg, #00F5A0, #00D4FF)' } : undefined}>
-                      <span className="block">{tf.toUpperCase()}</span>
-                      <span className="block text-[9px] opacity-60">{type}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <MarketContextPanel capitalFlow={capitalFlow} />
-            {trendingAssets.length > 0 && <TrendingAssets assets={trendingAssets} onSelect={sym => setManualSymbol(sym)} />}
-          </div>
-
-          {/* ─── RIGHT PANEL ─────────────────── */}
-          <div className="lg:col-span-3 space-y-4">
-
-            {/* Pipeline card (idle) */}
-            {pipelineStep === 'idle' && (
-              <AnalysisPipelineCard running={false} currentStep={-1} onRun={runAutomatedPipeline} dailyPassStatus={dailyPassStatus} />
-            )}
+        {/* Pipeline card (idle) */}
+        {pipelineStep === 'idle' && (
+          <AnalysisPipelineCard running={false} currentStep={-1} onRun={runAutomatedPipeline} dailyPassStatus={dailyPassStatus} />
+        )}
 
             {/* Pipeline running states */}
             {(pipelineStep !== 'idle' || pipelineRunning) && (
@@ -626,8 +566,6 @@ export default function AutomatedAnalysisPage() {
                filteredRecent.length === 0 ? <div className="text-center py-8"><p className="text-xs text-gray-400 dark:text-white/30">No analyses found</p></div> :
                <div className="space-y-2">{filteredRecent.slice(0, 10).map(item => <RecentAnalysisRow key={item.id} item={item} />)}</div>}
             </div>
-          </div>
-        </div>
 
       {/* Analysis Dialog */}
       {showAnalysisDialog && selectedAsset && (

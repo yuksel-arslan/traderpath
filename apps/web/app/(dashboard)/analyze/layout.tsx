@@ -23,6 +23,9 @@ export default function AnalyzeLayout({ children }: { children: React.ReactNode 
   const isDetailPage = pathname.startsWith('/analyze/details/');
   if (isDetailPage) return <>{children}</>;
 
+  // Get active tab name for header
+  const activeTab = TABS.find(tab => isActive(tab.href));
+
   return (
     <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
       <div className="max-w-[1400px] mx-auto pt-6 px-4 sm:px-6">
@@ -34,7 +37,7 @@ export default function AnalyzeLayout({ children }: { children: React.ReactNode 
               <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
             </div>
             <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
-              ANALYZER
+              ANALYZER {activeTab?.name ?? ''}
             </span>
           </div>
 
