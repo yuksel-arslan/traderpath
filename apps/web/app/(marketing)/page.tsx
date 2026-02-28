@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Check, Sparkles, FileText, BarChart3 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { cn } from '../../lib/utils';
 import { AnimatedCounter } from '../../components/ui/AnimatedCounter';
 import dynamic from 'next/dynamic';
 import { Footer } from '../../components/common/Footer';
@@ -323,28 +324,26 @@ function PerformanceChart() {
 const LANDING_PLANS = [
   {
     name: 'Intelligent Report',
-    icon: '📊',
+    planType: 'report',
     price: '$13.99',
     period: '/week',
-    quota: '7 reports',
-    perUnit: '$2.00 per report',
-    color: 'violet' as const,
-    description: 'Receive daily professional reports automatically',
+    quota: '7 reports/week',
+    perUnit: '$2.00 each',
+    description: 'We analyze, you receive daily reports via Telegram & Discord',
     features: [
       '1 report per day, 7 per week',
       'Executive Summary or Detailed Report',
-      'Telegram + Discord delivery',
-      'Outcome tracking & notifications',
+      'Snapshot PNG — Telegram + Discord',
+      'Outcome tracking & TP/SL notifications',
     ],
   },
   {
     name: 'Capital Flow & Analysis',
-    icon: '🔬',
+    planType: 'analysis',
     price: '$13.99',
     period: '/week',
-    quota: '7 analyses',
-    perUnit: '$2.00 per analysis',
-    color: 'teal' as const,
+    quota: '7 analyses/week',
+    perUnit: '$2.00 each',
     description: 'Run your own analyses with AI Expert support',
     features: [
       '7 full analyses per week',
@@ -357,81 +356,126 @@ const LANDING_PLANS = [
 
 function PricingSection() {
   return (
-    <section className="py-12 md:py-20 border-t border-gray-200 dark:border-gray-800">
+    <section className="py-16 md:py-24 border-t border-gray-200 dark:border-white/[0.04]">
       <div className="max-w-[1100px] mx-auto px-4">
         {/* Header */}
-        <div className="text-center mb-10">
-          <div className="text-[10px] font-sans uppercase tracking-wider text-slate-400 mb-2">PRICING</div>
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">
-            Two Plans, One Price
+        <div className="text-center mb-12">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">PRICING</p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-3">
+            Choose Your Plan
           </h2>
-          <p className="text-sm text-slate-500 max-w-lg mx-auto">
-            Professional-grade trading intelligence for just $13.99/week. Get reports delivered or run your own analyses.
+          <p className="text-sm text-slate-500 max-w-md mx-auto">
+            Professional-grade trading intelligence for $13.99/week. Pick the plan that fits your style.
           </p>
         </div>
 
         {/* Free Trial Banner */}
-        <div className="mb-8 mx-auto max-w-md">
-          <div className="flex items-center justify-center gap-3 px-5 py-3 rounded-lg bg-teal-500/5 border border-teal-500/20">
-            <div className="w-8 h-8 rounded-full bg-teal-500/10 flex items-center justify-center flex-shrink-0">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg>
+        <div className="mb-10 mx-auto max-w-sm">
+          <div className="flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-full bg-teal-500/5 border border-teal-500/15">
+            <div className="w-6 h-6 rounded-full bg-teal-500/10 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-3 h-3 text-teal-500" />
             </div>
-            <div>
-              <span className="text-sm font-semibold text-teal-600 dark:text-teal-400">3 Free Analyses</span>
-              <span className="text-xs text-slate-500 ml-2">on signup, no credit card required</span>
-            </div>
+            <span className="text-xs font-semibold text-teal-600 dark:text-teal-400">3 Free Analyses</span>
+            <span className="w-px h-3 bg-slate-200 dark:bg-white/10" />
+            <span className="text-xs text-slate-400">no credit card</span>
           </div>
         </div>
 
         {/* Subscription Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl mx-auto mb-8">
-          {LANDING_PLANS.map((plan) => (
-            <div
-              key={plan.name}
-              className={`rounded-xl p-6 bg-white dark:bg-white/[0.03] relative transition-all duration-200 hover:shadow-md border-2 ${
-                plan.color === 'violet'
-                  ? 'border-violet-500 shadow-sm shadow-violet-500/10'
-                  : 'border-teal-500 shadow-sm shadow-teal-500/10'
-              }`}
-            >
-              {/* Plan Icon & Name */}
-              <div className="text-2xl mb-3">{plan.icon}</div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">{plan.name}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl mx-auto mb-10">
+          {LANDING_PLANS.map((plan) => {
+            const report = plan.planType === 'report';
+            return (
+              <div key={plan.name} className="group relative rounded-2xl overflow-hidden">
+                {/* Top accent bar */}
+                <div className={cn(
+                  'h-1',
+                  report
+                    ? 'bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500'
+                    : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500'
+                )} />
 
-              {/* Price */}
-              <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-3xl font-bold text-gray-900 dark:text-white">{plan.price}</span>
-                <span className="text-sm text-slate-500">{plan.period}</span>
-              </div>
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className={`text-base font-semibold ${plan.color === 'violet' ? 'text-violet-500' : 'text-teal-500'}`}>
-                  {plan.quota}
-                </span>
-              </div>
-              <div className="text-[11px] text-slate-500 mb-4 pb-3 border-b border-gray-100 dark:border-white/[0.06]">
-                {plan.perUnit}
-              </div>
+                {/* Card body */}
+                <div className={cn(
+                  'bg-white dark:bg-white/[0.03] border border-t-0 rounded-b-2xl p-6 md:p-7 transition-all duration-300',
+                  report
+                    ? 'border-slate-200 dark:border-white/[0.08] hover:border-violet-200 dark:hover:border-violet-500/20'
+                    : 'border-slate-200 dark:border-white/[0.08] hover:border-emerald-200 dark:hover:border-emerald-500/20',
+                  'hover:shadow-xl hover:shadow-slate-200/30 dark:hover:shadow-black/30'
+                )}>
+                  {/* Badge + Icon */}
+                  <div className="flex items-start justify-between mb-5">
+                    <div className={cn(
+                      'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider',
+                      report
+                        ? 'bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400'
+                        : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
+                    )}>
+                      {report ? <FileText className="w-3 h-3" /> : <BarChart3 className="w-3 h-3" />}
+                      {report ? 'Reports' : 'Analysis'}
+                    </div>
+                    <div className={cn(
+                      'w-9 h-9 rounded-lg flex items-center justify-center',
+                      report
+                        ? 'bg-violet-50 dark:bg-violet-500/10'
+                        : 'bg-emerald-50 dark:bg-emerald-500/10'
+                    )}>
+                      {report
+                        ? <FileText className="w-4 h-4 text-violet-500" />
+                        : <BarChart3 className="w-4 h-4 text-emerald-500" />
+                      }
+                    </div>
+                  </div>
 
-              {/* Description */}
-              <p className="text-xs text-slate-600 dark:text-slate-400 mb-4">{plan.description}</p>
+                  {/* Name */}
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 leading-tight">{plan.name}</h3>
+                  <p className="text-xs text-slate-500 mb-5">{plan.description}</p>
 
-              {/* Features */}
-              <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={plan.color === 'violet' ? '#8b5cf6' : '#14b8a6'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+                  {/* Price block */}
+                  <div className="rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/[0.06] p-4 mb-5">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{plan.price}</span>
+                      <span className="text-sm text-slate-400 font-medium">{plan.period}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className={cn(
+                        'text-xs font-semibold',
+                        report ? 'text-violet-500' : 'text-emerald-500'
+                      )}>
+                        {plan.quota}
+                      </span>
+                      <span className="w-px h-3 bg-slate-200 dark:bg-white/10" />
+                      <span className="text-xs text-slate-400">{plan.perUnit}</span>
+                    </div>
+                  </div>
+
+                  {/* Features */}
+                  <ul className="space-y-2.5">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400">
+                        <div className={cn(
+                          'w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0',
+                          report ? 'bg-violet-100 dark:bg-violet-500/15' : 'bg-emerald-100 dark:bg-emerald-500/15'
+                        )}>
+                          <Check className={cn(
+                            'w-2.5 h-2.5',
+                            report ? 'text-violet-600 dark:text-violet-400' : 'text-emerald-600 dark:text-emerald-400'
+                          )} />
+                        </div>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* What Every Analysis Includes */}
-        <div className="mb-8 p-5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/[0.06]">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3 text-center">Every Analysis Includes</div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 max-w-2xl mx-auto">
+        <div className="mb-10 p-5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.06]">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-3 text-center">Every Analysis Includes</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2.5 max-w-2xl mx-auto">
             {[
               '7-Step Analysis (40+ indicators)',
               'MLIS Pro AI Confirmation',
@@ -441,7 +485,9 @@ function PricingSection() {
               'News & Sentiment Check',
             ].map((item) => (
               <div key={item} className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                <div className="w-3.5 h-3.5 rounded-full bg-emerald-100 dark:bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                  <Check className="w-2 h-2 text-emerald-600 dark:text-emerald-400" />
+                </div>
                 {item}
               </div>
             ))}
@@ -450,10 +496,10 @@ function PricingSection() {
 
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Link href="/register" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm font-medium bg-teal-500 hover:bg-teal-600 text-white rounded-md transition-colors">
+          <Link href="/register" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors shadow-lg shadow-emerald-500/25">
             START WITH 3 FREE ANALYSES <ArrowRight className="w-4 h-4" />
           </Link>
-          <Link href="/pricing" className="w-full sm:w-auto inline-flex items-center justify-center px-7 py-3 text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+          <Link href="/pricing" className="w-full sm:w-auto inline-flex items-center justify-center px-7 py-3 text-sm font-semibold border border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 rounded-xl hover:border-slate-300 dark:hover:border-white/[0.2] transition-colors">
             VIEW FULL PRICING
           </Link>
         </div>
