@@ -16,22 +16,16 @@ import {
   TrendingUp,
   TrendingDown,
   Target,
-  Zap,
   ArrowRight,
   ExternalLink,
   RefreshCw,
   Globe,
   Activity,
   BarChart3,
-  Layers,
-  ArrowUpRight,
-  ArrowDownRight,
   Clock,
   AlertTriangle,
   CheckCircle2,
   Crown,
-  DollarSign,
-  PieChart,
 } from 'lucide-react';
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
@@ -92,116 +86,6 @@ interface CapitalFlowData {
   };
 }
 
-// Layer indicator component
-function LayerBreadcrumb({ activeLayer = 0 }: { activeLayer?: number }) {
-  const layers = [
-    { num: 1, label: 'Global', icon: Globe },
-    { num: 2, label: 'Market', icon: BarChart3 },
-    { num: 3, label: 'Sector', icon: PieChart },
-    { num: 4, label: 'Asset', icon: Target },
-  ];
-
-  return (
-    <div className="flex items-center gap-1 text-xs">
-      {layers.map((layer, idx) => (
-        <div key={layer.num} className="flex items-center">
-          <div className={cn(
-            "flex items-center gap-1 px-2 py-1 rounded-lg transition-all",
-            activeLayer >= layer.num
-              ? "bg-teal-100 dark:bg-teal-500/20 text-teal-700 dark:text-teal-400"
-              : "text-gray-400 dark:text-white/40"
-          )}>
-            <layer.icon className="w-3 h-3" />
-            <span className="font-medium">L{layer.num}</span>
-          </div>
-          {idx < layers.length - 1 && (
-            <ArrowRight className="w-3 h-3 text-gray-300 dark:text-white/20 mx-0.5" />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// Flow Direction Indicator
-function FlowIndicator({ flow, label }: { flow: number; label: string }) {
-  const safeFlow = typeof flow === 'number' && !isNaN(flow) ? flow : 0;
-  const isPositive = safeFlow >= 0;
-  return (
-    <div className="flex items-center gap-2">
-      <div className={cn(
-        "flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold",
-        isPositive
-          ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-          : "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
-      )}>
-        {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-        {isPositive ? '+' : ''}{safeFlow.toFixed(1)}%
-      </div>
-      <span className="text-xs text-gray-400 dark:text-white/40">{label}</span>
-    </div>
-  );
-}
-
-// Phase Badge
-function PhaseBadge({ phase }: { phase: string }) {
-  const config: Record<string, { bg: string; text: string; label: string }> = {
-    early: { bg: 'bg-emerald-100 dark:bg-emerald-500/20', text: 'text-emerald-700 dark:text-emerald-400', label: 'EARLY' },
-    mid: { bg: 'bg-amber-100 dark:bg-amber-500/20', text: 'text-amber-700 dark:text-amber-400', label: 'MID' },
-    late: { bg: 'bg-orange-100 dark:bg-orange-500/20', text: 'text-orange-700 dark:text-orange-400', label: 'LATE' },
-    exit: { bg: 'bg-red-100 dark:bg-red-500/20', text: 'text-red-700 dark:text-red-400', label: 'EXIT' },
-  };
-  const c = config[phase] || config.mid;
-  return (
-    <span className={cn("px-2 py-0.5 rounded text-xs font-bold", c.bg, c.text)}>
-      {c.label}
-    </span>
-  );
-}
-
-// Market Flow Card
-function MarketFlowCard({
-  market,
-  flow7d,
-  phase,
-  isRecommended,
-  onClick
-}: {
-  market: string;
-  flow7d: number;
-  phase: string;
-  isRecommended: boolean;
-  onClick: () => void;
-}) {
-  const marketIcons: Record<string, string> = {
-    crypto: '₿',
-    stocks: '📈',
-    bonds: '📊',
-    metals: '🥇',
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "relative flex flex-col items-center p-3 rounded-xl border transition-all hover:scale-[1.02]",
-        isRecommended
-          ? "bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-500/10 dark:to-emerald-500/10 border-teal-300 dark:border-teal-500/30 shadow-lg shadow-teal-500/10"
-          : "bg-white dark:bg-[#0A0A0A] border-gray-200 dark:border-white/[0.06] hover:border-gray-300 dark:hover:border-white/20"
-      )}
-    >
-      {isRecommended && (
-        <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 flex items-center justify-center">
-          <CheckCircle2 className="w-3 h-3 text-white" />
-        </div>
-      )}
-      <span className="text-2xl mb-1">{marketIcons[market] || '📊'}</span>
-      <span className="text-xs font-bold text-gray-900 dark:text-white uppercase">{market}</span>
-      <FlowIndicator flow={flow7d} label="7d" />
-      <PhaseBadge phase={phase} />
-    </button>
-  );
-}
 
 // Verdict Badge
 function VerdictBadge({ verdict, score }: { verdict: string; score?: number }) {
@@ -247,13 +131,13 @@ function QuickCommand({
       onClick={onClick}
       className={cn(
         "group relative flex items-center gap-2 px-3 py-2 rounded-xl",
-        "bg-gradient-to-r backdrop-blur-sm border border-gray-200 dark:border-white/[0.06] shadow-sm",
+        "bg-gradient-to-r backdrop-blur-sm border border-border shadow-sm",
         "hover:scale-[1.02] hover:shadow-lg transition-all duration-200",
         gradient
       )}
     >
-      <Icon className="w-4 h-4 text-gray-700 dark:text-white/80" />
-      <span className="text-sm font-semibold text-gray-900 dark:text-white/90">{label}</span>
+      <Icon className="w-4 h-4 text-foreground/80" />
+      <span className="text-sm font-semibold text-foreground/90">{label}</span>
       {badge && (
         <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-white rounded">
           {badge}
@@ -587,22 +471,22 @@ export default function ConciergePage() {
   // Show upgrade prompt if user doesn't have access
   if (!featureLoading && !hasConciergeAccess) {
     return (
-      <div className="h-[100dvh] flex flex-col bg-white dark:bg-[#0A0A0A] text-gray-900 dark:text-white overflow-hidden">
-        <div className="max-w-xl mx-auto px-4 py-8 sm:py-12">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 mb-4 shadow-xl">
-              <Bot className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              AI Concierge
-            </h1>
-            <p className="text-gray-500 dark:text-white/30">
-              Your Capital Flow aware trading assistant
-            </p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 py-8 sm:py-12">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 mb-4 shadow-xl">
+            <Bot className="w-8 h-8 text-white" />
           </div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">
+            AI Concierge
+          </h1>
+          <p className="text-muted-foreground">
+            Your Capital Flow aware trading assistant
+          </p>
+        </div>
 
-          {/* Upgrade Card */}
+        {/* Upgrade Card */}
+        <div className="w-full max-w-xl">
           <UpgradeCard
             feature="ai_features"
             currentTier={currentTier}
@@ -629,12 +513,12 @@ export default function ConciergePage() {
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-[10px] text-gray-400 dark:text-white/40 uppercase tracking-wider hidden sm:inline">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider hidden sm:inline">
                 AI-powered · Capital Flow
               </span>
               {credits !== null && (
-                <span className="text-[11px] text-gray-400 dark:text-white/40">
-                  <span className="text-gray-900 dark:text-white font-semibold">{credits.toLocaleString()}</span> credits
+                <span className="text-[11px] text-muted-foreground">
+                  <span className="text-foreground font-semibold">{credits.toLocaleString()}</span> credits
                 </span>
               )}
             </div>
@@ -642,7 +526,7 @@ export default function ConciergePage() {
 
           {/* Capital Flow Summary Bar — compact on mobile */}
           {!flowLoading && capitalFlow && Array.isArray(capitalFlow.markets) && capitalFlow.markets.length > 0 && capitalFlow.recommendation && (
-            <div className="mt-2 p-2 sm:p-3 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
+            <div className="mt-2 p-2 sm:p-3 rounded-xl bg-muted/50 border border-border">
               {/* Mobile: horizontal scroll row */}
               <div className="flex items-center gap-2 sm:hidden overflow-x-auto scrollbar-hide pb-1">
                 {/* Bias chip */}
@@ -650,24 +534,6 @@ export default function ConciergePage() {
                   {biasDisplay && <biasDisplay.icon className={cn("w-3.5 h-3.5", biasDisplay.color)} />}
                   <span className={cn("text-xs font-bold whitespace-nowrap", biasDisplay?.color)}>{biasDisplay?.label}</span>
                 </div>
-                {/* Market chips */}
-                {capitalFlow.markets.filter(m => m && m.market).map((market) => (
-                  <button
-                    key={market.market}
-                    onClick={() => sendMessage(`Analyze ${market.market} market`)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shrink-0 border transition-colors",
-                      capitalFlow.recommendation?.primaryMarket === market.market
-                        ? "bg-teal-50 dark:bg-teal-500/10 border-teal-300 dark:border-teal-500/30"
-                        : "bg-white dark:bg-white/[0.03] border-gray-200 dark:border-white/[0.06]"
-                    )}
-                  >
-                    <span className="text-[10px] font-bold uppercase text-gray-600 dark:text-white/50">{market.market}</span>
-                    <span className={cn("text-xs font-bold", (market.flow7d ?? 0) >= 0 ? "text-emerald-500" : "text-red-500")}>
-                      {(market.flow7d ?? 0) >= 0 ? '+' : ''}{(market.flow7d ?? 0).toFixed(1)}%
-                    </span>
-                  </button>
-                ))}
                 {/* Recommendation chip */}
                 <div className={cn(
                   "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shrink-0",
@@ -677,7 +543,7 @@ export default function ConciergePage() {
                     ? "bg-amber-100 dark:bg-amber-500/20"
                     : "bg-red-100 dark:bg-red-500/20"
                 )}>
-                  <span className="text-xs font-bold text-gray-900 dark:text-white capitalize whitespace-nowrap">
+                  <span className="text-xs font-bold text-foreground capitalize whitespace-nowrap">
                     {capitalFlow.recommendation?.action || 'wait'} {String(capitalFlow.recommendation?.primaryMarket || '').toUpperCase()}
                   </span>
                 </div>
@@ -691,28 +557,12 @@ export default function ConciergePage() {
                     {biasDisplay && <biasDisplay.icon className={cn("w-5 h-5", biasDisplay.color)} />}
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-gray-400 dark:text-white/40">Global Liquidity</p>
+                    <p className="text-xs font-medium text-muted-foreground">Global Liquidity</p>
                     <p className={cn("font-bold", biasDisplay?.color)}>{biasDisplay?.label}</p>
                   </div>
                 </div>
 
-                <div className="hidden lg:block w-px h-10 bg-gray-200 dark:bg-white/[0.05]" />
-
-                {/* Market Flows */}
-                <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {capitalFlow.markets.filter(m => m && m.market).map((market) => (
-                    <MarketFlowCard
-                      key={market.market}
-                      market={market.market}
-                      flow7d={market.flow7d ?? 0}
-                      phase={market.phase || 'mid'}
-                      isRecommended={capitalFlow.recommendation?.primaryMarket === market.market}
-                      onClick={() => sendMessage(`Analyze ${market.market} market`)}
-                    />
-                  ))}
-                </div>
-
-                <div className="hidden lg:block w-px h-10 bg-gray-200 dark:bg-white/[0.05]" />
+                <div className="hidden lg:block w-px h-10 bg-border" />
 
                 {/* Recommendation */}
                 <div className="flex items-center gap-3 flex-shrink-0">
@@ -733,8 +583,8 @@ export default function ConciergePage() {
                     )}
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-gray-400 dark:text-white/40">Recommendation</p>
-                    <p className="font-bold text-gray-900 dark:text-white capitalize">
+                    <p className="text-xs font-medium text-muted-foreground">Recommendation</p>
+                    <p className="font-bold text-foreground capitalize">
                       {capitalFlow.recommendation?.action || 'wait'} {String(capitalFlow.recommendation?.primaryMarket || 'market').toUpperCase()}
                     </p>
                   </div>
@@ -744,57 +594,133 @@ export default function ConciergePage() {
           )}
 
           {flowLoading && (
-            <div className="mt-2 p-3 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] animate-pulse">
-              <div className="h-10 sm:h-16 bg-gray-200 dark:bg-white/[0.08] rounded-xl" />
+            <div className="mt-2 p-3 sm:p-4 rounded-xl bg-card border border-border animate-pulse">
+              <div className="h-10 sm:h-16 bg-muted rounded-xl" />
             </div>
           )}
         </div>
 
-        {/* Main Content — flex-1 on mobile so chat fills remaining space */}
-        <div className="flex-1 min-h-0 flex flex-col pb-3 sm:pb-6">
+        {/* Main Content — flex-1 fills remaining space */}
+        <div className="flex-1 min-h-0 flex flex-col pb-3 sm:pb-4">
           {/* Chat Area — full width */}
           <div className="flex-1 flex flex-col min-h-0">
-            <div className="flex-1 min-h-0 flex flex-col rounded-xl bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/[0.06] overflow-hidden">
-              {/* Messages — flex-1 fills available space instead of fixed height */}
+            <div className="flex-1 min-h-0 flex flex-col rounded-xl bg-card border border-border overflow-hidden">
+              {/* Messages — flex-1 fills available space */}
               <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
-                {/* Welcome State */}
+                {/* Welcome State — categorized command list */}
                 {messages.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-full text-center px-2">
-                    <Bot className="w-7 h-7 sm:w-8 sm:h-8 text-gray-300 dark:text-white/20 mb-2 sm:mb-3" />
-
-                    <h2 className="text-sm font-sans font-semibold text-gray-900 dark:text-white mb-1">
-                      Follow the Money Flow
-                    </h2>
-                    <p className="text-[10px] text-gray-400 max-w-sm mb-1 hidden sm:block">
-                      Capital Flow → AI Recommendation → Analysis → Trade Plan
-                    </p>
-                    <p className="text-xs text-gray-500 max-w-md mb-3 sm:mb-4 line-clamp-2">
-                      {capitalFlow?.recommendation?.reasoning || 'Start with capital flow to discover where money is moving, then drill down to trade plans.'}
-                    </p>
-
-                    {/* Pipeline Quick Commands — 2 cols on mobile, wrap on desktop */}
-                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:justify-center gap-2 max-w-lg w-full">
-                      {getSmartCommands().slice(0, 4).map((cmd, i) => (
-                        <QuickCommand
-                          key={i}
-                          icon={cmd.icon}
-                          label={cmd.label}
-                          onClick={() => sendMessage(cmd.command)}
-                          gradient={cmd.gradient}
-                        />
-                      ))}
+                  <div className="flex flex-col h-full">
+                    {/* Header */}
+                    <div className="text-center pt-4 sm:pt-6 pb-4 sm:pb-6">
+                      <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 mb-3 shadow-lg">
+                        <Bot className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                      </div>
+                      <h2 className="text-base sm:text-lg font-semibold text-foreground mb-1">
+                        AI Concierge
+                      </h2>
+                      <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto">
+                        Select a command below, type your own, or speak using the microphone.
+                      </p>
                     </div>
-                    {/* Extra commands visible only on desktop */}
-                    <div className="hidden sm:flex sm:flex-wrap sm:justify-center gap-2 max-w-lg mt-2">
-                      {getSmartCommands().slice(4).map((cmd, i) => (
-                        <QuickCommand
-                          key={i + 4}
-                          icon={cmd.icon}
-                          label={cmd.label}
-                          onClick={() => sendMessage(cmd.command)}
-                          gradient={cmd.gradient}
-                        />
-                      ))}
+
+                    {/* Command Categories */}
+                    <div className="flex-1 overflow-y-auto px-1 sm:px-2 space-y-4 sm:space-y-5 pb-4">
+                      {/* Analysis */}
+                      <div>
+                        <h3 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                          <BarChart3 className="w-3.5 h-3.5 text-teal-500" />
+                          Analysis
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
+                          {[
+                            { label: 'Analyze BTC on 4h', command: 'Analyze BTC on 4h timeframe' },
+                            { label: 'Quick ETH analysis', command: 'Quick analysis of ETH' },
+                            { label: 'SOL 15m scalping', command: 'Analyze SOL 15m scalping' },
+                            { label: 'Best crypto to trade now', command: "What's the best crypto to trade right now?" },
+                          ].map((item) => (
+                            <button
+                              key={item.command}
+                              onClick={() => sendMessage(item.command)}
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-accent text-left transition-colors group"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-teal-500 shrink-0" />
+                              <span className="text-xs sm:text-sm text-foreground group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">{item.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Capital Flow */}
+                      <div>
+                        <h3 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                          <Globe className="w-3.5 h-3.5 text-cyan-500" />
+                          Capital Flow
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
+                          {[
+                            { label: 'Where is money flowing?', command: 'Where is money flowing right now?' },
+                            { label: 'Strongest market inflow', command: 'Which market has the strongest inflow?' },
+                            { label: 'AI trade recommendation', command: 'What should I trade based on capital flow?' },
+                            { label: 'Market status', command: 'Show me the current market status' },
+                          ].map((item) => (
+                            <button
+                              key={item.command}
+                              onClick={() => sendMessage(item.command)}
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-accent text-left transition-colors group"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
+                              <span className="text-xs sm:text-sm text-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">{item.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Discovery */}
+                      <div>
+                        <h3 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                          <Crown className="w-3.5 h-3.5 text-amber-500" />
+                          Discovery
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
+                          {[
+                            { label: 'Top 5 high-probability coins', command: 'Give me top 5 highest probability coins' },
+                            { label: 'Top movers today', command: 'Show me top movers today' },
+                            { label: 'Market sentiment', command: "What's the current market sentiment?" },
+                          ].map((item) => (
+                            <button
+                              key={item.command}
+                              onClick={() => sendMessage(item.command)}
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-accent text-left transition-colors group"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                              <span className="text-xs sm:text-sm text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">{item.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Alerts & Automation */}
+                      <div>
+                        <h3 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                          <Activity className="w-3.5 h-3.5 text-rose-500" />
+                          Alerts & Automation
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
+                          {[
+                            { label: 'Set BTC price alert', command: 'Set a BTC alert when price drops to 55000' },
+                            { label: 'Morning briefing', command: 'Set my morning briefing to 11:00 AM every day' },
+                          ].map((item) => (
+                            <button
+                              key={item.command}
+                              onClick={() => sendMessage(item.command)}
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-accent text-left transition-colors group"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                              <span className="text-xs sm:text-sm text-foreground group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">{item.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -812,7 +738,7 @@ export default function ConciergePage() {
                       "max-w-[92%] sm:max-w-[85%] rounded-xl px-3 py-2.5 sm:px-4 sm:py-3",
                       msg.role === 'user'
                         ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white"
-                        : "bg-gray-100 dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.06]"
+                        : "bg-muted border border-border"
                     )}>
                       {msg.role === 'assistant' && (
                         <div className="flex items-center gap-2 mb-2">
@@ -824,7 +750,7 @@ export default function ConciergePage() {
 
                       {/* Verdict Card */}
                       {msg.data?.verdict && (
-                        <div className="mt-4 p-4 rounded-xl bg-white dark:bg-black/20 border border-gray-200 dark:border-white/[0.06]">
+                        <div className="mt-4 p-4 rounded-xl bg-card border border-border">
                           <div className="flex items-center justify-between mb-3">
                             <VerdictBadge verdict={msg.data.verdict} score={msg.data.score} />
                             {msg.data.direction && typeof msg.data.direction === 'string' && (
@@ -973,7 +899,7 @@ export default function ConciergePage() {
               </div>
 
               {/* Input Area — shrink-0 so it stays at bottom */}
-              <div className="shrink-0 p-2 sm:p-3 border-t border-gray-200 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.03]">
+              <div className="shrink-0 p-2 sm:p-3 border-t border-border bg-muted/50">
                 {/* Quick suggestions — scrollable on mobile */}
                 {messages.length > 0 && (
                   <div className="flex gap-2 mb-2 overflow-x-auto scrollbar-hide pb-1">
@@ -981,7 +907,7 @@ export default function ConciergePage() {
                       <button
                         key={i}
                         onClick={() => sendMessage(cmd.command)}
-                        className="px-2.5 py-1 sm:px-3 sm:py-1.5 text-[11px] sm:text-xs font-medium rounded-lg bg-white dark:bg-[#0A0A0A] hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/30 border border-gray-200 dark:border-white/[0.06] transition-colors whitespace-nowrap shrink-0"
+                        className="px-2.5 py-1 sm:px-3 sm:py-1.5 text-[11px] sm:text-xs font-medium rounded-lg bg-card hover:bg-accent text-muted-foreground border border-border transition-colors whitespace-nowrap shrink-0"
                       >
                         {cmd.label}
                       </button>
@@ -1001,7 +927,7 @@ export default function ConciergePage() {
                         "p-2.5 sm:p-3 rounded-xl transition-all border shrink-0",
                         isListening
                           ? "bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse border-red-400"
-                          : "bg-white dark:bg-[#0A0A0A] text-gray-500 dark:text-white/30 hover:bg-gray-50 dark:hover:bg-white/10 border-gray-200 dark:border-white/[0.06]"
+                          : "bg-card text-muted-foreground hover:bg-accent border-border"
                       )}
                     >
                       {isListening ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
@@ -1014,7 +940,7 @@ export default function ConciergePage() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder={isListening ? '🎤 Speak now...' : 'Ask anything...'}
-                    className="flex-1 min-w-0 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/[0.06] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-colors"
+                    className="flex-1 min-w-0 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-card border border-border text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-colors"
                     disabled={isLoading}
                   />
 
@@ -1034,7 +960,6 @@ export default function ConciergePage() {
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </div>
