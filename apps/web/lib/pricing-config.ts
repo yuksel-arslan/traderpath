@@ -1,9 +1,80 @@
 // Centralized pricing configuration
-// Package-Based Pricing Model: Buy analyses, use anytime
-// These must match the API payment packages
+// Weekly Subscription Model: Simple, affordable weekly plans
+// These must match the API weekly-plans configuration
 
 // ==========================================
-// ANALYSIS PACKAGES (Core Product)
+// WEEKLY SUBSCRIPTION PLANS (Primary Product)
+// Two simple plans: Report + Analysis
+// ==========================================
+
+export type WeeklyPlanType = 'REPORT_WEEKLY' | 'ANALYSIS_WEEKLY';
+
+export interface WeeklyPlan {
+  id: string;
+  planType: WeeklyPlanType;
+  name: string;
+  description: string;
+  price: number;
+  priceDisplay: string;
+  perUnit: string;
+  interval: 'week';
+  quota: number;
+  aiExpertQuestionsPerAnalysis: number;
+  features: string[];
+  icon: 'report' | 'analysis';
+}
+
+export const WEEKLY_PLANS: WeeklyPlan[] = [
+  {
+    id: 'report_weekly',
+    planType: 'REPORT_WEEKLY',
+    name: 'Report Subscription',
+    description: 'Receive daily professional reports automatically',
+    price: 6.99,
+    priceDisplay: '$6.99/week',
+    perUnit: '$1.00',
+    interval: 'week',
+    quota: 7,
+    aiExpertQuestionsPerAnalysis: 0,
+    features: [
+      '7 reports per week (1 daily)',
+      'Executive Summary or Detailed Analysis Report',
+      'Snapshot PNG delivery (pixel-perfect)',
+      'Telegram + Discord inline delivery',
+      'Choose your preferred assets & timeframes',
+      'Outcome tracking & TP/SL notifications',
+    ],
+    icon: 'report',
+  },
+  {
+    id: 'analysis_weekly',
+    planType: 'ANALYSIS_WEEKLY',
+    name: 'Analysis Subscription',
+    description: 'Run your own analyses with AI Expert support',
+    price: 6.99,
+    priceDisplay: '$6.99/week',
+    perUnit: '$1.00',
+    interval: 'week',
+    quota: 7,
+    aiExpertQuestionsPerAnalysis: 5,
+    features: [
+      '7 full analyses per week',
+      '5 AI Expert questions per analysis',
+      'AI Concierge, Automatic, or Tailored methods',
+      'Executive Summary + Detailed Report included',
+      'Full 7-Step + MLIS Pro dual-engine',
+      'RAG Intelligence enrichment',
+      'Trade Plan with Entry / SL / TP1 / TP2',
+    ],
+    icon: 'analysis',
+  },
+];
+
+// Free signup analyses (no credit card required)
+export const FREE_SIGNUP_ANALYSES = 3;
+
+// ==========================================
+// ANALYSIS PACKAGES (Legacy - One-time purchases)
 // ==========================================
 
 export interface AnalysisPackage {
@@ -93,9 +164,6 @@ export const ANALYSIS_PACKAGES: AnalysisPackage[] = [
     color: 'purple',
   },
 ];
-
-// Free signup analyses (no credit card required)
-export const FREE_SIGNUP_ANALYSES = 3;
 
 // What's included in every analysis
 export const ANALYSIS_INCLUDES = [

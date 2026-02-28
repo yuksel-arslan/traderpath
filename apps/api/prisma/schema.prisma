@@ -115,6 +115,7 @@ model User {
   signalPreferences UserSignalPreferences?
   signalSubscription SignalSubscription?
   subscription     Subscription?
+  weeklyPlans      WeeklyPlan[]
   notifications    Notification[]
 
   @@map("users")
@@ -1219,4 +1220,55 @@ enum NotificationType {
   SIGNAL    // New trade signal
   REWARD    // Tier upgrade or AP gain
   SYSTEM    // General announcements
+}
+
+// ===========================================
+// Weekly Subscription Plans
+// Report ($6.99/week = 7 reports) and Analysis ($6.99/week = 7 analyses + 5 AI Expert questions each)
+// ===========================================
+
+model WeeklyPlan {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Plan type
+  planType     WeeklyPlanType
+
+  // Stripe identifiers
+  stripeCustomerId     String?  @map("stripe_customer_id") @db.VarChar(255)
+  stripeSubscriptionId String?  @unique @map("stripe_subscription_id") @db.VarChar(255)
+  stripePriceId        String?  @map("stripe_price_id") @db.VarChar(255)
+
+  // Status
+  status       SubscriptionStatus @default(INACTIVE)
+
+  // Quota tracking
+  remainingQuota  Int    @default(7) @map("remaining_quota")
+  totalQuota      Int    @default(7) @map("total_quota")
+  quotaUsedThisPeriod Int @default(0) @map("quota_used_this_period")
+
+  // Billing period
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+  cancelAtPeriodEnd  Boolean   @default(false) @map("cancel_at_period_end")
+
+  // Delivery preferences (for report subscriptions)
+  telegramDelivery    Boolean   @default(true) @map("telegram_delivery")
+  discordDelivery     Boolean   @default(false) @map("discord_delivery")
+
+  // Timestamps
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, planType])
+  @@index([planType])
+  @@index([status])
+  @@index([stripeCustomerId])
+  @@map("weekly_plans")
+}
+
+enum WeeklyPlanType {
+  REPORT_WEEKLY      // $6.99/week - 7 reports delivered daily
+  ANALYSIS_WEEKLY    // $6.99/week - 7 analyses + 5 AI Expert questions per analysis
 }

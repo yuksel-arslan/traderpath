@@ -61,6 +61,7 @@ import {
   stopSignalOutcomeTracker,
 } from './modules/signals';
 import subscriptionRoutes from './modules/subscriptions/subscription.routes';
+import weeklyPlanRoutes from './modules/weekly-plans/weekly-plan.routes';
 import { startDailyCreditsJob, stopDailyCreditsJob } from './modules/subscriptions/subscription-cron.job';
 import { startReconciliationJob, stopReconciliationJob } from './modules/admin/reconciliation.cron';
 import { unifiedAnalysisRoutes } from './modules/unified-analysis';
@@ -413,6 +414,9 @@ app.register(signalSubscriptionRoutes, { prefix: '/api/v1/signals' });
 // Subscription management routes (credit-based)
 app.register(subscriptionRoutes, { prefix: '/api/v1/subscriptions' });
 app.register(subscriptionRoutes, { prefix: '/api/subscriptions' }); // Legacy
+
+app.register(weeklyPlanRoutes, { prefix: '/api/v1/weekly-plans' });
+app.register(weeklyPlanRoutes, { prefix: '/api/weekly-plans' }); // Legacy
 
 // Unified Analysis Pipeline routes
 app.register(unifiedAnalysisRoutes, { prefix: '/api/v1/unified-analysis' });
