@@ -129,10 +129,19 @@
 
 | Hak | Miktar | Ücretsiz Limit | Sonrası Maliyet | Takip Alanı |
 |-----|--------|----------------|-----------------|-------------|
-| AI Expert Sohbet | 3 | 3 soru/analiz | 5 kredi/soru | `Analysis.aiExpertQuestionsUsed` |
+| AI Expert Sohbet | 5 | 5 soru/analiz (Analysis Subscription dahil) | Abonelik gerekli | `Analysis.aiExpertQuestionsUsed` |
 | Snapshot Rapor | Otomatik | Sınırsız | $0 | Telegram/Discord'a otomatik gönderim |
 
 > **Not:** Raporlar Snapshot PNG olarak Telegram ve Discord'a otomatik gönderilir (inline görünüm, indirme gerektirmez). PDF kaldırıldı. İşlem sonuçları (TP/SL hit) Telegram/Discord ile bildirilir. Auth emailleri (doğrulama, şifre sıfırlama) için Resend Free Tier kullanılır.
+
+### Haftalık Abonelik Planları (YENİ)
+
+| Plan | Fiyat | Kota | İçerik |
+|------|-------|------|--------|
+| **Intelligent Report Subscription** | $13.99/hafta | 7 rapor/hafta (1/gün) | Executive Summary veya Detailed Analysis, Snapshot PNG, Telegram+Discord delivery |
+| **Capital Flow & Asset Analysis Subscription** | $13.99/hafta | 7 analiz/hafta | Full analiz + 5 AI Expert soru/analiz, AI Concierge/Auto/Tailored |
+
+> **Not:** Planlar birbirinden bağımsızdır — kullanıcı birini seçer. Kota her hafta yenilenir. 3 ücretsiz analiz kayıt bonusu devam eder.
 ### Trade Type Completion Bonus (Otomatik)
 
 | Trade Type | Bonus Kredi | Açıklama |
@@ -292,6 +301,15 @@ Kullanıcı Hakları Aktif:
 | 2026-02-28 | Notifications: Zenginleştirilmiş ALERT/SIGNAL kartları | ALERT: layer icon + severity badge + market + action. SIGNAL: direction + confidence badge |
 | 2026-02-28 | Analyzer: 3-tab layout (Auto / Tailored / Scheduled) | analyze/layout.tsx ile tab navigasyonu, Scheduled artık Analyzer'ın parçası |
 | 2026-02-28 | Analyzer: Scheduled /analyze/scheduled'a taşındı | More dropdown'dan kaldırıldı, Analyzer tab olarak erişilir |
+| 2026-02-28 | Pricing: Haftalık abonelik modeli | Eski karmaşık paketler (Explorer/Trader/Pro/Elite + Report Standard/Pro + Platform Starter/Pro/Elite) → 2 basit haftalık plan |
+| 2026-02-28 | Pricing: Intelligent Report Subscription $13.99/hafta | 7 rapor/hafta (günde 1), Executive Summary veya Detailed Analysis, Telegram + Discord Snapshot PNG delivery |
+| 2026-02-28 | Pricing: Capital Flow & Asset Analysis Subscription $13.99/hafta | 7 analiz/hafta + analiz başına 5 AI Expert soru, AI Concierge/Auto/Tailored yöntemler, aynı fiyat |
+| 2026-02-28 | Pricing: Planlar bağımsız | Kullanıcı birini seçer: ya Intelligent Report ya Capital Flow & Asset Analysis |
+| 2026-02-28 | Pricing: Birim fiyat $2.00 | $13.99 / 7 = $2.00 per analiz veya rapor — %97 tasarruf (geleneksel analist $75-140) |
+| 2026-02-28 | Pricing: /pricing sayfası 2 kart layout | Tab toggle kaldırıldı, 2 yan yana kart (violet=Report, emerald=Analysis) + How It Works + Value Comparison + FAQ |
+| 2026-02-28 | Pricing: Landing PricingSection 2 plan grid | 4 paket grid → 2 bağımsız plan grid, güncel bilgilerle |
+| 2026-02-28 | DB: WeeklyPlan modeli eklendi | weekly_plans tablosu: planType (REPORT_WEEKLY/ANALYSIS_WEEKLY), quota tracking, Stripe entegrasyonu |
+| 2026-02-28 | API: /api/weekly-plans routes | plans, status, checkout, cancel, resume endpoints — Stripe haftalık recurring billing |
 
 ---
 

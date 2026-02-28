@@ -317,14 +317,42 @@ function PerformanceChart() {
 }
 
 // ---------------------------------------------------------------------------
-// PRICING SECTION — Package-Based Model
+// PRICING SECTION — Weekly Subscription Model
 // ---------------------------------------------------------------------------
 
-const LANDING_PACKAGES = [
-  { name: 'Explorer', analyses: 5, bonus: 0, price: '$9.99', perAnalysis: '$2.00', color: 'slate' as const, features: ['5 full analyses', '7-Step + MLIS Pro', 'PDF report per analysis'] },
-  { name: 'Trader', analyses: 20, bonus: 2, price: '$29.99', perAnalysis: '$1.36', color: 'teal' as const, popular: true, features: ['20 + 2 bonus analyses', '7-Step + MLIS Pro', 'Priority queue + PDF reports'] },
-  { name: 'Pro', analyses: 50, bonus: 5, price: '$59.99', perAnalysis: '$1.09', color: 'slate' as const, features: ['50 + 5 bonus analyses', '7-Step + MLIS Pro', 'Unlimited PDF + AI Expert'] },
-  { name: 'Elite', analyses: 150, bonus: 20, price: '$149.99', perAnalysis: '$0.88', color: 'slate' as const, features: ['150 + 20 bonus analyses', '7-Step + MLIS Pro', 'API access + everything'] },
+const LANDING_PLANS = [
+  {
+    name: 'Intelligent Report',
+    icon: '📊',
+    price: '$13.99',
+    period: '/week',
+    quota: '7 reports',
+    perUnit: '$2.00 per report',
+    color: 'violet' as const,
+    description: 'Receive daily professional reports automatically',
+    features: [
+      '1 report per day, 7 per week',
+      'Executive Summary or Detailed Report',
+      'Telegram + Discord delivery',
+      'Outcome tracking & notifications',
+    ],
+  },
+  {
+    name: 'Capital Flow & Analysis',
+    icon: '🔬',
+    price: '$13.99',
+    period: '/week',
+    quota: '7 analyses',
+    perUnit: '$2.00 per analysis',
+    color: 'teal' as const,
+    description: 'Run your own analyses with AI Expert support',
+    features: [
+      '7 full analyses per week',
+      '5 AI Expert questions per analysis',
+      'AI Concierge, Auto, or Tailored',
+      '7-Step + MLIS Pro dual-engine',
+    ],
+  },
 ];
 
 function PricingSection() {
@@ -335,10 +363,10 @@ function PricingSection() {
         <div className="text-center mb-10">
           <div className="text-[10px] font-sans uppercase tracking-wider text-slate-400 mb-2">PRICING</div>
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">
-            Analysis Packages
+            Two Plans, One Price
           </h2>
           <p className="text-sm text-slate-500 max-w-lg mx-auto">
-            Buy analyses, use anytime. No subscriptions required. Every analysis includes 7-Step + MLIS Pro AI engine, PDF report, and trade plan.
+            Professional-grade trading intelligence for just $13.99/week. Get reports delivered or run your own analyses.
           </p>
         </div>
 
@@ -355,44 +383,43 @@ function PricingSection() {
           </div>
         </div>
 
-        {/* Package Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {LANDING_PACKAGES.map((pkg) => (
+        {/* Subscription Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl mx-auto mb-8">
+          {LANDING_PLANS.map((plan) => (
             <div
-              key={pkg.name}
-              className={`rounded-xl p-5 bg-white dark:bg-white/[0.03] relative transition-all duration-200 hover:shadow-md ${
-                pkg.popular
-                  ? 'border-2 border-teal-500 shadow-sm shadow-teal-500/10'
-                  : 'border border-gray-200 dark:border-white/[0.06]'
+              key={plan.name}
+              className={`rounded-xl p-6 bg-white dark:bg-white/[0.03] relative transition-all duration-200 hover:shadow-md border-2 ${
+                plan.color === 'violet'
+                  ? 'border-violet-500 shadow-sm shadow-violet-500/10'
+                  : 'border-teal-500 shadow-sm shadow-teal-500/10'
               }`}
             >
-              {pkg.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-teal-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-full">
-                  Popular
-                </div>
-              )}
-              {/* Package Name */}
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3">{pkg.name}</div>
+              {/* Plan Icon & Name */}
+              <div className="text-2xl mb-3">{plan.icon}</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">{plan.name}</div>
 
               {/* Price */}
-              <div className="text-2xl font-bold text-gray-900 dark:text-white mb-0.5">{pkg.price}</div>
-              <div className="flex items-baseline gap-2 mb-3">
-                <span className="text-lg font-semibold text-teal-500">{pkg.analyses} analyses</span>
-                {pkg.bonus > 0 && (
-                  <span className="text-xs font-medium text-amber-500">+{pkg.bonus} bonus</span>
-                )}
+              <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-3xl font-bold text-gray-900 dark:text-white">{plan.price}</span>
+                <span className="text-sm text-slate-500">{plan.period}</span>
+              </div>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className={`text-base font-semibold ${plan.color === 'violet' ? 'text-violet-500' : 'text-teal-500'}`}>
+                  {plan.quota}
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-500 mb-4 pb-3 border-b border-gray-100 dark:border-white/[0.06]">
+                {plan.perUnit}
               </div>
 
-              {/* Per Analysis Cost */}
-              <div className="text-[11px] text-slate-500 mb-4 pb-3 border-b border-gray-100 dark:border-white/[0.06]">
-                {pkg.perAnalysis} per analysis
-              </div>
+              {/* Description */}
+              <p className="text-xs text-slate-600 dark:text-slate-400 mb-4">{plan.description}</p>
 
               {/* Features */}
-              <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
-                {pkg.features.map((f) => (
+              <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+                {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-2">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={plan.color === 'violet' ? '#8b5cf6' : '#14b8a6'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                     {f}
                   </li>
                 ))}
@@ -409,7 +436,7 @@ function PricingSection() {
               '7-Step Analysis (40+ indicators)',
               'MLIS Pro AI Confirmation',
               'Trade Plan (Entry/SL/TP)',
-              'PDF Report Download',
+              'Snapshot PNG Reports',
               'Order Book Analysis',
               'News & Sentiment Check',
             ].map((item) => (
@@ -418,24 +445,6 @@ function PricingSection() {
                 {item}
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* Intelligence Reports Callout */}
-        <div className="mb-8 p-5 rounded-xl border border-purple-200 dark:border-purple-500/20 bg-purple-50/50 dark:bg-purple-500/[0.03]">
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 11a9 9 0 0 1 9 9" /><path d="M4 4a16 16 0 0 1 16 16" /><circle cx="5" cy="19" r="1" /></svg>
-            </div>
-            <div className="flex-1 text-center sm:text-left">
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">Intelligence Reports — from $29/mo</div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Daily professional reports with trade signals for up to 10 assets. Includes 7-Step analysis, PDF reports, and Telegram/Discord delivery.
-              </p>
-            </div>
-            <Link href="/pricing" className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-purple-600 dark:text-purple-400 border border-purple-300 dark:border-purple-500/30 rounded-md hover:bg-purple-50 dark:hover:bg-purple-500/10 transition-colors">
-              Learn More <ArrowRight className="w-3 h-3" />
-            </Link>
           </div>
         </div>
 
