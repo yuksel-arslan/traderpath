@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "installCommand": "pnpm install",
+  "installCommand": "corepack enable && pnpm install",
   "buildCommand": "NODE_OPTIONS='--max-old-space-size=4096' pnpm turbo build --filter=@traderpath/web",
   "outputDirectory": "apps/web/.next",
   "rewrites": [],
