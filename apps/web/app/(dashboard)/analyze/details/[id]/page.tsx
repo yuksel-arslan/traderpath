@@ -111,10 +111,10 @@ export default function AnalysisDetailsPage() {
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const [autoPdfInProgress, setAutoPdfInProgress] = useState(false);
-  const [autoPdfDone, setAutoPdfDone] = useState(false);
-  const autoPdfTriggered = useRef(false);
+  const [downloadingSnapshot, setDownloadingSnapshot] = useState(false);
+  const [autoSnapshotInProgress, setAutoSnapshotInProgress] = useState(false);
+  const [autoSnapshotDone, setAutoSnapshotDone] = useState(false);
+  const autoSnapshotTriggered = useRef(false);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -139,19 +139,16 @@ export default function AnalysisDetailsPage() {
     fetchAnalysis();
   }, [analysisId]);
 
-  // Auto-PDF handler for ?pdf=true parameter
-  const handleAutoPdf = useCallback(async () => {
-    if (!pageRef.current || !analysis || autoPdfTriggered.current) return;
+  // Auto-snapshot handler for ?snapshot=true parameter
+  const handleAutoSnapshot = useCallback(async () => {
+    if (!pageRef.current || !analysis || autoSnapshotTriggered.current) return;
 
-    autoPdfTriggered.current = true;
-    setAutoPdfInProgress(true);
+    autoSnapshotTriggered.current = true;
+    setAutoSnapshotInProgress(true);
 
     try {
       // Wait for chart to render
       await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Dynamic import jsPDF
-      const { jsPDF } = await import('jspdf');
 
       // Snapshot canvases to static images so html2canvas can capture them
       const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
@@ -166,7 +163,6 @@ export default function AnalysisDetailsPage() {
           allowTaint: true,
           windowWidth: 1400,
           onclone: (clonedDoc) => {
-            // Force dark mode in the cloned document
             clonedDoc.documentElement.classList.add('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
@@ -181,49 +177,38 @@ export default function AnalysisDetailsPage() {
         restoreCanvases();
       }
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
+      // Download as PNG snapshot
+      const link = document.createElement('a');
+      link.download = `TraderPath_${analysis.symbol || 'Analysis'}_${new Date().toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
 
-      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-
-      const symbol = analysis.symbol || 'Analysis';
-      const date = new Date().toISOString().split('T')[0];
-      pdf.save(`TraderPath_${symbol}_${date}.pdf`);
-
-      setAutoPdfDone(true);
-      // Dismiss overlay after 2 seconds - let user stay on page
+      setAutoSnapshotDone(true);
       setTimeout(() => {
-        setAutoPdfInProgress(false);
+        setAutoSnapshotInProgress(false);
       }, 2000);
     } catch (err) {
-      console.error('Failed to auto generate PDF:', err);
-      alert('Failed to generate PDF. Please try again.');
-      setAutoPdfInProgress(false);
+      console.error('Failed to auto generate snapshot:', err);
+      alert('Failed to generate snapshot. Please try again.');
+      setAutoSnapshotInProgress(false);
     }
   }, [analysis]);
 
-  // Trigger auto-PDF when analysis is loaded and pdf=true parameter is present
+  // Trigger auto-snapshot when analysis is loaded and snapshot=true parameter is present
   useEffect(() => {
-    const shouldAutoPdf = searchParams.get('pdf') === 'true';
-    if (shouldAutoPdf && analysis && !loading && !autoPdfTriggered.current) {
-      handleAutoPdf();
+    const shouldAutoSnapshot = searchParams.get('snapshot') === 'true';
+    if (shouldAutoSnapshot && analysis && !loading && !autoSnapshotTriggered.current) {
+      handleAutoSnapshot();
     }
-  }, [searchParams, analysis, loading, handleAutoPdf]);
+  }, [searchParams, analysis, loading, handleAutoSnapshot]);
 
-  // Download PDF (dark mode capture)
-  const handleDownloadPdf = async () => {
-    if (!pageRef.current || downloadingPdf || !analysis) return;
+  // Download Snapshot PNG (dark mode capture)
+  const handleDownloadSnapshot = async () => {
+    if (!pageRef.current || downloadingSnapshot || !analysis) return;
 
-    setDownloadingPdf(true);
+    setDownloadingSnapshot(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Dynamic import jsPDF
-      const { jsPDF } = await import('jspdf');
 
       // Snapshot canvases to static images so html2canvas can capture them
       const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
@@ -240,7 +225,6 @@ export default function AnalysisDetailsPage() {
           removeContainer: true,
           imageTimeout: 5000,
           onclone: (clonedDoc) => {
-            // Force dark mode in the cloned document
             clonedDoc.documentElement.classList.add('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
@@ -254,29 +238,22 @@ export default function AnalysisDetailsPage() {
         restoreCanvases();
       }
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
-
-      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-
-      const symbol = analysis.symbol || 'Analysis';
-      const date = new Date().toISOString().split('T')[0];
-      pdf.save(`TraderPath_${symbol}_${date}.pdf`);
+      // Download as PNG snapshot
+      const link = document.createElement('a');
+      link.download = `TraderPath_${analysis.symbol || 'Analysis'}_${new Date().toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
     } catch (err) {
-      console.error('Failed to download PDF:', err);
-      alert('Failed to download PDF: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      console.error('Failed to download snapshot:', err);
+      alert('Failed to download snapshot: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
-      setDownloadingPdf(false);
+      setDownloadingSnapshot(false);
     }
   };
 
   const getTradeType = (interval: string): 'scalping' | 'dayTrade' | 'swing' => {
     if (interval === '5m' || interval === '15m') return 'scalping';
-    if (interval === '1h' || interval === '4h') return 'dayTrade';
+    if (interval === '30m' || interval === '1h' || interval === '2h' || interval === '4h') return 'dayTrade';
     return 'swing';
   };
 
@@ -375,23 +352,23 @@ export default function AnalysisDetailsPage() {
 
   return (
     <>
-      {/* Auto-PDF overlay - shows on top of page content */}
-      {autoPdfInProgress && (
+      {/* Auto-Snapshot overlay - shows on top of page content */}
+      {autoSnapshotInProgress && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl text-center max-w-md mx-4">
-            {autoPdfDone ? (
+            {autoSnapshotDone ? (
               <>
                 <div className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
                   <Check className="w-8 h-8 text-green-500" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">PDF Downloaded!</h2>
-                <p className="text-gray-500 dark:text-slate-400">Your analysis report has been saved as PDF. Redirecting...</p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Snapshot Downloaded!</h2>
+                <p className="text-gray-500 dark:text-slate-400">Your analysis report has been saved as PNG snapshot.</p>
               </>
             ) : (
               <>
-                <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-red-500" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Generating PDF...</h2>
-                <p className="text-gray-500 dark:text-slate-400">Creating your analysis report as PDF. This may take a moment...</p>
+                <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-teal-500" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Generating Snapshot...</h2>
+                <p className="text-gray-500 dark:text-slate-400">Creating your analysis report as PNG snapshot. This may take a moment...</p>
               </>
             )}
           </div>
@@ -407,18 +384,18 @@ export default function AnalysisDetailsPage() {
               <span>Back to Analyze</span>
             </Link>
 
-            {/* Download PDF Button */}
+            {/* Download Snapshot Button */}
             <button
-              onClick={handleDownloadPdf}
-              disabled={downloadingPdf}
+              onClick={handleDownloadSnapshot}
+              disabled={downloadingSnapshot}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg"
             >
-              {downloadingPdf ? (
+              {downloadingSnapshot ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <FileText className="w-4 h-4" />
               )}
-              <span>{downloadingPdf ? 'Generating...' : 'Download PDF'}</span>
+              <span>{downloadingSnapshot ? 'Generating...' : 'Download Snapshot'}</span>
             </button>
           </div>
 
@@ -991,6 +968,7 @@ export default function AnalysisDetailsPage() {
                   resistance={step2.levels?.resistance}
                   forecastBands={step7?.ragEnrichment?.forecastBands || []}
                   tradeType={getTradeType(analysis.interval)}
+                  interval={analysis.interval}
                   chartId="trade-plan-chart"
                   analysisTime={analysis.createdAt}
                   tradePlanStatus={step5.tradePlanStatus}

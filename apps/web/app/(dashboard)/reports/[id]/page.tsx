@@ -660,6 +660,7 @@ export default function ReportViewPage() {
                   support={report.assetScan?.levels?.support}
                   resistance={report.assetScan?.levels?.resistance}
                   tradeType={report.tradeType}
+                  interval={report.interval}
                   analysisTime={report.generatedAt}
                 />
               </div>

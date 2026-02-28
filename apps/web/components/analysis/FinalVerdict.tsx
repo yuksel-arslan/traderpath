@@ -137,9 +137,10 @@ interface FinalVerdictProps {
   data?: FinalVerdictData;
   symbol: string;
   allResults?: AllResultsData;
+  interval?: string;
 }
 
-export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
+export function FinalVerdict({ data, symbol, allResults, interval }: FinalVerdictProps) {
   const router = useRouter();
 
   if (!data) {
@@ -508,6 +509,7 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
           currentPrice={tradePlan.currentPrice || tradePlan.averageEntry || tradePlan.entries![0].price}
           support={tradePlan.support}
           resistance={tradePlan.resistance}
+          interval={interval}
           chartId="trade-plan-chart-visible"
         />
       )}

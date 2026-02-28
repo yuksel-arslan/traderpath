@@ -98,14 +98,29 @@ interface TradePlanChartProps {
   onChartReady?: () => void; // Callback when chart is fully rendered with data
   chartId?: string; // Optional custom ID for the chart container (default: 'trade-plan-chart')
   tradeType?: 'scalping' | 'dayTrade' | 'swing'; // Trade type to determine chart interval
+  interval?: string; // Actual analysis interval (e.g., '15m', '4h') - takes priority over tradeType
   analysisTime?: string | Date; // When the analysis was created (for marker placement)
   // Trade plan validity status
   tradePlanStatus?: 'valid' | 'wait_for_entry' | 'trade_missed';
   tradePlanMessage?: string;
 }
 
-// Get Binance interval based on trade type
-function getChartInterval(tradeType?: string): { interval: string; label: string } {
+const INTERVAL_LABELS: Record<string, string> = {
+  '5m': '5 Min',
+  '15m': '15 Min',
+  '30m': '30 Min',
+  '1h': '1 Hour',
+  '2h': '2 Hour',
+  '4h': '4 Hour',
+  '1d': '1 Day',
+  '1W': '1 Week',
+};
+
+// Get chart interval - use explicit interval if provided, otherwise fall back to trade type
+function getChartInterval(tradeType?: string, interval?: string): { interval: string; label: string } {
+  if (interval && INTERVAL_LABELS[interval]) {
+    return { interval, label: INTERVAL_LABELS[interval] };
+  }
   switch (tradeType) {
     case 'scalping':
       return { interval: '5m', label: '5 Min' };
@@ -139,11 +154,12 @@ export function TradePlanChart({
   onChartReady,
   chartId = 'trade-plan-chart',
   tradeType = 'dayTrade',
+  interval: explicitInterval,
   analysisTime,
   tradePlanStatus = 'valid',
   tradePlanMessage,
 }: TradePlanChartProps) {
-  const { interval: chartInterval, label: intervalLabel } = getChartInterval(tradeType);
+  const { interval: chartInterval, label: intervalLabel } = getChartInterval(tradeType, explicitInterval);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);

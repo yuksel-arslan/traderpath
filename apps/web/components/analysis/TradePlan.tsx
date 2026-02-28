@@ -48,6 +48,7 @@ interface TradePlanData {
 interface TradePlanProps {
   data?: TradePlanData;
   symbol: string;
+  interval?: string;
 }
 
 // Generate AI explanation for why these levels were chosen
@@ -106,7 +107,7 @@ function generateLevelExplanation(data: TradePlanData): string {
   return explanation;
 }
 
-export function TradePlan({ data, symbol }: TradePlanProps) {
+export function TradePlan({ data, symbol, interval }: TradePlanProps) {
   const [showDetails, setShowDetails] = useState(true);
 
   if (!data) {
@@ -217,6 +218,7 @@ export function TradePlan({ data, symbol }: TradePlanProps) {
           currentPrice={data.currentPrice || averageEntry}
           support={data.support}
           resistance={data.resistance}
+          interval={interval}
         />
       </div>
 
