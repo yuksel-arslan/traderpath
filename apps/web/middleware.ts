@@ -21,7 +21,6 @@ const protectedPaths = [
   '/ai-expert',
   '/concierge',
   '/scheduled',
-  '/signals',
   '/methodology',
   '/top-coins',
   '/notifications',

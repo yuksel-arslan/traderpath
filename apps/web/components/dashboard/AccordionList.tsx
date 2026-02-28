@@ -842,7 +842,7 @@ export function AccordionList(props: AccordionListProps) {
                 {signalStats.recentSignals.length > 0 && signalStats.recentSignals.slice(0, 3).map(signal => (
                   <Link
                     key={signal.id}
-                    href={`/signals/${signal.id}`}
+                    href={`/notifications`}
                     className="flex items-center justify-between py-2.5 hover:bg-white/[0.03] transition-colors rounded-lg px-2 -mx-2 min-h-[48px]"
                   >
                     <div className="flex items-center gap-2">
@@ -870,7 +870,7 @@ export function AccordionList(props: AccordionListProps) {
                 ))}
 
                 <div className="mt-2">
-                  <Link href="/signals" className="text-xs text-gray-400 hover:text-[#4dd0e1] transition flex items-center gap-1 min-h-[48px] items-center">
+                  <Link href="/notifications" className="text-xs text-gray-400 hover:text-[#4dd0e1] transition flex items-center gap-1 min-h-[48px] items-center">
                     View All Signals <ArrowRight className="w-3 h-3" />
                   </Link>
                 </div>
