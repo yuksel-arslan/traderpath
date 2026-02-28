@@ -101,7 +101,7 @@ const LAYERS = [
     title: 'TRADE VISUALIZER',
     subtitle: 'TradingView-powered charts with Entry, SL, TP overlays. 48-hour price forecast with confidence intervals.',
     metrics: ['TradingView Charts', 'Entry/SL/TP Overlay', '48h Forecast', 'Confidence Bands'],
-    page: '/trades',
+    page: '/terminal',
   },
 ];
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { getLogoUrl, getAssetLogo, loadLogosCache, isCacheLoaded, fetchAndCacheLogo, AssetClass } from '../../lib/asset-logos-cache';
+import { getLogoUrl, getAssetLogo, loadLogosCache, isCacheLoaded, fetchAndCacheLogo, generateFallbackSvg, AssetClass } from '../../lib/asset-logos-cache';
 
 interface CoinIconProps {
   symbol: string;
@@ -107,9 +107,24 @@ export function CoinIcon({
     );
   }
 
-  // All CDNs failed or no URL available - render nothing
+  // All CDNs failed or no URL available - render branded SVG fallback
   if (allFailed || !iconUrl) {
-    return null;
+    if (!showFallback) return null;
+    const logoInfo = getAssetLogo(symbol, assetClass);
+    const fallbackSvg = generateFallbackSvg(symbol, logoInfo.color);
+    return (
+      <div className={`relative ${className}`} style={{ width: size, height: size }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={fallbackSvg}
+          alt={`${symbol} icon`}
+          width={size}
+          height={size}
+          className="rounded-full object-cover"
+          style={{ width: size, height: size }}
+        />
+      </div>
+    );
   }
 
   return (
