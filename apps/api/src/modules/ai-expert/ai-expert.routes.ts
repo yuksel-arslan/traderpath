@@ -32,7 +32,7 @@ const chatSchema = z.object({
 });
 
 // Constants for AI Expert pricing
-const FREE_QUESTIONS_PER_ANALYSIS = 3;
+const FREE_QUESTIONS_PER_ANALYSIS = 5;
 const AI_EXPERT_QUESTION_COST = 5;
 
 export async function aiExpertRoutes(fastify: FastifyInstance) {

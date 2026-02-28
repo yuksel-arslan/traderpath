@@ -666,7 +666,7 @@ export default function AIExpertChatPage() {
 
   const Icon = expert.icon;
   const isAdmin = user?.isAdmin === true;
-  const hasEnoughCredits = isAdmin || (credits?.balance || 0) >= 3;
+  const hasEnoughCredits = isAdmin || (credits?.balance || 0) >= 5;
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
