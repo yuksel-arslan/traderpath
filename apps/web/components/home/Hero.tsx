@@ -2,8 +2,11 @@
 
 import Link from 'next/link';
 import { ArrowRight, ChevronDown } from 'lucide-react';
+import { usePlatformStats } from '../../hooks/usePlatformStats';
 
 export function Hero() {
+  const { data } = usePlatformStats();
+
   return (
     <section className="py-12 sm:py-16 md:py-24">
       <div className="max-w-[1200px] mx-auto px-4 text-center">
@@ -51,7 +54,10 @@ export function Hero() {
 
         {/* Micro-proof */}
         <p className="text-[10px] font-sans text-slate-400 mt-5">
-          25 free credits on signup &middot; No credit card required &middot; 309+ analyses completed
+          3 free analyses on signup &middot; No credit card required
+          {data && data.totalAnalyses > 0 && (
+            <> &middot; {data.totalAnalyses.toLocaleString()}+ analyses completed</>
+          )}
         </p>
       </div>
     </section>

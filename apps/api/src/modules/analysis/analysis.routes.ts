@@ -2179,12 +2179,20 @@ Explain the key risks and what conditions would need to change before trading th
         ? firstUser.createdAt.toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0];
 
+      // Count total tradeable assets from asset-logos data
+      const { CRYPTO_LOGOS, STOCK_LOGOS, METAL_LOGOS, BOND_LOGOS } = await import('../asset-logos/asset-logos.data.js');
+      const totalAssets = Object.keys(CRYPTO_LOGOS).length
+        + Object.keys(STOCK_LOGOS).length
+        + Object.keys(METAL_LOGOS).length
+        + Object.keys(BOND_LOGOS).length;
+
       return reply.send({
         success: true,
         data: {
           platform: {
             totalUsers,
             totalAnalyses,
+            totalAssets,
             dailyAnalyses,
             weeklyAnalyses,
             monthlyAnalyses,
