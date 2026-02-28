@@ -176,14 +176,12 @@ export default function CapitalFlowReportDetailPage() {
     }
   };
 
-  const handleExportPDF = async () => {
+  const handleExportSnapshot = async () => {
     if (!contentRef.current || exporting) return;
     setExporting(true);
     setExportDropdownOpen(false);
 
     try {
-      const { jsPDF } = await import('jspdf');
-
       const canvas = await html2canvas(contentRef.current, {
         backgroundColor: '#0B1120',
         scale: 2,
@@ -191,19 +189,14 @@ export default function CapitalFlowReportDetailPage() {
         useCORS: true,
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
-
-      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+      const link = document.createElement('a');
       const date = new Date().toISOString().split('T')[0];
-      pdf.save(`TraderPath_CapitalFlow_${date}.pdf`);
+      link.download = `TraderPath_CapitalFlow_${date}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
     } catch (err) {
-      console.error('Failed to export PDF:', err);
-      alert('Failed to export PDF. Please try again.');
+      console.error('Failed to export snapshot:', err);
+      alert('Failed to export snapshot. Please try again.');
     } finally {
       setExporting(false);
     }
@@ -280,11 +273,11 @@ export default function CapitalFlowReportDetailPage() {
                   Download JPG
                 </button>
                 <button
-                  onClick={handleExportPDF}
+                  onClick={handleExportSnapshot}
                   className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
                 >
-                  <FileText className="w-4 h-4 text-red-500" />
-                  Download PDF
+                  <FileText className="w-4 h-4 text-teal-500" />
+                  Download Snapshot
                 </button>
               </div>
             )}

@@ -1,11 +1,10 @@
 'use client';
 
 // ===========================================
-// TraderPath Detailed Analysis Report - Comprehensive PDF
+// TraderPath Detailed Analysis Report - Comprehensive Snapshot PNG
 // Multi-Page Layout with Step Details, Indicator Charts, and Commentary
 // ===========================================
 
-import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
 // ===========================================
@@ -727,8 +726,8 @@ async function renderPageToCanvas(html: string): Promise<HTMLCanvasElement | nul
   return canvas;
 }
 
-export async function generateDetailedReport(data: DetailedReportData): Promise<{ base64: string; fileName: string } | void> {
-  // Fetch asset logo for PDF rendering
+export async function generateDetailedReport(data: DetailedReportData): Promise<{ snapshots: { base64: string; fileName: string }[] } | void> {
+  // Fetch asset logo for snapshot rendering
   if (!data.assetLogoUrl) {
     try {
       const { getLogoUrlAsync } = await import('../../lib/asset-logos-cache');
@@ -750,58 +749,52 @@ export async function generateDetailedReport(data: DetailedReportData): Promise<
     } catch { /* Logo fetch failed, continue without it */ }
   }
 
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'pt',
-    format: 'a4',
-  });
-
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = pdf.internal.pageSize.getHeight();
-
   let pageNumber = 1;
-  const pages: string[] = [];
+  const pages: { html: string; label: string }[] = [];
 
   // Page 1: Cover
-  pages.push(generateCoverPage(data));
+  pages.push({ html: generateCoverPage(data), label: 'Cover' });
 
-  // Pages 2-8: Step Details (one page per step)
+  // Pages 2+: Step Details (one page per step)
   for (const step of safeArray(data.steps)) {
     pageNumber++;
-    pages.push(generateStepDetailPage(data, step, pageNumber));
+    pages.push({ html: generateStepDetailPage(data, step, pageNumber), label: `Step${step.stepNumber || pageNumber}` });
 
     // Add indicator charts page if step has charts
     if (safeArray(step.indicatorCharts).length > 0) {
       pageNumber++;
       const chartPage = generateIndicatorChartsPage(data, step, pageNumber);
-      if (chartPage) pages.push(chartPage);
-    }
-  }
-
-  // Render all pages
-  let isFirst = true;
-  for (const pageHtml of pages) {
-    if (!pageHtml) continue;
-
-    const canvas = await renderPageToCanvas(pageHtml);
-    if (canvas) {
-      if (!isFirst) pdf.addPage();
-      const imgData = canvas.toDataURL('image/png');
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      isFirst = false;
+      if (chartPage) pages.push({ html: chartPage, label: `Step${step.stepNumber || pageNumber}_Charts` });
     }
   }
 
   const tradeTypeShort = data.tradeType === 'scalping' ? 'Scalp' : data.tradeType === 'dayTrade' ? 'Day' : 'Swing';
-  const fileName = `TraderPath_${data.symbol}_${tradeTypeShort}_Detailed_${new Date().toISOString().split('T')[0]}.pdf`;
-  const pdfBase64 = pdf.output('datauristring').split(',')[1];
+  const dateStr = new Date().toISOString().split('T')[0];
+  const baseFileName = `TraderPath_${data.symbol}_${tradeTypeShort}_Detailed_${dateStr}`;
 
-  pdf.save(fileName);
+  const snapshots: { base64: string; fileName: string }[] = [];
 
-  return {
-    base64: pdfBase64,
-    fileName,
-  };
+  // Render all pages as PNG snapshots
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+    if (!page.html) continue;
+
+    const canvas = await renderPageToCanvas(page.html);
+    if (canvas) {
+      const base64 = canvas.toDataURL('image/png').split(',')[1];
+      const fileName = `${baseFileName}_${i + 1}_${page.label}.png`;
+
+      // Download the snapshot
+      const link = document.createElement('a');
+      link.download = fileName;
+      link.href = `data:image/png;base64,${base64}`;
+      link.click();
+
+      snapshots.push({ base64, fileName });
+    }
+  }
+
+  return { snapshots };
 }
 
 // Types are already exported via interface declarations above

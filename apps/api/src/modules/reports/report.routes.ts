@@ -22,8 +22,8 @@ function formatSymbolPair(symbol: string): string {
 }
 
 // Constants for free usage limits per analysis
-const FREE_PDF_DOWNLOADS_PER_ANALYSIS = 2;
-const PDF_DOWNLOAD_CREDIT_COST = 5;
+const FREE_SNAPSHOT_DOWNLOADS_PER_ANALYSIS = 2;
+const SNAPSHOT_DOWNLOAD_CREDIT_COST = 5;
 
 // Admin emails - their reports are public and visible to all users
 const ADMIN_EMAILS = ['contact@yukselarslan.com'];
@@ -564,7 +564,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
   );
 
   // ===========================================
-  // POST /api/reports/:id/track-download - Track PDF download with free usage limits
+  // POST /api/reports/:id/track-download - Track snapshot download with free usage limits
   // ===========================================
   fastify.post<{ Params: { id: string } }>(
     '/api/reports/:id/track-download',
@@ -604,7 +604,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
           });
 
           if (analysis) {
-            freeDownloadsRemaining = FREE_PDF_DOWNLOADS_PER_ANALYSIS - analysis.pdfDownloadsUsed;
+            freeDownloadsRemaining = FREE_SNAPSHOT_DOWNLOADS_PER_ANALYSIS - analysis.pdfDownloadsUsed;
             isFreeDownload = freeDownloadsRemaining > 0;
           }
         }
@@ -613,8 +613,8 @@ export async function reportRoutes(fastify: FastifyInstance) {
         if (!isFreeDownload) {
           const chargeResult = await creditService.charge(
             userId,
-            PDF_DOWNLOAD_CREDIT_COST,
-            'pdf_download',
+            SNAPSHOT_DOWNLOAD_CREDIT_COST,
+            'snapshot_download',
             { reportId: id, analysisId: report.analysisId }
           );
 
@@ -622,8 +622,8 @@ export async function reportRoutes(fastify: FastifyInstance) {
             return reply.code(402).send({
               error: {
                 code: 'INSUFFICIENT_CREDITS',
-                message: `PDF download requires ${PDF_DOWNLOAD_CREDIT_COST} credits (free downloads exhausted for this analysis).`,
-                required: PDF_DOWNLOAD_CREDIT_COST,
+                message: `Snapshot download requires ${SNAPSHOT_DOWNLOAD_CREDIT_COST} credits (free downloads exhausted for this analysis).`,
+                required: SNAPSHOT_DOWNLOAD_CREDIT_COST,
               },
             });
           }
@@ -650,8 +650,8 @@ export async function reportRoutes(fastify: FastifyInstance) {
             wasFree: isFreeDownload,
             freeDownloads: analysis ? {
               used: analysis.pdfDownloadsUsed + 1,
-              total: FREE_PDF_DOWNLOADS_PER_ANALYSIS,
-              remaining: Math.max(0, FREE_PDF_DOWNLOADS_PER_ANALYSIS - analysis.pdfDownloadsUsed - 1),
+              total: FREE_SNAPSHOT_DOWNLOADS_PER_ANALYSIS,
+              remaining: Math.max(0, FREE_SNAPSHOT_DOWNLOADS_PER_ANALYSIS - analysis.pdfDownloadsUsed - 1),
             } : null,
           },
         });

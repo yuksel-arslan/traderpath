@@ -1045,7 +1045,7 @@ export function AnalysisDialog({
                       {activeStep === 5 && <TrapCheck data={results[5]} symbol={symbol} />}
                       {activeStep === 6 && (
                         results[6] ? (
-                          <TradePlan data={results[6]} symbol={symbol} />
+                          <TradePlan data={results[6]} symbol={symbol} interval={timeframe} />
                         ) : (
                           <div
                             className="p-4 rounded-xl text-center"
@@ -1062,7 +1062,7 @@ export function AnalysisDialog({
                           </div>
                         )
                       )}
-                      {activeStep === 7 && <FinalVerdict data={results[7]} symbol={symbol} allResults={results} />}
+                      {activeStep === 7 && <FinalVerdict data={results[7]} symbol={symbol} allResults={results} interval={timeframe} />}
                       {activeStep === 8 && results[8] && (
                         <MLConfirmationResult data={results[8]} />
                       )}

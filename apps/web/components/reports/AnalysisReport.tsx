@@ -4,7 +4,6 @@
 // TraderPath Professional Analysis Report
 // ===========================================
 
-import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
 // ===========================================
@@ -1934,7 +1933,7 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
 }
 
 // ===========================================
-// CHART CAPTURE & PDF GENERATION
+// CHART CAPTURE & SNAPSHOT PNG GENERATION
 // ===========================================
 
 export async function captureChartAsImage(): Promise<string | null> {
@@ -2048,9 +2047,8 @@ async function renderPageToCanvas(html: string): Promise<HTMLCanvasElement> {
   return canvas;
 }
 
-interface PdfResult {
-  base64: string;
-  fileName: string;
+interface SnapshotResult {
+  snapshots: { base64: string; fileName: string }[];
 }
 
 // Fetch asset logo and convert to data URI for PDF rendering (avoids CORS)
@@ -2644,7 +2642,7 @@ function generateSinglePageReport(data: AnalysisReportData): string {
   `;
 }
 
-export async function generateAnalysisReport(data: AnalysisReportData, captureChart: boolean = true, singlePage: boolean = false): Promise<PdfResult | void> {
+export async function generateAnalysisReport(data: AnalysisReportData, captureChart: boolean = true, singlePage: boolean = false): Promise<SnapshotResult | void> {
   // Validate required data
   if (!data) {
     throw new Error('Report data is required');
@@ -2659,33 +2657,41 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
       if (chartImage) data.chartImage = chartImage;
     }
 
-    // Fetch asset logo for PDF rendering
+    // Fetch asset logo for snapshot rendering
     if (!data.assetLogoUrl) {
       const logoDataUri = await fetchAssetLogoDataUri(data.symbol);
       if (logoDataUri) data.assetLogoUrl = logoDataUri;
     }
 
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
-
     const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'DayTrade', swing: 'Swing' };
     const tradeType = data.tradeType ? tradeTypes[data.tradeType] || '' : '';
+    const dateStr = new Date().toISOString().split('T')[0];
+    const baseFileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_${dateStr}`;
 
-    // SINGLE PAGE FORMAT - Compact layout with all info on one page
+    const snapshots: { base64: string; fileName: string }[] = [];
+
+    // Helper to render a page canvas and save as PNG snapshot
+    const addSnapshot = async (html: string, suffix: string) => {
+      const canvas = await renderPageToCanvas(html);
+      const base64 = canvas.toDataURL('image/png').split(',')[1];
+      const fileName = `${baseFileName}_${suffix}.png`;
+
+      // Download the snapshot
+      const link = document.createElement('a');
+      link.download = fileName;
+      link.href = `data:image/png;base64,${base64}`;
+      link.click();
+
+      snapshots.push({ base64, fileName });
+    };
+
+    // SINGLE PAGE FORMAT - Executive Summary (1 snapshot)
     if (singlePage) {
-      const canvas = await renderPageToCanvas(generateSinglePageReport(data));
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
-
-      const fileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_Summary_${new Date().toISOString().split('T')[0]}.pdf`;
-      const pdfBase64 = pdf.output('datauristring').split(',')[1];
-      pdf.save(fileName);
-
-      return { base64: pdfBase64, fileName };
+      await addSnapshot(generateSinglePageReport(data), 'Summary');
+      return { snapshots };
     }
 
-    // MULTI-PAGE FORMAT - Detailed report (7 pages + optional RAG page)
-    // Only include RAG page when there's real research data (not empty placeholder)
+    // MULTI-PAGE FORMAT - Detailed report (7-8 snapshots)
     const ragResearch = data.ragEnrichment?.research;
     const hasRAG = !!data.ragEnrichment && !!(
       (ragResearch?.summary && ragResearch.summary.length > 0) ||
@@ -2693,55 +2699,36 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
     );
     const totalPages = hasRAG ? 8 : 7;
 
-    // Page 1: Executive Summary
-    const canvas1 = await renderPageToCanvas(generatePageExecutiveSummary(data, totalPages));
-    pdf.addImage(canvas1.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 1: Executive Summary
+    await addSnapshot(generatePageExecutiveSummary(data, totalPages), '1_Summary');
 
-    // Page 2: Trade Plan (Full Chart)
-    pdf.addPage();
-    const canvas2 = await renderPageToCanvas(generatePageTradePlan(data, totalPages));
-    pdf.addImage(canvas2.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 2: Trade Plan (Full Chart)
+    await addSnapshot(generatePageTradePlan(data, totalPages), '2_TradePlan');
 
-    // Page 3: Tokenomics
-    pdf.addPage();
-    const canvas3 = await renderPageToCanvas(generatePageTokenomics(data, totalPages));
-    pdf.addImage(canvas3.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 3: Tokenomics
+    await addSnapshot(generatePageTokenomics(data, totalPages), '3_Tokenomics');
 
-    // Page 4: Steps 1-2 (Market Pulse + Asset Scanner)
-    pdf.addPage();
-    const canvas4 = await renderPageToCanvas(generatePageSteps12(data, totalPages));
-    pdf.addImage(canvas4.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 4: Steps 1-2 (Market Pulse + Asset Scanner)
+    await addSnapshot(generatePageSteps12(data, totalPages), '4_MarketAsset');
 
-    // Page 5: Steps 3-4 (Safety Check + Timing)
-    pdf.addPage();
-    const canvas5 = await renderPageToCanvas(generatePageSteps34(data, totalPages));
-    pdf.addImage(canvas5.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 5: Steps 3-4 (Safety Check + Timing)
+    await addSnapshot(generatePageSteps34(data, totalPages), '5_SafetyTiming');
 
-    // Page 6: Steps 5-6 (Trade Plan Details + Trap Check)
-    pdf.addPage();
-    const canvas6 = await renderPageToCanvas(generatePageSteps56(data, totalPages));
-    pdf.addImage(canvas6.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 6: Steps 5-6 (Trade Plan Details + Trap Check)
+    await addSnapshot(generatePageSteps56(data, totalPages), '6_PlanTrap');
 
-    // Page 7: Final Verdict
-    pdf.addPage();
-    const canvas7 = await renderPageToCanvas(generatePageVerdict(data, totalPages));
-    pdf.addImage(canvas7.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 7: Final Verdict
+    await addSnapshot(generatePageVerdict(data, totalPages), '7_Verdict');
 
-    // Page 8: RAG Intelligence Layer (optional - only if RAG enrichment data exists)
+    // Snapshot 8: RAG Intelligence Layer (optional)
     if (hasRAG) {
-      pdf.addPage();
-      const canvas8 = await renderPageToCanvas(generatePageRAG(data, totalPages));
-      pdf.addImage(canvas8.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+      await addSnapshot(generatePageRAG(data, totalPages), '8_RAG');
     }
 
-    const fileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_${new Date().toISOString().split('T')[0]}.pdf`;
-    const pdfBase64 = pdf.output('datauristring').split(',')[1];
-    pdf.save(fileName);
-
-    return { base64: pdfBase64, fileName };
+    return { snapshots };
   } catch (error) {
-    console.error('[PDF] Generation failed:', error);
-    throw new Error(`PDF generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('[Snapshot] Generation failed:', error);
+    throw new Error(`Snapshot generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
