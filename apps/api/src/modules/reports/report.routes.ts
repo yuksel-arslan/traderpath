@@ -11,6 +11,8 @@ import { notificationService } from '../notifications/notification.service';
 import { creditService } from '../credits/credit.service';
 import { logger } from '../../core/logger';
 import { detectAssetClass } from '../analysis/providers/symbol-resolver';
+import { snapshotService, type SnapshotType } from './snapshot.service';
+import { reportDistributionService } from './report-distribution.service';
 
 // Helper: format symbol pair (crypto gets /USDT, non-crypto doesn't)
 function formatSymbolPair(symbol: string): string {
@@ -200,6 +202,26 @@ export async function reportRoutes(fastify: FastifyInstance) {
             fastify.log.error(alertError, 'Failed to auto-create price alerts');
             // Don't fail the report creation if alerts fail
           }
+        }
+
+        // Auto-distribute snapshot report to user's channels (async, non-blocking)
+        reportDistributionService.distributeToUser(
+          report.id,
+          userId,
+          reportData,
+          'executive'
+        ).catch(err => {
+          fastify.log.error(err, 'Failed to auto-distribute report snapshots');
+        });
+
+        // Auto-distribute to Intelligence Reports subscribers if GO/CONDITIONAL_GO
+        if (shouldCreateAlerts) {
+          reportDistributionService.distributeToSubscribers(
+            reportData,
+            'executive'
+          ).catch(err => {
+            fastify.log.error(err, 'Failed to distribute to subscribers');
+          });
         }
 
         return reply.code(201).send({
@@ -1416,6 +1438,185 @@ export async function reportRoutes(fastify: FastifyInstance) {
         const msg = error instanceof Error ? error.message : 'Failed to send WhatsApp message';
         return reply.code(500).send({
           error: { code: 'SERVER_ERROR', message: msg },
+        });
+      }
+    }
+  );
+
+  // ===========================================
+  // POST /api/reports/:id/snapshots - Generate snapshot PNGs for a report
+  // ===========================================
+  fastify.post<{ Params: { id: string }; Body: { type?: SnapshotType } }>(
+    '/api/reports/:id/snapshots',
+    { preHandler: authenticate },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const userId = getUser(request)?.id;
+        if (!userId) {
+          return reply.code(401).send({
+            error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+          });
+        }
+
+        const { id } = request.params as { id: string };
+        const { type = 'executive' } = (request.body as { type?: SnapshotType }) || {};
+
+        // Get report
+        const report = await prisma.report.findFirst({
+          where: { id, userId },
+        });
+
+        if (!report) {
+          return reply.code(404).send({
+            error: { code: 'NOT_FOUND', message: 'Report not found' },
+          });
+        }
+
+        // Check if Puppeteer is available
+        const available = await snapshotService.isAvailable();
+        if (!available) {
+          return reply.code(503).send({
+            error: { code: 'SERVICE_UNAVAILABLE', message: 'Snapshot generation is not available on this server' },
+          });
+        }
+
+        const reportData = report.reportData as Record<string, unknown>;
+        const snapshots = await snapshotService.generateSnapshots(reportData, type);
+
+        if (snapshots.length === 0) {
+          return reply.code(500).send({
+            error: { code: 'GENERATION_FAILED', message: 'Failed to generate snapshots' },
+          });
+        }
+
+        // Return snapshots as base64 array
+        const snapshotData = snapshots.map(s => ({
+          id: s.id,
+          title: s.title,
+          base64: s.buffer.toString('base64'),
+          mimeType: 'image/png',
+        }));
+
+        return reply.send({
+          success: true,
+          data: {
+            type,
+            symbol: report.symbol,
+            count: snapshotData.length,
+            snapshots: snapshotData,
+          },
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to generate snapshots' },
+        });
+      }
+    }
+  );
+
+  // ===========================================
+  // GET /api/reports/:id/snapshot/:pageId - Download a single snapshot PNG
+  // ===========================================
+  fastify.get<{ Params: { id: string; pageId: string }; Querystring: { type?: SnapshotType } }>(
+    '/api/reports/:id/snapshot/:pageId',
+    { preHandler: authenticate },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const userId = getUser(request)?.id;
+        if (!userId) {
+          return reply.code(401).send({
+            error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+          });
+        }
+
+        const { id, pageId } = request.params as { id: string; pageId: string };
+        const { type = 'executive' } = (request.query as { type?: SnapshotType }) || {};
+
+        const report = await prisma.report.findFirst({
+          where: { id, userId },
+        });
+
+        if (!report) {
+          return reply.code(404).send({
+            error: { code: 'NOT_FOUND', message: 'Report not found' },
+          });
+        }
+
+        const reportData = report.reportData as Record<string, unknown>;
+        const snapshots = await snapshotService.generateSnapshots(reportData, type);
+        const target = snapshots.find(s => s.id === pageId);
+
+        if (!target) {
+          return reply.code(404).send({
+            error: { code: 'NOT_FOUND', message: `Snapshot page '${pageId}' not found` },
+          });
+        }
+
+        return reply
+          .header('Content-Type', 'image/png')
+          .header('Content-Disposition', `attachment; filename="TraderPath_${report.symbol}_${pageId}.png"`)
+          .send(target.buffer);
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to generate snapshot' },
+        });
+      }
+    }
+  );
+
+  // ===========================================
+  // POST /api/reports/:id/distribute - Send report snapshots via Telegram/Discord
+  // ===========================================
+  fastify.post<{ Params: { id: string }; Body: { type?: SnapshotType } }>(
+    '/api/reports/:id/distribute',
+    { preHandler: authenticate },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const userId = getUser(request)?.id;
+        if (!userId) {
+          return reply.code(401).send({
+            error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+          });
+        }
+
+        const { id } = request.params as { id: string };
+        const { type = 'executive' } = (request.body as { type?: SnapshotType }) || {};
+
+        const report = await prisma.report.findFirst({
+          where: { id, userId },
+        });
+
+        if (!report) {
+          return reply.code(404).send({
+            error: { code: 'NOT_FOUND', message: 'Report not found' },
+          });
+        }
+
+        const reportData = report.reportData as Record<string, unknown>;
+
+        // Distribute to user's configured channels
+        const distResult = await reportDistributionService.distributeToUser(
+          id,
+          userId,
+          reportData,
+          type
+        );
+
+        return reply.send({
+          success: true,
+          data: {
+            snapshotsGenerated: distResult.snapshotsGenerated,
+            telegramSent: distResult.telegramSent,
+            discordSent: distResult.discordSent,
+            errors: distResult.errors.length > 0 ? distResult.errors : undefined,
+          },
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to distribute report' },
         });
       }
     }

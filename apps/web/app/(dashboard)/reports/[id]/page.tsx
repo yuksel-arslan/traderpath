@@ -26,6 +26,7 @@ import {
   Download,
   ChevronDown,
   Image,
+  Send,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
 import { CoinIcon } from '../../../../components/common/CoinIcon';
@@ -232,6 +233,7 @@ export default function ReportViewPage() {
   const [error, setError] = useState<string | null>(null);
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [sending, setSending] = useState(false);
   const [reportMeta, setReportMeta] = useState<{ analysisId: string; interval?: string } | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
@@ -357,6 +359,44 @@ export default function ReportViewPage() {
       alert('Failed to export image');
     } finally {
       setExporting(false);
+    }
+  };
+
+  // Send report snapshots to Telegram/Discord
+  const handleSendReport = async () => {
+    if (sending) return;
+    setSending(true);
+    setExportDropdownOpen(false);
+    try {
+      const response = await authFetch(`/api/reports/${reportId}/distribute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'executive' }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        alert(err.error?.message || 'Failed to send report');
+        return;
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        const { telegramSent, discordSent } = data.data;
+        const channels: string[] = [];
+        if (telegramSent > 0) channels.push('Telegram');
+        if (discordSent > 0) channels.push('Discord');
+        if (channels.length > 0) {
+          alert(`Report sent via ${channels.join(' & ')}!`);
+        } else {
+          alert('No notification channels configured. Set up Telegram or Discord in Settings.');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to send report:', err);
+      alert('Failed to send report');
+    } finally {
+      setSending(false);
     }
   };
 
@@ -635,6 +675,22 @@ export default function ReportViewPage() {
                           <div>
                             <div>Download JPG</div>
                             <div className="text-xs text-gray-400">Smaller Size</div>
+                          </div>
+                        </button>
+                        <div className="border-t border-gray-200 dark:border-gray-800" />
+                        <button
+                          onClick={handleSendReport}
+                          disabled={sending}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-50"
+                        >
+                          {sending ? (
+                            <Loader2 className="w-4 h-4 text-emerald-500 animate-spin" />
+                          ) : (
+                            <Send className="w-4 h-4 text-emerald-500" />
+                          )}
+                          <div>
+                            <div>{sending ? 'Sending...' : 'Send to Telegram/Discord'}</div>
+                            <div className="text-xs text-gray-400">Snapshot PNG inline</div>
                           </div>
                         </button>
                       </div>
