@@ -6,9 +6,8 @@
 // Runs automatically with visual progression spectacle
 // ===========================================
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Globe,
@@ -16,20 +15,18 @@ import {
   Zap,
   FileText,
   Loader2,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   Check,
   AlertTriangle,
   Shield,
-  RefreshCw,
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import { authFetch, getAuthToken, getApiUrl } from '../../../lib/api';
+import { authFetch } from '../../../lib/api';
+import { type RecentAnalysis } from '../../../lib/analysis-types';
+import { useRecentAnalyses, useDailyPass } from '../../../lib/hooks/useAnalysisData';
 
 // Intelligence UI
-import { PulseDot, VerdictBadge } from '@/components/ui/intelligence';
+import { PulseDot } from '@/components/ui/intelligence';
 import { AnalysisPipelineCard } from '@/components/analyze/AnalysisPipelineCard';
 import { RecentAnalysisRow } from '@/components/analyze/RecentAnalysisRow';
 import { AnalysisReportDrawer } from '@/components/analyze/AnalysisReportDrawer';
@@ -47,7 +44,6 @@ const AnalysisDialog = dynamic(
 );
 
 // Types
-type TradeType = 'scalping' | 'dayTrade' | 'swing';
 type Phase = 'early' | 'mid' | 'late' | 'exit';
 type LiquidityBias = 'risk_on' | 'risk_off' | 'neutral';
 type PipelineStep = 'idle' | 'capital_flow' | 'ai_recommendation' | 'asset_analysis' | 'complete' | 'error' | 'warning';
@@ -121,26 +117,6 @@ interface AIRecommendation {
   canProceed: boolean;
 }
 
-interface RecentAnalysis {
-  id: string;
-  symbol: string;
-  verdict: 'go' | 'conditional_go' | 'wait' | 'avoid';
-  score: number | null;
-  direction: string | null;
-  tradeType?: TradeType;
-  method?: string;
-  createdAt: string;
-  outcome?: 'correct' | 'incorrect' | 'pending' | null;
-  entryPrice?: number;
-  currentPrice?: number;
-  unrealizedPnL?: number;
-  stopLoss?: number;
-  takeProfit1?: number;
-  tpProgress?: number;
-  hasTradePlan?: boolean;
-  expiresAt?: string;
-}
-
 const PIPELINE_STEPS = [
   { key: 'capital_flow' as PipelineStep, label: 'Capital Flow', icon: Globe, gradient: 'from-teal-500 to-emerald-600', bgGlow: 'shadow-teal-500/30' },
   { key: 'ai_recommendation' as PipelineStep, label: 'AI Selection', icon: Brain, gradient: 'from-amber-500 to-orange-600', bgGlow: 'shadow-amber-500/30' },
@@ -149,7 +125,6 @@ const PIPELINE_STEPS = [
 ];
 
 export default function AutomatedAnalysisPage() {
-  const router = useRouter();
   const [pipelineStep, setPipelineStep] = useState<PipelineStep>('idle');
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [capitalFlow, setCapitalFlow] = useState<CapitalFlowSummary | null>(null);
@@ -157,10 +132,6 @@ export default function AutomatedAnalysisPage() {
   const [aiRecommendation, setAiRecommendation] = useState<AIRecommendation | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<AIRecommendedAsset | null>(null);
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
-  const [dailyPassStatus, setDailyPassStatus] = useState<{ hasPass: boolean; canUse: boolean; usageCount: number; maxUsage: number } | null>(null);
-  const [analyses, setAnalyses] = useState<RecentAnalysis[]>([]);
-  const [analysesLoading, setAnalysesLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<{ id: string; action: string } | null>(null);
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const [manualSymbol, setManualSymbol] = useState('');
   const [filter, setFilter] = useState('All');
@@ -174,58 +145,10 @@ export default function AutomatedAnalysisPage() {
   const [showBatchResults, setShowBatchResults] = useState(false);
   const [reportDrawerId, setReportDrawerId] = useState<string | null>(null);
 
-  // ── Data fetching ─────────────────────────
-  const fetchDailyPassStatus = useCallback(async () => {
-    try {
-      const res = await authFetch('/api/passes/check/ASSET_ANALYSIS');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) setDailyPassStatus({ hasPass: data.data.hasPass, canUse: data.data.canUse, usageCount: data.data.pass?.usageCount ?? 0, maxUsage: data.data.pass?.maxUsage ?? 10 });
-      }
-    } catch {}
-  }, []);
-
-  const fetchAnalyses = useCallback(async () => {
-    try {
-      const token = await getAuthToken();
-      if (!token) { setAnalyses([]); setAnalysesLoading(false); return; }
-      const response = await fetch(getApiUrl('/api/analysis/live-prices'), { headers: { 'Authorization': `Bearer ${token}` } });
-      if (response.ok) {
-        const responseText = await response.text();
-        if (responseText?.trim()) {
-          const result = JSON.parse(responseText);
-          const liveAnalyses = result.data?.analyses || [];
-          const mapped = liveAnalyses.map((a: Record<string, unknown>) => {
-            const rawVerdict = ((a.verdict as string) || '').toLowerCase().replace(/[^a-z_]/g, '');
-            let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
-            if (rawVerdict === 'go') verdict = 'go';
-            else if (rawVerdict === 'conditional_go' || rawVerdict === 'conditionalgo' || rawVerdict === 'cond') verdict = 'conditional_go';
-            else if (rawVerdict === 'avoid' || rawVerdict === 'no_go' || rawVerdict === 'nogo') verdict = 'avoid';
-            let tradeType: TradeType | undefined;
-            if (a.interval === '5m' || a.interval === '15m') tradeType = 'scalping';
-            else if (a.interval === '1h' || a.interval === '4h') tradeType = 'dayTrade';
-            else if (a.interval === '1d' || a.interval === '1D') tradeType = 'swing';
-            let outcome: 'correct' | 'incorrect' | 'pending' | null = null;
-            if (a.outcome === 'tp1_hit' || a.outcome === 'tp2_hit' || a.outcome === 'tp3_hit') outcome = 'correct';
-            else if (a.outcome === 'sl_hit') outcome = 'incorrect';
-            else if (a.hasTradePlan) outcome = 'pending';
-            return {
-              id: a.id as string, symbol: a.symbol as string, verdict, score: (a.totalScore as number) ?? null,
-              direction: a.direction as string | null, tradeType, method: (a.method as string) || 'classic',
-              createdAt: new Date(a.createdAt as string).toLocaleDateString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-              outcome, entryPrice: a.entryPrice as number | undefined, currentPrice: a.currentPrice as number | undefined,
-              unrealizedPnL: a.unrealizedPnL as number | undefined, stopLoss: a.stopLoss as number | undefined,
-              takeProfit1: a.takeProfit1 as number | undefined, tpProgress: a.tpProgress as number | undefined,
-              hasTradePlan: a.hasTradePlan as boolean | undefined, expiresAt: a.expiresAt as string | undefined,
-            };
-          });
-          setAnalyses(mapped);
-        }
-      }
-    } catch {} finally { setAnalysesLoading(false); }
-  }, []);
-
-  useEffect(() => { fetchDailyPassStatus(); fetchAnalyses(); const i = setInterval(fetchAnalyses, 30000); return () => clearInterval(i); }, [fetchDailyPassStatus, fetchAnalyses]);
+  // ── Shared hooks ──────────────────────────
+  const { analyses, setAnalyses, loading: analysesLoading, refresh: fetchAnalyses } = useRecentAnalyses();
+  const { status: dailyPassStatus, setStatus: setDailyPassStatus, refresh: fetchDailyPassStatus } = useDailyPass();
+  // Note: handleDelete/handleEmail available via useAnalysisHandlers if needed for future use
 
   // ── Automated Pipeline ─────────────────────
   const runAutomatedPipeline = async () => {
@@ -315,18 +238,6 @@ export default function AutomatedAnalysisPage() {
     l3Summary: { primaryMarket: aiRecommendation.l3Status.primaryMarket, topSectors: aiRecommendation.l3Status.sectors.slice(0, 3).map(s => s.name) },
     l4Summary: { action: aiRecommendation.l4Status.buyRecommendation?.action || aiRecommendation.l4Status.sellRecommendation?.action || 'wait', confidence: selectedAsset?.confidence || aiRecommendation.l4Status.buyRecommendation?.confidence || 0, market: aiRecommendation.l4Status.buyRecommendation?.market || aiRecommendation.l4Status.sellRecommendation?.market || '' },
   } : undefined;
-
-  const handleDelete = async (e: React.MouseEvent, analysisId: string) => {
-    e.preventDefault(); e.stopPropagation();
-    if (!confirm('Delete this analysis?')) return;
-    setActionLoading({ id: analysisId, action: 'delete' });
-    try { const r = await authFetch(`/api/analysis/${analysisId}`, { method: 'DELETE' }); if (r.ok) setAnalyses(analyses.filter(a => a.id !== analysisId)); } catch {} finally { setActionLoading(null); }
-  };
-
-  const handleEmail = (e: React.MouseEvent, analysis: RecentAnalysis) => {
-    e.preventDefault(); e.stopPropagation();
-    router.push(`/analyze/details/${analysis.id}?email=true`);
-  };
 
   // ── Helpers ────────────────────────────────
   const getBiasConfig = (bias: LiquidityBias) => {

@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { cn } from '@/lib/utils';
-import { formatPrice } from '@/lib/utils';
+import { cn, formatPrice } from '@/lib/utils';
 import { ScoreRing, VerdictBadge } from '@/components/ui/intelligence';
 import { X, Zap, Shield, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import type { Timeframe } from '@/components/analysis/TradeTypeSelector';
+import type { DailyPassStatus } from '@/lib/analysis-types';
 
 const CoinIcon = dynamic(
   () => import('@/components/common/CoinIcon').then(mod => ({ default: mod.CoinIcon })),
@@ -33,12 +32,7 @@ interface AssetConfigPanelProps {
   onTimeframeChange: (tf: Timeframe) => void;
   onRun: () => void;
   onClose: () => void;
-  dailyPassStatus: {
-    hasPass: boolean;
-    canUse: boolean;
-    usageCount: number;
-    maxUsage: number;
-  } | null;
+  dailyPassStatus: DailyPassStatus | null;
   purchasingPass: boolean;
   onPurchasePass: () => void;
 }
@@ -58,18 +52,10 @@ export function AssetConfigPanel({
   purchasingPass,
   onPurchasePass,
 }: AssetConfigPanelProps) {
-  // Estimate
-  const creditCost = 35;
   const estimatedTime = '~45 seconds';
 
   return (
-    <div
-      className="rounded-2xl p-4 mb-6"
-      style={{
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.08)',
-      }}
-    >
+    <div className="rounded-2xl p-4 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.08]">
       {/* Header: Asset info + close */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -105,8 +91,7 @@ export function AssetConfigPanel({
           )}
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/60 transition-colors"
-            style={{ background: 'rgba(255,255,255,0.06)' }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 dark:bg-white/[0.06] text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/60 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -118,22 +103,18 @@ export function AssetConfigPanel({
         <label className="text-[10px] uppercase tracking-widest text-gray-400 dark:text-white/30 mb-2 block">
           Timeframe
         </label>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-6 gap-1.5">
           {TIMEFRAMES.map((tf) => (
             <button
               key={tf.value}
               onClick={() => onTimeframeChange(tf.value)}
               className={cn(
-                'flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all',
+                'py-2.5 rounded-xl text-sm font-semibold transition-all',
                 timeframe === tf.value
                   ? 'text-white'
-                  : 'text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/60',
+                  : 'bg-gray-100 dark:bg-white/[0.06] border border-gray-200 dark:border-white/[0.06] text-gray-500 dark:text-white/40 hover:text-gray-700 dark:hover:text-white/60',
               )}
-              style={
-                timeframe === tf.value
-                  ? { background: 'linear-gradient(135deg, #00F5A0, #00D4FF)' }
-                  : { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.06)' }
-              }
+              style={timeframe === tf.value ? { background: 'linear-gradient(135deg, #00F5A0, #00D4FF)' } : undefined}
             >
               {tf.label}
               <span className="block text-[9px] opacity-60 font-normal">{tf.type}</span>
@@ -144,14 +125,11 @@ export function AssetConfigPanel({
 
       {/* Daily Pass Status */}
       {dailyPassStatus && (
-        <div
-          className="flex items-center gap-3 p-2.5 rounded-xl mb-4"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
-        >
+        <div className="flex items-center gap-3 p-2.5 rounded-xl mb-4 bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.06]">
           <span className="text-[10px] text-gray-400 dark:text-white/40">Daily Pass:</span>
           {dailyPassStatus.hasPass ? (
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: 'rgba(0,245,160,0.12)', color: '#00F5A0' }}>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#00F5A0]/10 text-[#00F5A0]">
                 Active
               </span>
               <span className="text-[10px] font-mono text-gray-400 dark:text-white/40">
@@ -172,10 +150,7 @@ export function AssetConfigPanel({
       )}
 
       {/* Tailored note */}
-      <div
-        className="flex items-start gap-2 p-2.5 rounded-xl mb-4"
-        style={{ background: 'rgba(255,184,0,0.06)', border: '1px solid rgba(255,184,0,0.12)' }}
-      >
+      <div className="flex items-start gap-2 p-2.5 rounded-xl mb-4 bg-[#FFB800]/5 border border-[#FFB800]/10">
         <Shield className="w-4 h-4 text-[#FFB800] mt-0.5 shrink-0" />
         <p className="text-[10px] text-[#FFB800]/80">
           Tailored analysis skips Capital Flow alignment. For best results, use Automated Analysis.
@@ -185,7 +160,6 @@ export function AssetConfigPanel({
       {/* Estimate + Run button */}
       <div className="flex items-center justify-between mb-3 text-[10px] text-gray-400 dark:text-white/30">
         <span>{estimatedTime}</span>
-        <span className="font-mono">{creditCost} credits</span>
       </div>
 
       <button
