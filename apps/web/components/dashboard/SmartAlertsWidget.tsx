@@ -4,7 +4,7 @@
 // SmartAlertsWidget — Dashboard compact widget
 // Polls GET /api/smart-alerts?limit=3 every 60s
 // Also fetches scan status for liveness indicator
-// Full list at /alerts/smart
+// Full list at /notifications (ALERT filter)
 // ===========================================
 
 import { useEffect, useState } from 'react';
@@ -156,7 +156,7 @@ export function SmartAlertsWidget() {
             )}
           </div>
           <Link
-            href="/alerts/smart"
+            href="/notifications"
             className="flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           >
             All alerts
@@ -188,7 +188,7 @@ export function SmartAlertsWidget() {
             </p>
           )}
           <Link
-            href="/alerts/smart/settings"
+            href="/notifications"
             className="inline-block mt-3 text-xs font-medium text-teal-500 hover:text-teal-600 transition-colors"
           >
             Configure preferences &rarr;
@@ -205,7 +205,7 @@ export function SmartAlertsWidget() {
             return (
               <Link
                 key={alert.id}
-                href="/alerts/smart"
+                href="/notifications"
                 className={`flex items-start gap-3 px-6 py-4 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.02] ${
                   !alert.read ? 'bg-gray-50/40 dark:bg-white/[0.015]' : ''
                 }`}

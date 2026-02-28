@@ -16,14 +16,9 @@ import {
   User,
   ChevronDown,
   Server,
-  Brain,
-  Calendar,
   Bot,
-  Activity,
   FileText,
   Inbox,
-  ShieldAlert,
-  Sparkles,
   Monitor,
   BarChart3,
   FlaskConical,
@@ -42,11 +37,11 @@ const PriceTicker = dynamic(
 
 // Primary navigation - Top-Down Methodology Flow (L1→L7)
 const directNav = [
+  { name: 'Concierge', href: '/concierge', icon: Bot },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Analyzer', href: '/analyze', icon: BarChart3 },
   { name: 'Terminal', href: '/terminal', icon: Monitor },
-  { name: 'Analyze', href: '/analyze', icon: BarChart3 },
   { name: 'Reports', href: '/reports', icon: FileText },
-  { name: 'Signals', href: '/signals', icon: Activity },
 ];
 
 // Dropdown navigation groups
@@ -55,11 +50,9 @@ const dropdownNav = [
     name: 'More',
     icon: Settings,
     items: [
-      { name: 'Concierge', href: '/concierge', icon: Bot },
-      { name: 'Methodology', href: '/methodology', icon: FlaskConical },
-      { name: 'Smart Alerts', href: '/alerts/smart', icon: ShieldAlert },
-      { name: 'Scheduled', href: '/scheduled', icon: Calendar },
+      { name: 'Price Alerts', href: '/alerts', icon: Bell },
       { name: 'Notifications', href: '/notifications', icon: Inbox },
+      { name: 'Methodology', href: '/methodology', icon: FlaskConical },
     ],
   },
 ];
