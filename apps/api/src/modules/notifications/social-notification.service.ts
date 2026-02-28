@@ -288,6 +288,203 @@ This analysis is for informational and educational purposes only. Not financial 
   }
 
   // ===========================================
+  // Telegram Photo (Snapshot PNG inline)
+  // ===========================================
+
+  /**
+   * Send a photo via Telegram sendPhoto API (inline image, no download needed)
+   */
+  async sendTelegramPhoto(chatId: string, photoBuffer: Buffer, caption?: string): Promise<NotificationResult> {
+    if (!this.TELEGRAM_BOT_TOKEN) {
+      console.log('[SocialNotification] No Telegram bot token, photo would be sent to:', chatId);
+      return { success: true, channel: 'telegram' };
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('chat_id', chatId);
+      formData.append('photo', new Blob([photoBuffer], { type: 'image/png' }), 'report.png');
+      if (caption) {
+        formData.append('caption', caption);
+        formData.append('parse_mode', 'HTML');
+      }
+
+      const response = await fetch(
+        `https://api.telegram.org/bot${this.TELEGRAM_BOT_TOKEN}/sendPhoto`,
+        { method: 'POST', body: formData }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        console.error('[SocialNotification] Telegram sendPhoto error:', data);
+        return { success: false, channel: 'telegram', error: data.description || 'Unknown error' };
+      }
+
+      console.log('[SocialNotification] Telegram photo sent to:', chatId);
+      return { success: true, channel: 'telegram' };
+    } catch (error) {
+      console.error('[SocialNotification] Telegram sendPhoto error:', error);
+      return { success: false, channel: 'telegram', error: String(error) };
+    }
+  }
+
+  /**
+   * Send multiple photos as a Telegram media group (album)
+   */
+  async sendTelegramMediaGroup(chatId: string, photos: Array<{ buffer: Buffer; caption?: string }>): Promise<NotificationResult> {
+    if (!this.TELEGRAM_BOT_TOKEN) {
+      console.log('[SocialNotification] No Telegram bot token, media group would be sent to:', chatId);
+      return { success: true, channel: 'telegram' };
+    }
+
+    try {
+      // Telegram media group supports max 10 items
+      const items = photos.slice(0, 10);
+      const formData = new FormData();
+      formData.append('chat_id', chatId);
+
+      const media = items.map((photo, i) => {
+        const attachName = `photo_${i}`;
+        formData.append(attachName, new Blob([photo.buffer], { type: 'image/png' }), `report_${i}.png`);
+        return {
+          type: 'photo',
+          media: `attach://${attachName}`,
+          ...(i === 0 && photo.caption ? { caption: photo.caption, parse_mode: 'HTML' } : {}),
+        };
+      });
+
+      formData.append('media', JSON.stringify(media));
+
+      const response = await fetch(
+        `https://api.telegram.org/bot${this.TELEGRAM_BOT_TOKEN}/sendMediaGroup`,
+        { method: 'POST', body: formData }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        console.error('[SocialNotification] Telegram sendMediaGroup error:', data);
+        return { success: false, channel: 'telegram', error: data.description || 'Unknown error' };
+      }
+
+      console.log('[SocialNotification] Telegram media group sent to:', chatId, `(${items.length} photos)`);
+      return { success: true, channel: 'telegram' };
+    } catch (error) {
+      console.error('[SocialNotification] Telegram sendMediaGroup error:', error);
+      return { success: false, channel: 'telegram', error: String(error) };
+    }
+  }
+
+  // ===========================================
+  // Discord Image Attachment
+  // ===========================================
+
+  /**
+   * Send Discord webhook message with image attachment (inline display)
+   */
+  async sendDiscordWithImage(webhookUrl: string, content: {
+    title: string;
+    description?: string;
+    color?: number;
+    fields?: Array<{ name: string; value: string; inline?: boolean }>;
+  }, imageBuffer: Buffer, filename: string = 'report.png'): Promise<NotificationResult> {
+    if (!webhookUrl) {
+      return { success: false, channel: 'discord', error: 'No webhook URL' };
+    }
+
+    try {
+      const formData = new FormData();
+
+      // Attach file
+      formData.append('files[0]', new Blob([imageBuffer], { type: 'image/png' }), filename);
+
+      // Build payload with image embed
+      const payload = {
+        embeds: [{
+          title: content.title,
+          description: content.description || '',
+          color: content.color || 0x14b8a6,
+          fields: content.fields || [],
+          image: { url: `attachment://${filename}` },
+          footer: { text: 'TraderPath - Professional Trading Analysis' },
+          timestamp: new Date().toISOString(),
+        }],
+      };
+
+      formData.append('payload_json', JSON.stringify(payload));
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.error('[SocialNotification] Discord image error:', error);
+        return { success: false, channel: 'discord', error };
+      }
+
+      console.log('[SocialNotification] Discord image sent');
+      return { success: true, channel: 'discord' };
+    } catch (error) {
+      console.error('[SocialNotification] Discord image error:', error);
+      return { success: false, channel: 'discord', error: String(error) };
+    }
+  }
+
+  /**
+   * Send multiple images to Discord via webhook (one embed per image)
+   */
+  async sendDiscordMultiImage(webhookUrl: string, images: Array<{
+    buffer: Buffer;
+    title: string;
+    description?: string;
+    color?: number;
+  }>): Promise<NotificationResult> {
+    if (!webhookUrl) {
+      return { success: false, channel: 'discord', error: 'No webhook URL' };
+    }
+
+    try {
+      const formData = new FormData();
+      const embeds = images.map((img, i) => {
+        const filename = `report_${i}.png`;
+        formData.append(`files[${i}]`, new Blob([img.buffer], { type: 'image/png' }), filename);
+        return {
+          title: img.title,
+          description: img.description || '',
+          color: img.color || 0x14b8a6,
+          image: { url: `attachment://${filename}` },
+          ...(i === images.length - 1 ? {
+            footer: { text: 'TraderPath - Professional Trading Analysis' },
+            timestamp: new Date().toISOString(),
+          } : {}),
+        };
+      });
+
+      formData.append('payload_json', JSON.stringify({ embeds }));
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.error('[SocialNotification] Discord multi-image error:', error);
+        return { success: false, channel: 'discord', error };
+      }
+
+      console.log('[SocialNotification] Discord multi-image sent:', images.length, 'images');
+      return { success: true, channel: 'discord' };
+    } catch (error) {
+      console.error('[SocialNotification] Discord multi-image error:', error);
+      return { success: false, channel: 'discord', error: String(error) };
+    }
+  }
+
+  // ===========================================
   // Generic Notifications (for future use)
   // ===========================================
 

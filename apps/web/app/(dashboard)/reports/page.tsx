@@ -23,6 +23,9 @@ import {
   ChevronDown,
   Layers,
   Globe,
+  Download,
+  Send,
+  Image,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
@@ -345,6 +348,109 @@ Could you share your risk assessment and recommendations based on this analysis?
       }
     } catch (error) {
       console.error('Failed to prepare AI Expert context:', error);
+    }
+  };
+
+  // Download snapshot PNGs for a report
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [snapshotDropdownId, setSnapshotDropdownId] = useState<string | null>(null);
+
+  const handleDownloadSnapshots = async (report: Report, type: 'executive' | 'detailed' = 'executive') => {
+    setDownloadingId(report.id);
+    setSnapshotDropdownId(null);
+    try {
+      // First find the reportId from reports API (analysis ID → report)
+      const reportResponse = await authFetch(`/api/reports/by-analysis/${report.id}`);
+      if (!reportResponse.ok) {
+        alert('Report not found. View the analysis first to generate a report.');
+        return;
+      }
+      const reportResult = await reportResponse.json();
+      const reportId = reportResult.data?.id;
+      if (!reportId) {
+        alert('Report not found.');
+        return;
+      }
+
+      const response = await authFetch(`/api/reports/${reportId}/snapshots`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        alert(err.error?.message || 'Failed to generate snapshots');
+        return;
+      }
+
+      const data = await response.json();
+      if (data.success && data.data?.snapshots) {
+        // Download each snapshot as PNG
+        for (const snapshot of data.data.snapshots) {
+          const link = document.createElement('a');
+          link.href = `data:image/png;base64,${snapshot.base64}`;
+          link.download = `TraderPath_${report.symbol}_${snapshot.id}.png`;
+          link.click();
+          // Small delay between downloads
+          await new Promise(r => setTimeout(r, 300));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to download snapshots:', error);
+      alert('Failed to download snapshots');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleSendReport = async (report: Report, type: 'executive' | 'detailed' = 'executive') => {
+    setSendingId(report.id);
+    setSnapshotDropdownId(null);
+    try {
+      // Find report ID
+      const reportResponse = await authFetch(`/api/reports/by-analysis/${report.id}`);
+      if (!reportResponse.ok) {
+        alert('Report not found. View the analysis first to generate a report.');
+        return;
+      }
+      const reportResult = await reportResponse.json();
+      const reportId = reportResult.data?.id;
+      if (!reportId) {
+        alert('Report not found.');
+        return;
+      }
+
+      const response = await authFetch(`/api/reports/${reportId}/distribute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        alert(err.error?.message || 'Failed to send report');
+        return;
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        const { telegramSent, discordSent } = data.data;
+        const channels: string[] = [];
+        if (telegramSent > 0) channels.push('Telegram');
+        if (discordSent > 0) channels.push('Discord');
+        if (channels.length > 0) {
+          alert(`Report sent via ${channels.join(' & ')}!`);
+        } else {
+          alert('No notification channels configured. Set up Telegram or Discord in Settings.');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send report:', error);
+      alert('Failed to send report');
+    } finally {
+      setSendingId(null);
     }
   };
 
@@ -906,6 +1012,68 @@ Could you share your risk assessment and recommendations based on this analysis?
                     <Eye className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Details</span>
                   </button>
+                  {/* Download Snapshots */}
+                  {report.symbol !== 'CAPITAL_FLOW' && (
+                    <div className="relative">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSnapshotDropdownId(snapshotDropdownId === report.id ? null : report.id); }}
+                        disabled={downloadingId === report.id || sendingId === report.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border border-teal-200 dark:border-teal-500/20 hover:border-teal-300 dark:hover:border-teal-500/40 text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-500/5 disabled:opacity-50"
+                        title="Download / Send Report"
+                      >
+                        {downloadingId === report.id || sendingId === report.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Image className="w-3.5 h-3.5" />
+                        )}
+                        <span className="hidden sm:inline">Snapshot</span>
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                      {snapshotDropdownId === report.id && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setSnapshotDropdownId(null)} />
+                          <div className="absolute right-0 mt-1.5 w-52 bg-white dark:bg-[#12131A] rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.08] z-50 overflow-hidden">
+                            <div className="px-3 py-2 border-b border-gray-100 dark:border-white/[0.06]">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-white/30">Download PNG</span>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDownloadSnapshots(report, 'executive'); }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs font-medium text-gray-700 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition"
+                            >
+                              <Download className="w-3.5 h-3.5 text-teal-500" />
+                              <div>
+                                <div>Executive Summary</div>
+                                <div className="text-[10px] text-gray-400 dark:text-white/30">3-4 PNG snapshots</div>
+                              </div>
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDownloadSnapshots(report, 'detailed'); }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs font-medium text-gray-700 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition"
+                            >
+                              <Download className="w-3.5 h-3.5 text-blue-500" />
+                              <div>
+                                <div>Detailed Analysis</div>
+                                <div className="text-[10px] text-gray-400 dark:text-white/30">6-8 PNG snapshots</div>
+                              </div>
+                            </button>
+                            <div className="px-3 py-2 border-t border-gray-100 dark:border-white/[0.06]">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-white/30">Send via</span>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleSendReport(report, 'executive'); }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs font-medium text-gray-700 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition"
+                            >
+                              <Send className="w-3.5 h-3.5 text-emerald-500" />
+                              <div>
+                                <div>Telegram / Discord</div>
+                                <div className="text-[10px] text-gray-400 dark:text-white/30">Send Executive Summary</div>
+                              </div>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                   {/* AI Expert */}
                   {!report.aiExpertComment && report.analysisId && (
                     <button
