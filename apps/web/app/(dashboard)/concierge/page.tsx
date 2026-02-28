@@ -28,6 +28,10 @@ import {
   Compass,
   Zap,
   BookOpen,
+  Brain,
+  LineChart,
+  Eye,
+  ShieldAlert,
 } from 'lucide-react';
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
@@ -134,6 +138,46 @@ function QuickCommand({
     </button>
   );
 }
+
+// AI Expert profiles for quick access
+const AI_EXPERTS = [
+  {
+    id: 'nexus',
+    name: 'NEXUS',
+    role: 'Risk & Position',
+    icon: Target,
+    color: 'text-amber-500',
+    bg: 'bg-amber-500/10 hover:bg-amber-500/20',
+    border: 'border-amber-500/20',
+  },
+  {
+    id: 'aria',
+    name: 'ARIA',
+    role: 'Technical Analysis',
+    icon: LineChart,
+    color: 'text-blue-500',
+    bg: 'bg-blue-500/10 hover:bg-blue-500/20',
+    border: 'border-blue-500/20',
+  },
+  {
+    id: 'oracle',
+    name: 'ORACLE',
+    role: 'Whale Tracking',
+    icon: Eye,
+    color: 'text-purple-500',
+    bg: 'bg-purple-500/10 hover:bg-purple-500/20',
+    border: 'border-purple-500/20',
+  },
+  {
+    id: 'sentinel',
+    name: 'SENTINEL',
+    role: 'Security & Traps',
+    icon: ShieldAlert,
+    color: 'text-red-500',
+    bg: 'bg-red-500/10 hover:bg-red-500/20',
+    border: 'border-red-500/20',
+  },
+] as const;
 
 export default function ConciergePage() {
   const router = useRouter();
@@ -441,6 +485,24 @@ export default function ConciergePage() {
     return commands;
   };
 
+  // Navigate to AI Expert with analysis context
+  const goToExpert = useCallback((expertId: string, analysisId?: string, contextSummary?: string) => {
+    if (contextSummary) {
+      sessionStorage.setItem('aiExpertContext', contextSummary);
+    }
+    if (analysisId) {
+      sessionStorage.setItem('aiExpertAnalysisId', analysisId);
+    }
+    router.push(`/ai-expert/${expertId}${analysisId ? '?fromAnalysis=true' : ''}`);
+  }, [router]);
+
+  // Build a context summary from the last assistant message for expert handoff
+  const getLastAnalysisContext = useCallback(() => {
+    const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant' && m.data?.verdict);
+    if (!lastAssistant) return '';
+    return lastAssistant.content;
+  }, [messages]);
+
   // Get bias icon and color
   const getBiasDisplay = (bias: string) => {
     switch (bias) {
@@ -737,6 +799,40 @@ export default function ConciergePage() {
                             </span>
                           </div>
                         </div>
+
+                        {/* AI Experts Quick Access */}
+                        <div className="mt-4 sm:mt-5 p-3 sm:p-4 rounded-xl border border-border bg-card">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <Brain className="w-4 h-4 text-purple-500" />
+                              <span className="text-xs sm:text-sm font-semibold text-foreground">Need Deep Analysis?</span>
+                            </div>
+                            <Link
+                              href="/ai-expert"
+                              className="text-[10px] sm:text-xs text-purple-500 hover:text-purple-600 dark:hover:text-purple-400 font-medium flex items-center gap-0.5"
+                            >
+                              View all
+                              <ChevronRight className="w-3 h-3" />
+                            </Link>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {AI_EXPERTS.map((expert) => (
+                              <button
+                                key={expert.id}
+                                onClick={() => goToExpert(expert.id)}
+                                className={cn(
+                                  "flex flex-col items-center gap-1.5 p-2.5 sm:p-3 rounded-xl transition-all border",
+                                  expert.bg, expert.border,
+                                  "hover:scale-[1.03] hover:shadow-md"
+                                )}
+                              >
+                                <expert.icon className={cn("w-5 h-5 sm:w-6 sm:h-6", expert.color)} />
+                                <span className={cn("text-xs font-bold", expert.color)}>{expert.name}</span>
+                                <span className="text-[9px] sm:text-[10px] text-muted-foreground leading-tight text-center">{expert.role}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -783,13 +879,39 @@ export default function ConciergePage() {
                           </div>
 
                           {msg.data.analysisId && (
-                            <Link
-                              href={`/analyze/details/${msg.data.analysisId}`}
-                              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-teal-100 hover:bg-teal-200 dark:bg-teal-500/10 dark:hover:bg-teal-500/20 text-teal-700 dark:text-teal-400 font-semibold transition-colors border border-teal-200 dark:border-teal-500/20"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                              View Full Analysis
-                            </Link>
+                            <div className="space-y-2">
+                              <Link
+                                href={`/analyze/details/${msg.data.analysisId}`}
+                                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-teal-100 hover:bg-teal-200 dark:bg-teal-500/10 dark:hover:bg-teal-500/20 text-teal-700 dark:text-teal-400 font-semibold transition-colors border border-teal-200 dark:border-teal-500/20"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                                View Full Analysis
+                              </Link>
+
+                              {/* Discuss with Expert */}
+                              <div className="pt-1">
+                                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                                  <Brain className="w-3 h-3" />
+                                  Discuss this analysis with an expert:
+                                </p>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                  {AI_EXPERTS.map((expert) => (
+                                    <button
+                                      key={expert.id}
+                                      onClick={() => goToExpert(expert.id, msg.data?.analysisId, msg.content)}
+                                      className={cn(
+                                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                                        expert.bg, expert.border, expert.color
+                                      )}
+                                    >
+                                      <expert.icon className="w-3 h-3" />
+                                      <span className="truncate">{expert.name}</span>
+                                      <span className="text-[9px] text-muted-foreground hidden sm:inline">· {expert.role}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
                           )}
                         </div>
                       )}
@@ -865,6 +987,14 @@ export default function ConciergePage() {
                         {cmd.label}
                       </button>
                     ))}
+                    {/* Talk to Expert shortcut */}
+                    <button
+                      onClick={() => router.push('/ai-expert')}
+                      className="flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 text-[11px] sm:text-xs font-medium rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 transition-colors whitespace-nowrap shrink-0"
+                    >
+                      <Brain className="w-3 h-3" />
+                      Talk to Expert
+                    </button>
                   </div>
                 )}
 

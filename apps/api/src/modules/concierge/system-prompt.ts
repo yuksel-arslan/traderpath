@@ -535,3 +535,230 @@ Start → "Where is money flowing?"`,
     },
   },
 };
+
+// ===========================================
+// AI RESPONSE SYNTHESIS PROMPT
+// ===========================================
+// Used to transform raw data + template into intelligent, contextual responses.
+// Gemini receives the structured data and produces a professional analyst commentary.
+
+export const AI_RESPONSE_SYNTHESIS_PROMPT = `You are TraderPath AI Concierge — a senior capital flow analyst and trading strategist.
+
+Your job: Take the raw data provided and produce a concise, insightful response that demonstrates genuine analytical reasoning. You are NOT a template engine — you are a thinking analyst.
+
+## RESPONSE PRINCIPLES
+
+1. **Reason about the data** — Don't just restate numbers. Explain what they mean, why they matter, and what the trader should consider.
+2. **Connect the dots** — If DXY is strengthening and crypto has outflow, explain the causal relationship.
+3. **Be opinionated but honest** — Give clear direction (bullish/bearish/neutral) with reasoning. If signals conflict, say so.
+4. **Actionable insight** — Every response should end with what the trader should DO next.
+5. **Professional brevity** — Institutional quality, not verbose. 150-300 words max.
+6. **Use structure** — Headers, bullet points, bold for key terms. Easy to scan.
+
+## FORMATTING RULES
+
+- Use markdown: **bold**, bullet points, headers with emoji
+- Numbers: Always include context (e.g., "VIX at 18.5 — elevated but not panic")
+- Phases: EARLY = opportunity, MID = caution, LATE = avoid new entries, EXIT = stay out
+- Verdicts: Use 🟢 GO, 🟡 CONDITIONAL, 🟠 WAIT, 🔴 AVOID where appropriate
+- End with a "📌 Next Step:" suggestion
+
+## WHAT NOT TO DO
+
+- Don't dump raw numbers without interpretation
+- Don't give generic advice like "do your own research"
+- Don't be wishy-washy — take a stance backed by the data
+- Don't exceed 300 words
+- Don't use financial disclaimers (the platform handles this separately)
+- Don't hallucinate data — only use what's provided in the context
+
+## LANGUAGE
+
+Respond in the same language as the user's message. If the user wrote in Turkish, respond in Turkish. If English, respond in English.
+
+User language: {LANGUAGE}
+
+## CONTEXT DATA
+
+Intent: {INTENT}
+User message: "{USER_MESSAGE}"
+
+{DATA_CONTEXT}
+
+Now produce your analytical response:`;
+
+// Specific context builders for each intent type
+export function buildCapitalFlowSummaryContext(data: {
+  liquidityBias: string;
+  fedTrend: string;
+  dxyTrend: string;
+  dxyValue: number;
+  vixValue: number;
+  vixLevel: string;
+  markets: Array<{ market: string; flow7d: number; flow30d: number; phase: string; rotationSignal: string | null }>;
+  recommendation: { action: string; primaryMarket: string; confidence: number; reason: string };
+}): string {
+  const marketLines = data.markets.map(m =>
+    `  - ${m.market.toUpperCase()}: 7D ${m.flow7d > 0 ? '+' : ''}${m.flow7d.toFixed(1)}%, 30D ${m.flow30d > 0 ? '+' : ''}${m.flow30d.toFixed(1)}%, Phase: ${m.phase.toUpperCase()}, Rotation: ${m.rotationSignal || 'stable'}`
+  ).join('\n');
+
+  return `CAPITAL FLOW SUMMARY (4-Layer Pipeline):
+L1 Global Liquidity:
+  - Bias: ${data.liquidityBias}
+  - Fed Balance Sheet: ${data.fedTrend}
+  - DXY (Dollar Index): ${data.dxyValue.toFixed(2)}, trend: ${data.dxyTrend}
+  - VIX (Fear Index): ${data.vixValue.toFixed(2)}, level: ${data.vixLevel}
+
+L2 Market Flows:
+${marketLines}
+
+L4 AI Recommendation:
+  - Action: ${data.recommendation.action}
+  - Primary Market: ${data.recommendation.primaryMarket}
+  - Confidence: ${data.recommendation.confidence}%
+  - Reasoning: ${data.recommendation.reason}`;
+}
+
+export function buildCapitalFlowLiquidityContext(data: {
+  fedBalanceSheet: { value: number; change30d: number; trend: string };
+  m2MoneySupply: { value: number; change30d: number; yoyGrowth: number };
+  dxy: { value: number; change7d: number; trend: string };
+  vix: { value: number; level: string };
+  yieldCurve: { spread10y2y: number; inverted: boolean; interpretation: string };
+}): string {
+  return `LAYER 1 — GLOBAL LIQUIDITY (Detailed):
+Fed Balance Sheet:
+  - Value: $${(data.fedBalanceSheet.value / 1e12).toFixed(2)}T
+  - 30D Change: ${data.fedBalanceSheet.change30d > 0 ? '+' : ''}${data.fedBalanceSheet.change30d.toFixed(2)}%
+  - Trend: ${data.fedBalanceSheet.trend}
+
+M2 Money Supply:
+  - Value: $${(data.m2MoneySupply.value / 1e12).toFixed(2)}T
+  - 30D Change: ${data.m2MoneySupply.change30d > 0 ? '+' : ''}${data.m2MoneySupply.change30d.toFixed(2)}%
+  - YoY Growth: ${data.m2MoneySupply.yoyGrowth > 0 ? '+' : ''}${data.m2MoneySupply.yoyGrowth.toFixed(2)}%
+
+DXY (Dollar Index):
+  - Value: ${data.dxy.value.toFixed(2)}
+  - 7D Change: ${data.dxy.change7d > 0 ? '+' : ''}${data.dxy.change7d.toFixed(2)}%
+  - Trend: ${data.dxy.trend}
+
+VIX (Fear Index):
+  - Value: ${data.vix.value.toFixed(2)}
+  - Level: ${data.vix.level}
+
+Yield Curve (10Y-2Y):
+  - Spread: ${data.yieldCurve.spread10y2y.toFixed(2)} bps
+  - Inverted: ${data.yieldCurve.inverted ? 'YES — recession signal' : 'NO — normal curve'}
+  - Interpretation: ${data.yieldCurve.interpretation}`;
+}
+
+export function buildCapitalFlowMarketsContext(data: {
+  markets: Array<{
+    market: string;
+    flow7d: number;
+    flow30d: number;
+    flowVelocity: number;
+    phase: string;
+    daysInPhase: number;
+    rotationSignal: string | null;
+  }>;
+}): string {
+  const lines = data.markets.map(m =>
+    `${m.market.toUpperCase()}:
+  - 7D Flow: ${m.flow7d > 0 ? '+' : ''}${m.flow7d.toFixed(2)}%
+  - 30D Flow: ${m.flow30d > 0 ? '+' : ''}${m.flow30d.toFixed(2)}%
+  - Velocity: ${m.flowVelocity > 0 ? 'Accelerating' : m.flowVelocity < 0 ? 'Decelerating' : 'Stable'}
+  - Phase: ${m.phase.toUpperCase()} (${m.daysInPhase} days)
+  - Rotation: ${m.rotationSignal === 'entering' ? 'CAPITAL ENTERING' : m.rotationSignal === 'exiting' ? 'CAPITAL EXITING' : 'STABLE'}`
+  ).join('\n\n');
+
+  return `LAYER 2 — MARKET FLOW (All Markets):\n\n${lines}`;
+}
+
+export function buildCapitalFlowRecommendationContext(data: {
+  recommendation: { action: string; primaryMarket: string; confidence: number; reason: string; suggestedAssets?: Array<{ symbol: string; name: string; reason: string }> };
+  liquidityBias: string;
+  markets: Array<{ market: string; flow7d: number; flow30d: number; phase: string; rotationSignal: string | null }>;
+  assetHint?: string;
+}): string {
+  const marketLines = data.markets.map(m =>
+    `  - ${m.market.toUpperCase()}: 30D ${m.flow30d > 0 ? '+' : ''}${m.flow30d.toFixed(1)}%, Phase: ${m.phase.toUpperCase()}, Rotation: ${m.rotationSignal || 'stable'}`
+  ).join('\n');
+
+  let context = `AI RECOMMENDATION REQUEST:
+Global Liquidity Bias: ${data.liquidityBias}
+
+Market Flows:
+${marketLines}
+
+Recommendation:
+  - Action: ${data.recommendation.action}
+  - Primary Market: ${data.recommendation.primaryMarket}
+  - Confidence: ${data.recommendation.confidence}%
+  - Reasoning: ${data.recommendation.reason}`;
+
+  if (data.recommendation.suggestedAssets && data.recommendation.suggestedAssets.length > 0) {
+    const assetLines = data.recommendation.suggestedAssets.map(a =>
+      `  - ${a.symbol} (${a.name}): ${a.reason}`
+    ).join('\n');
+    context += `\n\nSuggested Assets:\n${assetLines}`;
+  }
+
+  if (data.assetHint) {
+    context += `\n\nUser is specifically asking about: ${data.assetHint}`;
+  }
+
+  return context;
+}
+
+export function buildAnalysisResultContext(data: {
+  symbol: string;
+  interval: string;
+  tradeType: string;
+  verdict: string;
+  score: number;
+  direction: string;
+  entry: number;
+  stopLoss: number;
+  takeProfit1: number;
+  takeProfit2?: number;
+  riskReward: number;
+  reasoning: string;
+  stepResults?: Array<{ step: string; score: number; verdict: string; summary: string }>;
+}): string {
+  let context = `7-STEP ANALYSIS RESULT:
+Asset: ${data.symbol} | Timeframe: ${data.interval} | Trade Type: ${data.tradeType}
+Verdict: ${data.verdict} | Score: ${data.score}/10 | Direction: ${data.direction}
+
+Trade Plan:
+  - Entry: $${data.entry}
+  - Stop Loss: $${data.stopLoss}
+  - Take Profit 1: $${data.takeProfit1}${data.takeProfit2 ? `\n  - Take Profit 2: $${data.takeProfit2}` : ''}
+  - Risk/Reward: ${data.riskReward.toFixed(1)}
+
+Analysis Reasoning: ${data.reasoning}`;
+
+  if (data.stepResults && data.stepResults.length > 0) {
+    const stepLines = data.stepResults.map(s =>
+      `  ${s.step}: ${s.score}/10 (${s.verdict}) — ${s.summary}`
+    ).join('\n');
+    context += `\n\nStep-by-Step Breakdown:\n${stepLines}`;
+  }
+
+  return context;
+}
+
+export function buildSectorsContext(data: {
+  market: string;
+  sectors: Array<{ name: string; flow7d: number; flow30d: number; dominance: number; topAssets: string[] }>;
+}): string {
+  const lines = data.sectors.map(s =>
+    `${s.name}:
+  - 7D Flow: ${s.flow7d > 0 ? '+' : ''}${s.flow7d.toFixed(1)}%
+  - 30D Flow: ${s.flow30d > 0 ? '+' : ''}${s.flow30d.toFixed(1)}%
+  - Dominance: ${s.dominance.toFixed(1)}%
+  - Top Assets: ${s.topAssets.join(', ')}`
+  ).join('\n\n');
+
+  return `LAYER 3 — SECTOR DRILL-DOWN (${data.market.toUpperCase()}):\n\n${lines}`;
+}
