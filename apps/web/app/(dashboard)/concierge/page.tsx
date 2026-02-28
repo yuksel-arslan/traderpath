@@ -30,16 +30,9 @@ import {
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import dynamic from 'next/dynamic';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 import { UpgradeCard } from '@/components/modals/UpgradePrompt';
 import { StyledMessage } from '@/components/concierge';
-
-// Lazy load TradePlanChart
-const TradePlanChart = dynamic(
-  () => import('@/components/analysis/TradePlanChart').then(mod => ({ default: mod.TradePlanChart })),
-  { ssr: false, loading: () => <div className="h-[300px] bg-gray-200 dark:bg-white/[0.03] rounded-xl animate-pulse" /> }
-);
 
 // Types
 interface ChatMessage {
@@ -54,13 +47,6 @@ interface ChatMessage {
     direction?: string;
     scanComplete?: boolean;
     chartData?: Array<{ time: number; open: number; high: number; low: number; close: number }>;
-    tradePlan?: {
-      entry?: number;
-      averageEntry?: number;
-      stopLoss?: number | { price: number };
-      takeProfits?: Array<number | { price: number; percentage?: number; riskReward?: number }>;
-      direction?: string;
-    };
   };
 }
 
@@ -361,7 +347,6 @@ export default function ConciergePage() {
           analysisId: data.analysisId,
           direction: data.direction,
           chartData: data.chartData,
-          tradePlan: data.tradePlan,
         } : undefined,
       };
 
@@ -775,70 +760,6 @@ export default function ConciergePage() {
                             </Link>
                           )}
                         </div>
-                      )}
-
-                      {/* Chart */}
-                      {msg.data?.tradePlan && (
-                        (() => {
-                          try {
-                            // Handle both simple and full tradePlan structures
-                            const tp = msg.data.tradePlan;
-                            if (!tp) return null;
-
-                            // Get entry price - handle both averageEntry and entry
-                            const entryPrice = Number(tp.averageEntry || tp.entry) || 0;
-
-                            // Get stop loss price - handle both object and number
-                            const slPrice = typeof tp.stopLoss === 'object' && tp.stopLoss
-                              ? Number((tp.stopLoss as { price?: number }).price) || 0
-                              : Number(tp.stopLoss) || 0;
-
-                            // Get take profits - handle both object array and number array
-                            const tpArr = Array.isArray(tp.takeProfits)
-                              ? tp.takeProfits.map((item, i) => {
-                                  const price = typeof item === 'object' && item
-                                    ? Number((item as { price?: number }).price) || 0
-                                    : Number(item) || 0;
-                                  const percentage = typeof item === 'object' && item
-                                    ? Number((item as { percentage?: number }).percentage) || 0
-                                    : 0;
-                                  let riskReward = typeof item === 'object' && item
-                                    ? Number((item as { riskReward?: number }).riskReward) || 0
-                                    : 0;
-                                  // Calculate per-TP R:R if not provided by backend
-                                  if (!riskReward && price && entryPrice && slPrice) {
-                                    const risk = Math.abs(entryPrice - slPrice);
-                                    riskReward = risk > 0 ? parseFloat((Math.abs(price - entryPrice) / risk).toFixed(1)) : (i + 1);
-                                  }
-                                  if (!riskReward) riskReward = i + 1;
-                                  return { price, percentage, riskReward };
-                                }).filter(t => t.price > 0)
-                              : [];
-
-                            // Get direction
-                            const dir = ((msg.data?.direction || tp.direction || 'long') as string).toLowerCase() as 'long' | 'short';
-
-                            // Only render if we have valid entry and stopLoss prices
-                            if (entryPrice <= 0 || slPrice <= 0) return null;
-
-                            return (
-                              <div className="mt-3 sm:mt-4 rounded-xl overflow-hidden bg-gray-50 dark:bg-white/[0.03] max-w-full">
-                                <TradePlanChart
-                                  symbol="Analysis"
-                                  direction={dir}
-                                  entries={[{ price: entryPrice, percentage: 100 }]}
-                                  stopLoss={{ price: slPrice, percentage: 0 }}
-                                  takeProfits={tpArr.length > 0 ? tpArr : [{ price: entryPrice * 1.05, percentage: 100, riskReward: 1 }]}
-                                  currentPrice={entryPrice}
-                                  analysisTime={msg.timestamp}
-                                />
-                              </div>
-                            );
-                          } catch (error) {
-                            console.error('Error rendering TradePlanChart:', error);
-                            return null;
-                          }
-                        })()
                       )}
 
                       {/* Scan Complete Button */}
