@@ -2,13 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { cn } from '../../lib/utils';
-
-const TRUST_METRICS = [
-  { value: '200+', label: 'Tradeable Assets' },
-  { value: '5', label: 'Global Markets' },
-  { value: '24/7', label: 'Real-Time Scanning' },
-  { value: '309+', label: 'Analyses Completed' },
-];
+import { usePlatformStats } from '../../hooks/usePlatformStats';
 
 const TECH_STACK = [
   'Binance Data',
@@ -20,6 +14,7 @@ const TECH_STACK = [
 export function SocialProof() {
   const ref = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);
+  const { data: stats } = usePlatformStats();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -29,6 +24,13 @@ export function SocialProof() {
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
   }, []);
+
+  const trustMetrics = [
+    { value: stats ? `${stats.totalAssets}+` : '—', label: 'Tradeable Assets' },
+    { value: '5', label: 'Global Markets' },
+    { value: '24/7', label: 'Real-Time Scanning' },
+    { value: stats ? `${stats.totalAnalyses.toLocaleString()}+` : '—', label: 'Analyses Completed' },
+  ];
 
   return (
     <section ref={ref} className="py-12 md:py-20 border-t border-gray-200 dark:border-gray-800">
@@ -48,7 +50,7 @@ export function SocialProof() {
           'grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-200 dark:bg-white/[0.06] rounded-xl overflow-hidden mb-8 transition-all duration-700',
           visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4',
         )}>
-          {TRUST_METRICS.map((m) => (
+          {trustMetrics.map((m) => (
             <div key={m.label} className="bg-white dark:bg-[#111111] p-6 text-center">
               <div className="text-2xl sm:text-3xl font-bold tabular-nums text-gray-900 dark:text-white mb-1">
                 {m.value}

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowRight, Check, Sparkles, FileText, BarChart3 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '../../lib/utils';
+import { usePlatformStats } from '../../hooks/usePlatformStats';
 import { AnimatedCounter } from '../../components/ui/AnimatedCounter';
 import dynamic from 'next/dynamic';
 import { Footer } from '../../components/common/Footer';
@@ -64,59 +65,13 @@ const RechartsArea = dynamic(
 );
 
 // ---------------------------------------------------------------------------
-// STATS – Real platform data
+// STATS – Real platform data (from /api/analysis/platform-stats)
 // ---------------------------------------------------------------------------
 
 function Stats() {
-  const [metrics, setMetrics] = useState<{
-    totalAnalyses: number;
-    accuracy: number;
-    totalPnL: number;
-    closedCount: number;
-  } | null>(null);
+  const { data: metrics, loading } = usePlatformStats();
 
-  useEffect(() => {
-    const fetchMetrics = async () => {
-      try {
-        const apiUrls = [
-          process.env.NEXT_PUBLIC_API_URL,
-          'https://api.traderpath.io',
-          'https://traderpath-api-production.up.railway.app'
-        ].filter(Boolean);
-
-        let data = null;
-        for (const baseUrl of apiUrls) {
-          try {
-            const res = await fetch(`${baseUrl}/api/analysis/platform-stats`, {
-              method: 'GET',
-              headers: { 'Content-Type': 'application/json' },
-              cache: 'no-store'
-            });
-            if (res.ok) {
-              data = await res.json();
-              if (data.success) break;
-            }
-          } catch {
-            continue;
-          }
-        }
-
-        if (data?.success) {
-          setMetrics({
-            totalAnalyses: data.data.platform.totalAnalyses || 0,
-            accuracy: data.data.accuracy.overall || 0,
-            totalPnL: data.data.accuracy.totalPnL || 0,
-            closedCount: data.data.accuracy.closedCount || 0,
-          });
-        }
-      } catch {
-        // silent
-      }
-    };
-    fetchMetrics();
-  }, []);
-
-  if (!metrics) {
+  if (loading || !metrics) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-200 dark:bg-gray-800">
         {[1, 2, 3, 4].map((i) => (
@@ -133,7 +88,7 @@ function Stats() {
     { label: 'ANALYSES COMPLETED', end: metrics.totalAnalyses, suffix: '+', prefix: '', decimals: 0, show: true },
     { label: 'WIN RATE ALL SIGNALS', end: metrics.accuracy, suffix: '%', prefix: '', decimals: 1, show: metrics.closedCount > 0 },
     { label: 'VERIFIED PLATFORM P/L', end: Math.abs(metrics.totalPnL), suffix: '%', prefix: metrics.totalPnL >= 0 ? '+' : '-', decimals: 1, show: metrics.closedCount > 0 },
-    { label: 'TRADEABLE ASSETS', end: 194, suffix: '+', prefix: '', decimals: 0, show: true },
+    { label: 'TRADEABLE ASSETS', end: metrics.totalAssets, suffix: '+', prefix: '', decimals: 0, show: true },
   ];
 
   return (
@@ -513,6 +468,8 @@ function PricingSection() {
 // ---------------------------------------------------------------------------
 
 export default function LandingPage() {
+  const { data: platformStats } = usePlatformStats();
+
   return (
     <div className="min-h-screen bg-white dark:bg-[#0A0A0A] text-gray-900 dark:text-gray-100 relative">
       <div className="relative z-10">
@@ -565,7 +522,7 @@ export default function LandingPage() {
               Stop Guessing. Start Following the Flow.
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-              Join 300+ traders who use capital flow intelligence to make smarter trading decisions.
+              Join {platformStats ? `${platformStats.totalUsers.toLocaleString()}+` : ''} traders who use capital flow intelligence to make smarter trading decisions.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/register" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm font-medium bg-teal-500 hover:bg-teal-600 text-white rounded-md transition-colors">
