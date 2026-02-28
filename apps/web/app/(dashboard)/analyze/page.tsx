@@ -628,7 +628,6 @@ export default function AutomatedAnalysisPage() {
             </div>
           </div>
         </div>
-      </div>
 
       {/* Analysis Dialog */}
       {showAnalysisDialog && selectedAsset && (
