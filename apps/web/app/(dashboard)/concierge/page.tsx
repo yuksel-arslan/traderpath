@@ -587,8 +587,8 @@ export default function ConciergePage() {
   // Show upgrade prompt if user doesn't have access
   if (!featureLoading && !hasConciergeAccess) {
     return (
-      <div className="h-screen flex flex-col bg-white dark:bg-[#0A0A0A] text-gray-900 dark:text-white overflow-hidden">
-        <div className="max-w-xl mx-auto px-4 py-12">
+      <div className="h-[100dvh] flex flex-col bg-white dark:bg-[#0A0A0A] text-gray-900 dark:text-white overflow-hidden">
+        <div className="max-w-xl mx-auto px-4 py-8 sm:py-12">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 mb-4 shadow-xl">
@@ -614,10 +614,10 @@ export default function ConciergePage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-white dark:bg-[#0A0A0A] text-gray-900 dark:text-white overflow-hidden">
-      <div className="max-w-[1400px] mx-auto w-full px-4 sm:px-6 flex flex-col h-full">
+    <div className="h-[100dvh] flex flex-col bg-white dark:bg-[#0A0A0A] text-gray-900 dark:text-white overflow-hidden">
+      <div className="max-w-[1400px] mx-auto w-full px-3 sm:px-6 flex flex-col flex-1 min-h-0">
         {/* Header */}
-        <div className="shrink-0 pt-4 pb-3">
+        <div className="shrink-0 pt-3 sm:pt-4 pb-2 sm:pb-3">
           <header className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5">
@@ -640,10 +640,51 @@ export default function ConciergePage() {
             </div>
           </header>
 
-          {/* Capital Flow Summary Bar */}
+          {/* Capital Flow Summary Bar — compact on mobile */}
           {!flowLoading && capitalFlow && Array.isArray(capitalFlow.markets) && capitalFlow.markets.length > 0 && capitalFlow.recommendation && (
-            <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
-              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+            <div className="mt-2 p-2 sm:p-3 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
+              {/* Mobile: horizontal scroll row */}
+              <div className="flex items-center gap-2 sm:hidden overflow-x-auto scrollbar-hide pb-1">
+                {/* Bias chip */}
+                <div className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shrink-0", biasDisplay?.bg)}>
+                  {biasDisplay && <biasDisplay.icon className={cn("w-3.5 h-3.5", biasDisplay.color)} />}
+                  <span className={cn("text-xs font-bold whitespace-nowrap", biasDisplay?.color)}>{biasDisplay?.label}</span>
+                </div>
+                {/* Market chips */}
+                {capitalFlow.markets.filter(m => m && m.market).map((market) => (
+                  <button
+                    key={market.market}
+                    onClick={() => sendMessage(`Analyze ${market.market} market`)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shrink-0 border transition-colors",
+                      capitalFlow.recommendation?.primaryMarket === market.market
+                        ? "bg-teal-50 dark:bg-teal-500/10 border-teal-300 dark:border-teal-500/30"
+                        : "bg-white dark:bg-white/[0.03] border-gray-200 dark:border-white/[0.06]"
+                    )}
+                  >
+                    <span className="text-[10px] font-bold uppercase text-gray-600 dark:text-white/50">{market.market}</span>
+                    <span className={cn("text-xs font-bold", (market.flow7d ?? 0) >= 0 ? "text-emerald-500" : "text-red-500")}>
+                      {(market.flow7d ?? 0) >= 0 ? '+' : ''}{(market.flow7d ?? 0).toFixed(1)}%
+                    </span>
+                  </button>
+                ))}
+                {/* Recommendation chip */}
+                <div className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shrink-0",
+                  capitalFlow.recommendation?.action === 'analyze'
+                    ? "bg-emerald-100 dark:bg-emerald-500/20"
+                    : capitalFlow.recommendation?.action === 'wait'
+                    ? "bg-amber-100 dark:bg-amber-500/20"
+                    : "bg-red-100 dark:bg-red-500/20"
+                )}>
+                  <span className="text-xs font-bold text-gray-900 dark:text-white capitalize whitespace-nowrap">
+                    {capitalFlow.recommendation?.action || 'wait'} {String(capitalFlow.recommendation?.primaryMarket || '').toUpperCase()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Desktop: full layout */}
+              <div className="hidden sm:flex sm:flex-col lg:flex-row lg:items-center gap-4">
                 {/* Global Liquidity Status */}
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <div className={cn("p-2 rounded-lg", biasDisplay?.bg)}>
@@ -703,39 +744,51 @@ export default function ConciergePage() {
           )}
 
           {flowLoading && (
-            <div className="p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] animate-pulse">
-              <div className="h-16 bg-gray-200 dark:bg-white/[0.08] rounded-xl" />
+            <div className="mt-2 p-3 sm:p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] animate-pulse">
+              <div className="h-10 sm:h-16 bg-gray-200 dark:bg-white/[0.08] rounded-xl" />
             </div>
           )}
         </div>
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Main Content — flex-1 on mobile so chat fills remaining space */}
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 pb-3 sm:pb-6">
           {/* Chat Area */}
-          <div className="lg:col-span-3">
-            <div className="rounded-xl bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/[0.06] overflow-hidden">
-              {/* Messages */}
-              <div className="h-[450px] overflow-y-auto p-4 space-y-3">
+          <div className="lg:col-span-3 flex flex-col min-h-0">
+            <div className="flex-1 min-h-0 flex flex-col rounded-xl bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/[0.06] overflow-hidden">
+              {/* Messages — flex-1 fills available space instead of fixed height */}
+              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
                 {/* Welcome State */}
                 {messages.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-full text-center">
-                    <Bot className="w-8 h-8 text-gray-300 dark:text-white/20 mb-3" />
+                  <div className="flex flex-col items-center justify-center h-full text-center px-2">
+                    <Bot className="w-7 h-7 sm:w-8 sm:h-8 text-gray-300 dark:text-white/20 mb-2 sm:mb-3" />
 
                     <h2 className="text-sm font-sans font-semibold text-gray-900 dark:text-white mb-1">
                       Follow the Money Flow
                     </h2>
-                    <p className="text-[10px] text-gray-400 max-w-sm mb-1">
+                    <p className="text-[10px] text-gray-400 max-w-sm mb-1 hidden sm:block">
                       Capital Flow → AI Recommendation → Analysis → Trade Plan
                     </p>
-                    <p className="text-xs text-gray-500 max-w-md mb-4">
+                    <p className="text-xs text-gray-500 max-w-md mb-3 sm:mb-4 line-clamp-2">
                       {capitalFlow?.recommendation?.reasoning || 'Start with capital flow to discover where money is moving, then drill down to trade plans.'}
                     </p>
 
-                    {/* Pipeline Quick Commands */}
-                    <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-                      {getSmartCommands().map((cmd, i) => (
+                    {/* Pipeline Quick Commands — 2 cols on mobile, wrap on desktop */}
+                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:justify-center gap-2 max-w-lg w-full">
+                      {getSmartCommands().slice(0, 4).map((cmd, i) => (
                         <QuickCommand
                           key={i}
+                          icon={cmd.icon}
+                          label={cmd.label}
+                          onClick={() => sendMessage(cmd.command)}
+                          gradient={cmd.gradient}
+                        />
+                      ))}
+                    </div>
+                    {/* Extra commands visible only on desktop */}
+                    <div className="hidden sm:flex sm:flex-wrap sm:justify-center gap-2 max-w-lg mt-2">
+                      {getSmartCommands().slice(4).map((cmd, i) => (
+                        <QuickCommand
+                          key={i + 4}
                           icon={cmd.icon}
                           label={cmd.label}
                           onClick={() => sendMessage(cmd.command)}
@@ -756,7 +809,7 @@ export default function ConciergePage() {
                     )}
                   >
                     <div className={cn(
-                      "max-w-[85%] rounded-xl px-4 py-3",
+                      "max-w-[92%] sm:max-w-[85%] rounded-xl px-3 py-2.5 sm:px-4 sm:py-3",
                       msg.role === 'user'
                         ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white"
                         : "bg-gray-100 dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.06]"
@@ -843,7 +896,7 @@ export default function ConciergePage() {
                             if (entryPrice <= 0 || slPrice <= 0) return null;
 
                             return (
-                              <div className="mt-4 rounded-xl overflow-hidden bg-gray-50 dark:bg-white/[0.03]">
+                              <div className="mt-3 sm:mt-4 rounded-xl overflow-hidden bg-gray-50 dark:bg-white/[0.03] max-w-full">
                                 <TradePlanChart
                                   symbol="Analysis"
                                   direction={dir}
@@ -919,15 +972,16 @@ export default function ConciergePage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input Area */}
-              <div className="p-3 border-t border-gray-200 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.03]">
+              {/* Input Area — shrink-0 so it stays at bottom */}
+              <div className="shrink-0 p-2 sm:p-3 border-t border-gray-200 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.03]">
+                {/* Quick suggestions — scrollable on mobile */}
                 {messages.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
+                  <div className="flex gap-2 mb-2 overflow-x-auto scrollbar-hide pb-1">
                     {getSmartCommands().slice(0, 3).map((cmd, i) => (
                       <button
                         key={i}
                         onClick={() => sendMessage(cmd.command)}
-                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-[#0A0A0A] hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/30 border border-gray-200 dark:border-white/[0.06] transition-colors"
+                        className="px-2.5 py-1 sm:px-3 sm:py-1.5 text-[11px] sm:text-xs font-medium rounded-lg bg-white dark:bg-[#0A0A0A] hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500 dark:text-white/30 border border-gray-200 dark:border-white/[0.06] transition-colors whitespace-nowrap shrink-0"
                       >
                         {cmd.label}
                       </button>
@@ -937,20 +991,20 @@ export default function ConciergePage() {
 
                 <form
                   onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
-                  className="flex items-center gap-3"
+                  className="flex items-center gap-2 sm:gap-3"
                 >
                   {speechSupported && (
                     <button
                       type="button"
                       onClick={toggleListening}
                       className={cn(
-                        "p-3 rounded-xl transition-all border",
+                        "p-2.5 sm:p-3 rounded-xl transition-all border shrink-0",
                         isListening
                           ? "bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse border-red-400"
                           : "bg-white dark:bg-[#0A0A0A] text-gray-500 dark:text-white/30 hover:bg-gray-50 dark:hover:bg-white/10 border-gray-200 dark:border-white/[0.06]"
                       )}
                     >
-                      {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                      {isListening ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
                     </button>
                   )}
 
@@ -959,8 +1013,8 @@ export default function ConciergePage() {
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Capital flow, recommendations, or analyze an asset..."
-                    className="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/[0.06] text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-colors"
+                    placeholder={isListening ? '🎤 Speak now...' : 'Ask anything...'}
+                    className="flex-1 min-w-0 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/[0.06] text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-colors"
                     disabled={isLoading}
                   />
 
@@ -968,21 +1022,21 @@ export default function ConciergePage() {
                     type="submit"
                     disabled={!input.trim() || isLoading}
                     className={cn(
-                      "p-3 rounded-xl transition-all",
+                      "p-2.5 sm:p-3 rounded-xl transition-all shrink-0",
                       input.trim() && !isLoading
                         ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/30 hover:shadow-xl"
                         : "bg-gray-200 dark:bg-white/[0.05] text-gray-400 cursor-not-allowed"
                     )}
                   >
-                    <Send className="w-5 h-5" />
+                    <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                 </form>
               </div>
             </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-4">
+          {/* Sidebar — hidden on mobile, visible on lg */}
+          <div className="hidden lg:block space-y-4">
             {/* Capital Flow Link */}
             <Link
               href="/analyze"
