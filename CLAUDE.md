@@ -26,7 +26,7 @@
 
 ### Veri Mimarisi
 - **Analysis tablosu**: Kullanıcının yaptığı analizler (totalScore, outcome, step results)
-- **Report tablosu**: Kullanıcı raporları (PDF export vb. için)
+- **Report tablosu**: Kullanıcı raporları (Snapshot PNG olarak Telegram/Discord'a gönderim)
 - **TÜM ANALİZ İSTATİSTİKLERİ → Analysis tablosundan** (platform-stats, statistics vb.)
 - Report tablosu analiz istatistikleri için KULLANILMAZ
 - Platform accuracy = TP hits / (TP hits + SL hits) from Analysis.outcome
@@ -36,13 +36,16 @@
 - **Analiz çok detaylı yapılacak**: Tüm 40+ enstrüman/indikatör kullanılacak
 - **Sadece 2 rapor tipi var** (başka tip ekleme!):
 
-| Rapor Tipi | İçerik | Sayfa |
-|------------|--------|-------|
-| **Executive Summary** | 7 aşama sonucu + işlem planı (kısa, öz) | 6 sayfa |
-| **Detailed Analysis Report** | Her türlü detay, tüm indikatör grafikleri | 10+ sayfa |
+| Rapor Tipi | İçerik | Format |
+|------------|--------|--------|
+| **Executive Summary** | 7 aşama sonucu + işlem planı (kısa, öz) | 3-4 Snapshot PNG |
+| **Detailed Analysis Report** | Her türlü detay, tüm indikatör grafikleri | 6-8 Snapshot PNG |
 
 - Executive Summary: Hızlı karar için özet
 - Detailed Analysis Report: Derinlemesine inceleme için tam detay
+- **Format: Snapshot PNG** (Puppeteer screenshot, pixel-perfect Chrome rendering)
+- **Dağıtım: Telegram + Discord** (inline görünüm, indirme gerektirmez)
+- **PDF KULLANILMAZ** — satır kayması ve font sorunları nedeniyle kaldırıldı
 
 ### Yapılmaması Gerekenler ❌
 - `!important` kullanma
@@ -127,9 +130,9 @@
 | Hak | Miktar | Ücretsiz Limit | Sonrası Maliyet | Takip Alanı |
 |-----|--------|----------------|-----------------|-------------|
 | AI Expert Sohbet | 3 | 3 soru/analiz | 5 kredi/soru | `Analysis.aiExpertQuestionsUsed` |
-| PDF İndirme | 2 | 2 indirme/analiz | 5 kredi/indirme | `Analysis.pdfDownloadsUsed` |
+| Snapshot Rapor | Otomatik | Sınırsız | $0 | Telegram/Discord'a otomatik gönderim |
 
-> **Not:** Email ile rapor gönderme kaldırıldı. Raporlar sadece PDF olarak indirilebilir. İşlem sonuçları (TP/SL hit) otomatik email ile bildirilir.
+> **Not:** Raporlar Snapshot PNG olarak Telegram ve Discord'a otomatik gönderilir (inline görünüm, indirme gerektirmez). PDF kaldırıldı. İşlem sonuçları (TP/SL hit) Telegram/Discord ile bildirilir. Auth emailleri (doğrulama, şifre sıfırlama) için Resend Free Tier kullanılır.
 ### Trade Type Completion Bonus (Otomatik)
 
 | Trade Type | Bonus Kredi | Açıklama |
@@ -161,9 +164,14 @@ Signal Auto-Publish (Confidence > 70% ve GO/COND_GO ise):
     ├── Telegram kanalına yayınlanır (sadece Signal aboneleri)
     └── Discord'a bildirim gönderilir (sadece Signal aboneleri)
     ↓
+Snapshot Rapor Gönderimi:
+    ├── HTML template → Puppeteer screenshot (2x retina)
+    ├── Telegram sendPhoto (inline görünüm)
+    └── Discord webhook embed (inline görünüm)
+    ↓
 Kullanıcı Hakları Aktif:
     ├── 3x AI Expert sohbet (ücretsiz)
-    └── 2x PDF indirme (ücretsiz)
+    └── Snapshot rapor (otomatik, sınırsız)
 ```
 
 ### Kod Lokasyonları
@@ -174,7 +182,7 @@ Kullanıcı Hakları Aktif:
 | Trade type bonus | `analysis.routes.ts` | 549-562 |
 | Signal auto-publish | `analysis.routes.ts` | 1268-1421 |
 | AI Expert hak kontrolü | `ai-expert.routes.ts` | 186-358 |
-| PDF indirme hak kontrolü | `report.routes.ts` | 564-662 |
+| Snapshot rapor gönderimi | `report.routes.ts` | 564-662 |
 
 ### Önemli Kurallar
 
@@ -209,11 +217,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-18 | Scroll Animations - IntersectionObserver ile görünürlük | Akıcı, profesyonel geçişler |
 | 2026-01-18 | Hover Animations - Scale, shadow, border efektleri | Etkileşimli, responsive |
 | 2026-01-18 | Timeframe Seçimi (15m, 1h, 4h, 1d) | Trade type yerine timeframe seçimi - daha sezgisel ve anlaşılır |
-| 2026-01-19 | PDF Rapor: Logo dikey düzen | Logo tek başına üstte, altında TraderPath markası - profesyonel görünüm |
-| 2026-01-19 | PDF Rapor: Dark grafik arka plan | #1a1a2e koyu arka plan - grafik görünürlüğü artırıldı |
-| 2026-01-19 | PDF Rapor: Tokenomics uyarı sayfası | Veri yoksa detaylı açıklama ve risk uyarısı gösteriliyor |
-| 2026-01-19 | PDF Rapor: 40+ indikatör özeti | Tüm kategoriler ve indikatörler detaylı gösteriliyor |
-| 2026-01-19 | PDF Rapor: Verdict tek sayfa | Analiz kararı sadece final sayfada - tekrar önlendi |
+| 2026-01-19 | ~~PDF Rapor kaldırıldı~~ | Satır kayması ve font sorunları — Snapshot PNG ile değiştirildi |
 | 2026-01-19 | Reports sayfası: Stats kutuları kaldırıldı | Report tablosu senkronize değil - Dashboard'dan bakılacak |
 | 2026-01-19 | Reports sayfası: 2026 trend tasarımı | Glassmorphism, gradient orbs, grain texture, modern filtreler |
 | 2026-01-19 | Reports sayfası: Teal/Coral kurumsal renkler | Tüm renkler kurumsal palette uygun (purple→teal, red→orange/coral) |
@@ -222,7 +226,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-20 | Recent Analyses: Verdict filtresi | All/GO/COND/WAIT/AVOID filtre butonları - hızlı analiz filtreleme |
 | 2026-01-20 | Mobile App Icon: Dark mode versiyonları | 512x512, dark bg (#0D1421), scale 2.0, rounded corners (96px), glow efekti |
 | 2026-01-20 | Mobile App Icon: Alternatif renk düzeni | Yeşil-kırmızı-yeşil-kırmızı (çapraz) vs orijinal (2 yeşil + 2 kırmızı) |
-| 2026-01-20 | PDF Rapor: Gerçek candlestick grafik | Son 50 mum OHLCV verisiyle SVG candlestick chart - yeşil/kırmızı mumlar, entry/SL/TP seviyeleri |
+| 2026-01-20 | Snapshot Rapor: Gerçek candlestick grafik | Son 50 mum OHLCV verisiyle SVG candlestick chart - yeşil/kırmızı mumlar, entry/SL/TP seviyeleri |
 | 2026-01-27 | Testimonials → Platform Metrics | Sahte yorumlar yerine gerçek API verileri - şeffaflık ve güvenilirlik |
 | 2026-01-27 | Feature 1 → AI-Powered Market Scanner | 7-Step Analysis Suite formatında, "Find Your Next Winning Trade" yerine |
 | 2026-01-27 | Real Results section Hero altına taşındı | Metrikler daha erken görünsün |
@@ -276,6 +280,88 @@ Kullanıcı Hakları Aktif:
 | 2026-02-28 | Pricing: /pricing sayfası 3 modlu tasarım | Analysis Packages / Intelligence Reports / Monthly Plans — tab toggle ile geçiş |
 | 2026-02-28 | Pricing: Value Comparison bölümü | Professional Analyst ($75-140) vs TraderPath ($0.88) karşılaştırma kartları |
 | 2026-02-28 | Pricing: FAQ bölümü eklendi | 6 sık sorulan soru — analiz nedir, süre dolumu, rapor servisi, piyasalar vb. |
+| 2026-02-28 | Rapor: PDF → Snapshot PNG geçişi | PDF kaldırıldı (satır kayması/font sorunları), Puppeteer screenshot ile pixel-perfect PNG |
+| 2026-02-28 | Rapor: Telegram/Discord inline gönderim | Snapshot PNG'ler Telegram sendPhoto + Discord webhook ile inline görüntülenir, indirme gerektirmez |
+| 2026-02-28 | Rapor: Executive Summary 3-4 PNG, Detailed 6-8 PNG | Bölüm bazlı snapshot: Header+Verdict, 7-Step Özet, Chart+Levels, İşlem Planı+Final |
+| 2026-02-28 | İletişim: WhatsApp kaldırıldı | Telegram + Discord + Resend Free yeterli, WhatsApp $50-150/ay tasarruf |
+| 2026-02-28 | Email: Resend Pro → Free Tier | Sadece auth emailleri (doğrulama, şifre sıfırlama) için Free Tier yeterli (3,000/ay) |
+
+---
+
+## 💰 Aylık İşletme & Bakım Maliyeti (Piyasa Fiyatları)
+
+### Altyapı
+
+| Servis | Plan | Maliyet/Ay | Açıklama |
+|--------|------|-----------|----------|
+| Railway (API Backend) | Pro | $20 | Node.js API sunucusu |
+| Vercel (Frontend) | Pro | $20 | Next.js SSR, CDN |
+| Neon (PostgreSQL) | Pro | $25 | Managed database |
+| Upstash (Redis) | Pro | $10 | Cache, rate limiting, pub/sub |
+| Cloudflare (Domain/SSL) | Free | $0 | DNS, SSL, DDoS koruması |
+| **Alt Toplam** | | **$75** | |
+
+### Geliştirme & İzleme
+
+| Servis | Plan | Maliyet/Ay | Açıklama |
+|--------|------|-----------|----------|
+| Claude Code | Max | $100 | AI geliştirme asistanı |
+| Sentry | Team | $26 | Error monitoring, crash reporting |
+| Vercel Analytics | Pro dahil | $0 | Web analytics (Pro plan'a dahil) |
+| GitHub | Free | $0 | Repo, CI/CD Actions |
+| **Alt Toplam** | | **$126** | |
+
+### İletişim Kanalları
+
+| Servis | Plan | Maliyet/Ay | Açıklama |
+|--------|------|-----------|----------|
+| Telegram Bot API | Free | $0 | Sinyal/rapor/bildirim gönderimi, sınırsız |
+| Discord Webhooks | Free | $0 | Sinyal/rapor bildirimleri, sınırsız |
+| Resend (Email) | Free | $0 | Sadece auth emailleri (3,000/ay limit) |
+| **Alt Toplam** | | **$0** | |
+
+### Ödeme İşleme (Lemon Squeezy)
+
+| Bileşen | Oran |
+|---------|------|
+| İşlem komisyonu | 5% + $0.50/işlem |
+| Vergi hesaplama & ödeme | Dahil |
+| Aylık platform ücreti | $0 |
+
+### Müşteri Desteği
+
+| Servis | Plan | Maliyet/Ay |
+|--------|------|-----------|
+| Crisp Chat | Mini | $45 |
+
+### AI Motor (Gemini)
+
+| Model | 1,000 analiz/ay |
+|-------|----------------|
+| Gemini 2.5 Flash | ~$3 |
+| Gemini 2.5 Pro | ~$43 |
+
+### Toplam Aylık Maliyet (1,000 analiz/ay)
+
+| Senaryo | Flash | Pro |
+|---------|-------|-----|
+| Altyapı | $75 | $75 |
+| Geliştirme & İzleme | $126 | $126 |
+| İletişim | $0 | $0 |
+| Lemon Squeezy (~$3K gelir) | $200 | $200 |
+| Müşteri Desteği | $45 | $45 |
+| AI Motor | $3 | $43 |
+| **TOPLAM** | **$449** | **$489** |
+
+### Senaryo Bazlı Kar/Zarar
+
+| Dönem | Kullanıcı | Gelir | Gider (Flash) | Net Kar | Marj |
+|-------|----------|-------|--------------|---------|------|
+| Erken | 50 | $1,500 | $338 | $1,162 | 77.5% |
+| Büyüme | 200 | $6,000 | $651 | $5,349 | 89.2% |
+| Olgun | 1,000 | $25,000 | $1,936 | $23,064 | 92.3% |
+
+> **Not:** En büyük maliyet kalemi Lemon Squeezy komisyonu (gelire orantılı). Break-even: ~$450 gelir/ay (~15 Trader paketi).
 
 ---
 
