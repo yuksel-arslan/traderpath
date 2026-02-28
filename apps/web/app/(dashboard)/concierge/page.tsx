@@ -615,7 +615,7 @@ export default function ConciergePage() {
 
   return (
     <div className="h-[100dvh] flex flex-col bg-white dark:bg-[#0A0A0A] text-gray-900 dark:text-white overflow-hidden">
-      <div className="max-w-[1400px] mx-auto w-full px-3 sm:px-6 flex flex-col flex-1 min-h-0">
+      <div className="max-w-[1800px] mx-auto w-full px-3 sm:px-6 lg:px-10 flex flex-col flex-1 min-h-0">
         {/* Header */}
         <div className="shrink-0 pt-3 sm:pt-4 pb-2 sm:pb-3">
           <header className="flex items-center justify-between">
@@ -751,9 +751,9 @@ export default function ConciergePage() {
         </div>
 
         {/* Main Content — flex-1 on mobile so chat fills remaining space */}
-        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 pb-3 sm:pb-6">
-          {/* Chat Area */}
-          <div className="lg:col-span-3 flex flex-col min-h-0">
+        <div className="flex-1 min-h-0 flex flex-col pb-3 sm:pb-6">
+          {/* Chat Area — full width */}
+          <div className="flex-1 flex flex-col min-h-0">
             <div className="flex-1 min-h-0 flex flex-col rounded-xl bg-white dark:bg-[#0A0A0A] border border-gray-200 dark:border-white/[0.06] overflow-hidden">
               {/* Messages — flex-1 fills available space instead of fixed height */}
               <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
@@ -1035,77 +1035,6 @@ export default function ConciergePage() {
             </div>
           </div>
 
-          {/* Sidebar — hidden on mobile, visible on lg */}
-          <div className="hidden lg:block space-y-4">
-            {/* Capital Flow Link */}
-            <Link
-              href="/analyze"
-              className="block p-4 rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-500/10 dark:to-emerald-500/10 border border-teal-200 dark:border-teal-500/20 hover:border-teal-300 dark:hover:border-teal-500/30 transition-all group"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-lg">
-                  <Layers className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="font-bold text-gray-900 dark:text-white">Capital Flow Radar</p>
-                  <p className="text-xs text-gray-500 dark:text-white/30">See full 4-layer analysis</p>
-                </div>
-              </div>
-              <div className="flex items-center text-teal-600 dark:text-teal-400 text-sm font-medium group-hover:translate-x-1 transition-transform">
-                Open Radar <ArrowRight className="w-4 h-4 ml-1" />
-              </div>
-            </Link>
-
-            {/* Flow Philosophy */}
-            <div className="p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <Globe className="w-4 h-4 text-teal-500" />
-                Follow The Money
-              </h3>
-              <div className="space-y-2 text-xs text-gray-500 dark:text-white/30">
-                <p><span className="font-semibold text-teal-600 dark:text-teal-400">L1:</span> Global Liquidity (Fed, DXY, VIX)</p>
-                <p><span className="font-semibold text-teal-600 dark:text-teal-400">L2:</span> Market Flows (Crypto, Stocks...)</p>
-                <p><span className="font-semibold text-teal-600 dark:text-teal-400">L3:</span> Sector Drill-Down</p>
-                <p><span className="font-semibold text-teal-600 dark:text-teal-400">L4:</span> Asset Analysis</p>
-              </div>
-            </div>
-
-            {/* Phase Legend */}
-            <div className="p-4 rounded-xl bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Market Phases</h3>
-              <div className="space-y-2">
-                {[
-                  { phase: 'early', label: 'EARLY', desc: 'Best entry', color: 'text-emerald-600 dark:text-emerald-400' },
-                  { phase: 'mid', label: 'MID', desc: 'Caution', color: 'text-amber-600 dark:text-amber-400' },
-                  { phase: 'late', label: 'LATE', desc: 'No entry', color: 'text-orange-600 dark:text-orange-400' },
-                  { phase: 'exit', label: 'EXIT', desc: 'Avoid', color: 'text-red-600 dark:text-red-400' },
-                ].map((item) => (
-                  <div key={item.phase} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <PhaseBadge phase={item.phase} />
-                      <span className="text-xs text-gray-500 dark:text-white/30">{item.desc}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Analysis Cost */}
-            <div className="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 border border-amber-200 dark:border-amber-500/20">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
-                  <Zap className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 dark:text-white/30">Analysis Cost</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">Daily Pass</p>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-white/30">
-                Flow questions and insights are free!
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
