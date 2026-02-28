@@ -250,11 +250,13 @@ Analyze the user message and respond with a JSON object:
 
 1. CAPITAL FLOW FIRST: Liquidity, market, flow questions → CAPITAL_FLOW_* intents
 2. Strip pair suffixes: BTCUSDT → BTC, ETH/USDT → ETH
-3. Coin + action words → ANALYSIS (unless "should I buy/sell" → CAPITAL_FLOW_RECOMMENDATION)
-4. Educational questions without coin → EXPERT_ASK
-5. Chart/grafik → CHART_VIEW (not MONTHLY_PERFORMANCE)
-6. Default timeframe: "4h"
-7. Detect language from Turkish characters/words
+3. Coin + action words (analiz yap, analiz et, analyze, check, kontrol) → ANALYSIS with default "4h"
+4. Turkish crypto names: Eteryum→ETH, Bitkoin→BTC, Solena→SOL, Dogekoyn→DOGE, Litekoyn→LTC
+5. "analiz yap", "analiz et", "nasıl", "durumu" with a coin → ANALYSIS (not ANALYSIS_NEEDS_CLARIFICATION)
+6. Educational questions without coin → EXPERT_ASK
+7. Chart/grafik → CHART_VIEW (not MONTHLY_PERFORMANCE)
+8. Default timeframe: "4h"
+9. Detect language from Turkish characters/words
 
 ## EXAMPLES
 
@@ -286,6 +288,11 @@ Analyze the user message and respond with a JSON object:
 "BTC nasıl?"                  → {"intent": "ANALYSIS",      "confidence": 0.95, "entities": {"symbol": "BTC", "interval": "4h"}, "language": "tr"}
 "ETHUSDT 1h"                  → {"intent": "ANALYSIS",      "confidence": 0.90, "entities": {"symbol": "ETH", "interval": "1h"}, "language": "en"}
 "BTC mlis pro"                → {"intent": "MLIS_ANALYSIS", "confidence": 0.95, "entities": {"symbol": "BTC", "interval": "4h"}, "language": "en"}
+"Bana Eteryum analizi yap"    → {"intent": "ANALYSIS",      "confidence": 0.95, "entities": {"symbol": "ETH", "interval": "4h"}, "language": "tr"}
+"SOL analiz et"               → {"intent": "ANALYSIS",      "confidence": 0.95, "entities": {"symbol": "SOL", "interval": "4h"}, "language": "tr"}
+"Bitcoin analizi"             → {"intent": "ANALYSIS",      "confidence": 0.95, "entities": {"symbol": "BTC", "interval": "4h"}, "language": "tr"}
+"Analyze ETH for me"          → {"intent": "ANALYSIS",      "confidence": 0.95, "entities": {"symbol": "ETH", "interval": "4h"}, "language": "en"}
+"BTC kontrol et"              → {"intent": "ANALYSIS",      "confidence": 0.90, "entities": {"symbol": "BTC", "interval": "4h"}, "language": "tr"}
 
 ### Other
 "RSI nedir?"                  → {"intent": "EXPERT_ASK",    "confidence": 0.95, "entities": {"expertType": "aria"}, "language": "tr"}

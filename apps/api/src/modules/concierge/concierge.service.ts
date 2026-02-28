@@ -113,7 +113,7 @@ const SUPPORTED_ASSETS = [
 
 // Asset name aliases for natural language (Turkish and English)
 const ASSET_ALIASES: Record<string, string> = {
-  // Crypto aliases
+  // Crypto aliases (English)
   'bitcoin': 'btc',
   'ethereum': 'eth',
   'binance': 'bnb',
@@ -137,6 +137,23 @@ const ASSET_ALIASES: Record<string, string> = {
   'fetch': 'fet',
   'singularity': 'agix',
 
+  // Crypto aliases (Turkish)
+  'eteryum': 'eth',
+  'etherium': 'eth',
+  'bitekoyn': 'btc',
+  'bitkoin': 'btc',
+  'solena': 'sol',
+  'dogekoyn': 'doge',
+  'dojkoyn': 'doge',
+  'doçkoyn': 'doge',
+  'litekoyn': 'ltc',
+  'kozmoz': 'atom',
+  'çeynlink': 'link',
+  'shibarium': 'shib',
+  'bonk coin': 'bonk',
+  'sui coin': 'sui',
+  'sei coin': 'sei',
+
   // Metal aliases (Turkish and English)
   'altın': 'gld',
   'altin': 'gld',
@@ -149,7 +166,7 @@ const ASSET_ALIASES: Record<string, string> = {
   'paladyum': 'pall',
   'palladium': 'pall',
 
-  // Stock aliases (Turkish)
+  // Stock aliases (Turkish and English)
   'apple': 'aapl',
   'microsoft': 'msft',
   'google': 'googl',
@@ -697,6 +714,11 @@ function detectIntent(message: string): {
 
   // Analysis intent - coin detected
   if (detectedCoin) {
+    // Check if user explicitly requested analysis (e.g., "analiz yap", "analyze", "analiz et")
+    const hasAnalysisAction = /\b(analiz|analyze|analysis|check|kontrol|incele)\b/i.test(lower) ||
+      lower.includes('analiz yap') || lower.includes('analiz et') || lower.includes('nasıl') ||
+      lower.includes('durumu') || lower.includes('how is');
+
     // Detect interval - check if user explicitly specified
     let interval = ''; // empty means not specified
     let intervalExplicit = false;
@@ -730,10 +752,13 @@ function detectIntent(message: string): {
       intervalExplicit = true;
     }
 
-    console.log(`[Concierge] Detected: symbol=${detectedCoin}, interval=${interval || 'NOT_SPECIFIED'}, explicit=${intervalExplicit}, message="${lower}"`);
+    // If user explicitly asked for analysis (e.g., "analiz yap", "analyze"), use default 4h
+    const shouldRunDirectly = intervalExplicit || hasAnalysisAction;
+
+    console.log(`[Concierge] Detected: symbol=${detectedCoin}, interval=${interval || 'NOT_SPECIFIED'}, explicit=${intervalExplicit}, analysisAction=${hasAnalysisAction}, direct=${shouldRunDirectly}, message="${lower}"`);
 
     return {
-      intent: intervalExplicit ? 'ANALYSIS' : 'ANALYSIS_NEEDS_CLARIFICATION',
+      intent: shouldRunDirectly ? 'ANALYSIS' : 'ANALYSIS_NEEDS_CLARIFICATION',
       symbol: detectedCoin.toUpperCase(),
       interval: interval || '4h', // fallback for later use
       intervalExplicit,
@@ -3385,6 +3410,84 @@ Type "top coins" to see results when complete.`;
     const ANALYSIS_COST = 25;
     const upperSymbol = symbol.toUpperCase();
     const isTurkish = language === 'tr';
+
+    // Check for existing recent analysis (within 4 hours) before spending credits
+    try {
+      const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+      const existingAnalysis = await prisma.analysis.findFirst({
+        where: {
+          userId,
+          symbol: upperSymbol,
+          interval,
+          createdAt: { gte: fourHoursAgo },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (existingAnalysis) {
+        const verdictResult = existingAnalysis.step7Result as Record<string, any> || {};
+        const tradePlanResult = existingAnalysis.step5Result as Record<string, any> || {};
+        const verdict = verdictResult.verdict?.toUpperCase() || 'WAIT';
+        const score = existingAnalysis.totalScore || verdictResult.overallScore || 5;
+        const direction = tradePlanResult?.direction || undefined;
+        const synthesis = this.generateNaturalResponse(upperSymbol, interval, verdict, score, language);
+
+        let tradePlan: any | undefined;
+        if (tradePlanResult) {
+          tradePlan = {
+            averageEntry: tradePlanResult.averageEntry,
+            stopLoss: tradePlanResult.stopLoss,
+            takeProfits: tradePlanResult.takeProfits,
+            direction: tradePlanResult.direction || direction,
+            riskReward: tradePlanResult.riskReward,
+          };
+        }
+
+        const verdictLabel = verdict === 'GO' ? 'GO'
+          : verdict === 'AVOID' ? (isTurkish ? 'KACIN' : 'AVOID')
+          : verdict === 'CONDITIONAL_GO' ? (isTurkish ? 'SARTLI' : 'COND')
+          : (isTurkish ? 'BEKLE' : 'WAIT');
+
+        const timeAgo = Math.round((Date.now() - existingAnalysis.createdAt.getTime()) / 60000);
+        const timeLabel = isTurkish
+          ? `${timeAgo} dakika once yapildi`
+          : `from ${timeAgo} minutes ago`;
+
+        const analysisMessage = isTurkish
+          ? `${upperSymbol} ${interval.toUpperCase()} Analizi (mevcut — ${timeLabel})
+
+Karar: ${verdictLabel}
+Skor: ${score}/10
+
+${synthesis}`
+          : `${upperSymbol} ${interval.toUpperCase()} Analysis (existing — ${timeLabel})
+
+Verdict: ${verdictLabel}
+Score: ${score}/10
+
+${synthesis}`;
+
+        console.log(`[Concierge] Returning existing analysis ${existingAnalysis.id} for ${upperSymbol} ${interval} (${timeAgo}min ago)`);
+
+        return {
+          success: true,
+          intent: 'ANALYSIS',
+          message: analysisMessage,
+          creditsSpent: 0,
+          creditsRemaining: creditBalance,
+          analysisId: existingAnalysis.id,
+          verdict,
+          score,
+          direction,
+          tradePlan,
+          voltranSynthesis: synthesis,
+          detectedLanguage: language,
+        };
+      }
+    } catch (error) {
+      console.error('[Concierge] Error checking existing analysis:', error);
+      // Continue to create new analysis
+    }
 
     // Check credits
     if (creditBalance < ANALYSIS_COST) {
