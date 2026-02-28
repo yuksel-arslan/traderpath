@@ -267,6 +267,15 @@ Kullanıcı Hakları Aktif:
 | 2026-02-27 | Auth Layout: Dynamic gradient arka plan | Dashboard bg-background eşleşmesi + 4 animasyonlu gradient orb (teal/coral) + grain texture overlay, light/dark mod desteği |
 | 2026-02-27 | Dashboard: System Performance → Platform-wide veri | ProfitTracker artık platform-performance-history API'den tüm kullanıcıların P/L verilerini gösteriyor |
 | 2026-02-27 | Dashboard: Performance → My Performance | Ortadaki PnLChart "My Performance" olarak yeniden adlandırıldı - kullanıcıya özel veri gösterir |
+| 2026-02-28 | Pricing: Kredi → Analiz Paket modeli | Kredi sistemi yerine analiz paketi: Explorer(5/$9.99), Trader(20/$29.99), Pro(50/$59.99), Elite(150/$149.99) |
+| 2026-02-28 | Pricing: Sinyal Servisi → Intelligence Reports | "Signal Service" → "Intelligence Reports" olarak yeniden markalaştırıldı, rapor + sinyal dahil |
+| 2026-02-28 | Pricing: Report Standard $29/mo, Pro $59/mo | Standard: 5 rapor/gün Crypto, Pro: 10 rapor/gün 4 piyasa, PDF + sinyal + outcome tracking |
+| 2026-02-28 | Pricing: Platform Subscriptions yeniden yapılandırma | Starter $29/mo (3/gün), Pro $59/mo (10/gün), Elite $99/mo (sınırsız) — analiz bazlı, kredi bazlı değil |
+| 2026-02-28 | Pricing: Kayıt bonusu 25 kredi → 3 analiz | Yeni kullanıcılar 3 ücretsiz analiz alıyor (kredi kartı gerekmez) |
+| 2026-02-28 | Pricing: Landing PricingSection 4 paket grid | Explorer/Trader/Pro/Elite kartları + "Every Analysis Includes" bölümü + Intelligence Reports callout |
+| 2026-02-28 | Pricing: /pricing sayfası 3 modlu tasarım | Analysis Packages / Intelligence Reports / Monthly Plans — tab toggle ile geçiş |
+| 2026-02-28 | Pricing: Value Comparison bölümü | Professional Analyst ($75-140) vs TraderPath ($0.88) karşılaştırma kartları |
+| 2026-02-28 | Pricing: FAQ bölümü eklendi | 6 sık sorulan soru — analiz nedir, süre dolumu, rapor servisi, piyasalar vb. |
 
 ---
 
