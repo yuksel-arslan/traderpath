@@ -605,15 +605,17 @@ export default function ConciergePage() {
               <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
                 CONCIERGE
               </span>
-              <span className="text-[10px] text-gray-400 dark:text-white/40 uppercase tracking-wider">
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] text-gray-400 dark:text-white/40 uppercase tracking-wider hidden sm:inline">
                 AI-powered · Capital Flow
               </span>
+              {credits !== null && (
+                <span className="text-[11px] text-gray-400 dark:text-white/40">
+                  <span className="text-gray-900 dark:text-white font-semibold">{credits.toLocaleString()}</span> credits
+                </span>
+              )}
             </div>
-            {credits !== null && (
-              <span className="text-[11px] text-gray-400 dark:text-white/40">
-                <span className="text-gray-900 dark:text-white font-semibold">{credits.toLocaleString()}</span> credits
-              </span>
-            )}
           </header>
 
           {/* Capital Flow Summary Bar */}
