@@ -139,7 +139,7 @@ export default function PricingPage() {
               Two Plans, One Price
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-4">
-              Get professional-grade trading intelligence for just $6.99/week.
+              Get professional-grade trading intelligence for just $13.99/week.
               Choose reports delivered to you, or run your own analyses.
             </p>
             {!isLoggedIn && (
@@ -381,10 +381,10 @@ export default function PricingPage() {
               {/* TraderPath */}
               <div className="bg-white dark:bg-slate-900 rounded-xl border-2 border-emerald-500 p-6 relative">
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-500 text-white text-xs font-semibold rounded-full">
-                  98% SAVINGS
+                  97% SAVINGS
                 </div>
                 <p className="text-sm font-medium text-emerald-500 mb-2">TraderPath</p>
-                <div className="text-3xl font-bold text-slate-900 dark:text-white mb-2">$1.00</div>
+                <div className="text-3xl font-bold text-slate-900 dark:text-white mb-2">$2.00</div>
                 <p className="text-sm text-muted-foreground mb-4">per analysis or report</p>
                 <ul className="space-y-2 text-sm text-emerald-700 dark:text-emerald-400">
                   <li className="flex items-center gap-2"><Check className="w-4 h-4" /> Results in ~60 seconds</li>
@@ -421,7 +421,7 @@ export default function PricingPage() {
                 },
                 {
                   q: 'How does the weekly billing work?',
-                  a: 'You are billed $6.99 every 7 days. Your quota resets to 7 at each renewal. Cancel anytime — your access continues until the end of the current billing period.',
+                  a: 'You are billed $13.99 every 7 days. Your quota resets to 7 at each renewal. Cancel anytime — your access continues until the end of the current billing period.',
                 },
                 {
                   q: 'What markets are supported?',
@@ -451,7 +451,7 @@ export default function PricingPage() {
               Ready to Trade Smarter?
             </h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-lg mx-auto">
-              Join TraderPath today and get AI-powered trading intelligence for just $1 per analysis.
+              Join TraderPath today and get AI-powered trading intelligence for just $2 per analysis.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md mx-auto">
               <Link

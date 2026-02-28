@@ -23,8 +23,8 @@ export const WEEKLY_PLAN_CONFIG: Record<WeeklyPlanType, WeeklyPlanConfig> = {
   REPORT_WEEKLY: {
     name: 'Intelligent Report Subscription',
     description: 'Daily Executive Summary or Detailed Analysis Report via Telegram & Discord',
-    price: 699, // $6.99
-    priceUsd: 6.99,
+    price: 1399, // $13.99
+    priceUsd: 13.99,
     interval: 'week',
     quota: 7,
     aiExpertQuestionsPerAnalysis: 0,
@@ -40,8 +40,8 @@ export const WEEKLY_PLAN_CONFIG: Record<WeeklyPlanType, WeeklyPlanConfig> = {
   ANALYSIS_WEEKLY: {
     name: 'Capital Flow & Asset Analysis Subscription',
     description: 'Full 7-Step Analysis with AI Expert Chat included',
-    price: 699, // $6.99
-    priceUsd: 6.99,
+    price: 1399, // $13.99
+    priceUsd: 13.99,
     interval: 'week',
     quota: 7,
     aiExpertQuestionsPerAnalysis: 5,

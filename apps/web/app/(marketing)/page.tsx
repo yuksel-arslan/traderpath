@@ -324,10 +324,10 @@ const LANDING_PLANS = [
   {
     name: 'Intelligent Report',
     icon: '📊',
-    price: '$6.99',
+    price: '$13.99',
     period: '/week',
     quota: '7 reports',
-    perUnit: '$1.00 per report',
+    perUnit: '$2.00 per report',
     color: 'violet' as const,
     description: 'Receive daily professional reports automatically',
     features: [
@@ -340,10 +340,10 @@ const LANDING_PLANS = [
   {
     name: 'Capital Flow & Analysis',
     icon: '🔬',
-    price: '$6.99',
+    price: '$13.99',
     period: '/week',
     quota: '7 analyses',
-    perUnit: '$1.00 per analysis',
+    perUnit: '$2.00 per analysis',
     color: 'teal' as const,
     description: 'Run your own analyses with AI Expert support',
     features: [
@@ -366,7 +366,7 @@ function PricingSection() {
             Two Plans, One Price
           </h2>
           <p className="text-sm text-slate-500 max-w-lg mx-auto">
-            Professional-grade trading intelligence for just $6.99/week. Get reports delivered or run your own analyses.
+            Professional-grade trading intelligence for just $13.99/week. Get reports delivered or run your own analyses.
           </p>
         </div>
 
@@ -455,7 +455,7 @@ function PricingSection() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg>
             </div>
             <div className="flex-1 text-center sm:text-left">
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">Subscribe to Both for $13.98/week</div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-white">Subscribe to Both for $27.98/week</div>
               <p className="text-xs text-slate-500 mt-0.5">
                 Get daily reports AND run your own analyses. 14 total (7 reports + 7 analyses) with AI Expert chat included.
               </p>
