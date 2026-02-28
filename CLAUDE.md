@@ -336,10 +336,15 @@ Kullanıcı Hakları Aktif:
 
 ### AI Motor (Gemini)
 
-| Model | 1,000 analiz/ay |
-|-------|----------------|
-| Gemini 2.5 Flash | ~$3 |
-| Gemini 2.5 Pro | ~$43 |
+| Bileşen | Flash | Pro |
+|---------|-------|-----|
+| 7-Step Analiz (1,000/ay) | ~$3 | ~$43 |
+| AI Concierge sohbet (2,000 mesaj/ay) | ~$1 | ~$10 |
+| BILGE hata analizi + haftalık rapor | ~$1 | ~$3 |
+| AI Expert soruları (500/ay) | ~$0.50 | ~$10 |
+| **Alt Toplam** | **~$5.50** | **~$66** |
+
+> **Not:** Concierge — kullanıcıların doğal dille analiz başlattığı, kredi onay mekanizmalı AI chatbot. BILGE — sistem sağlığı izleme, hata pattern tespiti, haftalık bakım raporu üreten AI guardian. Her ikisi de Gemini API kullanır.
 
 ### Toplam Aylık Maliyet (1,000 analiz/ay)
 
@@ -350,18 +355,18 @@ Kullanıcı Hakları Aktif:
 | İletişim | $0 | $0 |
 | Lemon Squeezy (~$3K gelir) | $200 | $200 |
 | Müşteri Desteği | $45 | $45 |
-| AI Motor | $3 | $43 |
-| **TOPLAM** | **$449** | **$489** |
+| AI Motor (Analiz+Concierge+BILGE) | $5.50 | $66 |
+| **TOPLAM** | **$451.50** | **$512** |
 
 ### Senaryo Bazlı Kar/Zarar
 
 | Dönem | Kullanıcı | Gelir | Gider (Flash) | Net Kar | Marj |
 |-------|----------|-------|--------------|---------|------|
-| Erken | 50 | $1,500 | $338 | $1,162 | 77.5% |
-| Büyüme | 200 | $6,000 | $651 | $5,349 | 89.2% |
-| Olgun | 1,000 | $25,000 | $1,936 | $23,064 | 92.3% |
+| Erken | 50 | $1,500 | $341 | $1,159 | 77.3% |
+| Büyüme | 200 | $6,000 | $654 | $5,346 | 89.1% |
+| Olgun | 1,000 | $25,000 | $1,939 | $23,061 | 92.2% |
 
-> **Not:** En büyük maliyet kalemi Lemon Squeezy komisyonu (gelire orantılı). Break-even: ~$450 gelir/ay (~15 Trader paketi).
+> **Not:** En büyük maliyet kalemi Lemon Squeezy komisyonu (gelire orantılı). Break-even: ~$452 gelir/ay (~15 Trader paketi). AI Motor maliyeti Concierge ve BILGE dahil.
 
 ---
 
