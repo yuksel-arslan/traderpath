@@ -278,12 +278,11 @@ const nextConfig = {
         stream: false,
         zlib: false,
       };
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        canvas: false,
+      };
     }
-
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      canvas: false,
-    };
 
     return config;
   },
