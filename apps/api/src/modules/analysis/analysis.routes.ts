@@ -1213,6 +1213,8 @@ Warn about potential traps and give protective advice.`;
               } : null,
               validation: ragEnrichment.validations?.enginePlan ? {
                 passed: ragEnrichment.validations.enginePlan.overallStatus === 'pass',
+                blockers: ragEnrichment.validations.enginePlan.checks.filter(c => c.severity === 'block' && !c.passed).length,
+                warnings: ragEnrichment.validations.enginePlan.checks.filter(c => c.severity === 'warn' && !c.passed).length,
                 checks: ragEnrichment.validations.enginePlan.checks,
                 summary: `${ragEnrichment.validations.enginePlan.passedCount} passed, ${ragEnrichment.validations.enginePlan.warnCount} warnings, ${ragEnrichment.validations.enginePlan.blockCount} blocks`,
               } : null,
@@ -1572,6 +1574,7 @@ Explain the key risks and what conditions would need to change before trading th
               passed: ragEnrichment.validations.enginePlan.overallStatus === 'pass',
               blockers: ragEnrichment.validations.enginePlan.checks.filter(c => c.severity === 'block' && !c.passed).length,
               warnings: ragEnrichment.validations.enginePlan.checks.filter(c => c.severity === 'warn' && !c.passed).length,
+              checks: ragEnrichment.validations.enginePlan.checks,
               summary: `${ragEnrichment.validations.enginePlan.passedCount} passed, ${ragEnrichment.validations.enginePlan.warnCount} warnings, ${ragEnrichment.validations.enginePlan.blockCount} blocks`,
             } : null,
             capitalFlowAligned: ragEnrichment.capitalFlowAlignment?.aligned ?? null,
