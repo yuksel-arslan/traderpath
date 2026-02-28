@@ -499,7 +499,7 @@ export default function ConciergePage() {
 
   return (
     <div className="h-[calc(100dvh-10rem)] flex flex-col text-foreground overflow-hidden">
-      <div className="max-w-[1400px] mx-auto w-full px-3 sm:px-6 flex flex-col flex-1 min-h-0">
+      <div className="max-w-[1800px] mx-auto w-full px-3 sm:px-6 lg:px-10 flex flex-col flex-1 min-h-0">
         {/* Header */}
         <div className="shrink-0 pt-3 sm:pt-4 pb-2 sm:pb-3">
           <header className="flex items-center justify-between">

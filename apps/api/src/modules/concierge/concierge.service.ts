@@ -916,9 +916,9 @@ class ConciergeService {
       const creditBalanceObj = await creditService.getBalance(userId);
       const creditBalance = creditBalanceObj.balance;
 
-      // SMART LANGUAGE DETECTION - Always detect from message first
-      const messageLanguage = this.detectLanguageFromMessage(message);
-      let detectedLanguage = messageLanguage !== 'en' ? messageLanguage : language;
+      // All responses are in English — platform is English-first
+      // eslint-disable-next-line prefer-const
+      let detectedLanguage = 'en';
 
       console.log(`[Concierge] Message: "${message.substring(0, 50)}...", Detected language: ${detectedLanguage}`);
 
@@ -950,10 +950,7 @@ class ConciergeService {
           targetPrice = geminiResult.targetPrice;
           direction = geminiResult.direction;
           market = geminiResult.market;
-          // Use Gemini's language detection if available
-          if (geminiResult.language) {
-            detectedLanguage = geminiResult.language;
-          }
+          // Language detection from Gemini intentionally skipped — all responses are English
         }
       } catch (error) {
         console.error('[Concierge] Gemini intent detection failed:', error);
@@ -1848,7 +1845,7 @@ ${recommendation}
 
     // Detect the type of conversational message
     let responseText: string;
-    let detectedLanguage = language; // Start with user preference
+    let detectedLanguage = 'en'; // All responses in English
 
     // Language switch requests - detect from message content
     // Multi-language support: Users can request any supported language
@@ -1964,20 +1961,8 @@ ${recommendation}
     ) {
       // Detect language from greeting
       if (lower.includes('merhaba') || lower.includes('selam') || lower.includes('günaydın') || lower.includes('iyi akşamlar')) {
-        detectedLanguage = 'tr';
       }
-      responseText = detectedLanguage === 'tr'
-        ? `Merhaba! Ben TraderPath AI Concierge. Size nasıl yardımcı olabilirim?
-
-Şunları yapabilirim:
-• Coin analizi (örn: "BTC analiz")
-• Grafik gösterimi (örn: "ETH grafiği")
-• Teknik sorulara cevap (örn: "RSI nedir?")
-• Fiyat alarmı kurma
-• Ve daha fazlası...
-
-Ne yapmak istersiniz?`
-        : `Hello! I'm TraderPath AI Concierge. How can I help you?
+      responseText = `Hello! I'm TraderPath AI Concierge. How can I help you?
 
 I can:
 • Analyze coins (e.g., "Analyze BTC")
@@ -1995,13 +1980,7 @@ What would you like to do?`;
       lower.includes('sağol') ||
       lower.includes('eyvallah')
     ) {
-      // Detect language from thanks
-      if (lower.includes('teşekkür') || lower.includes('sağol') || lower.includes('eyvallah')) {
-        detectedLanguage = 'tr';
-      }
-      responseText = detectedLanguage === 'tr'
-        ? `Rica ederim! Başka bir konuda yardımcı olabilir miyim? Yeni bir analiz yapmak veya sorularınızı sormaktan çekinmeyin.`
-        : `You're welcome! Is there anything else I can help you with? Feel free to run another analysis or ask questions.`;
+      responseText = `You're welcome! Is there anything else I can help you with? Feel free to run another analysis or ask questions.`;
     }
     // Acknowledgment
     else if (
@@ -2010,13 +1989,7 @@ What would you like to do?`;
       lower === 'anladım' ||
       lower === 'okay'
     ) {
-      // Detect language from acknowledgment
-      if (lower === 'tamam' || lower === 'anladım') {
-        detectedLanguage = 'tr';
-      }
-      responseText = detectedLanguage === 'tr'
-        ? `Harika! Başka bir şey için buradayım. Bir coin analiz etmemi ister misiniz?`
-        : `Great! I'm here if you need anything else. Would you like me to analyze a coin?`;
+      responseText = `Great! I'm here if you need anything else. Would you like me to analyze a coin?`;
     }
     // Voice preference request
     else if (
@@ -2025,27 +1998,12 @@ What would you like to do?`;
       lower.includes('sesli konuş') ||
       lower.includes('speak to me')
     ) {
-      // Detect language from voice request
-      if (lower.includes('sesli yanıt') || lower.includes('sesli konuş')) {
-        detectedLanguage = 'tr';
-      }
-      responseText = detectedLanguage === 'tr'
-        ? `Sesli yanıt özelliği aktif! Tarayıcınızın ses çıkışı açıksa yanıtlarımı sesli olarak duyabilirsiniz.
-
-Şimdi ne yapmak istersiniz? Örneğin "BTC analiz" diyerek bir analiz başlatabilirsiniz.`
-        : `Voice response is enabled! If your browser's audio output is on, you can hear my responses spoken aloud.
+      responseText = `Voice response is enabled! If your browser's audio output is on, you can hear my responses spoken aloud.
 
 What would you like to do now? For example, say "Analyze BTC" to start an analysis.`;
     }
     // Default conversational response - route to AI Experts for intelligent answers
     else {
-      // Try to detect Turkish from common words
-      const turkishWords = ['ne', 'nasıl', 'nedir', 'neden', 'hangi', 'kaç', 'kim', 'yap', 'ver', 'göster', 'anlat', 'söyle', 'istiyorum', 'ister', 'misin', 'musun', 'bana', 'sana', 'için', 'ile', 'var', 'yok', 'bir', 'bu', 'şu', 'o', 've', 'ama', 'fakat', 'çünkü', 'eğer', 'ise'];
-      const hasTurkish = turkishWords.some(word => lower.includes(word));
-      if (hasTurkish) {
-        detectedLanguage = 'tr';
-      }
-
       // Check if it looks like a question that needs expert response
       const questionIndicators = ['?', 'what', 'how', 'why', 'when', 'which', 'explain', 'ne', 'nasıl', 'neden', 'nedir', 'açıkla', 'anlat'];
       const isQuestion = questionIndicators.some(q => lower.includes(q));
@@ -2055,9 +2013,7 @@ What would you like to do now? For example, say "Analyze BTC" to start an analys
         try {
           const expertType = this.detectExpertForQuestion(message);
 
-          const languageInstruction = detectedLanguage === 'tr'
-            ? '\n\n[IMPORTANT: Respond in Turkish (Türkçe yanıt ver). Be helpful and provide useful trading insights.]'
-            : '\n\n[Be helpful and provide useful trading insights.]';
+          const languageInstruction = '\n\n[Be helpful and provide useful trading insights.]';
 
           const response = await aiExpertService.chat({
             expertId: expertType as 'aria' | 'nexus' | 'oracle' | 'sentinel',
@@ -2067,10 +2023,10 @@ What would you like to do now? For example, say "Analyze BTC" to start an analys
 
           if (response.response) {
             const expertInfo: Record<string, { emoji: string; name: string }> = {
-              aria: { emoji: '🔬', name: detectedLanguage === 'tr' ? 'Teknik Uzman' : 'Technical Expert' },
-              nexus: { emoji: '⚖️', name: detectedLanguage === 'tr' ? 'Risk Uzmanı' : 'Risk Expert' },
-              oracle: { emoji: '🐋', name: detectedLanguage === 'tr' ? 'Balina Takipçisi' : 'Whale Tracker' },
-              sentinel: { emoji: '🛡️', name: detectedLanguage === 'tr' ? 'Güvenlik Uzmanı' : 'Security Expert' },
+              aria: { emoji: '🔬', name: 'Technical Expert' },
+              nexus: { emoji: '⚖️', name: 'Risk Expert' },
+              oracle: { emoji: '🐋', name: 'Whale Tracker' },
+              sentinel: { emoji: '🛡️', name: 'Security Expert' },
             };
             const expert = expertInfo[expertType] || expertInfo.aria;
 
@@ -2089,16 +2045,7 @@ What would you like to do now? For example, say "Analyze BTC" to start an analys
       }
 
       // Static fallback
-      responseText = detectedLanguage === 'tr'
-        ? `Anlıyorum. Size şu konularda yardımcı olabilirim:
-
-• Coin analizi: "BTC analiz" veya "ETH nasıl?"
-• Grafik görüntüleme: "BTC grafiği göster"
-• Teknik sorular: "RSI nedir?" veya "MACD nasıl çalışır?"
-• Hesap durumu: "kredim" veya "son analizlerim"
-
-Hangisini yapmak istersiniz?`
-        : `I understand. I can help you with:
+      responseText = `I understand. I can help you with:
 
 • Coin analysis: "Analyze BTC" or "How is ETH?"
 • Chart viewing: "Show BTC chart"
@@ -3878,12 +3825,8 @@ ${mlisResult.keySignals.slice(0, 3).map(s => `• ${s}`).join('\n')}`;
 
       const expert = expertInfo[expertType] || expertInfo.aria;
 
-      // Add language instruction to the question
-      const languageInstruction = language === 'tr'
-        ? '\n\n[IMPORTANT: Respond in Turkish (Türkçe yanıt ver)]'
-        : language !== 'en'
-          ? `\n\n[IMPORTANT: Respond in ${language}]`
-          : '';
+      // All responses in English
+      const languageInstruction = '';
 
       // Use AI Expert for question with language context
       const response = await aiExpertService.chat({
@@ -3893,7 +3836,7 @@ ${mlisResult.keySignals.slice(0, 3).map(s => `• ${s}`).join('\n')}`;
       });
 
       // The chat response has 'response' field, not 'reply'
-      const aiResponse = response.response || (language === 'tr' ? 'Yanıt oluşturulamadı.' : 'I couldn\'t generate a response.');
+      const aiResponse = response.response || 'I couldn\'t generate a response.';
 
       const formattedReply = `${expert.emoji} ${expert.name}
 
@@ -4050,35 +3993,24 @@ Quel est votre style? (scalp/day trade/swing)`,
 
       console.log(`[Concierge] Routing unknown intent to ${expertType.toUpperCase()} expert`);
 
-      // Add language instruction
-      const languageInstruction = language === 'tr'
-        ? '\n\n[IMPORTANT: Respond in Turkish (Türkçe yanıt ver). Be helpful and conversational.]'
-        : language !== 'en'
-          ? `\n\n[IMPORTANT: Respond in ${language}. Be helpful and conversational.]`
-          : '\n\n[Be helpful and conversational. If the question is about trading, provide useful insights.]';
-
       // Add context about what the user might want
-      const contextPrompt = language === 'tr'
-        ? `Kullanıcı şunu sordu: "${message}"\n\nLütfen yardımcı bir şekilde yanıt ver. Eğer soru trading ile ilgiliyse, bilgi ve tavsiyeler sun. Eğer platform hakkındaysa, TraderPath'in özelliklerini açıkla.`
-        : `User asked: "${message}"\n\nPlease respond helpfully. If the question is about trading, provide insights and advice. If about the platform, explain TraderPath features.`;
+      const contextPrompt = `User asked: "${message}"\n\nPlease respond helpfully. If the question is about trading, provide insights and advice. If about the platform, explain TraderPath features.\n\n[Be helpful and conversational. If the question is about trading, provide useful insights.]`;
 
       // Use AI Expert for intelligent response
       const response = await aiExpertService.chat({
         expertId: expertType as 'aria' | 'nexus' | 'oracle' | 'sentinel',
-        message: contextPrompt + languageInstruction,
+        message: contextPrompt,
         userId,
       });
 
-      const aiResponse = response.response || (language === 'tr'
-        ? 'Üzgünüm, şu an yanıt üretemiyorum. Lütfen farklı bir şekilde sormayı deneyin.'
-        : 'Sorry, I couldn\'t generate a response. Please try asking differently.');
+      const aiResponse = response.response || 'Sorry, I couldn\'t generate a response. Please try asking differently.';
 
       // Get expert info for formatting
       const expertInfo: Record<string, { emoji: string; name: string }> = {
-        aria: { emoji: '🔬', name: language === 'tr' ? 'Teknik Uzman' : 'Technical Expert' },
-        nexus: { emoji: '⚖️', name: language === 'tr' ? 'Risk Uzmanı' : 'Risk Expert' },
-        oracle: { emoji: '🐋', name: language === 'tr' ? 'Balina Takipçisi' : 'Whale Tracker' },
-        sentinel: { emoji: '🛡️', name: language === 'tr' ? 'Güvenlik Uzmanı' : 'Security Expert' },
+        aria: { emoji: '🔬', name: 'Technical Expert' },
+        nexus: { emoji: '⚖️', name: 'Risk Expert' },
+        oracle: { emoji: '🐋', name: 'Whale Tracker' },
+        sentinel: { emoji: '🛡️', name: 'Security Expert' },
       };
 
       const expert = expertInfo[expertType] || expertInfo.aria;
@@ -4094,8 +4026,7 @@ Quel est votre style? (scalp/day trade/swing)`,
       console.error('[Concierge] AI Expert fallback failed:', error);
 
       // Return static template as last resort
-      const lang = language === 'tr' ? 'tr' : 'en';
-      const templates = RESPONSE_TEMPLATES[lang];
+      const templates = RESPONSE_TEMPLATES.en;
 
       return {
         success: true,

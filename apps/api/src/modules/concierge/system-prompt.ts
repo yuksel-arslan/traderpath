@@ -422,116 +422,116 @@ Start → "Where is money flowing?"`,
   },
   tr: {
     INSUFFICIENT_CREDITS: (required: number, available: number) =>
-      `Yetersiz kredi. Bu işlem ${required} kredi gerektiriyor, bakiyeniz: ${available}.`,
+      `Insufficient credits. This action requires ${required} credits, you have ${available}.`,
     ANALYSIS_STARTED: (symbol: string, interval: string) =>
-      `${symbol} ${interval.toUpperCase()} analizi başlatılıyor...`,
+      `Running ${symbol} ${interval.toUpperCase()} analysis...`,
     ANALYSIS_COMPLETE: (symbol: string, verdict: string, score: number) =>
-      `${symbol} Analiz Tamamlandı\n\nKarar: ${verdict}\nSkor: ${score}/10`,
+      `${symbol} Analysis Complete\n\nVerdict: ${verdict}\nScore: ${score}/10`,
     NO_ANALYSIS_FOUND: (symbol?: string) =>
       symbol
-        ? `${symbol} için analiz bulunamadı. Önce "${symbol} analiz" deneyin.`
-        : 'Analiz bulunamadı. "BTC analiz" diyerek başlayın.',
-    UNKNOWN_INTENT: `Anlamadım. Şunları deneyebilirsiniz:
+        ? `No analysis found for ${symbol}. Try "Analyze ${symbol}" first.`
+        : 'No analyses found. Try "Analyze BTC" to get started.',
+    UNKNOWN_INTENT: `I didn't understand that. Here are some things you can ask:
 
-• "Para nereye akıyor?"  — Sermaye akış özeti
-• "Ne yapmalıyım?"       — AI tavsiyesi
-• "BTC analiz"           — Tam analiz
-• "yardım"               — Tüm komutlar`,
+• "Where is money flowing?"  — Capital Flow overview
+• "What should I trade?"     — AI recommendation
+• "Analyze BTC"              — Run full analysis
+• "help"                     — See all commands`,
     HELP_TEXT: `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TraderPath AI Concierge
-Parayı Takip Et
+Follow the Money Flow
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-ADIM 1 · SERMAYE AKIŞI (Ücretsiz)
+STEP 1 · CAPITAL FLOW (Free)
+────────────────────────────
+"Where is money flowing?"
+  → Full L1-L4 pipeline summary
+
+"Global liquidity status"
+  → Fed, M2, DXY, VIX, Yield Curve
+
+"Which market is leading?"
+  → Crypto / Stocks / Bonds / Metals
+
+"Best sector in crypto?"
+  → Sector flow & rotation
+
+STEP 2 · AI RECOMMENDATION (Free)
 ──────────────────────────────────
-"Para nereye akıyor?"
-  → 4 katmanlı tam pipeline özeti
+"What should I trade?"
+  → AI picks the best assets based
+    on capital flow alignment
 
-"Küresel likidite durumu"
-  → Fed, M2, DXY, VIX, Verim Eğrisi
+"Should I buy gold?"
+  → Asset-specific flow analysis
 
-"Hangi piyasa öne çıkıyor?"
-  → Kripto / Hisse / Tahvil / Metal
-
-"Kripto'da en iyi sektör?"
-  → Sektör akışı ve rotasyon
-
-ADIM 2 · AI TAVSİYESİ (Ücretsiz)
-─────────────────────────────────
-"Ne yapmalıyım?"
-  → Sermaye akışına en uygun
-    varlıkları AI seçer
-
-"Altın alınır mı?"
-  → Varlığa özel akış analizi
-
-ADIM 3 · VARLIK ANALİZİ (25 Kredi)
-───────────────────────────────────
-Klasik 7 Adım:
-  "BTC analiz" · "ETH 4h analiz"
-  → 40+ indikatör · GO/WAIT/AVOID
+STEP 3 · ASSET ANALYSIS (25 Credits)
+─────────────────────────────────────
+Classic 7-Step:
+  "Analyze BTC" · "ETH 4h analysis"
+  → 40+ indicators · GO/WAIT/AVOID
 
 MLIS Pro:
-  "BTC mlis pro" · "çoklu katman"
-  → 5 katmanlı AI · STRONG_BUY→SELL
+  "BTC mlis pro" · "multi-layer"
+  → 5-layer AI · STRONG_BUY to SELL
 
-Çoklu Varlık:
-  Kripto · Hisse · Tahvil · Metal
+Multi-Asset:
+  Crypto · Stocks · Bonds · Metals
 
-ADIM 4 · İŞLEM PLANI (Dahil)
-─────────────────────────────
-  Giriş · Stop Loss · TP1 · TP2
-  Yön · R:R · Giriş Durumu
+STEP 4 · TRADE PLAN (Included)
+───────────────────────────────
+  Entry · Stop Loss · TP1 · TP2
+  Direction · R:R · Entry Status
 
-DİĞER ÖZELLİKLER
-─────────────────
-Grafik       "BTC grafiği"        Ücretsiz
-Uzman S&C    "RSI nedir?"         Ücretsiz
-Alarmlar     "BTC 70K alarm"      1 kredi
-Otomatik     "Günlük BTC analiz"  25 kredi
-Top Coinler  "En iyi 5 coin"      Ücretsiz
+MORE FEATURES
+─────────────
+Charts     "Show BTC chart"     Free
+Expert Q&A "What is RSI?"       Free
+Alerts     "Alert BTC at 70K"   1 cr
+Scheduled  "Daily BTC analysis" 25 cr
+Top Coins  "Top 5 coins"        Free
 
-Başla → "Para nereye akıyor?"`,
+Start → "Where is money flowing?"`,
     PLATFORM_INFO: `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TraderPath
-Sermaye Akış İstihbarat Platformu
+Capital Flow Intelligence Platform
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Para nereye akıyorsa potansiyel oradadır.
+Where money flows, potential exists.
 
-TraderPath, küresel likidite koşullarından başlayıp bireysel işlem planlarına kadar inen katı bir yukarıdan-aşağıya pipeline ile çalışır.
+TraderPath operates on a strict top-down pipeline — starting from global liquidity conditions and drilling down to individual trade plans.
 
-PİPELINE
-────────
-Adım 1 → Sermaye Akış Analizi
-  4 katmanlı makro istihbarat:
-  K1 Küresel Likidite (Fed, M2, DXY, VIX)
-  K2 Piyasa Akışı (Kripto, Hisse, Tahvil, Metal)
-  K3 Sektör Detayı (DeFi, L2, Teknoloji vb.)
-  K4 AI Tavsiyesi (AL/SAT, güven yüzdesi)
+THE PIPELINE
+────────────
+Step 1 → Capital Flow Analysis
+  4-layer macro intelligence:
+  L1 Global Liquidity (Fed, M2, DXY, VIX)
+  L2 Market Flow (Crypto, Stocks, Bonds, Metals)
+  L3 Sector Drill-Down (DeFi, L2, Tech, etc.)
+  L4 AI Recommendation (BUY/SELL with confidence)
 
-Adım 2 → AI Varlık Tavsiyesi
-  Sermaye akış yönü, faz ve momentuma göre
-  en uygun varlıkları AI seçer.
+Step 2 → AI Asset Recommendation
+  AI selects the best-aligned assets based on
+  capital flow direction, phase, and momentum.
 
-Adım 3 → Varlık Analizi
-  Klasik 7 Adım (40+ indikatör) veya
-  MLIS Pro (5 katmanlı nöral analiz)
+Step 3 → Asset Analysis
+  Classic 7-Step (40+ indicators) or
+  MLIS Pro (5-layer neural analysis)
 
-Adım 4 → İşlem Planı
-  Giriş, Stop Loss, TP1, TP2, R:R oranı
+Step 4 → Trade Plan
+  Entry, Stop Loss, TP1, TP2, R:R ratio
 
-AI UZMAN PANELİ
+AI EXPERT PANEL
 ───────────────
-ARIA     Teknik analiz
-NEXUS    Risk yönetimi
-ORACLE   Balina takibi
-SENTINEL Güvenlik denetimi
-VOLTRAN  Ana sentez
+ARIA     Technical analysis
+NEXUS    Risk management
+ORACLE   Whale activity tracking
+SENTINEL Security audit
+VOLTRAN  Master synthesis
 
-Başla → "Para nereye akıyor?"`,
+Start → "Where is money flowing?"`,
     CONVERSATIONAL: (message: string) => {
-      return `Sermaye akış istihbaratı ve analiz konusunda size yardımcı olmak için buradayım. ${message}`;
+      return `I'm here to help with capital flow intelligence and trading analysis. ${message}`;
     },
   },
 };
