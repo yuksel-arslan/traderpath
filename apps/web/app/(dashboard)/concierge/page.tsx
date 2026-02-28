@@ -22,8 +22,6 @@ import {
   Globe,
   Activity,
   BarChart3,
-  ArrowUpRight,
-  ArrowDownRight,
   Clock,
   AlertTriangle,
   CheckCircle2,
@@ -88,85 +86,6 @@ interface CapitalFlowData {
   };
 }
 
-// Flow Direction Indicator
-function FlowIndicator({ flow, label }: { flow: number; label: string }) {
-  const safeFlow = typeof flow === 'number' && !isNaN(flow) ? flow : 0;
-  const isPositive = safeFlow >= 0;
-  return (
-    <div className="flex items-center gap-2">
-      <div className={cn(
-        "flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold",
-        isPositive
-          ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-          : "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
-      )}>
-        {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-        {isPositive ? '+' : ''}{safeFlow.toFixed(1)}%
-      </div>
-      <span className="text-xs text-muted-foreground">{label}</span>
-    </div>
-  );
-}
-
-// Phase Badge
-function PhaseBadge({ phase }: { phase: string }) {
-  const config: Record<string, { bg: string; text: string; label: string }> = {
-    early: { bg: 'bg-emerald-100 dark:bg-emerald-500/20', text: 'text-emerald-700 dark:text-emerald-400', label: 'EARLY' },
-    mid: { bg: 'bg-amber-100 dark:bg-amber-500/20', text: 'text-amber-700 dark:text-amber-400', label: 'MID' },
-    late: { bg: 'bg-orange-100 dark:bg-orange-500/20', text: 'text-orange-700 dark:text-orange-400', label: 'LATE' },
-    exit: { bg: 'bg-red-100 dark:bg-red-500/20', text: 'text-red-700 dark:text-red-400', label: 'EXIT' },
-  };
-  const c = config[phase] || config.mid;
-  return (
-    <span className={cn("px-2 py-0.5 rounded text-xs font-bold", c.bg, c.text)}>
-      {c.label}
-    </span>
-  );
-}
-
-// Market Flow Card
-function MarketFlowCard({
-  market,
-  flow7d,
-  phase,
-  isRecommended,
-  onClick
-}: {
-  market: string;
-  flow7d: number;
-  phase: string;
-  isRecommended: boolean;
-  onClick: () => void;
-}) {
-  const marketIcons: Record<string, string> = {
-    crypto: '₿',
-    stocks: '📈',
-    bonds: '📊',
-    metals: '🥇',
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "relative flex flex-col items-center p-3 rounded-xl border transition-all hover:scale-[1.02]",
-        isRecommended
-          ? "bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-500/10 dark:to-emerald-500/10 border-teal-300 dark:border-teal-500/30 shadow-lg shadow-teal-500/10"
-          : "bg-card border-border hover:border-border/80"
-      )}
-    >
-      {isRecommended && (
-        <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 flex items-center justify-center">
-          <CheckCircle2 className="w-3 h-3 text-white" />
-        </div>
-      )}
-      <span className="text-2xl mb-1">{marketIcons[market] || '📊'}</span>
-      <span className="text-xs font-bold text-foreground uppercase">{market}</span>
-      <FlowIndicator flow={flow7d} label="7d" />
-      <PhaseBadge phase={phase} />
-    </button>
-  );
-}
 
 // Verdict Badge
 function VerdictBadge({ verdict, score }: { verdict: string; score?: number }) {
@@ -615,24 +534,6 @@ export default function ConciergePage() {
                   {biasDisplay && <biasDisplay.icon className={cn("w-3.5 h-3.5", biasDisplay.color)} />}
                   <span className={cn("text-xs font-bold whitespace-nowrap", biasDisplay?.color)}>{biasDisplay?.label}</span>
                 </div>
-                {/* Market chips */}
-                {capitalFlow.markets.filter(m => m && m.market).map((market) => (
-                  <button
-                    key={market.market}
-                    onClick={() => sendMessage(`Analyze ${market.market} market`)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shrink-0 border transition-colors",
-                      capitalFlow.recommendation?.primaryMarket === market.market
-                        ? "bg-teal-50 dark:bg-teal-500/10 border-teal-300 dark:border-teal-500/30"
-                        : "bg-card border-border"
-                    )}
-                  >
-                    <span className="text-[10px] font-bold uppercase text-muted-foreground">{market.market}</span>
-                    <span className={cn("text-xs font-bold", (market.flow7d ?? 0) >= 0 ? "text-emerald-500" : "text-red-500")}>
-                      {(market.flow7d ?? 0) >= 0 ? '+' : ''}{(market.flow7d ?? 0).toFixed(1)}%
-                    </span>
-                  </button>
-                ))}
                 {/* Recommendation chip */}
                 <div className={cn(
                   "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shrink-0",
@@ -659,22 +560,6 @@ export default function ConciergePage() {
                     <p className="text-xs font-medium text-muted-foreground">Global Liquidity</p>
                     <p className={cn("font-bold", biasDisplay?.color)}>{biasDisplay?.label}</p>
                   </div>
-                </div>
-
-                <div className="hidden lg:block w-px h-10 bg-border" />
-
-                {/* Market Flows */}
-                <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {capitalFlow.markets.filter(m => m && m.market).map((market) => (
-                    <MarketFlowCard
-                      key={market.market}
-                      market={market.market}
-                      flow7d={market.flow7d ?? 0}
-                      phase={market.phase || 'mid'}
-                      isRecommended={capitalFlow.recommendation?.primaryMarket === market.market}
-                      onClick={() => sendMessage(`Analyze ${market.market} market`)}
-                    />
-                  ))}
                 </div>
 
                 <div className="hidden lg:block w-px h-10 bg-border" />
