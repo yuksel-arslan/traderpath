@@ -11,10 +11,7 @@ import { Footer } from '../../components/common/Footer';
 import { PriceTicker } from '../../components/home/PriceTicker';
 import { Navbar } from '../../components/layout/Navbar';
 import { Hero } from '../../components/home/Hero';
-import { ProblemSolution } from '../../components/home/ProblemSolution';
 import { Pipeline } from '../../components/home/Pipeline';
-import { FlowAccordion } from '../../components/home/FlowAccordion';
-import { ComparisonTable } from '../../components/home/ComparisonTable';
 import { LivePreview } from '../../components/home/LivePreview';
 import { ThreeServices } from '../../components/home/ThreeServices';
 import { SocialProof } from '../../components/home/SocialProof';
@@ -84,11 +81,13 @@ function Stats() {
     );
   }
 
+  const assetCount = metrics.totalAssets > 0 ? metrics.totalAssets : 200;
+
   const stats: { label: string; end: number; suffix: string; prefix: string; decimals: number; show: boolean }[] = [
-    { label: 'ANALYSES COMPLETED', end: metrics.totalAnalyses, suffix: '+', prefix: '', decimals: 0, show: true },
+    { label: 'ANALYSES COMPLETED', end: metrics.totalAnalyses, suffix: '+', prefix: '', decimals: 0, show: metrics.totalAnalyses > 0 },
     { label: 'WIN RATE ALL SIGNALS', end: metrics.accuracy, suffix: '%', prefix: '', decimals: 1, show: metrics.closedCount > 0 },
     { label: 'VERIFIED PLATFORM P/L', end: Math.abs(metrics.totalPnL), suffix: '%', prefix: metrics.totalPnL >= 0 ? '+' : '-', decimals: 1, show: metrics.closedCount > 0 },
-    { label: 'TRADEABLE ASSETS', end: metrics.totalAssets, suffix: '+', prefix: '', decimals: 0, show: true },
+    { label: 'TRADEABLE ASSETS', end: assetCount, suffix: '+', prefix: '', decimals: 0, show: true },
   ];
 
   return (
@@ -486,17 +485,8 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 3. Problem → Solution */}
-        <ProblemSolution />
-
-        {/* 4. How It Works — 3-Step Pipeline */}
+        {/* 3. How It Works — 3-Step Pipeline */}
         <Pipeline />
-
-        {/* 5. 7-Layer Decision Engine */}
-        <FlowAccordion />
-
-        {/* 6. What Makes Us Different */}
-        <ComparisonTable />
 
         {/* 7. Live Platform Preview */}
         <LivePreview />
