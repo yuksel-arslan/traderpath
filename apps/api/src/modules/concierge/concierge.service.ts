@@ -291,6 +291,7 @@ function detectIntent(message: string): {
 
   // CAPITAL_FLOW_RECOMMENDATION - AI recommendation based on flow
   // Also handles "alınır mı?", "satmalı mıyım?", "should I buy?" style questions
+  // Also handles "analyze the best X asset" patterns
   if (
     lower.includes('ne yapmalı') ||
     lower.includes('what should i') ||
@@ -303,6 +304,10 @@ function detectIntent(message: string): {
     lower.includes('öner') ||
     lower.includes('recommend') ||
     lower.includes('tavsiye') ||
+    (lower.includes('best') && lower.includes('asset')) ||
+    (lower.includes('best') && (lower.includes('crypto') || lower.includes('stock') || lower.includes('coin'))) ||
+    (lower.includes('analyze') && lower.includes('best')) ||
+    (lower.includes('en iyi') && (lower.includes('kripto') || lower.includes('hisse') || lower.includes('coin'))) ||
     (lower.includes('şimdi') && (lower.includes('ne') || lower.includes('what'))) ||
     // Buy/sell question patterns (Turkish)
     lower.includes('alınır mı') ||
