@@ -57,6 +57,12 @@ interface AssetScanResultShape {
   indicatorDetails?: Record<string, any>;
   direction?: string | null;
   directionConfidence?: number;
+  elliottWave?: {
+    confidence?: number;
+    direction?: string;
+    currentWave?: string;
+    waveType?: string;
+  };
 }
 
 interface SafetyCheckResultShape {
@@ -84,6 +90,10 @@ interface TimingResultShape {
   score: number;
   tradeNow: boolean;
   conditions?: Array<{ name: string; met: boolean }>;
+  fibonacci?: {
+    nearGoldenZone?: boolean;
+    retracementPct?: number;
+  };
 }
 
 interface TradePlanResultShape {
@@ -92,6 +102,7 @@ interface TradePlanResultShape {
   winRateEstimate?: number;
   stopLoss?: { percentage?: number };
   direction?: string;
+  fibAlignedTargets?: boolean;
 }
 
 interface TrapCheckResultShape {
@@ -102,6 +113,7 @@ interface TrapCheckResultShape {
     bearTrap?: boolean;
     fakeoutRisk?: string;
     liquidityGrab?: { detected?: boolean };
+    fibLevelTrap?: boolean;
   };
 }
 
@@ -193,6 +205,12 @@ function extractAssetScanValues(
   const ma50 = as.indicators?.movingAverages?.ma50 ?? 0;
   const ma200 = as.indicators?.movingAverages?.ma200 ?? 0;
 
+  // Elliott Wave: confidence normalized to 0-1, trend alignment
+  const ewConfidence = (as.elliottWave?.confidence ?? 0) / 100;
+  const ewDirection = as.elliottWave?.direction ?? 'neutral';
+  const primaryTrendDir = trend1d?.trend ?? trend4h?.trend ?? 'neutral';
+  const waveAligned = ewConfidence > 0.3 && ewDirection === primaryTrendDir;
+
   return {
     trend1dStrength: (trend1d?.strength ?? 50) / 100,
     trend4hStrength: (trend4h?.strength ?? 50) / 100,
@@ -201,6 +219,8 @@ function extractAssetScanValues(
     priceAboveMa50: ma50 > 0 ? price > ma50 : false,
     priceAboveMa200: ma200 > 0 ? price > ma200 : false,
     adxStrength: (as.indicatorDetails?.adx?.value ?? 25) / 100,
+    elliottWaveConfidence: ewConfidence,
+    waveAlignedWithTrend: waveAligned,
   };
 }
 
@@ -255,6 +275,9 @@ function extractTimingValues(
     n.includes('candle') || n.includes('pattern') || n.includes('engulf'),
   );
 
+  // Fibonacci: near golden zone (38.2%-61.8% retracement) is a high-quality entry
+  const nearFibLevel = tm.fibonacci?.nearGoldenZone ?? false;
+
   return {
     rsiInZone,
     bbPosition: 0.5, // Will be overridden by rolling stats
@@ -264,6 +287,7 @@ function extractTimingValues(
     volumeConfirm,
     pvtDivergence: 0, // Requires rolling history
     candlePattern,
+    nearFibLevel,
   };
 }
 
@@ -303,6 +327,7 @@ function extractTradePlanValues(
     winRateEstimate: winRate,
     stopTightness,
     expectancy: Math.max(-1, Math.min(2, expectancy)),
+    fibAlignedTargets: tp.fibAlignedTargets ?? false,
   };
 }
 
@@ -317,6 +342,7 @@ function extractTrapCheckValues(
     fakeoutRisk: tc.traps?.fakeoutRisk ?? 'low',
     lowVolumeBreakout: tc.traps?.liquidityGrab?.detected ?? false,
     oiDivergence: 0, // Requires OI data from futures API
+    fibLevelTrap: tc.traps?.fibLevelTrap ?? false,
   };
 }
 

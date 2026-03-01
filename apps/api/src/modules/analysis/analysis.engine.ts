@@ -1997,6 +1997,15 @@ interface AssetScanResult {
     keyDrivers: string[];
     warnings: string[];
   };
+  // Elliott Wave analysis
+  elliottWave?: {
+    currentWave?: string;
+    waveType?: string;
+    direction?: string;
+    confidence?: number;
+    projectedTarget?: number;
+    waves?: Array<{ wave: string; startPrice: number; endPrice: number }>;
+  };
   // Chart data for PDF generation
   chartCandles?: Array<{
     timestamp: number;
@@ -2138,6 +2147,15 @@ interface TimingResult {
     confidence: number;
     urgency: 'immediate' | 'soon' | 'wait' | 'avoid';
   };
+  // Fibonacci analysis for entry timing
+  fibonacci?: {
+    nearGoldenZone: boolean;
+    retracementPct: number;
+    goldenZone: { upper: number; lower: number } | null;
+    nearestFibSupport: number | null;
+    nearestFibResistance: number | null;
+    levels: Array<{ level: number; price: number; type: string }>;
+  };
 }
 
 // Step 5 Types (Enhanced - uses all previous step data)
@@ -2191,6 +2209,8 @@ interface TradePlanResult {
   };
   // New: Confidence from integrated analysis
   confidence: number;
+  // Fibonacci-aligned targets flag
+  fibAlignedTargets?: boolean;
   // Gate evaluation result
   gate: {
     canProceed: boolean;
@@ -2214,6 +2234,7 @@ interface TrapCheckResult {
     };
     stopHuntZones: number[];
     fakeoutRisk: 'low' | 'medium' | 'high';
+    fibLevelTrap?: boolean;
   };
   liquidationLevels: Array<{
     price: number;
@@ -4044,6 +4065,30 @@ export const analysisEngine = {
     const bearishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bearish');
     const highSigPatterns = patterns.filter((p: { significance: string }) => p.significance === 'high');
 
+    // Elliott Wave analysis for trend structure confirmation
+    const ohlcvPrimary = candlesToOHLCV(candlesPrimary);
+    const elliottWaveResult = indicatorsService.calculateElliottWave(ohlcvPrimary);
+    const elliottWave = elliottWaveResult.metadata as {
+      currentWave?: string;
+      waveType?: string;
+      direction?: string;
+      confidence?: number;
+      projectedTarget?: number;
+      waves?: Array<{ wave: string; startPrice: number; endPrice: number }>;
+    } | undefined;
+
+    // Elliott Wave adds conviction to trend direction
+    if (elliottWave && elliottWave.confidence && elliottWave.confidence > 40) {
+      if (elliottWave.direction === trend4h.direction) {
+        score += 0.5; // Wave structure confirms trend
+        confidence += 5;
+      } else if (elliottWave.direction !== 'neutral') {
+        score -= 0.3; // Wave structure diverges from trend — caution
+      }
+      score = Math.max(1, Math.min(10, parseFloat(score.toFixed(1))));
+      confidence = Math.min(90, Math.max(20, confidence));
+    }
+
     // Gate evaluation for Asset Scanner
     const gateInput: AssetGateEvaluationInput = {
       symbol,
@@ -4142,6 +4187,15 @@ export const analysisEngine = {
       // NEW: Asset-specific context for non-crypto assets (metals, stocks, bonds)
       // Uses specialized analyzers with asset-class-specific metrics
       assetContext: assetContext.metrics ? assetContext : undefined,
+      // Elliott Wave analysis for trend structure confirmation
+      elliottWave: elliottWave && elliottWave.confidence && elliottWave.confidence > 20 ? {
+        currentWave: elliottWave.currentWave,
+        waveType: elliottWave.waveType,
+        direction: elliottWave.direction,
+        confidence: elliottWave.confidence,
+        projectedTarget: elliottWave.projectedTarget,
+        waves: elliottWave.waves?.slice(0, 5),
+      } : undefined,
       // Chart data for PDF generation (last 50 candles)
       chartCandles: candlesPrimary.slice(-50).map(c => ({
         timestamp: c.openTime,
@@ -4607,6 +4661,21 @@ export const analysisEngine = {
     const bearishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bearish');
     const highSigPatterns = patterns.filter((p: { significance: string }) => p.significance === 'high');
 
+    // Fibonacci level analysis for entry timing
+    const ohlcvTiming = candlesToOHLCV(candles4h);
+    const fibResult = indicatorsService.calculateFibonacciLevels(ohlcvTiming);
+    const fibMeta = fibResult.metadata as {
+      levels?: Array<{ level: number; price: number; type: string }>;
+      isUptrend?: boolean;
+      nearestSupport?: number | null;
+      nearestResistance?: number | null;
+      goldenZone?: { upper: number; lower: number };
+    } | undefined;
+
+    // Check if price is in Fibonacci golden zone (38.2%-61.8% retracement)
+    const fibRetracePct = fibResult.value ?? 0;
+    const inFibGoldenZone = fibRetracePct >= 0.382 && fibRetracePct <= 0.618;
+
     const currentPrice = ticker.price;
 
     // Entry conditions
@@ -4661,10 +4730,17 @@ export const analysisEngine = {
           ? `${patterns.length} pattern(s): ${highSigPatterns.map((p: { name: string }) => p.name).join(', ') || 'None high-significance'}`
           : 'No candlestick patterns detected',
       },
+      {
+        name: 'Fibonacci Golden Zone',
+        met: inFibGoldenZone,
+        details: inFibGoldenZone
+          ? `Price in golden zone (${(fibRetracePct * 100).toFixed(1)}% retracement) — high-quality entry`
+          : `Fibonacci retracement: ${(fibRetracePct * 100).toFixed(1)}%`,
+      },
     ];
 
     const conditionsMet = conditions.filter((c) => c.met).length;
-    // Need at least 4 out of 8 conditions met, RSI not overbought, and no volume spike
+    // Need at least 4 out of 9 conditions met, RSI not overbought, and no volume spike
     // Bonus: If high-significance bullish/bearish pattern aligns with trend, more confidence
     const patternAligned = highSigPatterns.length > 0 && (
       (trend.direction === 'bullish' && bullishPatterns.length > bearishPatterns.length) ||
@@ -4674,7 +4750,13 @@ export const analysisEngine = {
 
     // Calculate optimal entry
     const nearestSupport = levels.support[0] ?? currentPrice * 0.97;
-    const optimalEntry = roundPrice(currentPrice * 0.6 + nearestSupport * 0.4);
+    // Use Fibonacci golden zone as optimal entry if in zone, else weighted average
+    const fibGoldenMid = fibMeta?.goldenZone
+      ? (fibMeta.goldenZone.upper + fibMeta.goldenZone.lower) / 2
+      : null;
+    const optimalEntry = inFibGoldenZone && fibGoldenMid
+      ? roundPrice(fibGoldenMid)
+      : roundPrice(currentPrice * 0.6 + nearestSupport * 0.4);
 
     // Entry zones
     const entryZones: TimingResult['entryZones'] = [];
@@ -4800,6 +4882,15 @@ export const analysisEngine = {
         confidence: timingGateResult.confidence,
         urgency: timingGateResult.urgency,
       },
+      // Fibonacci analysis for scoring integration
+      fibonacci: {
+        nearGoldenZone: inFibGoldenZone,
+        retracementPct: fibRetracePct,
+        goldenZone: fibMeta?.goldenZone ?? null,
+        nearestFibSupport: fibMeta?.nearestSupport ?? null,
+        nearestFibResistance: fibMeta?.nearestResistance ?? null,
+        levels: fibMeta?.levels?.slice(0, 7) ?? [],
+      },
     };
   },
 
@@ -4820,6 +4911,24 @@ export const analysisEngine = {
     const trend = calculateTrend(candles4h);
     const levels = findSupportResistance(candles4h);
     const atr = calculateATR(candles4h);
+
+    // Fibonacci levels for TP/SL optimization
+    const ohlcvPlan = candlesToOHLCV(candles4h);
+    const fibPlan = indicatorsService.calculateFibonacciLevels(ohlcvPlan);
+    const fibPlanMeta = fibPlan.metadata as {
+      levels?: Array<{ level: number; price: number; type: string }>;
+      isUptrend?: boolean;
+      swingHigh?: number;
+      swingLow?: number;
+    } | undefined;
+
+    // Extract Fibonacci extension levels for TP targets
+    const fibExtensions = (fibPlanMeta?.levels ?? [])
+      .filter((l: { type: string }) => l.type === 'extension')
+      .map((l: { price: number; level: number }) => l.price);
+    const fibRetracements = (fibPlanMeta?.levels ?? [])
+      .filter((l: { type: string }) => l.type === 'retracement')
+      .map((l: { price: number; level: number }) => l.price);
 
     const direction: 'long' | 'short' = trend.direction === 'bearish' ? 'short' : 'long';
     const currentPrice = ticker.price;
@@ -4863,24 +4972,68 @@ export const analysisEngine = {
       safetyAdjusted: false,
     };
 
-    // Take profit levels (R:R based) - only 2 TPs at 1.5R and 2.5R
+    // Take profit levels — Fibonacci-enhanced R:R calculation
     const riskAmount = Math.abs(averageEntry - stopPrice);
     const safeRiskAmount = riskAmount === 0 ? currentPrice * 0.015 : riskAmount;
-    const tp1Price = roundPrice(direction === 'long' ? averageEntry + safeRiskAmount * 1.5 : averageEntry - safeRiskAmount * 1.5);
-    const tp2Price = roundPrice(direction === 'long' ? averageEntry + safeRiskAmount * 2.5 : averageEntry - safeRiskAmount * 2.5);
+
+    // Base R:R targets
+    let tp1Price = roundPrice(direction === 'long' ? averageEntry + safeRiskAmount * 1.5 : averageEntry - safeRiskAmount * 1.5);
+    let tp2Price = roundPrice(direction === 'long' ? averageEntry + safeRiskAmount * 2.5 : averageEntry - safeRiskAmount * 2.5);
+    let tp1Source = '1.5R calculation';
+    let tp2Source = '2.5R calculation';
+    let tp1Reason = '1.5R - First take profit';
+    let tp2Reason = '2.5R - Main target';
+
+    // Fibonacci extension override: use extension levels if they provide ≥1.0R
+    let fibAligned = false;
+    if (fibExtensions.length >= 2) {
+      const ext1 = fibExtensions[0]; // 1.272 extension
+      const ext2 = fibExtensions[1]; // 1.618 extension
+      const ext1RR = Math.abs(ext1 - averageEntry) / safeRiskAmount;
+      const ext2RR = Math.abs(ext2 - averageEntry) / safeRiskAmount;
+
+      if (direction === 'long') {
+        if (ext1 > averageEntry && ext1RR >= 1.0) {
+          tp1Price = roundPrice(ext1);
+          tp1Source = 'Fibonacci 1.272 extension';
+          tp1Reason = `Fib 1.272 extension (${ext1RR.toFixed(1)}R)`;
+          fibAligned = true;
+        }
+        if (ext2 > averageEntry && ext2RR > ext1RR) {
+          tp2Price = roundPrice(ext2);
+          tp2Source = 'Fibonacci 1.618 extension';
+          tp2Reason = `Fib 1.618 extension (${ext2RR.toFixed(1)}R)`;
+          fibAligned = true;
+        }
+      } else {
+        if (ext1 < averageEntry && ext1RR >= 1.0) {
+          tp1Price = roundPrice(ext1);
+          tp1Source = 'Fibonacci 1.272 extension';
+          tp1Reason = `Fib 1.272 extension (${ext1RR.toFixed(1)}R)`;
+          fibAligned = true;
+        }
+        if (ext2 < averageEntry && ext2RR > ext1RR) {
+          tp2Price = roundPrice(ext2);
+          tp2Source = 'Fibonacci 1.618 extension';
+          tp2Reason = `Fib 1.618 extension (${ext2RR.toFixed(1)}R)`;
+          fibAligned = true;
+        }
+      }
+    }
+
     const takeProfits: TradePlanResult['takeProfits'] = [
       {
         price: tp1Price,
         percentage: 50,
-        reason: '1.5R - First take profit',
-        source: '1.5R calculation',
+        reason: tp1Reason,
+        source: tp1Source,
         riskReward: parseFloat((Math.abs(tp1Price - averageEntry) / safeRiskAmount).toFixed(2)),
       },
       {
         price: tp2Price,
         percentage: 50,
-        reason: '2.5R - Main target',
-        source: '2.5R calculation',
+        reason: tp2Reason,
+        source: tp2Source,
         riskReward: parseFloat((Math.abs(tp2Price - averageEntry) / safeRiskAmount).toFixed(2)),
       },
     ];
@@ -4961,9 +5114,10 @@ export const analysisEngine = {
         direction: [`${tf.primary.toUpperCase()} Trend Analysis`],
         entries: ['Current price', 'DCA level', 'Support/Resistance'],
         stopLoss: ['ATR calculation'],
-        targets: ['R:R calculation'],
+        targets: fibAligned ? ['Fibonacci extension', 'R:R calculation'] : ['R:R calculation'],
       },
       confidence: trend.strength,
+      fibAlignedTargets: fibAligned,
       gate: {
         canProceed: tradePlanGateResult.canProceed,
         reason: tradePlanGateResult.reason,
@@ -4995,6 +5149,13 @@ export const analysisEngine = {
 
     const currentPrice = ticker.price;
     const levels = findSupportResistance(candles4h);
+
+    // Fibonacci analysis for trap detection at key levels
+    const ohlcvTrap = candlesToOHLCV(candles4h);
+    const fibTrap = indicatorsService.calculateFibonacciLevels(ohlcvTrap);
+    const fibTrapMeta = fibTrap.metadata as {
+      levels?: Array<{ level: number; price: number; type: string }>;
+    } | undefined;
 
     // Guard against empty candle arrays (non-crypto assets may not have secondary timeframe data)
     if (prices1h.length === 0 || prices4h.length === 0) {
@@ -5052,6 +5213,19 @@ export const analysisEngine = {
       fakeoutRisk = 'high';
     }
 
+    // Fibonacci level trap detection:
+    // Traps often occur at key Fibonacci levels (0.618, 0.786) where retail stops cluster
+    let fibLevelTrap = false;
+    const fibLevels = (fibTrapMeta?.levels ?? []).map((l: { price: number }) => l.price);
+    for (const fLevel of fibLevels) {
+      const distPct = Math.abs(currentPrice - fLevel) / currentPrice;
+      // Price is within 1.5% of a key Fibonacci level AND trap conditions exist
+      if (distPct < 0.015 && (bullTrap || bearTrap || lowVolumeBreakout)) {
+        fibLevelTrap = true;
+        break;
+      }
+    }
+
     // Liquidation levels (ATR-based estimation)
     // Common leverage levels: 5x (20% move), 10x (10% move), 20x (5% move), 50x (2% move)
     const atr = calculateATR(candles4h);
@@ -5099,6 +5273,9 @@ export const analysisEngine = {
       counterStrategy.push('Wait for confirmation candle');
     }
     counterStrategy.push('Be cautious around liquidity zones');
+    if (fibLevelTrap) {
+      counterStrategy.push('Price is at a key Fibonacci level with trap conditions — wait for clear breakout confirmation');
+    }
 
     // Pro tip
     let proTip = 'Do not trust breakouts without volume confirmation.';
@@ -5120,6 +5297,7 @@ export const analysisEngine = {
     if (fakeoutRisk === 'medium') score -= 1;
     if (fakeoutRisk === 'high') score -= 2;
     if (lowVolumeBreakout) score -= 1;
+    if (fibLevelTrap) score -= 1; // Fibonacci level trap penalty
     score = Math.max(1, Math.min(10, score));
 
     // Gate evaluation
@@ -5148,6 +5326,7 @@ export const analysisEngine = {
         },
         stopHuntZones: stopHuntZones.slice(0, 4),
         fakeoutRisk,
+        fibLevelTrap,
       },
       liquidationLevels: [...longLiquidations, ...shortLiquidations],
       counterStrategy,
