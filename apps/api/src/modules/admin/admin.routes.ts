@@ -613,14 +613,26 @@ export default async function adminRoutes(app: FastifyInstance) {
           creditCostFullAnalysis: settings.creditCostFullAnalysis,
           creditCostQuickCheck: settings.creditCostQuickCheck,
           creditCostSmartEntry: settings.creditCostSmartEntry,
+          // MLIS Pro Analysis
+          creditCostMlisProAnalysis: settings.creditCostMlisProAnalysis,
+          creditCostMlisTechnicalLayer: settings.creditCostMlisTechnicalLayer,
+          creditCostMlisMomentumLayer: settings.creditCostMlisMomentumLayer,
+          creditCostMlisVolatilityLayer: settings.creditCostMlisVolatilityLayer,
+          creditCostMlisVolumeLayer: settings.creditCostMlisVolumeLayer,
+          creditCostMlisVerdictLayer: settings.creditCostMlisVerdictLayer,
+          // Capital Flow
+          creditCostCapitalFlowL3L4: settings.creditCostCapitalFlowL3L4,
           // Features
           creditCostAiExpert: settings.creditCostAiExpert,
+          creditCostAiConcierge: settings.creditCostAiConcierge,
           creditCostPdfReport: settings.creditCostPdfReport,
           creditCostTranslation: settings.creditCostTranslation,
           creditCostEmailSend: settings.creditCostEmailSend,
           creditCostAddToReport: settings.creditCostAddToReport,
           creditCostPriceAlert: settings.creditCostPriceAlert,
           creditCostWatchlistSlot: settings.creditCostWatchlistSlot,
+          // Credit Economy
+          creditCostAnalysisPurchase: settings.creditCostAnalysisPurchase,
         } : null,
         updatedAt: settings?.updatedAt,
       },
@@ -648,14 +660,26 @@ export default async function adminRoutes(app: FastifyInstance) {
       creditCostFullAnalysis?: number;
       creditCostQuickCheck?: number;
       creditCostSmartEntry?: number;
+      // MLIS Pro Analysis
+      creditCostMlisProAnalysis?: number;
+      creditCostMlisTechnicalLayer?: number;
+      creditCostMlisMomentumLayer?: number;
+      creditCostMlisVolatilityLayer?: number;
+      creditCostMlisVolumeLayer?: number;
+      creditCostMlisVerdictLayer?: number;
+      // Capital Flow
+      creditCostCapitalFlowL3L4?: number;
       // Features
       creditCostAiExpert?: number;
+      creditCostAiConcierge?: number;
       creditCostPdfReport?: number;
       creditCostTranslation?: number;
       creditCostEmailSend?: number;
       creditCostAddToReport?: number;
       creditCostPriceAlert?: number;
       creditCostWatchlistSlot?: number;
+      // Credit Economy
+      creditCostAnalysisPurchase?: number;
     };
 
     // Validate all values are non-negative integers
@@ -701,13 +725,22 @@ export default async function adminRoutes(app: FastifyInstance) {
       creditCostFullAnalysis: defaults.BUNDLE_FULL_ANALYSIS,
       creditCostQuickCheck: defaults.BUNDLE_QUICK_CHECK,
       creditCostSmartEntry: defaults.BUNDLE_SMART_ENTRY,
+      creditCostMlisProAnalysis: defaults.BUNDLE_MLIS_PRO_ANALYSIS,
+      creditCostMlisTechnicalLayer: defaults.MLIS_LAYER_TECHNICAL,
+      creditCostMlisMomentumLayer: defaults.MLIS_LAYER_MOMENTUM,
+      creditCostMlisVolatilityLayer: defaults.MLIS_LAYER_VOLATILITY,
+      creditCostMlisVolumeLayer: defaults.MLIS_LAYER_VOLUME,
+      creditCostMlisVerdictLayer: defaults.MLIS_LAYER_VERDICT,
+      creditCostCapitalFlowL3L4: defaults.CAPITAL_FLOW_L3_L4,
       creditCostAiExpert: defaults.AI_EXPERT_QUESTION,
+      creditCostAiConcierge: defaults.AI_CONCIERGE_MESSAGE,
       creditCostPdfReport: defaults.PDF_REPORT,
       creditCostTranslation: defaults.REPORT_TRANSLATION,
       creditCostEmailSend: defaults.EMAIL_SEND,
       creditCostAddToReport: defaults.ADD_TO_REPORT,
       creditCostPriceAlert: defaults.PRICE_ALERT,
       creditCostWatchlistSlot: defaults.WATCHLIST_SLOT,
+      creditCostAnalysisPurchase: defaults.ANALYSIS_PURCHASE,
     });
 
     return reply.send({
