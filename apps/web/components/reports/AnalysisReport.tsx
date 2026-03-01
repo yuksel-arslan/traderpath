@@ -105,6 +105,14 @@ export interface AnalysisReportData {
     optimalEntry?: number;
     waitFor?: { event: string; estimatedTime: string };
     gate?: { canProceed: boolean; reason: string; confidence: number; urgency?: string };
+    fibonacci?: {
+      nearGoldenZone: boolean;
+      retracementPct: number;
+      goldenZone?: { upper: number; lower: number } | null;
+      nearestFibSupport?: number | null;
+      nearestFibResistance?: number | null;
+      levels?: Array<{ level: number; price: number; type: string }>;
+    };
   };
 
   tradePlan: {
