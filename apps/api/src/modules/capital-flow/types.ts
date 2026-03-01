@@ -379,6 +379,9 @@ export interface CapitalFlowSummary {
 
   // Cache info
   cacheExpiry?: Date;
+
+  // Data source tracking — helps UI show live/stale indicators
+  dataSource?: 'live' | 'cached' | 'fallback';
 }
 
 // AI-generated insights for each layer

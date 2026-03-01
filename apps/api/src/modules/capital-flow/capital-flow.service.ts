@@ -108,6 +108,7 @@ const CACHE_TTL = {
 export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
   // MINIMAL MODE: Return static fallback data immediately (no external API calls)
   if (process.env['DISABLE_EXTERNAL_APIS'] === 'true') {
+    console.warn('[CapitalFlow] ⚠ MINIMAL MODE active — returning static fallback data. Pipeline will NOT update until DISABLE_EXTERNAL_APIS is removed.');
     return buildFallbackSummary();
   }
 
@@ -115,7 +116,9 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
   try {
     const cached = await redis?.get(CACHE_KEYS.CAPITAL_FLOW);
     if (cached) {
-      return JSON.parse(cached);
+      const parsed = JSON.parse(cached);
+      parsed.dataSource = 'cached';
+      return parsed;
     }
   } catch (cacheError) {
     console.warn('[CapitalFlow] Cache read error:', cacheError);
@@ -128,14 +131,17 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
     getAllMarketFlows(),
   ]);
 
+  // Track whether we're using live or fallback data
+  let usingFallback = false;
+
   // Extract results with fallbacks
   const globalLiquidity: GlobalLiquidity = results[0].status === 'fulfilled'
     ? results[0].value
-    : getFallbackGlobalLiquidity();
+    : (usingFallback = true, getFallbackGlobalLiquidity());
 
   const markets: MarketFlow[] = results[1].status === 'fulfilled'
     ? results[1].value
-    : getFallbackMarketFlows();
+    : (usingFallback = true, getFallbackMarketFlows());
 
   // Log any failures for debugging
   if (results[0].status === 'rejected') {
@@ -216,7 +222,12 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
     activeRotation,
     insights,
     cacheExpiry: new Date(Date.now() + CACHE_TTL.SUMMARY * 1000),
+    dataSource: usingFallback ? 'fallback' : 'live',
   };
+
+  if (usingFallback) {
+    console.warn('[CapitalFlow] ⚠ Summary built with FALLBACK data — external APIs may be down or keys missing');
+  }
 
   // Cache the result
   try {
@@ -1233,6 +1244,7 @@ function buildFallbackSummary(): CapitalFlowSummary {
     recommendation: getFallbackRecommendation(),
     activeRotation: null,
     cacheExpiry: new Date(Date.now() + 60_000), // 1 min TTL in fallback mode
+    dataSource: 'fallback',
   };
 }
 

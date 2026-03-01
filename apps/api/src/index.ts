@@ -683,8 +683,18 @@ const start = async () => {
     // ===========================================
     const externalApisDisabled = process.env['DISABLE_EXTERNAL_APIS'] === 'true';
 
+    // Capital Flow Pipeline health check — warn about missing keys
+    if (!externalApisDisabled) {
+      if (!process.env['FRED_API_KEY']) {
+        logger.warn('⚠ FRED_API_KEY not set — Capital Flow Pipeline will use static fallback data for macro indicators (Fed BS, M2, Yields, RRP, TGA)');
+        logger.warn('  Get a free key at: https://fred.stlouisfed.org/docs/api/api_key.html');
+      }
+    }
+
     if (externalApisDisabled) {
-      logger.info('⚠ MINIMAL MODE: External APIs disabled. Only DB/Redis/Auth/Routes active.');
+      logger.warn('⚠ MINIMAL MODE: External APIs disabled (DISABLE_EXTERNAL_APIS=true).');
+      logger.warn('  Flow → Action Pipeline will show STATIC fallback data!');
+      logger.warn('  Remove DISABLE_EXTERNAL_APIS env var to enable live data.');
       logger.info('  Skipped: outcome tracker, price checker, scheduled reports,');
       logger.info('           coin score cache, signals, BILGE cron, asset logos.');
     } else {

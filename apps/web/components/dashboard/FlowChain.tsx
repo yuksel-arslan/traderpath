@@ -52,6 +52,8 @@ interface FlowChainProps {
       sectors?: string[];
       suggestedAssets?: SuggestedAsset[];
     };
+    timestamp?: string;
+    dataSource?: 'live' | 'cached' | 'fallback';
   } | null;
 }
 
@@ -195,17 +197,65 @@ function buildFlowSteps(
 }
 
 
+function getDataSourceInfo(capitalFlow: FlowChainProps['capitalFlow']): {
+  label: string;
+  color: string;
+  isStale: boolean;
+} {
+  if (!capitalFlow) {
+    return { label: 'Loading', color: '#FFB800', isStale: false };
+  }
+
+  const source = capitalFlow.dataSource;
+  const timestamp = capitalFlow.timestamp ? new Date(capitalFlow.timestamp) : null;
+  const ageMinutes = timestamp ? (Date.now() - timestamp.getTime()) / 60_000 : Infinity;
+
+  if (source === 'fallback') {
+    return { label: 'Offline Data', color: '#FF4757', isStale: true };
+  }
+  if (source === 'cached' && ageMinutes > 30) {
+    return { label: `Cached (${Math.round(ageMinutes)}m ago)`, color: '#FFB800', isStale: true };
+  }
+  if (source === 'cached') {
+    return { label: 'Cached', color: '#00D4FF', isStale: false };
+  }
+  return { label: 'Live', color: '#00F5A0', isStale: false };
+}
+
 export function FlowChain({ capitalFlow }: FlowChainProps) {
   const steps = buildFlowSteps(capitalFlow);
+  const sourceInfo = getDataSourceInfo(capitalFlow);
 
   return (
     <div className="rounded-xl p-5 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-xs font-medium uppercase tracking-widest text-gray-500 dark:text-white/40">
-          Flow &rarr; Action Pipeline
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-widest text-gray-500 dark:text-white/40">
+            Flow &rarr; Action Pipeline
+          </span>
+          <PulseDot color={sourceInfo.isStale ? '#FF4757' : '#00F5A0'} size={6} />
+        </div>
+        <span
+          className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+          style={{
+            color: sourceInfo.color,
+            background: `${sourceInfo.color}18`,
+            border: `1px solid ${sourceInfo.color}30`,
+          }}
+        >
+          {sourceInfo.label}
         </span>
-        <PulseDot color="#00F5A0" size={6} />
       </div>
+      {sourceInfo.isStale && (
+        <div
+          className="text-[11px] mb-3 px-3 py-1.5 rounded-md"
+          style={{ background: 'rgba(255,71,87,0.08)', color: '#FF4757', border: '1px solid rgba(255,71,87,0.15)' }}
+        >
+          {sourceInfo.label === 'Offline Data'
+            ? 'External APIs are disabled or unavailable — showing static fallback data. Check DISABLE_EXTERNAL_APIS env and API keys.'
+            : 'Data may be stale. Market conditions could have changed.'}
+        </div>
+      )}
       {/* Desktop: horizontal, Mobile: vertical */}
       <div className="hidden lg:flex items-stretch gap-0">
         {steps.map((step, i) => (
