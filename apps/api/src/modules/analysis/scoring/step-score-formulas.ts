@@ -98,13 +98,15 @@ export const MARKET_PULSE_FEATURES: FeatureDefinition[] = [
 // ============================================================
 
 export const ASSET_SCAN_FEATURES: FeatureDefinition[] = [
-  { key: 'trend1dStrength',   label: '1D Trend Strength',      type: 'continuous', weight: 0.20, sign: 1 },
-  { key: 'trend4hStrength',   label: '4H Trend Strength',      type: 'continuous', weight: 0.15, sign: 1 },
-  { key: 'rsiNormalized',     label: 'RSI (distance from 50)', type: 'continuous', weight: 0.15, sign: 1 },
-  { key: 'macdHistogram',     label: 'MACD Histogram',         type: 'continuous', weight: 0.15, sign: 1 },
-  { key: 'priceAboveMa50',    label: 'Price > MA50',           type: 'binary',     weight: 0.10, sign: 1 },
-  { key: 'priceAboveMa200',   label: 'Price > MA200',          type: 'binary',     weight: 0.10, sign: 1 },
-  { key: 'adxStrength',       label: 'ADX Trend Strength',     type: 'continuous', weight: 0.15, sign: 1 },
+  { key: 'trend1dStrength',        label: '1D Trend Strength',       type: 'continuous', weight: 0.17, sign: 1 },
+  { key: 'trend4hStrength',        label: '4H Trend Strength',       type: 'continuous', weight: 0.13, sign: 1 },
+  { key: 'rsiNormalized',          label: 'RSI (distance from 50)',  type: 'continuous', weight: 0.13, sign: 1 },
+  { key: 'macdHistogram',          label: 'MACD Histogram',          type: 'continuous', weight: 0.13, sign: 1 },
+  { key: 'priceAboveMa50',         label: 'Price > MA50',            type: 'binary',     weight: 0.09, sign: 1 },
+  { key: 'priceAboveMa200',        label: 'Price > MA200',           type: 'binary',     weight: 0.09, sign: 1 },
+  { key: 'adxStrength',            label: 'ADX Trend Strength',      type: 'continuous', weight: 0.11, sign: 1 },
+  { key: 'elliottWaveConfidence',  label: 'Elliott Wave Confidence', type: 'continuous', weight: 0.08, sign: 1 },
+  { key: 'waveAlignedWithTrend',   label: 'Wave Aligned w/ Trend',  type: 'binary',     weight: 0.07, sign: 1 },
 ];
 
 // ============================================================
@@ -129,14 +131,15 @@ export const SAFETY_CHECK_FEATURES: FeatureDefinition[] = [
 // ============================================================
 
 export const TIMING_FEATURES: FeatureDefinition[] = [
-  { key: 'rsiInZone',         label: 'RSI Entry Zone',         type: 'binary',     weight: 0.15, sign: 1 },
-  { key: 'bbPosition',        label: 'BB Band Position',       type: 'continuous', weight: 0.12, sign: 1 },
-  { key: 'macdCrossing',      label: 'MACD Cross Signal',      type: 'binary',     weight: 0.12, sign: 1 },
-  { key: 'trendAligned',      label: 'Trend Alignment',        type: 'binary',     weight: 0.12, sign: 1 },
-  { key: 'nearSupport',       label: 'Near Support Level',     type: 'binary',     weight: 0.12, sign: 1 },
-  { key: 'volumeConfirm',     label: 'Volume Confirmation',    type: 'binary',     weight: 0.12, sign: 1 },
-  { key: 'pvtDivergence',     label: 'PVT Divergence',         type: 'continuous', weight: 0.10, sign: 1 },
+  { key: 'rsiInZone',         label: 'RSI Entry Zone',         type: 'binary',     weight: 0.13, sign: 1 },
+  { key: 'bbPosition',        label: 'BB Band Position',       type: 'continuous', weight: 0.11, sign: 1 },
+  { key: 'macdCrossing',      label: 'MACD Cross Signal',      type: 'binary',     weight: 0.11, sign: 1 },
+  { key: 'trendAligned',      label: 'Trend Alignment',        type: 'binary',     weight: 0.11, sign: 1 },
+  { key: 'nearSupport',       label: 'Near Support Level',     type: 'binary',     weight: 0.10, sign: 1 },
+  { key: 'volumeConfirm',     label: 'Volume Confirmation',    type: 'binary',     weight: 0.11, sign: 1 },
+  { key: 'pvtDivergence',     label: 'PVT Divergence',         type: 'continuous', weight: 0.08, sign: 1 },
   { key: 'candlePattern',     label: 'Candlestick Pattern',    type: 'binary',     weight: 0.15, sign: 1 },
+  { key: 'nearFibLevel',      label: 'Near Fibonacci Level',   type: 'binary',     weight: 0.10, sign: 1 },
 ];
 
 // ============================================================
@@ -144,11 +147,12 @@ export const TIMING_FEATURES: FeatureDefinition[] = [
 // ============================================================
 
 export const TRADE_PLAN_FEATURES: FeatureDefinition[] = [
-  { key: 'avgRiskReward',     label: 'Average R:R Ratio',      type: 'continuous', weight: 0.30, sign: 1 },
-  { key: 'trendStrength',     label: 'Trend Strength',         type: 'continuous', weight: 0.20, sign: 1 },
-  { key: 'winRateEstimate',   label: 'Win Rate Estimate',      type: 'continuous', weight: 0.25, sign: 1 },
+  { key: 'avgRiskReward',     label: 'Average R:R Ratio',      type: 'continuous', weight: 0.25, sign: 1 },
+  { key: 'trendStrength',     label: 'Trend Strength',         type: 'continuous', weight: 0.18, sign: 1 },
+  { key: 'winRateEstimate',   label: 'Win Rate Estimate',      type: 'continuous', weight: 0.22, sign: 1 },
   { key: 'stopTightness',     label: 'Stop-Loss Tightness',    type: 'continuous', weight: 0.15, sign: 1 },
   { key: 'expectancy',        label: 'Trade Expectancy',       type: 'continuous', weight: 0.10, sign: 1 },
+  { key: 'fibAlignedTargets', label: 'Fib-Aligned Targets',    type: 'binary',     weight: 0.10, sign: 1 },
 ];
 
 // ============================================================
@@ -156,12 +160,13 @@ export const TRADE_PLAN_FEATURES: FeatureDefinition[] = [
 // ============================================================
 
 export const TRAP_CHECK_FEATURES: FeatureDefinition[] = [
-  { key: 'bullTrapDetected',  label: 'Bull Trap Detected',     type: 'binary',     weight: 0.25, sign: -1 },
-  { key: 'bearTrapDetected',  label: 'Bear Trap Detected',     type: 'binary',     weight: 0.25, sign: -1 },
-  { key: 'fakeoutRisk',       label: 'Fakeout Risk',           type: 'ordinal',    weight: 0.20, sign: -1,
+  { key: 'bullTrapDetected',  label: 'Bull Trap Detected',     type: 'binary',     weight: 0.22, sign: -1 },
+  { key: 'bearTrapDetected',  label: 'Bear Trap Detected',     type: 'binary',     weight: 0.22, sign: -1 },
+  { key: 'fakeoutRisk',       label: 'Fakeout Risk',           type: 'ordinal',    weight: 0.18, sign: -1,
     ordinalMap: { low: 0, medium: 0.5, high: 1 } },
-  { key: 'lowVolumeBreakout', label: 'Low Volume Breakout',    type: 'binary',     weight: 0.15, sign: -1 },
-  { key: 'oiDivergence',      label: 'OI Divergence',          type: 'continuous', weight: 0.15, sign: -1 },
+  { key: 'lowVolumeBreakout', label: 'Low Volume Breakout',    type: 'binary',     weight: 0.14, sign: -1 },
+  { key: 'oiDivergence',      label: 'OI Divergence',          type: 'continuous', weight: 0.14, sign: -1 },
+  { key: 'fibLevelTrap',      label: 'Trap at Fibonacci Level', type: 'binary',    weight: 0.10, sign: -1 },
 ];
 
 // ============================================================
