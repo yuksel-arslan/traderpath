@@ -181,10 +181,12 @@ interface FlowRecommendation {
 }
 
 interface CapitalFlowSummary {
+  timestamp?: string;
   globalLiquidity: GlobalLiquidity;
   liquidityBias: 'risk_on' | 'risk_off' | 'neutral';
   markets: MarketFlow[];
   recommendation: FlowRecommendation;
+  dataSource?: 'live' | 'cached' | 'fallback';
 }
 
 interface SignalStats {
