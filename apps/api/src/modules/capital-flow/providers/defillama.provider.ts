@@ -15,6 +15,21 @@ import { logger } from '../../../core/logger';
 
 const DEFILLAMA_BASE_URL = process.env['DEFILLAMA_API_URL'] || 'https://api.llama.fi';
 
+// Track whether DefiLlama is returning live data or fallback
+let _defillamaLiveFetches = 0;
+let _defillamaFallbackFetches = 0;
+
+/** Returns true if the most recent DefiLlama fetch cycle used live data */
+export function isDefillamaLive(): boolean {
+  return _defillamaLiveFetches > 0 && _defillamaFallbackFetches === 0;
+}
+
+/** Reset fetch counters */
+export function resetDefillamaCounters(): void {
+  _defillamaLiveFetches = 0;
+  _defillamaFallbackFetches = 0;
+}
+
 interface DefiLlamaTvl {
   date: number;
   tvl: number;
@@ -68,6 +83,7 @@ export async function getDeFiTvl(): Promise<{
     const data: DefiLlamaTvl[] = await response.json();
 
     if (!data.length) {
+      _defillamaFallbackFetches++;
       return getFallbackTvlData();
     }
 
@@ -87,6 +103,7 @@ export async function getDeFiTvl(): Promise<{
       tvl: d.tvl / 1_000_000_000, // Convert to billions
     }));
 
+    _defillamaLiveFetches++;
     return {
       current: current / 1_000_000_000, // Billions
       change7d: parseFloat(change7d.toFixed(2)),
@@ -95,6 +112,7 @@ export async function getDeFiTvl(): Promise<{
     };
   } catch (error) {
     logger.error('[DefiLlama] Error fetching TVL:', error);
+    _defillamaFallbackFetches++;
     return getFallbackTvlData();
   }
 }

@@ -1,2 +1,9 @@
+[phases.setup]
+nixPkgs = ['...', 'chromium']
+
 [phases.install]
-cmds = ['pnpm install --no-frozen-lockfile']
+cmds = ['PUPPETEER_SKIP_DOWNLOAD=true pnpm install --no-frozen-lockfile']
+
+[variables]
+PUPPETEER_SKIP_DOWNLOAD = 'true'
+PUPPETEER_EXECUTABLE_PATH = 'chromium'

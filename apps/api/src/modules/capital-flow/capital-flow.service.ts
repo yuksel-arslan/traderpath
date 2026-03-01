@@ -47,6 +47,8 @@ import {
   getReverseRepo,
   getTreasuryGeneralAccount,
   getNetLiquidity as fetchNetLiquidity,
+  isFredLive,
+  resetFredCounters,
 } from './providers/fred.provider';
 import {
   getAllYahooData,
@@ -59,9 +61,11 @@ import {
   getStocksFlowData,
   getBistFlow,
   getBistFlowData,
+  isYahooLive,
+  resetYahooCounters,
 } from './providers/yahoo.provider';
-import { getAllDefiLlamaData, getCryptoSectors, getDeFiTvl, getStablecoinMarketCap } from './providers/defillama.provider';
-import { getCompleteCryptoFlowData } from './providers/binance.provider';
+import { getAllDefiLlamaData, getCryptoSectors, getDeFiTvl, getStablecoinMarketCap, isDefillamaLive, resetDefillamaCounters } from './providers/defillama.provider';
+import { getCompleteCryptoFlowData, isBinanceLive, resetBinanceCounters } from './providers/binance.provider';
 
 // Cache keys
 const CACHE_KEYS = {
@@ -124,6 +128,12 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
     console.warn('[CapitalFlow] Cache read error:', cacheError);
     // Continue without cache
   }
+
+  // Reset provider counters for this fetch cycle
+  resetFredCounters();
+  resetYahooCounters();
+  resetBinanceCounters();
+  resetDefillamaCounters();
 
   // Fetch all data in parallel with fallback
   const results = await Promise.allSettled([
@@ -210,6 +220,17 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
     // Continue without insights
   }
 
+  // Collect per-provider data source status
+  const dataSources = {
+    fred: isFredLive() ? 'live' as const : 'fallback' as const,
+    yahoo: isYahooLive() ? 'live' as const : 'fallback' as const,
+    binance: isBinanceLive() ? 'live' as const : 'fallback' as const,
+    defillama: isDefillamaLive() ? 'live' as const : 'fallback' as const,
+  };
+
+  const allLive = dataSources.fred === 'live' && dataSources.yahoo === 'live'
+    && dataSources.binance === 'live' && dataSources.defillama === 'live';
+
   const summary: CapitalFlowSummary = {
     timestamp: new Date(),
     globalLiquidity,
@@ -222,8 +243,20 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
     activeRotation,
     insights,
     cacheExpiry: new Date(Date.now() + CACHE_TTL.SUMMARY * 1000),
-    dataSource: usingFallback ? 'fallback' : 'live',
+    dataSource: usingFallback ? 'fallback' : (allLive ? 'live' : 'fallback'),
+    dataSources,
   };
+
+  // Log per-provider status for debugging
+  const fallbackProviders = Object.entries(dataSources)
+    .filter(([, status]) => status === 'fallback')
+    .map(([name]) => name);
+
+  if (fallbackProviders.length > 0) {
+    console.warn(`[CapitalFlow] ⚠ Fallback data for: ${fallbackProviders.join(', ')} — check API keys and network`);
+  } else {
+    console.info('[CapitalFlow] ✓ All providers returning LIVE data');
+  }
 
   if (usingFallback) {
     console.warn('[CapitalFlow] ⚠ Summary built with FALLBACK data — external APIs may be down or keys missing');
@@ -1054,14 +1087,17 @@ function getFallbackGlobalLiquidity(): GlobalLiquidity {
  */
 function getFallbackMarketFlows(): MarketFlow[] {
   const now = new Date();
+  // Deterministic history: use a simple sine wave to avoid Math.random() noise
   const generateHistory = (baseValue: number) => {
     const history: FlowDataPoint[] = [];
     for (let i = 29; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
+      // Deterministic variation: sine wave based on day index
+      const variation = Math.sin(i * 0.5) * 0.5;
       history.push({
         date: date.toISOString().split('T')[0],
-        value: baseValue + (Math.random() - 0.5) * 2,
+        value: parseFloat((baseValue + variation).toFixed(2)),
       });
     }
     return history;
