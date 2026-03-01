@@ -2267,6 +2267,86 @@ export default async function adminRoutes(app: FastifyInstance) {
       }
     }
   );
+
+  // ===========================================
+  // GET /api/admin/weekly-plans - Weekly plan subscribers overview
+  // ===========================================
+  app.get(
+    '/weekly-plans',
+    { preHandler: requireAdmin },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const [
+          allPlans,
+          activePlans,
+          plansByType,
+          recentPlans,
+        ] = await Promise.all([
+          prisma.weeklyPlan.count(),
+          prisma.weeklyPlan.count({ where: { status: 'ACTIVE' } }),
+          prisma.weeklyPlan.groupBy({
+            by: ['planType', 'status'],
+            _count: true,
+          }),
+          prisma.weeklyPlan.findMany({
+            take: 20,
+            orderBy: { updatedAt: 'desc' },
+            include: {
+              user: {
+                select: { id: true, email: true, name: true },
+              },
+            },
+          }),
+        ]);
+
+        // Calculate Weekly Recurring Revenue (WRR)
+        const activeByType = plansByType.filter(p => p.status === 'ACTIVE');
+        let wrr = 0;
+        for (const group of activeByType) {
+          wrr += group._count * 13.99;
+        }
+
+        return reply.send({
+          success: true,
+          data: {
+            total: allPlans,
+            active: activePlans,
+            wrr: wrr.toFixed(2),
+            mrr: (wrr * 4.33).toFixed(2),
+            byType: plansByType.map(p => ({
+              planType: p.planType,
+              status: p.status,
+              count: p._count,
+            })),
+            recent: recentPlans.map(plan => ({
+              id: plan.id,
+              userId: plan.userId,
+              userEmail: plan.user.email,
+              userName: plan.user.name,
+              planType: plan.planType,
+              status: plan.status,
+              remainingQuota: plan.remainingQuota,
+              totalQuota: plan.totalQuota,
+              quotaUsedThisPeriod: plan.quotaUsedThisPeriod,
+              currentPeriodStart: plan.currentPeriodStart,
+              currentPeriodEnd: plan.currentPeriodEnd,
+              cancelAtPeriodEnd: plan.cancelAtPeriodEnd,
+              telegramDelivery: plan.telegramDelivery,
+              discordDelivery: plan.discordDelivery,
+              createdAt: plan.createdAt,
+              updatedAt: plan.updatedAt,
+            })),
+          },
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Failed to fetch weekly plans');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'WEEKLY_PLANS_ERROR', message: 'Failed to fetch weekly plans data' },
+        });
+      }
+    }
+  );
 }
 
 // Helper functions
