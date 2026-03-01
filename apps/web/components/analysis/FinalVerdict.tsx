@@ -109,6 +109,14 @@ interface TimingData {
   entryZones?: Array<{ priceLow?: number; priceHigh?: number; probability?: number }>;
   conditions?: Array<{ name?: string; met?: boolean }>;
   aiInsight?: string;
+  fibonacci?: {
+    nearGoldenZone?: boolean;
+    retracementPct?: number;
+    goldenZone?: { upper: number; lower: number } | null;
+    nearestFibSupport?: number | null;
+    nearestFibResistance?: number | null;
+    levels?: Array<{ level: number; price: number; type: string }>;
+  };
 }
 
 interface TrapCheckData {

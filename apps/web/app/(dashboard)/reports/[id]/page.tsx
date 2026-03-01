@@ -161,6 +161,14 @@ interface ReportData {
   timing: {
     tradeNow: boolean;
     reason: string;
+    fibonacci?: {
+      nearGoldenZone: boolean;
+      retracementPct: number;
+      goldenZone?: { upper: number; lower: number } | null;
+      nearestFibSupport?: number | null;
+      nearestFibResistance?: number | null;
+      levels?: Array<{ level: number; price: number; type: string }>;
+    };
   };
   tradePlan: {
     direction: string;
