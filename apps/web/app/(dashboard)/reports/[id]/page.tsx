@@ -152,6 +152,14 @@ interface ReportData {
     volume24h?: number;
     indicators: { rsi: number; macd: { histogram: number; signal: string } };
     levels?: { support: number[]; resistance: number[] };
+    elliottWave?: {
+      currentWave?: string;
+      waveType?: string;
+      direction?: string;
+      confidence?: number;
+      projectedTarget?: number;
+      waves?: Array<{ wave: string; startPrice: number; endPrice: number }>;
+    };
   };
   safetyCheck: {
     riskLevel: string;
