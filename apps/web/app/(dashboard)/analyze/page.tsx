@@ -8,6 +8,7 @@
 
 import { useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Globe,
@@ -29,7 +30,6 @@ import { useRecentAnalyses, useDailyPass } from '../../../lib/hooks/useAnalysisD
 import { PulseDot } from '@/components/ui/intelligence';
 import { AnalysisPipelineCard } from '@/components/analyze/AnalysisPipelineCard';
 import { RecentAnalysisRow } from '@/components/analyze/RecentAnalysisRow';
-import { AnalysisReportDrawer } from '@/components/analyze/AnalysisReportDrawer';
 import { BatchResultsDrawer } from '@/components/analyze/BatchResultsDrawer';
 
 // Lazy load components
@@ -125,6 +125,7 @@ const PIPELINE_STEPS = [
 ];
 
 export default function AutomatedAnalysisPage() {
+  const router = useRouter();
   const [pipelineStep, setPipelineStep] = useState<PipelineStep>('idle');
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [capitalFlow, setCapitalFlow] = useState<CapitalFlowSummary | null>(null);
@@ -143,7 +144,6 @@ export default function AutomatedAnalysisPage() {
   const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
   const [completedAnalysisIds, setCompletedAnalysisIds] = useState<string[]>([]);
   const [showBatchResults, setShowBatchResults] = useState(false);
-  const [reportDrawerId, setReportDrawerId] = useState<string | null>(null);
 
   // ── Shared hooks ──────────────────────────
   const { analyses, setAnalyses, loading: analysesLoading, refresh: fetchAnalyses } = useRecentAnalyses();
@@ -503,7 +503,7 @@ export default function AutomatedAnalysisPage() {
                 if (completedAnalysisIds.length > 1) {
                   setShowBatchResults(true);
                 } else if (completedAnalysisIds.length === 1) {
-                  setReportDrawerId(completedAnalysisIds[0]);
+                  router.push(`/analyze/details/${completedAnalysisIds[0]}`);
                 }
               }
             }
@@ -538,14 +538,11 @@ export default function AutomatedAnalysisPage() {
               if (newCompleted.length > 1) {
                 setShowBatchResults(true);
               } else if (newCompleted.length === 1) {
-                setReportDrawerId(newCompleted[0]);
+                router.push(`/analyze/details/${newCompleted[0]}`);
               }
             }
           }} />
       )}
-
-      {/* Analysis Report Drawer - slides up from bottom after single analysis completes */}
-      <AnalysisReportDrawer analysisId={reportDrawerId} onClose={() => setReportDrawerId(null)} />
 
       {/* Batch Results Drawer - slides up after all queued analyses complete */}
       <BatchResultsDrawer analysisIds={completedAnalysisIds} isOpen={showBatchResults} onClose={() => setShowBatchResults(false)} />
