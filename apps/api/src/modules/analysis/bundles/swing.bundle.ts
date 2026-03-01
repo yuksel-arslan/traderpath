@@ -53,6 +53,10 @@ const SWING_INDICATORS: ReadonlyArray<{ name: string; params?: Record<string, nu
 
   // --- Patterns ---
   { name: 'CANDLESTICK_PATTERNS' },
+
+  // --- Fibonacci & Wave Analysis ---
+  { name: 'FIBONACCI' },
+  { name: 'ELLIOTT_WAVE' },
 ] as const;
 
 export const SWING_INDICATOR_NAMES: readonly string[] = SWING_INDICATORS.map(i => i.name);
