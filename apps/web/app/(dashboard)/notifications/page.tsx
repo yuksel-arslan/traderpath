@@ -15,7 +15,6 @@ import {
   Eye,
   Loader2,
   Inbox,
-  Settings,
   ExternalLink,
   Globe,
   TrendingUp,
@@ -66,9 +65,7 @@ interface UnreadCounts {
 
 const FILTER_OPTIONS: { label: string; value: NotificationType | 'ALL'; icon: typeof Bell; color: string }[] = [
   { label: 'All', value: 'ALL', icon: Bell, color: 'text-foreground' },
-  { label: 'Briefing', value: 'BRIEFING', icon: Sunrise, color: 'text-amber-500' },
   { label: 'Alerts', value: 'ALERT', icon: AlertTriangle, color: 'text-red-500' },
-  { label: 'Signals', value: 'SIGNAL', icon: Zap, color: 'text-teal-500' },
   { label: 'Rewards', value: 'REWARD', icon: Gift, color: 'text-purple-500' },
   { label: 'System', value: 'SYSTEM', icon: Megaphone, color: 'text-blue-500' },
 ];
@@ -216,7 +213,6 @@ export default function NotificationsPage() {
     const meta = n.metadata as Record<string, string>;
     if (meta?.link) return meta.link;
     if (meta?.analysisId) return `/analyze/details/${meta.analysisId}`;
-    if (meta?.signalId) return `/notifications`;
     return null;
   };
 
@@ -307,7 +303,7 @@ export default function NotificationsPage() {
           </aside>
 
           {/* Main Content */}
-          <main className="flex-1 min-w-0">
+          <section className="flex-1 min-w-0">
             {isLoading ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -517,7 +513,7 @@ export default function NotificationsPage() {
                 )}
               </>
             )}
-          </main>
+          </section>
         </div>
         </main>
       </div>
