@@ -22,8 +22,8 @@ import {
   Target,
   Calendar,
   CreditCard,
-  Crown,
-  Sparkles,
+  Users,
+  TrendingUp,
 } from 'lucide-react';
 import Link from 'next/link';
 import { authFetch } from '../../../../lib/api';
@@ -54,6 +54,38 @@ interface EditingPackage {
   isActive: boolean;
 }
 
+interface WeeklyPlanSubscriber {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName: string | null;
+  planType: 'REPORT_WEEKLY' | 'ANALYSIS_WEEKLY';
+  status: string;
+  remainingQuota: number;
+  totalQuota: number;
+  quotaUsedThisPeriod: number;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  telegramDelivery: boolean;
+  discordDelivery: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface WeeklyPlanStats {
+  total: number;
+  active: number;
+  wrr: string;
+  mrr: string;
+  byType: Array<{
+    planType: string;
+    status: string;
+    count: number;
+  }>;
+  recent: WeeklyPlanSubscriber[];
+}
+
 const emptyPackage: EditingPackage = {
   name: '',
   credits: 50,
@@ -63,13 +95,27 @@ const emptyPackage: EditingPackage = {
   isActive: true,
 };
 
+const PLAN_LABELS: Record<string, string> = {
+  REPORT_WEEKLY: 'Intelligent Report',
+  ANALYSIS_WEEKLY: 'Capital Flow & Asset Analysis',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  ACTIVE: 'bg-green-500/10 text-green-500',
+  CANCELED: 'bg-amber-500/10 text-amber-500',
+  PAST_DUE: 'bg-red-500/10 text-red-500',
+  INACTIVE: 'bg-slate-500/10 text-slate-500',
+  UNPAID: 'bg-red-500/10 text-red-500',
+  TRIALING: 'bg-blue-500/10 text-blue-500',
+};
+
 // ===========================================
 // Main Component
 // ===========================================
 
 export default function FinancePage() {
   // State
-  const [activeTab, setActiveTab] = useState<'economy' | 'packages'>('economy');
+  const [activeTab, setActiveTab] = useState<'subscriptions' | 'economy' | 'packages'>('subscriptions');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,9 +132,8 @@ export default function FinancePage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Signal Service Pricing
-  const [signalPlans, setSignalPlans] = useState<any[]>([]);
-
+  // Weekly Plans
+  const [weeklyPlanStats, setWeeklyPlanStats] = useState<WeeklyPlanStats | null>(null);
 
   // ===========================================
   // Data Fetching
@@ -99,10 +144,10 @@ export default function FinancePage() {
     setError(null);
 
     try {
-      const [costsRes, packagesRes, signalPlansRes] = await Promise.all([
+      const [costsRes, packagesRes, weeklyPlansRes] = await Promise.all([
         authFetch('/api/admin/credit-costs'),
         authFetch('/api/admin/packages'),
-        authFetch('/api/v1/signals/subscription/plans'),
+        authFetch('/api/admin/weekly-plans'),
       ]);
 
       if (costsRes.status === 403) {
@@ -123,15 +168,14 @@ export default function FinancePage() {
         setPackages(data.data.packages || []);
       }
 
-      if (signalPlansRes.ok) {
-        const data = await signalPlansRes.json();
-        if (data.success && data.data?.plans) {
-          setSignalPlans(data.data.plans);
+      if (weeklyPlansRes.ok) {
+        const data = await weeklyPlansRes.json();
+        if (data.success) {
+          setWeeklyPlanStats(data.data);
         }
       }
     } catch (err) {
       setError('Failed to fetch data');
-      console.error(err);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -158,8 +202,8 @@ export default function FinancePage() {
         setCreditCosts(editingCosts);
         showSuccess('Credit costs saved');
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      // Error handled silently
     } finally {
       setSavingCosts(false);
     }
@@ -175,8 +219,8 @@ export default function FinancePage() {
         fetchData(true);
         showSuccess('Credit costs reset to defaults');
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      // Error handled silently
     } finally {
       setSavingCosts(false);
     }
@@ -235,8 +279,8 @@ export default function FinancePage() {
         setIsCreating(false);
         fetchData();
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      // Error handled silently
     } finally {
       setIsSaving(false);
     }
@@ -251,8 +295,8 @@ export default function FinancePage() {
         showSuccess('Package deleted');
         fetchData();
       }
-    } catch (err) {
-      console.error(err);
+    } catch {
+      // Error handled silently
     }
   };
 
@@ -263,8 +307,8 @@ export default function FinancePage() {
         body: JSON.stringify({ isActive: !pkg.isActive }),
       });
       fetchData();
-    } catch (err) {
-      console.error(err);
+    } catch {
+      // Error handled silently
     }
   };
 
@@ -275,6 +319,21 @@ export default function FinancePage() {
   const showSuccess = (message: string) => {
     setSuccessMessage(message);
     setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  const getActiveCountByType = (planType: string) => {
+    if (!weeklyPlanStats) return 0;
+    const match = weeklyPlanStats.byType.find(p => p.planType === planType && p.status === 'ACTIVE');
+    return match?.count || 0;
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   };
 
   // ===========================================
@@ -314,7 +373,7 @@ export default function FinancePage() {
               <DollarSign className="w-8 h-8 text-primary" />
               Finance Management
             </h1>
-            <p className="text-muted-foreground mt-1">Revenue, costs, pricing & packages</p>
+            <p className="text-muted-foreground mt-1">Subscriptions, costs, pricing & packages</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -347,6 +406,7 @@ export default function FinancePage() {
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b border-border overflow-x-auto">
         {[
+          { id: 'subscriptions', label: 'Weekly Subscriptions', icon: Calendar },
           { id: 'economy', label: 'Credit Economy', icon: Zap },
           { id: 'packages', label: 'Packages', icon: Package },
         ].map((tab) => (
@@ -365,13 +425,291 @@ export default function FinancePage() {
         ))}
       </div>
 
+      {/* ============================================= */}
+      {/* Weekly Subscriptions Tab */}
+      {/* ============================================= */}
+      {activeTab === 'subscriptions' && (
+        <div className="space-y-6">
+          {/* Weekly Subscription Plans Overview */}
+          <div className="bg-gradient-to-r from-violet-500/10 via-purple-500/10 to-violet-500/10 border border-violet-500/30 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-violet-500/20 rounded-lg">
+                  <Calendar className="w-5 h-5 text-violet-500" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-lg">Weekly Subscription Plans</h4>
+                  <p className="text-sm text-muted-foreground">$13.99/week per plan — Stripe recurring billing</p>
+                </div>
+              </div>
+              <span className="bg-violet-500 text-white text-xs font-bold px-2 py-1 rounded">
+                ACTIVE MODEL
+              </span>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-card border rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-4 h-4 text-violet-500" />
+                  <span className="text-sm text-muted-foreground">Active Subscribers</span>
+                </div>
+                <p className="text-2xl font-bold font-sans">{weeklyPlanStats?.active || 0}</p>
+              </div>
+              <div className="bg-card border rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="w-4 h-4 text-emerald-500" />
+                  <span className="text-sm text-muted-foreground">WRR (Weekly)</span>
+                </div>
+                <p className="text-2xl font-bold font-sans text-emerald-500">${weeklyPlanStats?.wrr || '0.00'}</p>
+              </div>
+              <div className="bg-card border rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <DollarSign className="w-4 h-4 text-teal-500" />
+                  <span className="text-sm text-muted-foreground">Est. MRR</span>
+                </div>
+                <p className="text-2xl font-bold font-sans text-teal-500">${weeklyPlanStats?.mrr || '0.00'}</p>
+              </div>
+              <div className="bg-card border rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Package className="w-4 h-4 text-amber-500" />
+                  <span className="text-sm text-muted-foreground">Total Plans</span>
+                </div>
+                <p className="text-2xl font-bold font-sans">{weeklyPlanStats?.total || 0}</p>
+              </div>
+            </div>
+
+            {/* Two Plan Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Intelligent Report Subscription */}
+              <div className="bg-card border border-violet-200 dark:border-violet-800 rounded-lg p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-violet-500/10 rounded-lg">
+                      <FileText className="w-5 h-5 text-violet-500" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Intelligent Report</p>
+                      <p className="text-xs text-muted-foreground">REPORT_WEEKLY</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold font-sans text-violet-500">
+                      {getActiveCountByType('REPORT_WEEKLY')}
+                    </p>
+                    <p className="text-xs text-muted-foreground">active</p>
+                  </div>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Price</span>
+                    <span className="font-sans font-medium">$13.99/week</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Quota</span>
+                    <span className="font-sans font-medium">7 reports/week</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Per Unit</span>
+                    <span className="font-sans font-medium">$2.00/report</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Delivery</span>
+                    <span className="font-medium">Snapshot PNG</span>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t">
+                  <p className="text-xs text-muted-foreground">
+                    Executive Summary or Detailed Analysis Report. Telegram + Discord inline delivery.
+                  </p>
+                </div>
+              </div>
+
+              {/* Capital Flow & Asset Analysis Subscription */}
+              <div className="bg-card border border-emerald-200 dark:border-emerald-800 rounded-lg p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-500/10 rounded-lg">
+                      <Activity className="w-5 h-5 text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Capital Flow & Asset Analysis</p>
+                      <p className="text-xs text-muted-foreground">ANALYSIS_WEEKLY</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold font-sans text-emerald-500">
+                      {getActiveCountByType('ANALYSIS_WEEKLY')}
+                    </p>
+                    <p className="text-xs text-muted-foreground">active</p>
+                  </div>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Price</span>
+                    <span className="font-sans font-medium">$13.99/week</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Quota</span>
+                    <span className="font-sans font-medium">7 analyses/week</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Per Unit</span>
+                    <span className="font-sans font-medium">$2.00/analysis</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">AI Expert</span>
+                    <span className="font-sans font-medium">5 questions/analysis</span>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t">
+                  <p className="text-xs text-muted-foreground">
+                    Full 7-Step + MLIS Pro dual-engine. AI Concierge, Auto, or Tailored methods.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Info Box */}
+            <div className="mt-4 p-3 bg-card/50 rounded-lg border border-dashed">
+              <div className="flex items-center gap-2 text-sm flex-wrap">
+                <div className="w-2 h-2 rounded-full bg-violet-500" />
+                <span className="text-muted-foreground">Plans are independent — user selects one</span>
+                <span className="text-muted-foreground mx-1">|</span>
+                <span className="text-muted-foreground">Quota resets weekly via Stripe webhook</span>
+                <span className="text-muted-foreground mx-1">|</span>
+                <span className="text-muted-foreground">Configured in</span>
+                <code className="bg-violet-500/20 px-1.5 py-0.5 rounded text-xs">weekly-plans.ts</code>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Subscribers Table */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-teal-500/10 rounded-lg">
+                <Users className="w-5 h-5 text-teal-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Recent Subscribers</h3>
+                <p className="text-sm text-muted-foreground">Latest weekly plan activity</p>
+              </div>
+            </div>
+
+            <div className="bg-card border rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-accent/50">
+                    <tr>
+                      <th className="text-left p-4 font-medium">User</th>
+                      <th className="text-left p-4 font-medium">Plan</th>
+                      <th className="text-left p-4 font-medium">Status</th>
+                      <th className="text-left p-4 font-medium">Quota</th>
+                      <th className="text-left p-4 font-medium">Delivery</th>
+                      <th className="text-left p-4 font-medium">Period End</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {!weeklyPlanStats?.recent?.length ? (
+                      <tr>
+                        <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                          No weekly plan subscribers yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      weeklyPlanStats.recent.map((plan) => (
+                        <tr key={plan.id}>
+                          <td className="p-4">
+                            <div>
+                              <p className="font-medium text-sm">{plan.userName || 'Unknown'}</p>
+                              <p className="text-xs text-muted-foreground">{plan.userEmail}</p>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
+                              {plan.planType === 'REPORT_WEEKLY' ? (
+                                <FileText className="w-4 h-4 text-violet-500" />
+                              ) : (
+                                <Activity className="w-4 h-4 text-emerald-500" />
+                              )}
+                              <span className="text-sm">{PLAN_LABELS[plan.planType] || plan.planType}</span>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[plan.status] || STATUS_COLORS.INACTIVE}`}>
+                              {plan.status}
+                              {plan.cancelAtPeriodEnd && ' (canceling)'}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 h-2 bg-accent rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    plan.remainingQuota > 3 ? 'bg-emerald-500' :
+                                    plan.remainingQuota > 0 ? 'bg-amber-500' : 'bg-red-500'
+                                  }`}
+                                  style={{ width: `${(plan.remainingQuota / plan.totalQuota) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-xs font-sans text-muted-foreground">
+                                {plan.remainingQuota}/{plan.totalQuota}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-1">
+                              {plan.telegramDelivery && (
+                                <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-500 text-[10px] font-medium rounded">TG</span>
+                              )}
+                              {plan.discordDelivery && (
+                                <span className="px-1.5 py-0.5 bg-indigo-500/10 text-indigo-500 text-[10px] font-medium rounded">DC</span>
+                              )}
+                              {!plan.telegramDelivery && !plan.discordDelivery && (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <span className="text-sm text-muted-foreground font-sans">
+                              {formatDate(plan.currentPeriodEnd)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Stripe Dashboard Link */}
+          <div className="p-4 bg-muted/50 border rounded-lg text-center">
+            <p className="text-sm text-muted-foreground">
+              Subscription billing, payment history, and customer management via Stripe Dashboard.
+            </p>
+            <a
+              href="https://dashboard.stripe.com/subscriptions"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-2 text-sm text-violet-600 dark:text-violet-400 hover:underline"
+            >
+              Open Stripe Dashboard &rarr;
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================= */}
       {/* Credit Economy Tab */}
+      {/* ============================================= */}
       {activeTab === 'economy' && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold">Credit Cost Settings</h3>
-              <p className="text-sm text-muted-foreground">How many credits each operation costs</p>
+              <p className="text-sm text-muted-foreground">How many credits each operation costs (for free-tier & legacy users)</p>
             </div>
             <div className="flex gap-2">
               <button
@@ -405,7 +743,7 @@ export default function FinancePage() {
                 </div>
               </div>
               <span className="bg-teal-500 text-white text-xs font-bold px-2 py-1 rounded">
-                ACTIVE MODEL
+                LEGACY MODEL
               </span>
             </div>
 
@@ -532,102 +870,6 @@ export default function FinancePage() {
             </div>
           </div>
 
-          {/* Signal Service Subscription Pricing Section */}
-          <div className="bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-blue-500/10 border border-blue-500/30 rounded-lg p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500/20 rounded-lg">
-                  <Activity className="w-5 h-5 text-blue-500" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-lg">Signal Service Subscription Pricing</h4>
-                  <p className="text-sm text-muted-foreground">Monthly subscription plans for automated trading signals</p>
-                </div>
-              </div>
-              <span className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
-                SUBSCRIPTION MODEL
-              </span>
-            </div>
-
-            {signalPlans.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {signalPlans.map((plan, index) => {
-                  const isBasic = plan.tier === 'SIGNAL_BASIC';
-                  const isPro = plan.tier === 'SIGNAL_PRO';
-                  const isAnnual = plan.tier === 'SIGNAL_PRO_YEARLY';
-
-                  return (
-                    <div
-                      key={plan.tier}
-                      className={`bg-card rounded-lg p-4 relative ${
-                        isBasic ? 'border border-blue-200 dark:border-blue-800' :
-                        isPro ? 'border border-indigo-200 dark:border-indigo-700' :
-                        'bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/30'
-                      }`}
-                    >
-                      {isPro && (
-                        <span className="absolute -top-2 right-4 bg-indigo-500 text-white text-xs font-bold px-2 py-0.5 rounded">POPULAR</span>
-                      )}
-                      {isAnnual && (
-                        <span className="absolute -top-2 right-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold px-2 py-0.5 rounded">BEST VALUE</span>
-                      )}
-
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className={`p-2 rounded-lg ${
-                          isBasic ? 'bg-blue-500/10' :
-                          isPro ? 'bg-indigo-500/10' :
-                          'bg-indigo-500/10'
-                        }`}>
-                          {isBasic ? <Target className="w-5 h-5 text-blue-500" /> :
-                           isPro ? <Zap className="w-5 h-5 text-indigo-500" /> :
-                           <Crown className="w-5 h-5 text-indigo-500" />}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium">{plan.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {isBasic ? 'Crypto only' :
-                             isPro ? 'All markets' :
-                             '2 months free'}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="text-2xl font-bold">
-                          ${plan.price.monthly || plan.price.yearly}
-                          <span className="text-sm font-normal text-muted-foreground">
-                            /{isAnnual ? 'yr' : 'mo'}
-                          </span>
-                        </div>
-                        <ul className="text-xs space-y-1 text-muted-foreground">
-                          <li>• {plan.markets.length === 1 ? 'Crypto market only' : `All markets (${plan.markets.length})`}</li>
-                          <li>• {plan.maxSignalsPerDay} signals/day</li>
-                          <li>• {Object.entries(plan.deliveryChannels).filter(([k, v]) => v).map(([k]) => k.charAt(0).toUpperCase() + k.slice(1)).join(' + ')}</li>
-                          {isAnnual && <li>• Save ${(plan.price.monthly * 12) - plan.price.yearly}/year</li>}
-                        </ul>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center py-8">
-                <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-              </div>
-            )}
-
-            {/* Info Box */}
-            <div className="mt-4 p-3 bg-card/50 rounded-lg border border-dashed">
-              <div className="flex items-center gap-2 text-sm flex-wrap">
-                <div className="w-2 h-2 rounded-full bg-blue-500" />
-                <span className="text-muted-foreground">Signal subscriptions managed via Stripe webhooks</span>
-                <span className="text-muted-foreground mx-1">•</span>
-                <span className="text-muted-foreground">Plans configured in</span>
-                <code className="bg-blue-500/20 px-1.5 py-0.5 rounded text-xs">signal-subscription.service.ts</code>
-              </div>
-            </div>
-          </div>
-
           {creditCosts ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Analysis Bundles */}
@@ -685,7 +927,7 @@ export default function FinancePage() {
                     { key: 'creditCostAiExpert', label: 'AI Expert Chat', desc: 'Per chat session' },
                     { key: 'creditCostAiConcierge', label: 'AI Concierge', desc: 'Per chat session' },
                     { key: 'creditCostCapitalFlowL3L4', label: 'Capital Flow L3+L4', desc: 'Per use' },
-                    { key: 'creditCostPdfReport', label: 'PDF Report', desc: 'Generate PDF' },
+                    { key: 'creditCostPdfReport', label: 'Snapshot Report', desc: 'Generate Snapshot PNG' },
                     { key: 'creditCostTranslation', label: 'Translation', desc: 'Translate report' },
                     { key: 'creditCostEmailSend', label: 'Email Send', desc: 'Send via email' },
                     { key: 'creditCostPriceAlert', label: 'Price Alert', desc: 'Set alert' },
@@ -801,42 +1043,12 @@ export default function FinancePage() {
         </div>
       )}
 
+      {/* ============================================= */}
       {/* Packages Tab */}
+      {/* ============================================= */}
       {activeTab === 'packages' && (
         <div className="space-y-8">
-          {/* ============================================= */}
-          {/* SECTION 1: Monthly Subscription Plans */}
-          {/* ============================================= */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-violet-500/10 rounded-lg">
-                <Calendar className="w-5 h-5 text-violet-500" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">Monthly Subscription Plans</h3>
-                <p className="text-sm text-muted-foreground">Recurring subscriptions with included features</p>
-              </div>
-            </div>
-
-            <div className="p-4 bg-muted/50 border rounded-lg text-center">
-              <p className="text-sm text-muted-foreground">
-                Subscription tiers are managed via Stripe Dashboard.
-                Prices and features are configured in the payment provider, not hardcoded here.
-              </p>
-              <a
-                href="https://dashboard.stripe.com/products"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block mt-2 text-sm text-teal-600 dark:text-teal-400 hover:underline"
-              >
-                Open Stripe Dashboard &rarr;
-              </a>
-            </div>
-          </div>
-
-          {/* ============================================= */}
-          {/* SECTION 2: Credit Packages (One-time Purchase) */}
-          {/* ============================================= */}
+          {/* Credit Packages (One-time Purchase) */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
