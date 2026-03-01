@@ -14,6 +14,21 @@ import { FlowDataPoint } from '../types';
 const BINANCE_SPOT_URL = 'https://api.binance.com';
 const BINANCE_FUTURES_URL = 'https://fapi.binance.com';
 
+// Track whether Binance is returning live data or fallback
+let _binanceLiveFetches = 0;
+let _binanceFallbackFetches = 0;
+
+/** Returns true if the most recent Binance fetch cycle used live data */
+export function isBinanceLive(): boolean {
+  return _binanceLiveFetches > 0 && _binanceFallbackFetches === 0;
+}
+
+/** Reset fetch counters */
+export function resetBinanceCounters(): void {
+  _binanceLiveFetches = 0;
+  _binanceFallbackFetches = 0;
+}
+
 // Major trading pairs for market analysis
 const MAJOR_PAIRS = [
   'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'XRPUSDT',
@@ -67,6 +82,7 @@ export async function fetchHistoricalKlines(
     }
 
     const data = await response.json();
+    _binanceLiveFetches++;
 
     return data.map((k: any[]) => ({
       openTime: k[0],
@@ -83,6 +99,7 @@ export async function fetchHistoricalKlines(
     }));
   } catch (error) {
     console.error(`[Binance] Error fetching klines for ${symbol}:`, error);
+    _binanceFallbackFetches++;
     return [];
   }
 }

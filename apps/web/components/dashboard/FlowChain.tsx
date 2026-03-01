@@ -54,6 +54,12 @@ interface FlowChainProps {
     };
     timestamp?: string;
     dataSource?: 'live' | 'cached' | 'fallback';
+    dataSources?: {
+      fred: 'live' | 'fallback';
+      yahoo: 'live' | 'fallback';
+      binance: 'live' | 'fallback';
+      defillama: 'live' | 'fallback';
+    };
   } | null;
 }
 
@@ -211,6 +217,14 @@ function getDataSourceInfo(capitalFlow: FlowChainProps['capitalFlow']): {
   const ageMinutes = timestamp ? (Date.now() - timestamp.getTime()) / 60_000 : Infinity;
 
   if (source === 'fallback') {
+    // Show which providers are down if dataSources is available
+    const ds = capitalFlow.dataSources;
+    if (ds) {
+      const down = Object.entries(ds).filter(([, s]) => s === 'fallback').map(([k]) => k);
+      if (down.length > 0 && down.length < 4) {
+        return { label: `Partial (${down.join(', ')} offline)`, color: '#FFB800', isStale: true };
+      }
+    }
     return { label: 'Offline Data', color: '#FF4757', isStale: true };
   }
   if (source === 'cached' && ageMinutes > 30) {

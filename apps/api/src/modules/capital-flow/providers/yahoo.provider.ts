@@ -77,6 +77,21 @@ const SYMBOLS = {
 
 const YAHOO_BASE_URL = 'https://query1.finance.yahoo.com/v8/finance/chart';
 
+// Track whether Yahoo is returning live data or fallback
+let _yahooLiveFetches = 0;
+let _yahooFallbackFetches = 0;
+
+/** Returns true if the most recent Yahoo fetch cycle used live data */
+export function isYahooLive(): boolean {
+  return _yahooLiveFetches > 0 && _yahooFallbackFetches === 0;
+}
+
+/** Reset fetch counters (call at the start of each summary generation) */
+export function resetYahooCounters(): void {
+  _yahooLiveFetches = 0;
+  _yahooFallbackFetches = 0;
+}
+
 interface YahooChartResult {
   meta: {
     regularMarketPrice: number;
@@ -135,6 +150,7 @@ async function fetchYahooQuote(symbol: string): Promise<{
     const change = price - previousClose;
     const changePercent = previousClose !== 0 ? (change / previousClose) * 100 : 0;
 
+    _yahooLiveFetches++;
     return {
       price,
       change,
@@ -143,6 +159,7 @@ async function fetchYahooQuote(symbol: string): Promise<{
     };
   } catch (error) {
     console.error(`[Yahoo] Error fetching ${symbol}:`, error);
+    _yahooFallbackFetches++;
     return null;
   }
 }
