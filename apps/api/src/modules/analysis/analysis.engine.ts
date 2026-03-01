@@ -1188,6 +1188,19 @@ interface AIAnalysisSummaryInput {
   };
   tokenomics?: TokenomicsData | null;
   tradeType?: TradeType;
+  elliottWave?: {
+    currentWave?: string;
+    waveType?: string;
+    direction?: string;
+    confidence?: number;
+    projectedTarget?: number;
+  };
+  fibonacci?: {
+    nearGoldenZone: boolean;
+    retracementPct: number;
+    levels?: Array<{ level: number; price: number; type: string }>;
+  };
+  fibAlignedTargets?: boolean;
 }
 
 async function generateAIAnalysisSummary(input: AIAnalysisSummaryInput): Promise<{ aiSummary: string; tokenomicsInsight: string }> {
@@ -1258,6 +1271,33 @@ TOKENOMICS DATA:
     const riskLevel = keyMetrics.riskLevel || 'moderate';
     const whaleActivity = keyMetrics.whaleActivity || 'normal';
 
+    // Build Elliott Wave context
+    let elliottWaveContext = '';
+    if (input.elliottWave && input.elliottWave.confidence && input.elliottWave.confidence > 20) {
+      const ew = input.elliottWave;
+      elliottWaveContext = `
+ELLIOTT WAVE ANALYSIS:
+- Current Wave: ${ew.currentWave || 'N/A'} (${ew.waveType || 'N/A'})
+- Direction: ${ew.direction || 'N/A'}
+- Confidence: ${ew.confidence}%
+- Projected Target: ${ew.projectedTarget ? `$${ew.projectedTarget}` : 'N/A'}`;
+    }
+
+    // Build Fibonacci context
+    let fibonacciContext = '';
+    if (input.fibonacci) {
+      const fib = input.fibonacci;
+      const keyLevels = (fib.levels ?? []).slice(0, 5)
+        .map((l: { level: number; price: number; type: string }) => `  ${(l.level * 100).toFixed(1)}% (${l.type}): $${l.price}`)
+        .join('\n');
+      fibonacciContext = `
+FIBONACCI ANALYSIS:
+- In Golden Zone (38.2-61.8%): ${fib.nearGoldenZone ? 'YES — high-quality entry zone' : 'No'}
+- Retracement: ${(fib.retracementPct * 100).toFixed(1)}%
+${keyLevels ? `- Key Levels:\n${keyLevels}` : ''}
+${input.fibAlignedTargets ? '- Take Profit Targets: ALIGNED with Fibonacci extensions (institutional targets)' : ''}`;
+    }
+
     const prompt = `You are a professional crypto analyst. Generate TWO separate analyses:
 
 ANALYSIS REQUEST FOR ${symbol}:
@@ -1275,7 +1315,7 @@ KEY METRICS:
 - BTC Dominance: ${btcDom}%
 - Risk Level: ${riskLevel}
 - Whale Activity: ${whaleActivity}
-${tokenomicsContext}
+${tokenomicsContext}${elliottWaveContext}${fibonacciContext}
 
 GENERATE:
 
@@ -5916,6 +5956,16 @@ export const analysisEngine = {
     const furtherResistance = sortedResistances[1];
     const atr = assetScan.indicators.atr || currentPrice * 0.02;
 
+    // ===== FIBONACCI LEVELS for integrated trade plan =====
+    // Use timing step's Fibonacci data if available, otherwise calculate fresh
+    const fibLevels = timing.fibonacci?.levels ?? [];
+    const fibExtensionLevels = fibLevels
+      .filter((l: { type: string }) => l.type === 'extension')
+      .map((l: { price: number; level: number }) => ({ price: l.price, level: l.level }));
+    const fibRetracementLevels = fibLevels
+      .filter((l: { type: string }) => l.type === 'retracement')
+      .map((l: { price: number; level: number }) => ({ price: l.price, level: l.level }));
+
     // ===== ENTRY: Always at current price (no pullback waiting) =====
     entries.push({
       price: roundPrice(currentPrice),
@@ -6039,21 +6089,46 @@ export const analysisEngine = {
     const calcTPRR = (tpPrice: number): number =>
       parseFloat((Math.abs(tpPrice - averageEntry) / safeRiskAmount).toFixed(2));
 
+    // Helper: find best Fibonacci extension for TP
+    // Fibonacci extensions (1.272, 1.618, 2.618) are strong institutional targets
+    const findFibTP = (minPrice: number, maxPrice: number | null): { price: number; level: number } | null => {
+      const candidates = fibExtensionLevels.filter((f: { price: number; level: number }) => {
+        if (direction === 'long') {
+          return f.price > minPrice && (!maxPrice || f.price < maxPrice);
+        } else {
+          return f.price < minPrice && (!maxPrice || f.price > maxPrice);
+        }
+      });
+      if (candidates.length === 0) return null;
+      // Pick closest to minPrice
+      candidates.sort((a: { price: number }, b: { price: number }) =>
+        Math.abs(a.price - minPrice) - Math.abs(b.price - minPrice));
+      return candidates[0];
+    };
+
+    let fibAligned = false;
+
     if (direction === 'long') {
-      // TP1: nearest resistance or 2R fallback (60% of position)
-      // ENFORCE: TP1 must be at least 1R from entry (never risk more than you gain on 60% of position)
+      // TP1: nearest resistance or Fibonacci extension or 2R fallback (60% of position)
+      // ENFORCE: TP1 must be at least 1R from entry
       let tp1Price: number;
       let tp1Reason: string;
       let tp1Source: string;
 
-      if (nearestResistance && nearestResistance > averageEntry) {
+      // Priority: 1) Fibonacci 1.272/1.618 extension if ≥1R, 2) S/R level if ≥1R, 3) 2R fallback
+      const fibTP1 = findFibTP(averageEntry, null);
+      if (fibTP1 && (fibTP1.price - averageEntry) / safeRiskAmount >= 1.0) {
+        tp1Price = fibTP1.price;
+        tp1Reason = `Fibonacci ${fibTP1.level} extension`;
+        tp1Source = `Fib ${fibTP1.level} extension`;
+        fibAligned = true;
+      } else if (nearestResistance && nearestResistance > averageEntry) {
         const tp1RR = (nearestResistance - averageEntry) / safeRiskAmount;
         if (tp1RR >= 1.0) {
           tp1Price = nearestResistance;
           tp1Reason = 'Nearest resistance';
           tp1Source = 'Resistance level';
         } else {
-          // S/R level too close (< 1R), use 2R fallback
           tp1Price = averageEntry + safeRiskAmount * 2;
           tp1Reason = `2R target (resistance at ${roundPrice(nearestResistance)} only ${tp1RR.toFixed(1)}R)`;
           tp1Source = '2R calculation (min 1R enforced)';
@@ -6071,12 +6146,18 @@ export const analysisEngine = {
       });
       sources.targets.push(tp1Source);
 
-      // TP2: further resistance or 3R fallback (40% of position)
+      // TP2: Fibonacci extension beyond TP1 or further resistance or 3R fallback (40%)
       let tp2Price: number;
       let tp2Reason: string;
       let tp2Source: string;
 
-      if (furtherResistance && furtherResistance > tp1Price) {
+      const fibTP2 = findFibTP(tp1Price, null);
+      if (fibTP2 && fibTP2.price > tp1Price) {
+        tp2Price = fibTP2.price;
+        tp2Reason = `Fibonacci ${fibTP2.level} extension`;
+        tp2Source = `Fib ${fibTP2.level} extension`;
+        fibAligned = true;
+      } else if (furtherResistance && furtherResistance > tp1Price) {
         tp2Price = furtherResistance;
         tp2Reason = 'Further resistance';
         tp2Source = 'Resistance level';
@@ -6093,20 +6174,25 @@ export const analysisEngine = {
       });
       sources.targets.push(tp2Source);
     } else {
-      // TP1: nearest support or 2R fallback (60% of position)
+      // TP1: Fibonacci extension or nearest support or 2R fallback (60%)
       // ENFORCE: TP1 must be at least 1R from entry
       let tp1Price: number;
       let tp1Reason: string;
       let tp1Source: string;
 
-      if (nearestSupport && nearestSupport < averageEntry) {
+      const fibTP1 = findFibTP(averageEntry, null);
+      if (fibTP1 && (averageEntry - fibTP1.price) / safeRiskAmount >= 1.0) {
+        tp1Price = fibTP1.price;
+        tp1Reason = `Fibonacci ${fibTP1.level} extension`;
+        tp1Source = `Fib ${fibTP1.level} extension`;
+        fibAligned = true;
+      } else if (nearestSupport && nearestSupport < averageEntry) {
         const tp1RR = (averageEntry - nearestSupport) / safeRiskAmount;
         if (tp1RR >= 1.0) {
           tp1Price = nearestSupport;
           tp1Reason = 'Nearest support';
           tp1Source = 'Support level';
         } else {
-          // S/R level too close (< 1R), use 2R fallback
           tp1Price = averageEntry - safeRiskAmount * 2;
           tp1Reason = `2R target (support at ${roundPrice(nearestSupport)} only ${tp1RR.toFixed(1)}R)`;
           tp1Source = '2R calculation (min 1R enforced)';
@@ -6124,12 +6210,18 @@ export const analysisEngine = {
       });
       sources.targets.push(tp1Source);
 
-      // TP2: further support or 3R fallback (40% of position)
+      // TP2: Fibonacci extension beyond TP1 or further support or 3R fallback (40%)
       let tp2Price: number;
       let tp2Reason: string;
       let tp2Source: string;
 
-      if (furtherSupport && furtherSupport < tp1Price) {
+      const fibTP2 = findFibTP(tp1Price, null);
+      if (fibTP2 && fibTP2.price < tp1Price) {
+        tp2Price = fibTP2.price;
+        tp2Reason = `Fibonacci ${fibTP2.level} extension`;
+        tp2Source = `Fib ${fibTP2.level} extension`;
+        fibAligned = true;
+      } else if (furtherSupport && furtherSupport < tp1Price) {
         tp2Price = furtherSupport;
         tp2Reason = 'Further support';
         tp2Source = 'Support level';
@@ -6210,6 +6302,7 @@ export const analysisEngine = {
     if (winRateEstimate >= 60) score += 1;
     if (stopPercentage <= 5) score += 0.5;
     if (safetyCheck.riskLevel === 'low') score += 0.5;
+    if (fibAligned) score += 0.5; // Fibonacci-confirmed targets increase plan quality
     score = parseFloat(Math.max(1, Math.min(10, score)).toFixed(1));
 
     // ===== TRADE PLAN VALIDITY CHECK =====
@@ -6272,6 +6365,7 @@ export const analysisEngine = {
       score,
       sources,
       confidence: preliminaryVerdict.confidence,
+      fibAlignedTargets: fibAligned,
       // Gate evaluation for integrated trade plan
       gate: {
         canProceed: riskReward >= 1.5 && winRateEstimate >= 45,
@@ -6462,6 +6556,14 @@ export const analysisEngine = {
       },
       tokenomics: assetScan.tokenomics,
       tradeType,
+      // NEW: Elliott Wave & Fibonacci data for AI summary
+      elliottWave: assetScan.elliottWave,
+      fibonacci: timing.fibonacci ? {
+        nearGoldenZone: timing.fibonacci.nearGoldenZone,
+        retracementPct: timing.fibonacci.retracementPct,
+        levels: timing.fibonacci.levels,
+      } : undefined,
+      fibAlignedTargets: tradePlan?.fibAlignedTargets,
     });
 
     return {
