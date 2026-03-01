@@ -407,7 +407,7 @@ export async function synthesizeWithAI(params: {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 1000,
+          maxOutputTokens: 2000,
         },
       },
       2,
