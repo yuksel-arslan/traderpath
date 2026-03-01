@@ -49,6 +49,12 @@ interface TradePlanProps {
   data?: TradePlanData;
   symbol: string;
   interval?: string;
+  fibonacciLevels?: Array<{ level: number; price: number; type: string }>;
+  elliottWave?: {
+    currentWave?: string; waveType?: string; direction?: string;
+    confidence?: number; projectedTarget?: number;
+    waves?: Array<{ wave: string; startPrice: number; endPrice: number }>;
+  };
 }
 
 // Generate AI explanation for why these levels were chosen
@@ -107,7 +113,7 @@ function generateLevelExplanation(data: TradePlanData): string {
   return explanation;
 }
 
-export function TradePlan({ data, symbol, interval }: TradePlanProps) {
+export function TradePlan({ data, symbol, interval, fibonacciLevels, elliottWave }: TradePlanProps) {
   const [showDetails, setShowDetails] = useState(true);
 
   if (!data) {
@@ -218,6 +224,8 @@ export function TradePlan({ data, symbol, interval }: TradePlanProps) {
           currentPrice={data.currentPrice || averageEntry}
           support={data.support}
           resistance={data.resistance}
+          fibonacciLevels={fibonacciLevels}
+          elliottWave={elliottWave}
           interval={interval}
         />
       </div>

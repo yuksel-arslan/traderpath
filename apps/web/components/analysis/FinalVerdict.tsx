@@ -517,6 +517,13 @@ export function FinalVerdict({ data, symbol, allResults, interval }: FinalVerdic
           currentPrice={tradePlan.currentPrice || tradePlan.averageEntry || tradePlan.entries![0].price}
           support={tradePlan.support}
           resistance={tradePlan.resistance}
+          fibonacciLevels={(timing as Record<string, unknown>)?.fibonacci
+            ? ((timing as Record<string, unknown>).fibonacci as Record<string, unknown>)?.levels as { level: number; price: number; type: string }[] ?? []
+            : []}
+          elliottWave={(assetScanner as Record<string, unknown>)?.elliottWave as {
+            currentWave?: string; waveType?: string; direction?: string;
+            confidence?: number; projectedTarget?: number;
+          } | undefined}
           interval={interval}
           chartId="trade-plan-chart-visible"
         />
