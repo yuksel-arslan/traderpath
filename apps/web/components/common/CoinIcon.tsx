@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { getLogoUrl, getAssetLogo, loadLogosCache, isCacheLoaded, fetchAndCacheLogo, generateFallbackSvg, AssetClass } from '../../lib/asset-logos-cache';
+import { getLogoUrl, getAssetLogo, loadLogosCache, isCacheLoaded, fetchAndCacheLogo, generateFallbackSvg, detectAssetClass, AssetClass } from '../../lib/asset-logos-cache';
 
 interface CoinIconProps {
   symbol: string;
@@ -60,7 +60,17 @@ export function CoinIcon({
         setIconUrl(url);
         return;
       }
-      // Not in hardcoded list — fetch from CoinGecko and add to cache
+
+      // Non-crypto assets (stocks, metals, bonds) don't have CDN logos available
+      // Skip CoinGecko search and crypto CDN fallbacks — go straight to SVG fallback
+      const resolvedClass = assetClass || detectAssetClass(symbol);
+      if (resolvedClass !== 'crypto') {
+        setIconUrl(null);
+        setAllFailed(true);
+        return;
+      }
+
+      // Crypto only: fetch from CoinGecko and add to cache
       fetchAndCacheLogo(symbol, assetClass).then((fetchedUrl) => {
         if (fetchedUrl) {
           setIconUrl(fetchedUrl);
