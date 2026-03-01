@@ -154,12 +154,25 @@ class SnapshotService {
         });
       }
 
+      // Fibonacci levels from timing step
+      const timing = reportData.timing as Record<string, unknown> | undefined;
+      const fibData = timing?.fibonacci as Record<string, unknown> | undefined;
+      const fibLevels = (fibData?.levels as Array<{ level: number; price: number; type: string }>) ?? [];
+
+      // Elliott Wave from asset scan
+      const elliottWave = assetScan?.elliottWave as {
+        currentWave?: string; waveType?: string; direction?: string;
+        confidence?: number; projectedTarget?: number;
+      } | undefined;
+
       return generateCandlestickSVG(chartCandles.slice(-50), {
         width: 750,
         height: 280,
         title: `${(reportData.symbol as string) || ''}/USDT`,
         subtitle: `Last ${Math.min(50, chartCandles.length)} candles`,
         levels,
+        fibonacciLevels: fibLevels,
+        elliottWave,
       });
     } catch {
       return undefined;

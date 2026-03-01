@@ -967,6 +967,8 @@ export default function AnalysisDetailsPage() {
                   support={step2.levels?.support}
                   resistance={step2.levels?.resistance}
                   forecastBands={step7?.ragEnrichment?.forecastBands || []}
+                  fibonacciLevels={step4?.fibonacci?.levels || []}
+                  elliottWave={step2?.elliottWave}
                   tradeType={getTradeType(analysis.interval)}
                   interval={analysis.interval}
                   chartId="trade-plan-chart"

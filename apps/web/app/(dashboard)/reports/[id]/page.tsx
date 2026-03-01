@@ -718,6 +718,8 @@ export default function ReportViewPage() {
                   tradeType={report.tradeType}
                   interval={report.interval}
                   analysisTime={report.generatedAt}
+                  fibonacciLevels={report.timing?.fibonacci?.levels}
+                  elliottWave={report.assetScan?.elliottWave}
                 />
               </div>
             </div>

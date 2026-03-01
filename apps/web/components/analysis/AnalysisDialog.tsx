@@ -1045,7 +1045,13 @@ export function AnalysisDialog({
                       {activeStep === 5 && <TrapCheck data={results[5]} symbol={symbol} />}
                       {activeStep === 6 && (
                         results[6] ? (
-                          <TradePlan data={results[6]} symbol={symbol} interval={timeframe} />
+                          <TradePlan
+                            data={results[6]}
+                            symbol={symbol}
+                            interval={timeframe}
+                            fibonacciLevels={results[4]?.fibonacci?.levels}
+                            elliottWave={results[2]?.elliottWave}
+                          />
                         ) : (
                           <div
                             className="p-4 rounded-xl text-center"

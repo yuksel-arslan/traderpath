@@ -85,6 +85,21 @@ interface ForecastBand {
   p90: number;
 }
 
+interface FibonacciLevel {
+  level: number;
+  price: number;
+  type: string; // 'retracement' | 'extension'
+}
+
+interface ElliottWaveData {
+  currentWave?: string;
+  waveType?: string;
+  direction?: string;
+  confidence?: number;
+  projectedTarget?: number;
+  waves?: Array<{ wave: string; startPrice: number; endPrice: number }>;
+}
+
 interface TradePlanChartProps {
   symbol: string;
   direction: 'long' | 'short';
@@ -95,6 +110,8 @@ interface TradePlanChartProps {
   support?: number[];
   resistance?: number[];
   forecastBands?: ForecastBand[]; // AI forecast bands to overlay on chart
+  fibonacciLevels?: FibonacciLevel[]; // Fibonacci retracement & extension levels
+  elliottWave?: ElliottWaveData; // Elliott Wave analysis data
   onChartReady?: () => void; // Callback when chart is fully rendered with data
   chartId?: string; // Optional custom ID for the chart container (default: 'trade-plan-chart')
   tradeType?: 'scalping' | 'dayTrade' | 'swing'; // Trade type to determine chart interval
@@ -151,6 +168,8 @@ export function TradePlanChart({
   support = [],
   resistance = [],
   forecastBands = [],
+  fibonacciLevels = [],
+  elliottWave,
   onChartReady,
   chartId = 'trade-plan-chart',
   tradeType = 'dayTrade',
@@ -444,7 +463,39 @@ export function TradePlanChart({
       }
     }
 
-  }, [loading, entries, stopLoss, takeProfits, currentPrice, livePrice, support, resistance, forecastBands, analysisTime]);
+    // Fibonacci levels (teal/gold)
+    const fibColors: Record<string, string> = {
+      retracement: 'rgba(0, 212, 255, 0.45)', // Teal for retracement levels
+      extension: 'rgba(255, 184, 0, 0.45)',    // Gold for extension levels
+    };
+    fibonacciLevels.slice(0, 7).forEach((fib) => {
+      if (fib.price > 0) {
+        const pctLabel = (fib.level * 100).toFixed(1);
+        const color = fibColors[fib.type] || fibColors.retracement;
+        addPriceLine({
+          price: fib.price,
+          color,
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: `Fib ${pctLabel}%`,
+        });
+      }
+    });
+
+    // Elliott Wave: projected target line
+    if (elliottWave?.projectedTarget && elliottWave.projectedTarget > 0) {
+      addPriceLine({
+        price: elliottWave.projectedTarget,
+        color: 'rgba(168, 85, 247, 0.6)', // Purple for wave target
+        lineWidth: 1,
+        lineStyle: LineStyle.SparseDotted,
+        axisLabelVisible: true,
+        title: `EW Target (${elliottWave.currentWave || '?'})`,
+      });
+    }
+
+  }, [loading, entries, stopLoss, takeProfits, currentPrice, livePrice, support, resistance, forecastBands, fibonacciLevels, elliottWave, analysisTime]);
 
   const fetchKlineData = async (
     sym: string,
@@ -676,7 +727,39 @@ export function TradePlanChart({
             <div className="w-4 h-0.5 bg-purple-400/50" style={{ borderStyle: 'dotted' }}></div>
             <span>Resistance</span>
           </div>
+          {fibonacciLevels.length > 0 && (
+            <>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-0.5 bg-cyan-400/50"></div>
+                <span>Fib Retracement</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-0.5 bg-amber-400/50"></div>
+                <span>Fib Extension</span>
+              </div>
+            </>
+          )}
+          {elliottWave?.projectedTarget && (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-0.5 bg-purple-500/60"></div>
+              <span>Elliott Wave Target</span>
+            </div>
+          )}
         </div>
+
+        {/* Elliott Wave Badge */}
+        {elliottWave?.currentWave && elliottWave.confidence && elliottWave.confidence > 20 && (
+          <div className="mt-2 flex items-center gap-2 text-xs">
+            <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 font-medium">
+              Elliott Wave {elliottWave.currentWave}
+            </span>
+            <span className="text-muted-foreground">
+              {elliottWave.waveType === 'impulse' ? 'Impulse' : 'Corrective'} •{' '}
+              {elliottWave.direction === 'bullish' ? '↑ Bullish' : elliottWave.direction === 'bearish' ? '↓ Bearish' : 'Neutral'} •{' '}
+              {elliottWave.confidence}% confidence
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Price Levels Summary */}
