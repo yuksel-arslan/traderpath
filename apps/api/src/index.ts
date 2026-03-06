@@ -59,6 +59,8 @@ import {
   stopSignalGeneratorJob,
   startSignalOutcomeTracker,
   stopSignalOutcomeTracker,
+  startAutoEdgeJob,
+  stopAutoEdgeJob,
 } from './modules/signals';
 import subscriptionRoutes from './modules/subscriptions/subscription.routes';
 import weeklyPlanRoutes from './modules/weekly-plans/weekly-plan.routes';
@@ -735,6 +737,7 @@ const start = async () => {
       safeCronStart('BILGE Guardian', () => initializeBilgeService(redis as unknown as IoRedis));
       safeCronStart('BILGE weekly report cron', () => startBilgeWeeklyReportJob());
       safeCronStart('Signal generator cron', () => startSignalGeneratorJob());
+      safeCronStart('AutoEdge signal generator cron', () => startAutoEdgeJob());
       safeCronStart('Signal outcome tracker cron', () => startSignalOutcomeTracker());
       safeCronStart('Smart alert cron', () => startSmartAlertJob());
       safeCronStart('Subscription daily credits cron', () => startDailyCreditsJob());
@@ -816,6 +819,10 @@ const shutdown = async (signal: string) => {
     // Stop Signal Generator cron
     stopSignalGeneratorJob();
     logger.info('✓ Signal generator cron stopped');
+
+    // Stop AutoEdge Signal Generator cron
+    stopAutoEdgeJob();
+    logger.info('✓ AutoEdge signal generator cron stopped');
 
     // Stop Signal Outcome Tracker cron
     stopSignalOutcomeTracker();

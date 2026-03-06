@@ -5,7 +5,7 @@
 
 import { FastifyInstance } from 'fastify';
 import { signalService } from './signal.service';
-import { runSignalGenerationManually } from './signal-generator.job';
+import { runSignalGenerationManually, runAutoEdgeManually } from './signal-generator.job';
 import { runSignalOutcomeTrackerManually } from './signal-outcome-tracker.job';
 import { signalMonitoring } from './signal-monitoring.service';
 import type { SignalFilterCriteria } from './types';
@@ -402,6 +402,43 @@ export async function signalRoutes(fastify: FastifyInstance) {
         return reply.status(500).send({
           success: false,
           error: error instanceof Error ? error.message : 'Generation failed',
+        });
+      }
+    }
+  );
+
+  /**
+   * Trigger manual AutoEdge signal generation
+   * POST /api/signals/admin/generate-autoedge
+   */
+  fastify.post(
+    '/signals/admin/generate-autoedge',
+    {
+      preHandler: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      const user = request.user as any;
+
+      // Admin only
+      if (!user.isAdmin) {
+        return reply.status(403).send({
+          success: false,
+          error: 'Admin access required',
+        });
+      }
+
+      try {
+        const result = await runAutoEdgeManually();
+
+        return reply.send({
+          success: true,
+          data: result,
+        });
+      } catch (error) {
+        console.error('[SignalRoutes] Manual AutoEdge generation error:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error instanceof Error ? error.message : 'AutoEdge generation failed',
         });
       }
     }
