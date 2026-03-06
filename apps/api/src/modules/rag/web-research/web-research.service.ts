@@ -206,8 +206,13 @@ class WebResearchService {
     let geminiSummary: { summary: string; keyFindings: string[]; riskFactors: string[]; catalysts: string[]; sentiment: string } | null = null;
     try {
       const response = await callGeminiWithRetry(
-        this.buildNewsPrompt(evidencePack),
-        { type: 'default', maxOutputTokens: 400 },
+        {
+          contents: [{ role: 'user', parts: [{ text: this.buildNewsPrompt(evidencePack) }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 400 },
+        },
+        3,
+        'web_research_news',
+        'default',
       );
 
       geminiSummary = this.parseGeminiResponse(response.text);
@@ -231,6 +236,11 @@ class WebResearchService {
       timestamp: Date.now(),
       costUsd: geminiSummary ? 0.001 : 0,
     };
+
+    // If Gemini produced no summary and there are no citations, mark as no data
+    if (!result.summary && result.citations.length === 0 && result.keyFindings.length === 0) {
+      result.summary = null;
+    }
 
     await this.setCache(cacheKey, result, CACHE_TTL.news);
     return result;
@@ -262,8 +272,13 @@ class WebResearchService {
     let deepAnalysis: { summary: string; keyFindings: string[]; riskFactors: string[]; catalysts: string[]; sentiment: string } | null = null;
     try {
       const response = await callGeminiWithRetry(
-        this.buildDeepPrompt(evidencePack),
-        { type: 'expert', maxOutputTokens: 600 },
+        {
+          contents: [{ role: 'user', parts: [{ text: this.buildDeepPrompt(evidencePack) }] }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 600 },
+        },
+        3,
+        'web_research_deep',
+        'expert',
       );
 
       deepAnalysis = this.parseGeminiResponse(response.text);
@@ -311,7 +326,12 @@ class WebResearchService {
         // Auto-upgrade to news mode if fast mode returned no useful data
         if (fastResult.citations.length === 0 && fastResult.riskFactors.length === 0) {
           try {
-            return await this.researchNews(symbol, assetClass, options?.capitalFlowContext, options?.existingNews, options?.existingCalendar);
+            const upgraded = await this.researchNews(symbol, assetClass, options?.capitalFlowContext, options?.existingNews, options?.existingCalendar);
+            // If news mode also produced no real data, return null summary
+            if (!upgraded.summary && upgraded.citations.length === 0) {
+              return { ...upgraded, summary: null };
+            }
+            return upgraded;
           } catch {
             return fastResult; // Fall back to fast result on error
           }
@@ -445,9 +465,9 @@ Respond with this exact JSON structure:
     citations: Citation[],
     sentiment: 'bullish' | 'bearish' | 'neutral',
     riskFactors: string[],
-  ): string {
+  ): string | null {
     if (citations.length === 0 && riskFactors.length === 0) {
-      return `No significant news or events detected for ${symbol} at this time. Technical analysis serves as the primary signal source.`;
+      return null;
     }
 
     const sentimentText = sentiment === 'bullish' ? 'positive' : sentiment === 'bearish' ? 'negative' : 'mixed';

@@ -387,10 +387,47 @@ export async function runUnifiedPipeline(symbol: string): Promise<UnifiedReport>
     }
 
     // ========================================================================
-    // STEP 7: EXPERT VALIDATION (Gemini)
+    // STEP 7: EXPERT VALIDATION (Gemini) — with real metrics from expert services
     // ========================================================================
     updateStep(sessionId, 'expert_validation', 'running');
     try {
+      // Compute expert metrics in parallel before validation
+      const [oracleResult, nexusResult, sentinelResult] = await Promise.allSettled([
+        import('../expert/services/oracle-flow.service').then(m =>
+          m.calculateOracleFlowMetrics(technicalData.short)
+        ),
+        import('../expert/services/nexus-risk.service').then(m =>
+          m.calculateNexusRiskMetrics(technicalData.short)
+        ),
+        import('../expert/services/sentinel-risk.service').then(m =>
+          m.calculateSentinelRiskMetrics(normalizedSymbol, technicalData.short)
+        ),
+      ]);
+
+      const oracleMetrics = oracleResult.status === 'fulfilled' ? {
+        netflowDirection: oracleResult.value.netflowDirection,
+        netflowScore: oracleResult.value.netflowScore,
+        whaleBuySellRatio: oracleResult.value.whaleBuySellRatio,
+        accDistPhase: oracleResult.value.accDistPhase,
+        confidence: oracleResult.value.confidence,
+      } : undefined;
+
+      const nexusMetrics = nexusResult.status === 'fulfilled' ? {
+        var95: nexusResult.value.var95,
+        cvar95: nexusResult.value.cvar95,
+        maxDrawdown: nexusResult.value.maxDrawdown,
+        btcCorrelation: nexusResult.value.btcCorrelation ?? null,
+        sharpeProxy: nexusResult.value.sharpeProxy,
+        riskLevel: nexusResult.value.riskLevel,
+      } : undefined;
+
+      const sentinelMetrics = sentinelResult.status === 'fulfilled' ? {
+        regulatoryRiskScore: sentinelResult.value.regulatoryRiskScore,
+        manipulationScore: sentinelResult.value.manipulationScore,
+        overallSecurityScore: sentinelResult.value.overallSecurityScore,
+        verdict: sentinelResult.value.verdict,
+      } : undefined;
+
       expertValidation = await runExpertValidation(
         normalizedSymbol,
         assetClass,
@@ -398,6 +435,9 @@ export async function runUnifiedPipeline(symbol: string): Promise<UnifiedReport>
         horizonPredictions,
         capitalFlowData,
         sentimentData,
+        oracleMetrics,
+        nexusMetrics,
+        sentinelMetrics,
       );
       updateStep(sessionId, 'expert_validation', 'completed');
     } catch (err: any) {
@@ -435,6 +475,44 @@ export async function runUnifiedPipeline(symbol: string): Promise<UnifiedReport>
       TLT: 'Treasury 20+Y', IEF: 'Treasury 7-10Y', SPY: 'S&P 500', QQQ: 'NASDAQ-100',
     };
 
+    // Build trade plan from medium horizon prediction (for GO/CONDITIONAL_GO)
+    let tradePlan: UnifiedReport['tradePlan'];
+    if (['GO', 'CONDITIONAL_GO'].includes(overallVerdict)) {
+      const mediumPrediction = horizonPredictions.find(p => p.horizon === 'medium');
+      const mediumAnalysis = horizonAnalyses.find(a => a.horizon === 'medium');
+      if (mediumPrediction && mediumPrediction.entry > 0) {
+        const entryPrice = mediumPrediction.entry;
+        const slPrice = mediumPrediction.stopLoss;
+        const riskAmount = Math.abs(entryPrice - slPrice);
+        tradePlan = {
+          direction: mediumPrediction.direction,
+          entries: [{ price: entryPrice, percentage: 100, type: 'limit' }],
+          averageEntry: entryPrice,
+          stopLoss: {
+            price: slPrice,
+            percentage: riskAmount > 0 ? parseFloat((riskAmount / entryPrice * 100).toFixed(2)) : 0,
+            reason: `${mediumPrediction.direction === 'long' ? 'Below' : 'Above'} key level`,
+          },
+          takeProfits: [
+            {
+              price: mediumPrediction.takeProfit1,
+              percentage: 60,
+              reason: 'TP1 - First target',
+              riskReward: riskAmount > 0 ? parseFloat((Math.abs(mediumPrediction.takeProfit1 - entryPrice) / riskAmount).toFixed(2)) : 0,
+            },
+            {
+              price: mediumPrediction.takeProfit2,
+              percentage: 40,
+              reason: 'TP2 - Extended target',
+              riskReward: riskAmount > 0 ? parseFloat((Math.abs(mediumPrediction.takeProfit2 - entryPrice) / riskAmount).toFixed(2)) : 0,
+            },
+          ],
+          riskRewardRatio: mediumPrediction.riskReward,
+          positionSizePercent: 2,
+        };
+      }
+    }
+
     const report: UnifiedReport = {
       sessionId,
       symbol: normalizedSymbol,
@@ -453,15 +531,15 @@ export async function runUnifiedPipeline(symbol: string): Promise<UnifiedReport>
       overallDirection,
       overallConfidence,
       summary,
+      tradePlan,
     };
 
     // Cache report in Redis for 1 hour
     try {
-      await redis.set(
+      await redis.setex(
         `unified-report:${sessionId}`,
-        JSON.stringify(report),
-        'EX',
         3600,
+        JSON.stringify(report),
       );
     } catch { /* ignore cache errors */ }
 
@@ -677,7 +755,7 @@ async function runPipelineWithSession(sessionId: string, symbol: string): Promis
     };
 
     try {
-      await redis.set(`unified-report:${sessionId}`, JSON.stringify(report), 'EX', 3600);
+      await redis.setex(`unified-report:${sessionId}`, 3600, JSON.stringify(report));
     } catch { /* ignore */ }
 
     updateStep(sessionId, 'report_generation', 'completed');
@@ -975,6 +1053,27 @@ async function runExpertValidation(
   predictions: HorizonPrediction[],
   capitalFlow: CapitalFlowData | null,
   sentiment: SentimentData,
+  oracleMetrics?: {
+    netflowDirection: string;
+    netflowScore: number;
+    whaleBuySellRatio: number;
+    accDistPhase: string;
+    confidence: number;
+  },
+  nexusMetrics?: {
+    var95: number;
+    cvar95: number;
+    maxDrawdown: number;
+    btcCorrelation: number | null;
+    sharpeProxy: number;
+    riskLevel: string;
+  },
+  sentinelMetrics?: {
+    regulatoryRiskScore: number;
+    manipulationScore: number;
+    overallSecurityScore: number;
+    verdict: string;
+  },
 ): Promise<ExpertValidation> {
   const shortAnalysis = analyses.find(a => a.horizon === 'short');
   const mediumAnalysis = analyses.find(a => a.horizon === 'medium');
@@ -989,15 +1088,36 @@ Sentiment: ${sentiment.overallSentiment}, Fear&Greed: ${sentiment.fearGreedIndex
 Capital Flow Bias: ${capitalFlow?.globalLiquidity?.bias || 'N/A'}
 Trade Blocked: ${sentiment.shouldBlockTrade}`;
 
+  const metricsContext = `
+
+ORACLE Flow Metrics:
+- Exchange Netflow: ${oracleMetrics?.netflowDirection ?? 'N/A'} (score: ${oracleMetrics?.netflowScore ?? 'N/A'})
+- Whale Buy/Sell Ratio: ${oracleMetrics?.whaleBuySellRatio ?? 'N/A'} (>0.5 = net buying)
+- Accumulation/Distribution Phase: ${oracleMetrics?.accDistPhase ?? 'N/A'}
+
+NEXUS Risk Metrics:
+- Value at Risk (95%): ${nexusMetrics?.var95 != null ? nexusMetrics.var95.toFixed(2) + '%' : 'N/A'}
+- Conditional VaR: ${nexusMetrics?.cvar95 != null ? nexusMetrics.cvar95.toFixed(2) + '%' : 'N/A'}
+- Max Drawdown: ${nexusMetrics?.maxDrawdown != null ? nexusMetrics.maxDrawdown.toFixed(2) + '%' : 'N/A'}
+- BTC Correlation: ${nexusMetrics?.btcCorrelation != null ? nexusMetrics.btcCorrelation.toFixed(2) : 'N/A'}
+- Sharpe Proxy: ${nexusMetrics?.sharpeProxy != null ? nexusMetrics.sharpeProxy.toFixed(2) : 'N/A'}
+- Risk Level: ${nexusMetrics?.riskLevel ?? 'N/A'}
+
+SENTINEL Security Metrics:
+- Regulatory Risk Score: ${sentinelMetrics?.regulatoryRiskScore ?? 'N/A'}/100
+- Manipulation Score: ${sentinelMetrics?.manipulationScore ?? 'N/A'}/100
+- Overall Security Score: ${sentinelMetrics?.overallSecurityScore ?? 'N/A'}/100
+- Security Verdict: ${sentinelMetrics?.verdict ?? 'N/A'}`;
+
   const prompt = `You are a panel of 4 AI trading experts validating a multi-horizon analysis.
 
-${dataContext}
+${dataContext}${metricsContext}
 
 Each expert has a specialty:
 1. ARIA (Technical Analysis): Evaluates indicator confluence, trend alignment across timeframes
-2. ORACLE (Whale & Flow): Evaluates capital flow, smart money behavior, market structure
-3. SENTINEL (Risk Management): Evaluates risk/reward, position sizing, drawdown potential
-4. NEXUS (Market Correlation): Evaluates inter-market dynamics, sector rotation, macro alignment
+2. ORACLE (Flow Analyst): Interpret the ORACLE Flow Metrics above — evaluate whale activity, exchange netflow direction, and accumulation/distribution phase
+3. SENTINEL (Risk Manager): Interpret the SENTINEL Security Metrics above — evaluate manipulation risk, regulatory risk, and overall security score
+4. NEXUS (Correlation Analyst): Interpret the NEXUS Risk Metrics above — evaluate VaR, max drawdown, BTC correlation, and recommend position sizing accordingly
 
 For each expert, provide a verdict and 2-3 key points.
 Then synthesize into an overall verdict: GO | CONDITIONAL_GO | WAIT | AVOID

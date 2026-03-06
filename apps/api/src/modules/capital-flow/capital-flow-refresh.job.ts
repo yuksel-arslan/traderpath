@@ -14,7 +14,7 @@
  *   DXY / VIX        — Real-time (Yahoo)      → handled by MARKET cache (5 min)
  */
 
-import cron from 'node-cron';
+import cron, { type ScheduledTask } from 'node-cron';
 import { logger } from '../../core/logger';
 import { redis } from '../../core/cache';
 
@@ -28,6 +28,7 @@ import {
   getNetLiquidity,
 } from './providers/fred.provider';
 import { getAllDefiLlamaData } from './providers/defillama.provider';
+import { runRegimePipeline } from './scoring/regime-pipeline.service';
 
 // Cache keys and TTLs must stay in sync with capital-flow.service.ts
 const CACHE_KEYS = {
@@ -50,7 +51,7 @@ const CACHE_TTL = {
   DEFI: 43_200,               // 12 hours
 };
 
-let scheduledTasks: cron.ScheduledTask[] = [];
+let scheduledTasks: ScheduledTask[] = [];
 
 /**
  * Safely write data to Redis cache
@@ -203,6 +204,30 @@ async function refreshDefiLlama(): Promise<void> {
 }
 
 /**
+ * Refresh Regime Score
+ * Runs after any FRED/market data update to recompute GLRS + regime.
+ * Also scheduled independently every 5 minutes during market hours.
+ */
+async function refreshRegimeScore(): Promise<void> {
+  try {
+    logger.info('[CapitalFlowRefresh] Running regime scoring pipeline');
+    const { result, change } = await runRegimePipeline();
+    logger.info(
+      { score: result.glrs.score, regime: result.glrs.regime },
+      '[CapitalFlowRefresh] Regime score updated',
+    );
+    if (change) {
+      logger.warn(
+        { from: change.previousRegime, to: change.currentRegime, direction: change.direction },
+        '[CapitalFlowRefresh] REGIME CHANGE DETECTED',
+      );
+    }
+  } catch (error) {
+    logger.error(error, '[CapitalFlowRefresh] Regime scoring failed');
+  }
+}
+
+/**
  * Start all publication-aware refresh cron jobs
  */
 export function startCapitalFlowRefreshJobs(): void {
@@ -231,12 +256,23 @@ export function startCapitalFlowRefreshJobs(): void {
     cron.schedule('0 1 * * *', refreshDefiLlama, { timezone: 'UTC' })
   );
 
+  // Regime Score: Every 5 minutes during market hours (14:30–21:00 UTC = US market)
+  // Also runs at 21:05 UTC after weekly FRED data lands
+  scheduledTasks.push(
+    cron.schedule('*/5 14-21 * * 1-5', refreshRegimeScore, { timezone: 'UTC' })
+  );
+  // And once after each FRED refresh
+  scheduledTasks.push(
+    cron.schedule('5 21 * * 4', refreshRegimeScore, { timezone: 'UTC' })
+  );
+
   logger.info('[CapitalFlowRefresh] Smart refresh cron jobs started:');
-  logger.info('  M2:        Tuesdays 21:00 UTC (4th week only)');
-  logger.info('  Fed BS+TGA: Thursdays 21:00 UTC');
-  logger.info('  Yields:    Mon-Fri 22:30 UTC');
-  logger.info('  RRP:       Mon-Fri 20:00 UTC');
-  logger.info('  DefiLlama: Daily 01:00 UTC');
+  logger.info('  M2:           Tuesdays 21:00 UTC (4th week only)');
+  logger.info('  Fed BS+TGA:   Thursdays 21:00 UTC');
+  logger.info('  Yields:       Mon-Fri 22:30 UTC');
+  logger.info('  RRP:          Mon-Fri 20:00 UTC');
+  logger.info('  DefiLlama:    Daily 01:00 UTC');
+  logger.info('  Regime Score: Every 5 min during US market hours');
 }
 
 /**

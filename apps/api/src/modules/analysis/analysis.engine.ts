@@ -8,8 +8,20 @@ import { config } from '../../core/config';
 import { callGeminiWithRetry } from '../../core/gemini';
 import { contractSecurityService } from '../security/contract-security.service';
 import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig, getMaxStopLossPercent, getMaxTakeProfitPercent } from './config/trade-config';
+import { Timeframe as TimeframeEnum } from './config/timeframe.enum';
 import { selectBundle, getBundleType } from './bundles';
 import { aggregateScores, quickStepScore, STEP_WEIGHTS } from './scoring';
+import {
+  aggregateWithMetaEnsemble,
+  extractAllStepRawValues,
+  extractMLISScores,
+  extractTrapData,
+  hasCriticalSafetyIssue as checkCriticalSafety,
+  hasEconomicBlock as checkEconomicBlock,
+  computeMarketPulseCorrelationPenalty,
+  computeAllStepScores,
+} from './scoring';
+import type { ClosedFormAggregateResult } from './scoring';
 import {
   calculateStopLoss,
   calculateTakeProfits,
@@ -18,10 +30,9 @@ import {
   estimateWinRate,
 } from './risk';
 import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/indicator-interpreter.service';
-import { IndicatorAnalysis } from '../../../types';
+import { IndicatorAnalysis } from '../../types';
 import { IndicatorsService, OHLCV, IndicatorResult } from './services/indicators.service';
 import { getTFTClient, TFTForecast } from './services/tft-client.service';
-import { getTradingKnowledgeForAI } from '../ai-expert/trading-knowledge-base';
 
 // NEW: Tokenomics and Indicator Classification imports
 import { analyzeTokenomics, calculateTokenomicsRiskFactor, TokenomicsData } from './services/tokenomics.service';
@@ -48,6 +59,7 @@ import {
   fetchTicker as fetchMultiAssetTicker,
   getAssetClass,
   isSymbolSupported,
+  isBinanceAvailable,
   CandleData,
   TickerData,
   AssetClass,
@@ -176,75 +188,8 @@ interface GateEvaluationResult {
 }
 
 async function evaluateMarketGateWithRAG(input: GateEvaluationInput): Promise<GateEvaluationResult> {
-  const GEMINI_API_KEY = config.gemini?.apiKey;
-
-  // Fallback to rule-based if no API key
-  if (!GEMINI_API_KEY) {
-    return evaluateMarketGateRuleBased(input);
-  }
-
-  try {
-    // Get trading knowledge for context (RAG)
-    const tradingKnowledge = getTradingKnowledgeForAI();
-
-    const prompt = `You are a professional crypto trader. Based on the market data below, evaluate whether current market conditions are suitable for opening trades.
-
-IMPORTANT: You MUST respond in English only.
-
-## Market Data:
-- Fear & Greed Index: ${input.fearGreedIndex} (${input.fearGreedLabel})
-- BTC Daily Trend: ${input.btcTrend.direction} (${input.btcTrend.strength}% strength)
-- BTC 4H Trend: ${input.trend4h.direction} (${input.trend4h.strength}% strength)
-- BTC 1H Trend: ${input.trend1h.direction} (${input.trend1h.strength}% strength)
-- Timeframe Alignment: ${input.timeframesAligned}/4
-- Market Regime: ${input.marketRegime}
-- BTC 24h Change: ${input.btcPrice24hChange.toFixed(2)}%
-- Funding Rate: ${input.fundingRate.toFixed(4)}%
-- Long/Short Ratio: ${input.longShortRatio.toFixed(2)}
-- Top Trader L/S Ratio: ${input.topTraderLongShortRatio.toFixed(2)}
-- Taker Buy/Sell Ratio: ${input.takerBuySellRatio.toFixed(2)}
-- Open Interest: $${(input.openInterestValue / 1e9).toFixed(2)}B
-- News Sentiment: ${input.newsSentiment}
-
-## Trading Knowledge:
-${tradingKnowledge}
-
-## Task:
-Based on the data above, evaluate whether market conditions are suitable for trading.
-
-Respond ONLY in the following JSON format, nothing else:
-{
-  "canProceed": true or false,
-  "reason": "Brief and clear explanation (maximum 2 sentences)",
-  "confidence": confidence score between 0-100
-}`;
-
-    const response = await callGeminiWithRetry({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 200,
-      },
-    }, 3, 'market_gate');
-
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
-
-    // Parse JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        canProceed: Boolean(parsed.canProceed),
-        reason: String(parsed.reason || 'Evaluation completed'),
-        confidence: Number(parsed.confidence) || 50,
-      };
-    }
-
-    return evaluateMarketGateRuleBased(input);
-  } catch (error) {
-    console.warn('RAG gate evaluation failed, falling back to rule-based:', error);
-    return evaluateMarketGateRuleBased(input);
-  }
+  // Rule-based evaluation — Gemini gate calls removed for performance (same accuracy)
+  return evaluateMarketGateRuleBased(input);
 }
 
 function evaluateMarketGateRuleBased(input: GateEvaluationInput): GateEvaluationResult {
@@ -362,83 +307,8 @@ interface AssetGateEvaluationResult {
 }
 
 async function evaluateAssetGateWithRAG(input: AssetGateEvaluationInput): Promise<AssetGateEvaluationResult> {
-  const GEMINI_API_KEY = config.gemini?.apiKey;
-
-  // Fallback to rule-based if no API key
-  if (!GEMINI_API_KEY) {
-    return evaluateAssetGateRuleBased(input);
-  }
-
-  try {
-    const tradingKnowledge = getTradingKnowledgeForAI();
-
-    const patternInfo = input.highSignificancePatterns && input.highSignificancePatterns.length > 0
-      ? `High-significance patterns: ${input.highSignificancePatterns.join(', ')}`
-      : 'No high-significance patterns detected';
-    const patternBalance = (input.bullishPatternCount || 0) - (input.bearishPatternCount || 0);
-
-    const prompt = `You are a professional crypto trader. Based on the asset data below, evaluate whether this specific asset is suitable for trading.
-
-IMPORTANT: You MUST respond in English only.
-
-## Asset Data for ${input.symbol}:
-- Current Price: $${input.currentPrice.toLocaleString()}
-- 24h Price Change: ${input.priceChange24h.toFixed(2)}%
-- RSI (14): ${input.rsi.toFixed(1)}
-- MACD Histogram: ${input.macdHistogram > 0 ? 'Positive' : 'Negative'} (${input.macdHistogram.toFixed(4)})
-- Trend Direction: ${input.trendDirection}
-- Trend Strength: ${input.trendStrength}%
-- Timeframe Alignment: ${input.timeframeAlignment}/5 timeframes agree
-- Leading Indicators Signal: ${input.leadingIndicatorsSignal || 'N/A'}
-- Signal Confidence: ${input.signalConfidence || 0}%
-- ATR: ${input.atr.toFixed(2)} (volatility measure)
-- Support Levels: ${input.supportLevels.slice(0, 2).map(s => '$' + s.toLocaleString()).join(', ')}
-- Resistance Levels: ${input.resistanceLevels.slice(0, 2).map(r => '$' + r.toLocaleString()).join(', ')}
-- Candlestick Patterns: ${patternInfo} (Bullish: ${input.bullishPatternCount || 0}, Bearish: ${input.bearishPatternCount || 0})
-
-## Trading Knowledge:
-${tradingKnowledge}
-
-## Task:
-1. Evaluate if this asset is suitable for trading (not the market, the specific asset)
-2. If suitable, determine the recommended direction (long or short)
-
-Respond ONLY in the following JSON format:
-{
-  "canProceed": true or false,
-  "reason": "Brief explanation (max 2 sentences)",
-  "confidence": 0-100,
-  "direction": "long" or "short" or null,
-  "directionConfidence": 0-100
-}`;
-
-    const response = await callGeminiWithRetry({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 250,
-      },
-    }, 3, 'asset_gate');
-
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        canProceed: Boolean(parsed.canProceed),
-        reason: String(parsed.reason || 'Evaluation completed'),
-        confidence: Number(parsed.confidence) || 50,
-        direction: parsed.direction === 'long' ? 'long' : parsed.direction === 'short' ? 'short' : null,
-        directionConfidence: Number(parsed.directionConfidence) || 0,
-      };
-    }
-
-    return evaluateAssetGateRuleBased(input);
-  } catch (error) {
-    console.warn('Asset RAG gate evaluation failed:', error);
-    return evaluateAssetGateRuleBased(input);
-  }
+  // Rule-based evaluation — Gemini gate calls removed for performance (same accuracy)
+  return evaluateAssetGateRuleBased(input);
 }
 
 function evaluateAssetGateRuleBased(input: AssetGateEvaluationInput): AssetGateEvaluationResult {
@@ -589,70 +459,8 @@ interface SafetyGateEvaluationResult {
 }
 
 async function evaluateSafetyGateWithRAG(input: SafetyGateEvaluationInput): Promise<SafetyGateEvaluationResult> {
-  const GEMINI_API_KEY = config.gemini?.apiKey;
-
-  if (!GEMINI_API_KEY) {
-    return evaluateSafetyGateRuleBased(input);
-  }
-
-  try {
-    const tradingKnowledge = getTradingKnowledgeForAI();
-
-    const prompt = `You are a professional crypto trader evaluating trade safety. Analyze the following safety metrics.
-
-IMPORTANT: You MUST respond in English only.
-
-## Safety Data for ${input.symbol}:
-- Overall Risk Level: ${input.riskLevel}
-- Spoofing Detected: ${input.spoofingDetected}
-- Layering Detected: ${input.layeringDetected}
-- Wash Trading: ${input.washTrading}
-- Pump & Dump Risk: ${input.pumpDumpRisk}
-- Whale Activity Bias: ${input.whaleBias}
-- Net Whale Flow: $${input.netFlowUsd.toLocaleString()}
-- Order Flow Imbalance: ${(input.orderFlowImbalance * 100).toFixed(1)}%
-- Smart Money Positioning: ${input.smartMoneyPositioning}
-- Volume Spike: ${input.volumeSpike ? `Yes (${input.volumeSpikeFactor.toFixed(1)}x)` : 'No'}
-- Liquidity Score: ${input.liquidityScore.toFixed(0)}/100
-- Warnings: ${input.warnings.length > 0 ? input.warnings.join(', ') : 'None'}
-
-## Trading Knowledge:
-${tradingKnowledge}
-
-## Task:
-Evaluate if it's safe to proceed with the trade. Consider manipulation risks, whale activity, and liquidity.
-
-Respond ONLY in the following JSON format:
-{
-  "canProceed": true or false,
-  "reason": "Brief explanation (max 2 sentences)",
-  "confidence": 0-100,
-  "riskAdjustment": -100 to +100 (negative means reduce position size, positive means can increase)
-}`;
-
-    const response = await callGeminiWithRetry({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
-    }, 3, 'safety_gate');
-
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        canProceed: Boolean(parsed.canProceed),
-        reason: String(parsed.reason || 'Safety evaluation completed'),
-        confidence: Math.max(0, Math.min(100, Number(parsed.confidence) || 50)),
-        riskAdjustment: Math.max(-100, Math.min(100, Number(parsed.riskAdjustment) || 0)),
-      };
-    }
-
-    return evaluateSafetyGateRuleBased(input);
-  } catch (error) {
-    console.warn('Safety RAG evaluation failed:', error);
-    return evaluateSafetyGateRuleBased(input);
-  }
+  // Rule-based evaluation — Gemini gate calls removed for performance (same accuracy)
+  return evaluateSafetyGateRuleBased(input);
 }
 
 function evaluateSafetyGateRuleBased(input: SafetyGateEvaluationInput): SafetyGateEvaluationResult {
@@ -743,68 +551,8 @@ interface TimingGateEvaluationResult {
 }
 
 async function evaluateTimingGateWithRAG(input: TimingGateEvaluationInput): Promise<TimingGateEvaluationResult> {
-  const GEMINI_API_KEY = config.gemini?.apiKey;
-
-  if (!GEMINI_API_KEY) {
-    return evaluateTimingGateRuleBased(input);
-  }
-
-  try {
-    const tradingKnowledge = getTradingKnowledgeForAI();
-
-    const prompt = `You are a professional crypto trader evaluating entry timing. Analyze when to enter this trade.
-
-IMPORTANT: You MUST respond in English only.
-
-## Timing Data for ${input.symbol}:
-- Current Price: $${input.currentPrice.toLocaleString()}
-- RSI: ${input.rsiValue.toFixed(1)}
-- MACD Signal: ${input.macdSignal}
-- Volume Confirmation: ${input.volumeConfirmation ? 'Yes' : 'No'}
-- Near Support: ${input.nearSupport ? 'Yes' : 'No'}
-- Near Resistance: ${input.nearResistance ? 'Yes' : 'No'}
-- Trend Strength: ${input.trendStrength}%
-- Entry Quality Score: ${input.entryQuality}/10
-- Momentum: ${input.momentum}
-
-## Trading Knowledge:
-${tradingKnowledge}
-
-## Task:
-Evaluate if the timing is right for entry. Consider RSI extremes, support/resistance levels, and momentum.
-
-Respond ONLY in the following JSON format:
-{
-  "canProceed": true or false,
-  "reason": "Brief explanation (max 2 sentences)",
-  "confidence": 0-100,
-  "urgency": "immediate" or "soon" or "wait" or "avoid"
-}`;
-
-    const response = await callGeminiWithRetry({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
-    }, 3, 'timing_gate');
-
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      const validUrgency = ['immediate', 'soon', 'wait', 'avoid'].includes(parsed.urgency) ? parsed.urgency : 'wait';
-      return {
-        canProceed: Boolean(parsed.canProceed),
-        reason: String(parsed.reason || 'Timing evaluation completed'),
-        confidence: Math.max(0, Math.min(100, Number(parsed.confidence) || 50)),
-        urgency: validUrgency,
-      };
-    }
-
-    return evaluateTimingGateRuleBased(input);
-  } catch (error) {
-    console.warn('Timing RAG evaluation failed:', error);
-    return evaluateTimingGateRuleBased(input);
-  }
+  // Rule-based evaluation — Gemini gate calls removed for performance (same accuracy)
+  return evaluateTimingGateRuleBased(input);
 }
 
 function evaluateTimingGateRuleBased(input: TimingGateEvaluationInput): TimingGateEvaluationResult {
@@ -888,66 +636,8 @@ interface TradePlanGateEvaluationResult {
 }
 
 async function evaluateTradePlanGateWithRAG(input: TradePlanGateEvaluationInput): Promise<TradePlanGateEvaluationResult> {
-  const GEMINI_API_KEY = config.gemini?.apiKey;
-
-  if (!GEMINI_API_KEY) {
-    return evaluateTradePlanGateRuleBased(input);
-  }
-
-  try {
-    const tradingKnowledge = getTradingKnowledgeForAI();
-
-    const prompt = `You are a professional crypto trader evaluating a trade plan. Analyze if this plan is worth executing.
-
-IMPORTANT: You MUST respond in English only.
-
-## Trade Plan for ${input.symbol}:
-- Direction: ${input.direction.toUpperCase()}
-- Risk/Reward Ratio: ${input.riskRewardRatio.toFixed(2)}
-- Estimated Win Rate: ${input.winRateEstimate}%
-- Position Size: ${input.positionSizePercent.toFixed(1)}% of portfolio
-- Stop Loss: ${input.stopLossPercent.toFixed(2)}% from entry
-- Take Profit Targets: ${input.targetCount}
-- Average Target: +${input.averageTargetPercent.toFixed(2)}%
-
-## Trading Knowledge:
-${tradingKnowledge}
-
-## Task:
-Evaluate if this trade plan has positive expected value. Consider R:R, win rate, and position sizing.
-
-Respond ONLY in the following JSON format:
-{
-  "canProceed": true or false,
-  "reason": "Brief explanation (max 2 sentences)",
-  "confidence": 0-100,
-  "planQuality": "excellent" or "good" or "acceptable" or "poor"
-}`;
-
-    const response = await callGeminiWithRetry({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
-    }, 3, 'trade_plan_gate');
-
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      const validQuality = ['excellent', 'good', 'acceptable', 'poor'].includes(parsed.planQuality) ? parsed.planQuality : 'acceptable';
-      return {
-        canProceed: Boolean(parsed.canProceed),
-        reason: String(parsed.reason || 'Trade plan evaluation completed'),
-        confidence: Math.max(0, Math.min(100, Number(parsed.confidence) || 50)),
-        planQuality: validQuality,
-      };
-    }
-
-    return evaluateTradePlanGateRuleBased(input);
-  } catch (error) {
-    console.warn('Trade Plan RAG evaluation failed:', error);
-    return evaluateTradePlanGateRuleBased(input);
-  }
+  // Rule-based evaluation — Gemini gate calls removed for performance (same accuracy)
+  return evaluateTradePlanGateRuleBased(input);
 }
 
 function evaluateTradePlanGateRuleBased(input: TradePlanGateEvaluationInput): TradePlanGateEvaluationResult {
@@ -1029,66 +719,8 @@ interface TrapGateEvaluationResult {
 }
 
 async function evaluateTrapGateWithRAG(input: TrapGateEvaluationInput): Promise<TrapGateEvaluationResult> {
-  const GEMINI_API_KEY = config.gemini?.apiKey;
-
-  if (!GEMINI_API_KEY) {
-    return evaluateTrapGateRuleBased(input);
-  }
-
-  try {
-    const tradingKnowledge = getTradingKnowledgeForAI();
-
-    const prompt = `You are a professional crypto trader evaluating trap risks. Analyze potential market traps.
-
-IMPORTANT: You MUST respond in English only.
-
-## Trap Analysis for ${input.symbol}:
-- Bull Trap Detected: ${input.bullTrap ? 'Yes' : 'No'}
-- Bear Trap Detected: ${input.bearTrap ? 'Yes' : 'No'}
-- Liquidity Grab Detected: ${input.liquidityGrabDetected ? 'Yes' : 'No'}
-- Stop Hunt Zones: ${input.stopHuntZonesCount}
-- Fakeout Risk: ${input.fakeoutRisk}
-- Nearby Liquidation Levels: ${input.liquidationLevelsNearby}
-- Overall Risk Level: ${input.riskLevel}
-
-## Trading Knowledge:
-${tradingKnowledge}
-
-## Task:
-Evaluate if the trade can proceed safely or if trap risks are too high. Consider all trap indicators.
-
-Respond ONLY in the following JSON format:
-{
-  "canProceed": true or false,
-  "reason": "Brief explanation (max 2 sentences)",
-  "confidence": 0-100,
-  "trapRisk": "minimal" or "moderate" or "elevated" or "severe"
-}`;
-
-    const response = await callGeminiWithRetry({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
-    }, 3, 'trap_gate');
-
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      const validRisk = ['minimal', 'moderate', 'elevated', 'severe'].includes(parsed.trapRisk) ? parsed.trapRisk : 'moderate';
-      return {
-        canProceed: Boolean(parsed.canProceed),
-        reason: String(parsed.reason || 'Trap evaluation completed'),
-        confidence: Math.max(0, Math.min(100, Number(parsed.confidence) || 50)),
-        trapRisk: validRisk,
-      };
-    }
-
-    return evaluateTrapGateRuleBased(input);
-  } catch (error) {
-    console.warn('Trap RAG evaluation failed:', error);
-    return evaluateTrapGateRuleBased(input);
-  }
+  // Rule-based evaluation — Gemini gate calls removed for performance (same accuracy)
+  return evaluateTrapGateRuleBased(input);
 }
 
 function evaluateTrapGateRuleBased(input: TrapGateEvaluationInput): TrapGateEvaluationResult {
@@ -1176,6 +808,19 @@ interface AIAnalysisSummaryInput {
   };
   tokenomics?: TokenomicsData | null;
   tradeType?: TradeType;
+  elliottWave?: {
+    currentWave?: string;
+    waveType?: string;
+    direction?: string;
+    confidence?: number;
+    projectedTarget?: number;
+  };
+  fibonacci?: {
+    nearGoldenZone: boolean;
+    retracementPct: number;
+    levels?: Array<{ level: number; price: number; type: string }>;
+  };
+  fibAlignedTargets?: boolean;
 }
 
 async function generateAIAnalysisSummary(input: AIAnalysisSummaryInput): Promise<{ aiSummary: string; tokenomicsInsight: string }> {
@@ -1238,13 +883,40 @@ TOKENOMICS DATA:
     }
 
     // Safe metric extraction with full null checks
-    const keyMetrics = input.keyMetrics || {};
+    const keyMetrics: Partial<AIAnalysisSummaryInput['keyMetrics']> = input.keyMetrics || {};
     const rsi = keyMetrics.rsi?.toFixed(1) || '50';
     const macdHist = keyMetrics.macdHistogram?.toFixed(4) || '0';
     const fearGreed = keyMetrics.fearGreedIndex || 50;
     const btcDom = keyMetrics.btcDominance?.toFixed(1) || '50';
     const riskLevel = keyMetrics.riskLevel || 'moderate';
     const whaleActivity = keyMetrics.whaleActivity || 'normal';
+
+    // Build Elliott Wave context
+    let elliottWaveContext = '';
+    if (input.elliottWave && input.elliottWave.confidence && input.elliottWave.confidence > 20) {
+      const ew = input.elliottWave;
+      elliottWaveContext = `
+ELLIOTT WAVE ANALYSIS:
+- Current Wave: ${ew.currentWave || 'N/A'} (${ew.waveType || 'N/A'})
+- Direction: ${ew.direction || 'N/A'}
+- Confidence: ${ew.confidence}%
+- Projected Target: ${ew.projectedTarget ? `$${ew.projectedTarget}` : 'N/A'}`;
+    }
+
+    // Build Fibonacci context
+    let fibonacciContext = '';
+    if (input.fibonacci) {
+      const fib = input.fibonacci;
+      const keyLevels = (fib.levels ?? []).slice(0, 5)
+        .map((l: { level: number; price: number; type: string }) => `  ${(l.level * 100).toFixed(1)}% (${l.type}): $${l.price}`)
+        .join('\n');
+      fibonacciContext = `
+FIBONACCI ANALYSIS:
+- In Golden Zone (38.2-61.8%): ${fib.nearGoldenZone ? 'YES — high-quality entry zone' : 'No'}
+- Retracement: ${(fib.retracementPct * 100).toFixed(1)}%
+${keyLevels ? `- Key Levels:\n${keyLevels}` : ''}
+${input.fibAlignedTargets ? '- Take Profit Targets: ALIGNED with Fibonacci extensions (institutional targets)' : ''}`;
+    }
 
     const prompt = `You are a professional crypto analyst. Generate TWO separate analyses:
 
@@ -1263,7 +935,7 @@ KEY METRICS:
 - BTC Dominance: ${btcDom}%
 - Risk Level: ${riskLevel}
 - Whale Activity: ${whaleActivity}
-${tokenomicsContext}
+${tokenomicsContext}${elliottWaveContext}${fibonacciContext}
 
 GENERATE:
 
@@ -1352,26 +1024,76 @@ interface TradeTypeTimeframes {
 
 const TRADE_TYPE_TIMEFRAMES: Record<TradeType, TradeTypeTimeframes> = {
   scalping: {
-    primary: '1m',
-    secondary: '5m',
+    primary: '5m',
+    secondary: '1m',
     confirmation: '15m',
-    candleCounts: { primary: 100, secondary: 50, confirmation: 30 },
+    candleCounts: { primary: 1000, secondary: 200, confirmation: 100 },
   },
   dayTrade: {
-    primary: '15m',
+    primary: '4h',
     secondary: '1h',
-    confirmation: '4h',
-    candleCounts: { primary: 96, secondary: 48, confirmation: 24 },
+    confirmation: '1d',
+    candleCounts: { primary: 500, secondary: 200, confirmation: 50 },
   },
   swing: {
-    primary: '4h',
-    secondary: '1d',
+    primary: '1d',
+    secondary: '4h',
     confirmation: '1w',
-    candleCounts: { primary: 90, secondary: 60, confirmation: 12 },
+    candleCounts: { primary: 250, secondary: 100, confirmation: 50 },
   },
 };
 
-function getTimeframesForTradeType(tradeType: TradeType = 'dayTrade'): TradeTypeTimeframes {
+// Interval-specific timeframe mapping per CLAUDE.md spec
+// The user's selected interval becomes the PRIMARY analysis timeframe
+// Secondary = lower timeframe for detail, Confirmation = higher timeframe for trend
+const INTERVAL_TIMEFRAMES: Record<string, TradeTypeTimeframes> = {
+  '5m': {
+    primary: '5m',
+    secondary: '1m',
+    confirmation: '15m',
+    candleCounts: { primary: 1000, secondary: 200, confirmation: 100 },
+  },
+  '15m': {
+    primary: '15m',
+    secondary: '5m',
+    confirmation: '1h',
+    candleCounts: { primary: 1000, secondary: 200, confirmation: 100 },
+  },
+  '30m': {
+    primary: '30m',
+    secondary: '15m',
+    confirmation: '4h',
+    candleCounts: { primary: 500, secondary: 200, confirmation: 50 },
+  },
+  '1h': {
+    primary: '1h',
+    secondary: '15m',
+    confirmation: '4h',
+    candleCounts: { primary: 500, secondary: 200, confirmation: 50 },
+  },
+  '4h': {
+    primary: '4h',
+    secondary: '1h',
+    confirmation: '1d',
+    candleCounts: { primary: 500, secondary: 200, confirmation: 50 },
+  },
+  '1d': {
+    primary: '1d',
+    secondary: '4h',
+    confirmation: '1w',
+    candleCounts: { primary: 250, secondary: 100, confirmation: 50 },
+  },
+};
+
+/**
+ * Get timeframe configuration for analysis.
+ * When interval is provided, uses the user's selected interval as primary timeframe.
+ * Falls back to trade-type defaults when no interval is specified.
+ */
+function getTimeframesForTradeType(tradeType: TradeType = 'dayTrade', interval?: string): TradeTypeTimeframes {
+  if (interval && INTERVAL_TIMEFRAMES[interval]) {
+    return INTERVAL_TIMEFRAMES[interval];
+  }
   return TRADE_TYPE_TIMEFRAMES[tradeType] || TRADE_TYPE_TIMEFRAMES.dayTrade;
 }
 
@@ -1456,8 +1178,8 @@ function indicatorResultsToAnalysisInputs(
   currentPrice: number,
   priceChange24h: number,
   prices: number[]
-): Record<string, any> {
-  const inputs: Record<string, any> = {
+): { currentPrice: number; priceChange24h: number; prices: number[] } & Record<string, unknown> {
+  const inputs: Record<string, unknown> & { currentPrice: number; priceChange24h: number; prices: number[] } = {
     currentPrice,
     priceChange24h,
     prices,
@@ -1500,10 +1222,11 @@ function indicatorResultsToAnalysisInputs(
     // Moving Averages
     if (upperName.startsWith('SMA_') || upperName.startsWith('EMA_')) {
       const period = parseInt(upperName.split('_')[1]);
-      inputs.movingAverages = inputs.movingAverages || {};
-      if (period === 50) inputs.movingAverages.ma50 = result.value;
-      if (period === 200) inputs.movingAverages.ma200 = result.value;
-      if (period === 20) inputs.movingAverages.ma20 = result.value;
+      const ma = (inputs.movingAverages || {}) as { ma20?: number | null; ma50?: number | null; ma200?: number | null };
+      if (period === 50) ma.ma50 = result.value;
+      if (period === 200) ma.ma200 = result.value;
+      if (period === 20) ma.ma20 = result.value;
+      inputs.movingAverages = ma;
     }
 
     // PVT
@@ -1800,6 +1523,8 @@ interface MarketData {
   low24h: number;
   volume24h: number;
   quoteVolume24h: number;
+  openInterest?: number;
+  previousOpenInterest?: number;
 }
 
 // Step 1 Types
@@ -1822,6 +1547,12 @@ interface MarketPulseResult {
   futuresData?: {
     fundingRate: number; // percentage
     fundingRateInterpretation: 'bullish' | 'bearish' | 'neutral';
+    fundingRateSpread?: {
+      average: number;
+      spread: number;
+      interpretation: string;
+      rates: Record<string, number>;
+    };
     openInterest: number; // in USDT
     openInterestChange24h?: number;
     longShortRatio: number;
@@ -1899,7 +1630,16 @@ interface AssetScanResult {
     movingAverages: { ma20: number; ma50: number; ma200: number };
     bollingerBands: { upper: number; middle: number; lower: number };
     atr: number;
+    candlestickPatterns?: {
+      total: number;
+      bullish: number;
+      bearish: number;
+      highSignificance: string[];
+      all: Array<{ name: string; direction: string; significance: string }>;
+    };
   };
+  // Which indicator bundle was used
+  bundleType?: string;
   // Detailed indicator analysis with interpretations
   indicatorDetails?: IndicatorAnalysis;
   // NEW: Tokenomics analysis (financial structure of the token)
@@ -1917,6 +1657,24 @@ interface AssetScanResult {
     keyDrivers: string[];
     warnings: string[];
   };
+  // Elliott Wave analysis
+  elliottWave?: {
+    currentWave?: string;
+    waveType?: string;
+    direction?: string;
+    confidence?: number;
+    projectedTarget?: number;
+    waves?: Array<{ wave: string; startPrice: number; endPrice: number }>;
+  };
+  // Chart data for PDF generation
+  chartCandles?: Array<{
+    timestamp: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+  }>;
   score: number;
   // Gate decision for sequential approach
   gate: {
@@ -2049,6 +1807,15 @@ interface TimingResult {
     confidence: number;
     urgency: 'immediate' | 'soon' | 'wait' | 'avoid';
   };
+  // Fibonacci analysis for entry timing
+  fibonacci?: {
+    nearGoldenZone: boolean;
+    retracementPct: number;
+    goldenZone: { upper: number; lower: number } | null;
+    nearestFibSupport: number | null;
+    nearestFibResistance: number | null;
+    levels: Array<{ level: number; price: number; type: string }>;
+  };
 }
 
 // Step 5 Types (Enhanced - uses all previous step data)
@@ -2102,6 +1869,8 @@ interface TradePlanResult {
   };
   // New: Confidence from integrated analysis
   confidence: number;
+  // Fibonacci-aligned targets flag
+  fibAlignedTargets?: boolean;
   // Gate evaluation result
   gate: {
     canProceed: boolean;
@@ -2125,6 +1894,7 @@ interface TrapCheckResult {
     };
     stopHuntZones: number[];
     fakeoutRisk: 'low' | 'medium' | 'high';
+    fibLevelTrap?: boolean;
   };
   liquidationLevels: Array<{
     price: number;
@@ -2189,6 +1959,17 @@ interface FinalVerdictResult {
   aiSummary?: string;
   // NEW: Tokenomics interpretation for the report
   tokenomicsInsight?: string;
+  // MLIS verdict downgrade tracking
+  verdictDowngraded?: boolean;
+  verdictDowngradeReason?: string;
+  // Closed-form meta-ensemble results
+  metaEnsemble?: {
+    probability: number;
+    calibratedProbability: number;
+    confidenceInterval: [number, number];
+    confidence: number;
+    logit: number;
+  };
 }
 
 // ===========================================
@@ -2216,12 +1997,22 @@ async function fetchWithRetry(
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        // HTTP 451/418/403 from Binance: fail immediately, no retries
+        if (response.status === 451 || response.status === 418) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText} (geo-blocked)`);
+        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
+
+      // Don't retry geo-block errors
+      const errMsg = error instanceof Error ? error.message : '';
+      if (errMsg.includes('451') || errMsg.includes('418') || errMsg.includes('geo-blocked')) {
+        throw error;
+      }
 
       if (attempt === retries) {
         throw error;
@@ -2425,6 +2216,10 @@ async function fetchOrderBook(
   symbol: string,
   limit: number = 100
 ): Promise<{ bids: [string, string][]; asks: [string, string][] }> {
+  // Skip if Binance is geo-blocked
+  if (!isBinanceAvailable()) {
+    return { bids: [], asks: [] };
+  }
   try {
     const url = `https://api.binance.com/api/v3/depth?symbol=${symbol}USDT&limit=${limit}`;
     const response = await fetchWithRetry(url);
@@ -2441,6 +2236,10 @@ async function fetchRecentTrades(
 ): Promise<
   Array<{ price: string; qty: string; time: number; isBuyerMaker: boolean }>
 > {
+  // Skip if Binance is geo-blocked
+  if (!isBinanceAvailable()) {
+    return [];
+  }
   try {
     const url = `https://api.binance.com/api/v3/trades?symbol=${symbol}USDT&limit=${limit}`;
     const response = await fetchWithRetry(url);
@@ -2466,6 +2265,11 @@ async function fetchFundingRate(symbol: string = 'BTC'): Promise<FundingRateData
   const cacheKey = `funding_rate:${symbol}`;
   const cached = getCached<FundingRateData>(cacheKey);
   if (cached) return cached;
+
+  // Skip if Binance is geo-blocked
+  if (!isBinanceAvailable()) {
+    return { symbol, fundingRate: 0, fundingTime: Date.now(), nextFundingTime: Date.now() + 8 * 60 * 60 * 1000 };
+  }
 
   try {
     const url = `https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=1`;
@@ -2544,6 +2348,11 @@ async function fetchOpenInterest(symbol: string = 'BTC'): Promise<OpenInterestDa
   const cached = getCached<OpenInterestData>(cacheKey);
   if (cached) return cached;
 
+  // Skip if Binance is geo-blocked
+  if (!isBinanceAvailable()) {
+    return { symbol, openInterest: 0, openInterestValue: 0 };
+  }
+
   try {
     const url = `https://fapi.binance.com/fapi/v1/openInterest?symbol=${symbol}USDT`;
     const response = await fetchWithRetry(url);
@@ -2580,6 +2389,11 @@ async function fetchLongShortRatio(symbol: string = 'BTC'): Promise<LongShortRat
   const cacheKey = `long_short_ratio:${symbol}`;
   const cached = getCached<LongShortRatioData>(cacheKey);
   if (cached) return cached;
+
+  // Skip if Binance is geo-blocked
+  if (!isBinanceAvailable()) {
+    return { symbol, longShortRatio: 1, longAccount: 50, shortAccount: 50, timestamp: Date.now() };
+  }
 
   try {
     const url = `https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${symbol}USDT&period=5m&limit=1`;
@@ -2624,6 +2438,11 @@ async function fetchTopTraderSentiment(symbol: string = 'BTC'): Promise<TopTrade
   const cached = getCached<TopTraderSentiment>(cacheKey);
   if (cached) return cached;
 
+  // Skip if Binance is geo-blocked
+  if (!isBinanceAvailable()) {
+    return { symbol, topTraderLongShortRatio: 1, topTraderLongAccount: 50, topTraderShortAccount: 50, timestamp: Date.now() };
+  }
+
   try {
     const url = `https://fapi.binance.com/futures/data/topLongShortAccountRatio?symbol=${symbol}USDT&period=5m&limit=1`;
     const response = await fetchWithRetry(url);
@@ -2665,6 +2484,11 @@ async function fetchTakerBuySellRatio(symbol: string = 'BTC'): Promise<TakerBuyS
   const cacheKey = `taker_buy_sell:${symbol}`;
   const cached = getCached<TakerBuySellRatio>(cacheKey);
   if (cached) return cached;
+
+  // Skip if Binance is geo-blocked
+  if (!isBinanceAvailable()) {
+    return { buySellRatio: 1, buyVolume: 0, sellVolume: 0, timestamp: Date.now() };
+  }
 
   try {
     const url = `https://fapi.binance.com/futures/data/takerlongshortRatio?symbol=${symbol}USDT&period=5m&limit=1`;
@@ -3721,7 +3545,9 @@ export const analysisEngine = {
           average: fundingSpread.average,
           spread: fundingSpread.spread,
           interpretation: fundingSpread.interpretation,
-          rates: fundingSpread.rates,
+          rates: Array.isArray(fundingSpread.rates)
+            ? Object.fromEntries(fundingSpread.rates.map((r: { symbol: string; rate: number }) => [r.symbol, r.rate]))
+            : fundingSpread.rates,
         },
         openInterest: btcOpenInterest.openInterestValue,
         longShortRatio: btcLongShortRatio.longShortRatio,
@@ -3776,8 +3602,8 @@ export const analysisEngine = {
   // =========================================
   // Step 2: Asset Scanner (2 credits)
   // =========================================
-  async scanAsset(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<AssetScanResult> {
-    const tf = getTimeframesForTradeType(tradeType);
+  async scanAsset(symbol: string, tradeType: TradeType = 'dayTrade', interval?: string): Promise<AssetScanResult> {
+    const tf = getTimeframesForTradeType(tradeType, interval);
 
     // Detect asset class for conditional analysis
     const assetClass = getAssetClass(symbol);
@@ -3936,11 +3762,35 @@ export const analysisEngine = {
     });
 
     // Candlestick pattern detection for direction confirmation
-    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candles4h);
+    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candlesToOHLCV(candles4h));
     const patterns = candlestickPatterns.metadata?.patterns || [];
     const bullishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bullish');
     const bearishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bearish');
     const highSigPatterns = patterns.filter((p: { significance: string }) => p.significance === 'high');
+
+    // Elliott Wave analysis for trend structure confirmation
+    const ohlcvPrimary = candlesToOHLCV(candlesPrimary);
+    const elliottWaveResult = indicatorsService.calculateElliottWave(ohlcvPrimary);
+    const elliottWave = elliottWaveResult.metadata as {
+      currentWave?: string;
+      waveType?: string;
+      direction?: string;
+      confidence?: number;
+      projectedTarget?: number;
+      waves?: Array<{ wave: string; startPrice: number; endPrice: number }>;
+    } | undefined;
+
+    // Elliott Wave adds conviction to trend direction
+    if (elliottWave && elliottWave.confidence && elliottWave.confidence > 40) {
+      if (elliottWave.direction === trend4h.direction) {
+        score += 0.5; // Wave structure confirms trend
+        confidence += 5;
+      } else if (elliottWave.direction !== 'neutral') {
+        score -= 0.3; // Wave structure diverges from trend — caution
+      }
+      score = Math.max(1, Math.min(10, parseFloat(score.toFixed(1))));
+      confidence = Math.min(90, Math.max(20, confidence));
+    }
 
     // Gate evaluation for Asset Scanner
     const gateInput: AssetGateEvaluationInput = {
@@ -4031,7 +3881,7 @@ export const analysisEngine = {
         },
       },
       // Indicator bundle used for this analysis (timeframe-driven selection)
-      bundleType: getBundleType(tf.primary as Timeframe),
+      bundleType: getBundleType(tf.primary as TimeframeEnum),
       // Build detailed indicator analysis using bundle-appropriate indicators
       indicatorDetails: indicatorAnalysis,
       // NEW: Tokenomics analysis (financial structure of the token)
@@ -4040,9 +3890,18 @@ export const analysisEngine = {
       // NEW: Asset-specific context for non-crypto assets (metals, stocks, bonds)
       // Uses specialized analyzers with asset-class-specific metrics
       assetContext: assetContext.metrics ? assetContext : undefined,
+      // Elliott Wave analysis for trend structure confirmation
+      elliottWave: elliottWave && elliottWave.confidence && elliottWave.confidence > 20 ? {
+        currentWave: elliottWave.currentWave,
+        waveType: elliottWave.waveType,
+        direction: elliottWave.direction,
+        confidence: elliottWave.confidence,
+        projectedTarget: elliottWave.projectedTarget,
+        waves: elliottWave.waves?.slice(0, 5),
+      } : undefined,
       // Chart data for PDF generation (last 50 candles)
       chartCandles: candlesPrimary.slice(-50).map(c => ({
-        timestamp: c.timestamp,
+        timestamp: c.openTime,
         open: c.open,
         high: c.high,
         low: c.low,
@@ -4065,8 +3924,8 @@ export const analysisEngine = {
   // =========================================
   // Step 3: Safety Check (5 credits)
   // =========================================
-  async safetyCheck(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<SafetyCheckResult> {
-    const tf = getTimeframesForTradeType(tradeType);
+  async safetyCheck(symbol: string, tradeType: TradeType = 'dayTrade', interval?: string): Promise<SafetyCheckResult> {
+    const tf = getTimeframesForTradeType(tradeType, interval);
 
     // Detect asset class for conditional analysis
     const assetClass = getAssetClass(symbol);
@@ -4226,7 +4085,7 @@ export const analysisEngine = {
       low: c.low,
       close: c.close,
       volume: c.volume,
-      timestamp: c.timestamp ?? 0,
+      timestamp: c.openTime ?? 0,
     }));
     const smiResult = calculateSmartMoneyIndex(smiCandles);
 
@@ -4470,8 +4329,8 @@ export const analysisEngine = {
   // =========================================
   // Step 4: Timing (3 credits)
   // =========================================
-  async timingAnalysis(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<TimingResult> {
-    const tf = getTimeframesForTradeType(tradeType);
+  async timingAnalysis(symbol: string, tradeType: TradeType = 'dayTrade', interval?: string): Promise<TimingResult> {
+    const tf = getTimeframesForTradeType(tradeType, interval);
 
     const [ticker, candlesPrimary, candlesSecondary] = await Promise.all([
       fetch24hTicker(symbol),
@@ -4499,11 +4358,26 @@ export const analysisEngine = {
     const volumeSpike = detectVolumeSpike(candles1h, 15, 2.0);
 
     // Candlestick pattern detection for entry confirmation
-    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candles4h);
+    const candlestickPatterns = indicatorsService.detectCandlestickPatterns(candlesToOHLCV(candles4h));
     const patterns = candlestickPatterns.metadata?.patterns || [];
     const bullishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bullish');
     const bearishPatterns = patterns.filter((p: { direction: string }) => p.direction === 'bearish');
     const highSigPatterns = patterns.filter((p: { significance: string }) => p.significance === 'high');
+
+    // Fibonacci level analysis for entry timing
+    const ohlcvTiming = candlesToOHLCV(candles4h);
+    const fibResult = indicatorsService.calculateFibonacciLevels(ohlcvTiming);
+    const fibMeta = fibResult.metadata as {
+      levels?: Array<{ level: number; price: number; type: string }>;
+      isUptrend?: boolean;
+      nearestSupport?: number | null;
+      nearestResistance?: number | null;
+      goldenZone?: { upper: number; lower: number };
+    } | undefined;
+
+    // Check if price is in Fibonacci golden zone (38.2%-61.8% retracement)
+    const fibRetracePct = fibResult.value ?? 0;
+    const inFibGoldenZone = fibRetracePct >= 0.382 && fibRetracePct <= 0.618;
 
     const currentPrice = ticker.price;
 
@@ -4559,10 +4433,17 @@ export const analysisEngine = {
           ? `${patterns.length} pattern(s): ${highSigPatterns.map((p: { name: string }) => p.name).join(', ') || 'None high-significance'}`
           : 'No candlestick patterns detected',
       },
+      {
+        name: 'Fibonacci Golden Zone',
+        met: inFibGoldenZone,
+        details: inFibGoldenZone
+          ? `Price in golden zone (${(fibRetracePct * 100).toFixed(1)}% retracement) — high-quality entry`
+          : `Fibonacci retracement: ${(fibRetracePct * 100).toFixed(1)}%`,
+      },
     ];
 
     const conditionsMet = conditions.filter((c) => c.met).length;
-    // Need at least 4 out of 8 conditions met, RSI not overbought, and no volume spike
+    // Need at least 4 out of 9 conditions met, RSI not overbought, and no volume spike
     // Bonus: If high-significance bullish/bearish pattern aligns with trend, more confidence
     const patternAligned = highSigPatterns.length > 0 && (
       (trend.direction === 'bullish' && bullishPatterns.length > bearishPatterns.length) ||
@@ -4572,7 +4453,13 @@ export const analysisEngine = {
 
     // Calculate optimal entry
     const nearestSupport = levels.support[0] ?? currentPrice * 0.97;
-    const optimalEntry = roundPrice(currentPrice * 0.6 + nearestSupport * 0.4);
+    // Use Fibonacci golden zone as optimal entry if in zone, else weighted average
+    const fibGoldenMid = fibMeta?.goldenZone
+      ? (fibMeta.goldenZone.upper + fibMeta.goldenZone.lower) / 2
+      : null;
+    const optimalEntry = inFibGoldenZone && fibGoldenMid
+      ? roundPrice(fibGoldenMid)
+      : roundPrice(currentPrice * 0.6 + nearestSupport * 0.4);
 
     // Entry zones
     const entryZones: TimingResult['entryZones'] = [];
@@ -4698,14 +4585,23 @@ export const analysisEngine = {
         confidence: timingGateResult.confidence,
         urgency: timingGateResult.urgency,
       },
+      // Fibonacci analysis for scoring integration
+      fibonacci: {
+        nearGoldenZone: inFibGoldenZone,
+        retracementPct: fibRetracePct,
+        goldenZone: fibMeta?.goldenZone ?? null,
+        nearestFibSupport: fibMeta?.nearestSupport ?? null,
+        nearestFibResistance: fibMeta?.nearestResistance ?? null,
+        levels: fibMeta?.levels?.slice(0, 7) ?? [],
+      },
     };
   },
 
   // =========================================
   // Step 5: Trade Plan (5 credits)
   // =========================================
-  async tradePlan(symbol: string, accountSize: number = 10000, tradeType: TradeType = 'dayTrade'): Promise<TradePlanResult> {
-    const tf = getTimeframesForTradeType(tradeType);
+  async tradePlan(symbol: string, accountSize: number = 10000, tradeType: TradeType = 'dayTrade', interval?: string, capitalFlowPhase?: 'early' | 'mid' | 'late' | 'exit'): Promise<TradePlanResult> {
+    const tf = getTimeframesForTradeType(tradeType, interval);
 
     const [ticker, candlesPrimary] = await Promise.all([
       fetch24hTicker(symbol),
@@ -4718,6 +4614,24 @@ export const analysisEngine = {
     const trend = calculateTrend(candles4h);
     const levels = findSupportResistance(candles4h);
     const atr = calculateATR(candles4h);
+
+    // Fibonacci levels for TP/SL optimization
+    const ohlcvPlan = candlesToOHLCV(candles4h);
+    const fibPlan = indicatorsService.calculateFibonacciLevels(ohlcvPlan);
+    const fibPlanMeta = fibPlan.metadata as {
+      levels?: Array<{ level: number; price: number; type: string }>;
+      isUptrend?: boolean;
+      swingHigh?: number;
+      swingLow?: number;
+    } | undefined;
+
+    // Extract Fibonacci extension levels for TP targets
+    const fibExtensions = (fibPlanMeta?.levels ?? [])
+      .filter((l: { type: string }) => l.type === 'extension')
+      .map((l: { price: number; level: number }) => l.price);
+    const fibRetracements = (fibPlanMeta?.levels ?? [])
+      .filter((l: { type: string }) => l.type === 'retracement')
+      .map((l: { price: number; level: number }) => l.price);
 
     const direction: 'long' | 'short' = trend.direction === 'bearish' ? 'short' : 'long';
     const currentPrice = ticker.price;
@@ -4742,7 +4656,15 @@ export const analysisEngine = {
     );
 
     // Stop loss calculation (ATR-based or level-based)
-    const atrStop = atr * 2;
+    // Capital flow phase risk adjustment
+    const phaseRiskMultiplier = {
+      'early': 0.8,   // Early phase: tighter SL (more aggressive)
+      'mid': 1.0,     // Mid phase: normal
+      'late': 1.3,    // Late phase: wider SL (more conservative)
+      'exit': 1.5,    // Exit phase: widest SL or avoid trade
+    }[capitalFlowPhase ?? 'mid'] ?? 1.0;
+
+    const atrStop = atr * 2 * phaseRiskMultiplier;
     const levelStop = direction === 'long'
       ? (levels.support[1] || averageEntry * 0.93)
       : (levels.resistance[1] || averageEntry * 1.07);
@@ -4761,24 +4683,68 @@ export const analysisEngine = {
       safetyAdjusted: false,
     };
 
-    // Take profit levels (R:R based) - only 2 TPs at 1.5R and 2.5R
+    // Take profit levels — Fibonacci-enhanced R:R calculation
     const riskAmount = Math.abs(averageEntry - stopPrice);
     const safeRiskAmount = riskAmount === 0 ? currentPrice * 0.015 : riskAmount;
-    const tp1Price = roundPrice(direction === 'long' ? averageEntry + safeRiskAmount * 1.5 : averageEntry - safeRiskAmount * 1.5);
-    const tp2Price = roundPrice(direction === 'long' ? averageEntry + safeRiskAmount * 2.5 : averageEntry - safeRiskAmount * 2.5);
+
+    // Base R:R targets
+    let tp1Price = roundPrice(direction === 'long' ? averageEntry + safeRiskAmount * 1.5 : averageEntry - safeRiskAmount * 1.5);
+    let tp2Price = roundPrice(direction === 'long' ? averageEntry + safeRiskAmount * 2.5 : averageEntry - safeRiskAmount * 2.5);
+    let tp1Source = '1.5R calculation';
+    let tp2Source = '2.5R calculation';
+    let tp1Reason = '1.5R - First take profit';
+    let tp2Reason = '2.5R - Main target';
+
+    // Fibonacci extension override: use extension levels if they provide ≥1.0R
+    let fibAligned = false;
+    if (fibExtensions.length >= 2) {
+      const ext1 = fibExtensions[0]; // 1.272 extension
+      const ext2 = fibExtensions[1]; // 1.618 extension
+      const ext1RR = Math.abs(ext1 - averageEntry) / safeRiskAmount;
+      const ext2RR = Math.abs(ext2 - averageEntry) / safeRiskAmount;
+
+      if (direction === 'long') {
+        if (ext1 > averageEntry && ext1RR >= 1.0) {
+          tp1Price = roundPrice(ext1);
+          tp1Source = 'Fibonacci 1.272 extension';
+          tp1Reason = `Fib 1.272 extension (${ext1RR.toFixed(1)}R)`;
+          fibAligned = true;
+        }
+        if (ext2 > averageEntry && ext2RR > ext1RR) {
+          tp2Price = roundPrice(ext2);
+          tp2Source = 'Fibonacci 1.618 extension';
+          tp2Reason = `Fib 1.618 extension (${ext2RR.toFixed(1)}R)`;
+          fibAligned = true;
+        }
+      } else {
+        if (ext1 < averageEntry && ext1RR >= 1.0) {
+          tp1Price = roundPrice(ext1);
+          tp1Source = 'Fibonacci 1.272 extension';
+          tp1Reason = `Fib 1.272 extension (${ext1RR.toFixed(1)}R)`;
+          fibAligned = true;
+        }
+        if (ext2 < averageEntry && ext2RR > ext1RR) {
+          tp2Price = roundPrice(ext2);
+          tp2Source = 'Fibonacci 1.618 extension';
+          tp2Reason = `Fib 1.618 extension (${ext2RR.toFixed(1)}R)`;
+          fibAligned = true;
+        }
+      }
+    }
+
     const takeProfits: TradePlanResult['takeProfits'] = [
       {
         price: tp1Price,
         percentage: 50,
-        reason: '1.5R - First take profit',
-        source: '1.5R calculation',
+        reason: tp1Reason,
+        source: tp1Source,
         riskReward: parseFloat((Math.abs(tp1Price - averageEntry) / safeRiskAmount).toFixed(2)),
       },
       {
         price: tp2Price,
         percentage: 50,
-        reason: '2.5R - Main target',
-        source: '2.5R calculation',
+        reason: tp2Reason,
+        source: tp2Source,
         riskReward: parseFloat((Math.abs(tp2Price - averageEntry) / safeRiskAmount).toFixed(2)),
       },
     ];
@@ -4856,12 +4822,13 @@ export const analysisEngine = {
       score,
       // Legacy compatibility fields
       sources: {
-        direction: ['4H Trend Analysis'],
+        direction: [`${tf.primary.toUpperCase()} Trend Analysis`],
         entries: ['Current price', 'DCA level', 'Support/Resistance'],
         stopLoss: ['ATR calculation'],
-        targets: ['R:R calculation'],
+        targets: fibAligned ? ['Fibonacci extension', 'R:R calculation'] : ['R:R calculation'],
       },
       confidence: trend.strength,
+      fibAlignedTargets: fibAligned,
       gate: {
         canProceed: tradePlanGateResult.canProceed,
         reason: tradePlanGateResult.reason,
@@ -4874,8 +4841,8 @@ export const analysisEngine = {
   // =========================================
   // Step 6: Trap Check (5 credits)
   // =========================================
-  async trapCheck(symbol: string, tradeType: TradeType = 'dayTrade'): Promise<TrapCheckResult> {
-    const tf = getTimeframesForTradeType(tradeType);
+  async trapCheck(symbol: string, tradeType: TradeType = 'dayTrade', interval?: string): Promise<TrapCheckResult> {
+    const tf = getTimeframesForTradeType(tradeType, interval);
 
     const [ticker, candlesPrimary, candlesSecondary] = await Promise.all([
       fetch24hTicker(symbol),
@@ -4894,18 +4861,30 @@ export const analysisEngine = {
     const currentPrice = ticker.price;
     const levels = findSupportResistance(candles4h);
 
+    // Fibonacci analysis for trap detection at key levels
+    const ohlcvTrap = candlesToOHLCV(candles4h);
+    const fibTrap = indicatorsService.calculateFibonacciLevels(ohlcvTrap);
+    const fibTrapMeta = fibTrap.metadata as {
+      levels?: Array<{ level: number; price: number; type: string }>;
+    } | undefined;
+
     // Guard against empty candle arrays (non-crypto assets may not have secondary timeframe data)
     if (prices1h.length === 0 || prices4h.length === 0) {
       return {
+        symbol,
+        traps: {
+          bullTrap: false,
+          bearTrap: false,
+          liquidityGrab: { detected: false, zones: [] },
+          stopHuntZones: [],
+          fakeoutRisk: 'low' as const,
+        },
+        liquidationLevels: [],
+        counterStrategy: ['Insufficient candle data for trap detection'],
+        proTip: 'Trap check skipped due to insufficient data.',
+        riskLevel: 'low' as const,
         score: 5,
-        bullTrap: false,
-        bearTrap: false,
-        fakeBreakout: false,
-        squeezeDetected: false,
-        manipulationRisk: 'low' as const,
-        warnings: ['Insufficient candle data for trap detection'],
-        details: 'Trap check skipped due to insufficient data.',
-        gate: { canProceed: true, reason: 'Trap check skipped - insufficient data', confidence: 50, urgency: 'medium' as const },
+        gate: { canProceed: true, reason: 'Trap check skipped - insufficient data', confidence: 50, trapRisk: 'moderate' as const },
       };
     }
 
@@ -4943,6 +4922,19 @@ export const analysisEngine = {
     if (lowVolumeBreakout) fakeoutRisk = 'medium';
     if ((bullTrap || bearTrap) && Math.abs(ticker.priceChangePercent24h) > 5) {
       fakeoutRisk = 'high';
+    }
+
+    // Fibonacci level trap detection:
+    // Traps often occur at key Fibonacci levels (0.618, 0.786) where retail stops cluster
+    let fibLevelTrap = false;
+    const fibLevels = (fibTrapMeta?.levels ?? []).map((l: { price: number }) => l.price);
+    for (const fLevel of fibLevels) {
+      const distPct = Math.abs(currentPrice - fLevel) / currentPrice;
+      // Price is within 1.5% of a key Fibonacci level AND trap conditions exist
+      if (distPct < 0.015 && (bullTrap || bearTrap || lowVolumeBreakout)) {
+        fibLevelTrap = true;
+        break;
+      }
     }
 
     // Liquidation levels (ATR-based estimation)
@@ -4992,6 +4984,9 @@ export const analysisEngine = {
       counterStrategy.push('Wait for confirmation candle');
     }
     counterStrategy.push('Be cautious around liquidity zones');
+    if (fibLevelTrap) {
+      counterStrategy.push('Price is at a key Fibonacci level with trap conditions — wait for clear breakout confirmation');
+    }
 
     // Pro tip
     let proTip = 'Do not trust breakouts without volume confirmation.';
@@ -5013,6 +5008,7 @@ export const analysisEngine = {
     if (fakeoutRisk === 'medium') score -= 1;
     if (fakeoutRisk === 'high') score -= 2;
     if (lowVolumeBreakout) score -= 1;
+    if (fibLevelTrap) score -= 1; // Fibonacci level trap penalty
     score = Math.max(1, Math.min(10, score));
 
     // Gate evaluation
@@ -5041,6 +5037,7 @@ export const analysisEngine = {
         },
         stopHuntZones: stopHuntZones.slice(0, 4),
         fakeoutRisk,
+        fibLevelTrap,
       },
       liquidationLevels: [...longLiquidations, ...shortLiquidations],
       counterStrategy,
@@ -5549,9 +5546,10 @@ export const analysisEngine = {
     }
 
     // Final confidence calculation - now factors in gate confidence
+    // Clamp to 0-100 range to prevent impossible percentages
     const gateConfidenceBonus = (avgGateConfidence - 50) / 100; // -0.5 to +0.5
     const confidence = direction !== null
-      ? parseFloat((directionConfidence * (score / 10) * (1 + gateConfidenceBonus)).toFixed(1))
+      ? Math.min(100, Math.max(0, parseFloat((directionConfidence * (score / 10) * (1 + gateConfidenceBonus)).toFixed(1))))
       : 0;
 
     return {
@@ -5579,7 +5577,8 @@ export const analysisEngine = {
       timing: TimingResult;
       trapCheck: TrapCheckResult;
     },
-    accountSize: number = 10000
+    accountSize: number = 10000,
+    capitalFlowPhase?: 'early' | 'mid' | 'late' | 'exit'
   ): Promise<TradePlanResult | null> {
     // Don't generate trade plan if not GO/CONDITIONAL_GO
     if (!preliminaryVerdict.shouldGenerateTradePlan || !preliminaryVerdict.direction) {
@@ -5629,6 +5628,16 @@ export const analysisEngine = {
     const furtherResistance = sortedResistances[1];
     const atr = assetScan.indicators.atr || currentPrice * 0.02;
 
+    // ===== FIBONACCI LEVELS for integrated trade plan =====
+    // Use timing step's Fibonacci data if available, otherwise calculate fresh
+    const fibLevels = timing.fibonacci?.levels ?? [];
+    const fibExtensionLevels = fibLevels
+      .filter((l: { type: string }) => l.type === 'extension')
+      .map((l: { price: number; level: number }) => ({ price: l.price, level: l.level }));
+    const fibRetracementLevels = fibLevels
+      .filter((l: { type: string }) => l.type === 'retracement')
+      .map((l: { price: number; level: number }) => ({ price: l.price, level: l.level }));
+
     // ===== ENTRY: Always at current price (no pullback waiting) =====
     entries.push({
       price: roundPrice(currentPrice),
@@ -5673,19 +5682,29 @@ export const analysisEngine = {
       }
     }
 
-    // ===== STOP LOSS: Key level ± 1 ATR =====
-    // LONG: SL = nearest support - 1 ATR (below support)
-    // SHORT: SL = nearest resistance + 1 ATR (above resistance)
+    // ===== STOP LOSS: Key level ± ATR (adjusted by capital flow phase) =====
+    // LONG: SL = nearest support - atrMultiplied (below support)
+    // SHORT: SL = nearest resistance + atrMultiplied (above resistance)
+    // Capital flow phase risk adjustment
+    const phaseRiskMultiplier = {
+      'early': 0.8,   // Early phase: tighter SL (more aggressive)
+      'mid': 1.0,     // Mid phase: normal
+      'late': 1.3,    // Late phase: wider SL (more conservative)
+      'exit': 1.5,    // Exit phase: widest SL or avoid trade
+    }[capitalFlowPhase ?? 'mid'] ?? 1.0;
+
+    const atrMultiplied = atr * phaseRiskMultiplier;
+
     let stopPrice: number;
     let safetyAdjusted = false;
 
     if (direction === 'long') {
-      // SL below nearest support - 1 ATR
+      // SL below nearest support - atrMultiplied
       const slReference = nearestSupport ?? currentPrice;
-      stopPrice = slReference - atr;
+      stopPrice = slReference - atrMultiplied;
       sources.stopLoss.push(nearestSupport
-        ? `Below support $${nearestSupport.toFixed(2)} - 1 ATR ($${atr.toFixed(2)})`
-        : `Below current price - 1 ATR`);
+        ? `Below support $${nearestSupport.toFixed(2)} - ATR×${phaseRiskMultiplier} ($${atrMultiplied.toFixed(2)})`
+        : `Below current price - ATR×${phaseRiskMultiplier}`);
 
       // Trap zone adjustment - don't place stop inside trap zones
       if (trapCheck.traps.stopHuntZones.length > 0) {
@@ -5697,12 +5716,12 @@ export const analysisEngine = {
         }
       }
     } else {
-      // SL above nearest resistance + 1 ATR
+      // SL above nearest resistance + atrMultiplied
       const slReference = nearestResistance ?? currentPrice;
-      stopPrice = slReference + atr;
+      stopPrice = slReference + atrMultiplied;
       sources.stopLoss.push(nearestResistance
-        ? `Above resistance $${nearestResistance.toFixed(2)} + 1 ATR ($${atr.toFixed(2)})`
-        : `Above current price + 1 ATR`);
+        ? `Above resistance $${nearestResistance.toFixed(2)} + ATR×${phaseRiskMultiplier} ($${atrMultiplied.toFixed(2)})`
+        : `Above current price + ATR×${phaseRiskMultiplier}`);
 
       // Trap zone adjustment
       if (trapCheck.traps.stopHuntZones.length > 0) {
@@ -5752,21 +5771,46 @@ export const analysisEngine = {
     const calcTPRR = (tpPrice: number): number =>
       parseFloat((Math.abs(tpPrice - averageEntry) / safeRiskAmount).toFixed(2));
 
+    // Helper: find best Fibonacci extension for TP
+    // Fibonacci extensions (1.272, 1.618, 2.618) are strong institutional targets
+    const findFibTP = (minPrice: number, maxPrice: number | null): { price: number; level: number } | null => {
+      const candidates = fibExtensionLevels.filter((f: { price: number; level: number }) => {
+        if (direction === 'long') {
+          return f.price > minPrice && (!maxPrice || f.price < maxPrice);
+        } else {
+          return f.price < minPrice && (!maxPrice || f.price > maxPrice);
+        }
+      });
+      if (candidates.length === 0) return null;
+      // Pick closest to minPrice
+      candidates.sort((a: { price: number }, b: { price: number }) =>
+        Math.abs(a.price - minPrice) - Math.abs(b.price - minPrice));
+      return candidates[0];
+    };
+
+    let fibAligned = false;
+
     if (direction === 'long') {
-      // TP1: nearest resistance or 2R fallback (60% of position)
-      // ENFORCE: TP1 must be at least 1R from entry (never risk more than you gain on 60% of position)
+      // TP1: nearest resistance or Fibonacci extension or 2R fallback (60% of position)
+      // ENFORCE: TP1 must be at least 1R from entry
       let tp1Price: number;
       let tp1Reason: string;
       let tp1Source: string;
 
-      if (nearestResistance && nearestResistance > averageEntry) {
+      // Priority: 1) Fibonacci 1.272/1.618 extension if ≥1R, 2) S/R level if ≥1R, 3) 2R fallback
+      const fibTP1 = findFibTP(averageEntry, null);
+      if (fibTP1 && (fibTP1.price - averageEntry) / safeRiskAmount >= 1.0) {
+        tp1Price = fibTP1.price;
+        tp1Reason = `Fibonacci ${fibTP1.level} extension`;
+        tp1Source = `Fib ${fibTP1.level} extension`;
+        fibAligned = true;
+      } else if (nearestResistance && nearestResistance > averageEntry) {
         const tp1RR = (nearestResistance - averageEntry) / safeRiskAmount;
         if (tp1RR >= 1.0) {
           tp1Price = nearestResistance;
           tp1Reason = 'Nearest resistance';
           tp1Source = 'Resistance level';
         } else {
-          // S/R level too close (< 1R), use 2R fallback
           tp1Price = averageEntry + safeRiskAmount * 2;
           tp1Reason = `2R target (resistance at ${roundPrice(nearestResistance)} only ${tp1RR.toFixed(1)}R)`;
           tp1Source = '2R calculation (min 1R enforced)';
@@ -5784,12 +5828,18 @@ export const analysisEngine = {
       });
       sources.targets.push(tp1Source);
 
-      // TP2: further resistance or 3R fallback (40% of position)
+      // TP2: Fibonacci extension beyond TP1 or further resistance or 3R fallback (40%)
       let tp2Price: number;
       let tp2Reason: string;
       let tp2Source: string;
 
-      if (furtherResistance && furtherResistance > tp1Price) {
+      const fibTP2 = findFibTP(tp1Price, null);
+      if (fibTP2 && fibTP2.price > tp1Price) {
+        tp2Price = fibTP2.price;
+        tp2Reason = `Fibonacci ${fibTP2.level} extension`;
+        tp2Source = `Fib ${fibTP2.level} extension`;
+        fibAligned = true;
+      } else if (furtherResistance && furtherResistance > tp1Price) {
         tp2Price = furtherResistance;
         tp2Reason = 'Further resistance';
         tp2Source = 'Resistance level';
@@ -5806,20 +5856,25 @@ export const analysisEngine = {
       });
       sources.targets.push(tp2Source);
     } else {
-      // TP1: nearest support or 2R fallback (60% of position)
+      // TP1: Fibonacci extension or nearest support or 2R fallback (60%)
       // ENFORCE: TP1 must be at least 1R from entry
       let tp1Price: number;
       let tp1Reason: string;
       let tp1Source: string;
 
-      if (nearestSupport && nearestSupport < averageEntry) {
+      const fibTP1 = findFibTP(averageEntry, null);
+      if (fibTP1 && (averageEntry - fibTP1.price) / safeRiskAmount >= 1.0) {
+        tp1Price = fibTP1.price;
+        tp1Reason = `Fibonacci ${fibTP1.level} extension`;
+        tp1Source = `Fib ${fibTP1.level} extension`;
+        fibAligned = true;
+      } else if (nearestSupport && nearestSupport < averageEntry) {
         const tp1RR = (averageEntry - nearestSupport) / safeRiskAmount;
         if (tp1RR >= 1.0) {
           tp1Price = nearestSupport;
           tp1Reason = 'Nearest support';
           tp1Source = 'Support level';
         } else {
-          // S/R level too close (< 1R), use 2R fallback
           tp1Price = averageEntry - safeRiskAmount * 2;
           tp1Reason = `2R target (support at ${roundPrice(nearestSupport)} only ${tp1RR.toFixed(1)}R)`;
           tp1Source = '2R calculation (min 1R enforced)';
@@ -5837,12 +5892,18 @@ export const analysisEngine = {
       });
       sources.targets.push(tp1Source);
 
-      // TP2: further support or 3R fallback (40% of position)
+      // TP2: Fibonacci extension beyond TP1 or further support or 3R fallback (40%)
       let tp2Price: number;
       let tp2Reason: string;
       let tp2Source: string;
 
-      if (furtherSupport && furtherSupport < tp1Price) {
+      const fibTP2 = findFibTP(tp1Price, null);
+      if (fibTP2 && fibTP2.price < tp1Price) {
+        tp2Price = fibTP2.price;
+        tp2Reason = `Fibonacci ${fibTP2.level} extension`;
+        tp2Source = `Fib ${fibTP2.level} extension`;
+        fibAligned = true;
+      } else if (furtherSupport && furtherSupport < tp1Price) {
         tp2Price = furtherSupport;
         tp2Reason = 'Further support';
         tp2Source = 'Support level';
@@ -5907,8 +5968,8 @@ export const analysisEngine = {
     // ===== WIN RATE ESTIMATE — via RiskEngine (TASK 2.3) =====
     const winRateEstimate = estimateWinRate({
       direction,
-      trendDirection: assetScan.trend?.direction ?? 'neutral',
-      trendStrength:  assetScan.trend?.strength  ?? 50,
+      trendDirection: assetScan.timeframes?.find(t => t.tf === '4H')?.trend ?? 'neutral',
+      trendStrength:  assetScan.timeframes?.find(t => t.tf === '4H')?.strength ?? 50,
       confidence:     preliminaryVerdict.confidence,
       safetyScore:    safetyCheck.score,
       tradeNow:       timing.tradeNow,
@@ -5923,6 +5984,7 @@ export const analysisEngine = {
     if (winRateEstimate >= 60) score += 1;
     if (stopPercentage <= 5) score += 0.5;
     if (safetyCheck.riskLevel === 'low') score += 0.5;
+    if (fibAligned) score += 0.5; // Fibonacci-confirmed targets increase plan quality
     score = parseFloat(Math.max(1, Math.min(10, score)).toFixed(1));
 
     // ===== TRADE PLAN VALIDITY CHECK =====
@@ -5985,6 +6047,7 @@ export const analysisEngine = {
       score,
       sources,
       confidence: preliminaryVerdict.confidence,
+      fibAlignedTargets: fibAligned,
       // Gate evaluation for integrated trade plan
       gate: {
         canProceed: riskReward >= 1.5 && winRateEstimate >= 45,
@@ -6023,53 +6086,111 @@ export const analysisEngine = {
     // Map TradeType → BundleType so weights shift by trading style.
     const bundleTypeForScoring =
       tradeType === 'scalping'   ? 'scalping' :
-      tradeType === 'swingTrade' ? 'swing'    : 'day';
+      tradeType === 'swing'      ? 'swing'    : 'day';
 
-    const stepScoreInputs = [
-      quickStepScore('marketPulse', marketPulse),
-      quickStepScore('assetScan',   assetScan),
-      quickStepScore('safetyCheck', safetyCheck),
-      quickStepScore('timing',      timing),
-      quickStepScore('trapCheck',   trapCheck),
-      ...(hasTradePlan && tradePlan
-        ? [quickStepScore('tradePlan', tradePlan)]
-        : []),
-    ];
+    // ── Closed-form meta-ensemble aggregation (production path) ──
+    // Extract raw feature values from engine step results
+    const rawValues = extractAllStepRawValues(
+      { marketPulse, assetScan, safetyCheck, timing, trapCheck },
+      tradePlan,
+    );
 
-    const aggregated = aggregateScores({
-      scores:      stepScoreInputs,
-      bundleType:  bundleTypeForScoring,
+    // Compute closed-form step scores with correlation penalty
+    const correlationPenalty = computeMarketPulseCorrelationPenalty();
+    const closedFormSteps = computeAllStepScores(
+      rawValues,
+      {}, // Rolling stats computed from candle data when available
+      { marketPulse: correlationPenalty },
+    );
+
+    // Build step scores for meta-ensemble (use closed-form when available, engine score as fallback)
+    const cfStepScores = {
+      marketPulse: closedFormSteps.marketPulse?.score ?? marketPulse.score,
+      assetScan: closedFormSteps.assetScan?.score ?? assetScan.score,
+      safetyCheck: closedFormSteps.safetyCheck?.score ?? safetyCheck.score,
+      timing: closedFormSteps.timing?.score ?? timing.score,
+      tradePlan: closedFormSteps.tradePlan?.score ?? (tradePlan?.score ?? 5),
+      trapCheck: closedFormSteps.trapCheck?.score ?? trapCheck.score,
+    };
+
+    // Run meta-ensemble aggregation
+    const trapData = extractTrapData(trapCheck);
+    const criticalSafety = checkCriticalSafety(safetyCheck);
+    const economicBlock = checkEconomicBlock(marketPulse);
+
+    // MLIS integration: run ML analysis and feed into meta-ensemble (60/40 split)
+    const mlisTimeframe =
+      tradeType === 'scalping' ? '15m' :
+      tradeType === 'swing'   ? '1d'  : '4h';
+
+    let mlisScores: {
+      technical: number;
+      momentum: number;
+      volatility: number;
+      volume: number;
+      sentiment?: number;
+      onchain?: number;
+    } | undefined;
+
+    try {
+      const mlisResult = await analyzeMLIS(symbol, mlisTimeframe);
+      if (mlisResult && mlisResult.layers) {
+        mlisScores = extractMLISScores(mlisResult);
+      }
+    } catch {
+      // MLIS failure is non-critical — continue with 7-Step only (100% allocation)
+    }
+
+    const closedFormResult: ClosedFormAggregateResult = aggregateWithMetaEnsemble({
+      stepScores: cfStepScores,
+      mlisScores,
+      trapData,
+      riskLevel: safetyCheck.riskLevel as 'low' | 'medium' | 'high' | 'critical',
+      riskScoreRaw: safetyCheck.contractSecurity?.riskScore,
+      bundleType: bundleTypeForScoring as 'scalping' | 'day' | 'swing',
       hasTradePlan,
+      hasCriticalSafetyIssue: criticalSafety,
+      hasEconomicBlock: economicBlock,
     });
 
-    // Map to legacy shape expected by FinalVerdictResult
-    const componentScores: FinalVerdictResult['componentScores'] = aggregated.componentScores.map(cs => ({
-      step:   cs.step === 'marketPulse' ? 'Market Pulse'  :
-              cs.step === 'assetScan'   ? 'Asset Scanner' :
-              cs.step === 'safetyCheck' ? 'Safety Check'  :
-              cs.step === 'timing'      ? 'Timing'        :
-              cs.step === 'trapCheck'   ? 'Trap Check'    :
-              cs.step === 'tradePlan'   ? 'Trade Plan'    : cs.step,
-      score:  cs.score,
-      weight: cs.weight,
+    // Use meta-ensemble results as primary
+    const overallScore = closedFormResult.overallScore;
+    const verdict = closedFormResult.verdict;
+
+    // Build component scores from closed-form step breakdowns
+    const stepNameMap: Record<string, string> = {
+      marketPulse: 'Market Pulse',
+      assetScan: 'Asset Scanner',
+      safetyCheck: 'Safety Check',
+      timing: 'Timing',
+      trapCheck: 'Trap Check',
+      tradePlan: 'Trade Plan',
+    };
+
+    const componentScores: FinalVerdictResult['componentScores'] = closedFormResult.ensemble.stepContributions.map(sc => ({
+      step: stepNameMap[sc.step] ?? sc.step,
+      score: cfStepScores[sc.step as keyof typeof cfStepScores] ?? 5,
+      weight: sc.weight,
     }));
 
-    const overallScore = aggregated.overallScore;
-
-    // Confidence factors - use reasons from preliminary verdict
+    // Confidence factors from meta-ensemble + preliminary verdict
     const confidenceFactors: FinalVerdictResult['confidenceFactors'] = preliminaryVerdict.reasons.map(r => ({
       factor: r.factor,
       positive: r.positive,
       impact: r.impact
     }));
 
+    // Add meta-ensemble confidence as a factor
+    confidenceFactors.push({
+      factor: `Meta-ensemble P(up)=${(closedFormResult.probability * 100).toFixed(1)}%, CI=[${(closedFormResult.confidenceInterval[0] * 100).toFixed(1)}%,${(closedFormResult.confidenceInterval[1] * 100).toFixed(1)}%]`,
+      positive: closedFormResult.probability > 0.55,
+      impact: closedFormResult.confidence > 70 ? 'high' : closedFormResult.confidence > 40 ? 'medium' : 'low',
+    });
+
     // Add trade plan specific factors
     if (hasTradePlan && tradePlan && tradePlan.riskReward >= 2.5) {
       confidenceFactors.push({ factor: `Good R:R ratio (${tradePlan.riskReward})`, positive: true, impact: 'medium' });
     }
-
-    // Use verdict from preliminary verdict (decision was already made)
-    const verdict = preliminaryVerdict.verdict;
 
     // Generate recommendation
     let recommendation = '';
@@ -6117,6 +6238,14 @@ export const analysisEngine = {
       },
       tokenomics: assetScan.tokenomics,
       tradeType,
+      // NEW: Elliott Wave & Fibonacci data for AI summary
+      elliottWave: assetScan.elliottWave,
+      fibonacci: timing.fibonacci ? {
+        nearGoldenZone: timing.fibonacci.nearGoldenZone,
+        retracementPct: timing.fibonacci.retracementPct,
+        levels: timing.fibonacci.levels,
+      } : undefined,
+      fibAlignedTargets: tradePlan?.fibAlignedTargets,
     });
 
     return {
@@ -6131,12 +6260,19 @@ export const analysisEngine = {
       hasTradePlan,
       aiSummary,
       tokenomicsInsight,
+      metaEnsemble: {
+        probability: closedFormResult.probability,
+        calibratedProbability: closedFormResult.calibratedProbability,
+        confidenceInterval: closedFormResult.confidenceInterval,
+        confidence: closedFormResult.confidence,
+        logit: closedFormResult.logit,
+      },
     };
   },
 
   // =========================================
-  // Legacy: Old finalVerdict for backwards compatibility
-  // TODO: Remove after migrating all callers
+  // Convenience wrapper: finalVerdict → getFinalVerdict
+  // Kept for ai-expert callers that pass all 6 steps at once.
   // =========================================
   async finalVerdict(
     symbol: string,
@@ -6232,8 +6368,8 @@ export const analysisEngine = {
    */
   getTradeTypeFromTimeframe(timeframe: string): TradeType {
     const mapping: Record<string, TradeType> = {
-      '5m': 'scalp',
-      '15m': 'scalp',
+      '5m': 'scalping',
+      '15m': 'scalping',
       '30m': 'dayTrade',
       '1h': 'dayTrade',
       '4h': 'dayTrade',

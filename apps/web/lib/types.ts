@@ -65,8 +65,8 @@ export const CREDIT_COSTS = {
   AI_EXPERT_QUESTION_FREE: 0,
   PDF_DOWNLOAD: 5,
   PDF_DOWNLOAD_FREE: 0,
-  EMAIL_SEND: 5,
-  EMAIL_SEND_FREE: 0,
+  // EMAIL_SEND: removed - email report sending discontinued
+  // EMAIL_SEND_FREE: removed - email report sending discontinued
   CAPITAL_FLOW_L3: 25,
   CAPITAL_FLOW_L4: 25,
   ASSET_ANALYSIS_DAILY: 100,

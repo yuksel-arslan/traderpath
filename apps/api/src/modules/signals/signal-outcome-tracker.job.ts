@@ -4,25 +4,25 @@
  * Runs every 15 minutes
  */
 
-import cron from 'node-cron';
+import cron, { type ScheduledTask } from 'node-cron';
 import { prisma } from '../../core/database';
-import { redis } from '../../core/cache';
+import { redis, cache } from '../../core/cache';
 import { formatSignalUpdate } from './telegram-formatter';
 import { signalMonitoring } from './signal-monitoring.service';
 import { emailService } from '../email/email.service';
-import type { SignalOutcome } from './types';
+import type { SignalOutcomeValue } from './types';
 
 const CRON_SCHEDULE = '*/15 * * * *'; // Every 15 minutes
 const REDIS_LOCK_KEY = 'signal-outcome-tracker:lock';
 const REDIS_LOCK_TTL = 600; // 10 minutes
 
-let cronJob: cron.ScheduledTask | null = null;
+let cronJob: ScheduledTask | null = null;
 
 // Email notification template
 function generateOutcomeEmailHTML(
   symbol: string,
   direction: 'long' | 'short',
-  outcome: SignalOutcome,
+  outcome: SignalOutcomeValue,
   entryPrice: number,
   outcomePrice: number,
   pnlPercent: number,
@@ -49,14 +49,14 @@ function generateOutcomeEmailHTML(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${subject}</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc;">
-  <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f8fafc;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0f172a;">
+  <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #0f172a;">
     <tr>
       <td style="padding: 40px 20px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 12px; overflow: hidden; border: 1px solid #334155;">
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+            <td style="background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%); padding: 30px; text-align: center;">
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">TraderPath Signal Update</h1>
             </td>
           </tr>
@@ -64,9 +64,13 @@ function generateOutcomeEmailHTML(
           <!-- Outcome Badge -->
           <tr>
             <td style="padding: 30px; text-align: center;">
-              <div style="display: inline-block; background-color: ${backgroundColor}; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-size: 18px; font-weight: 700;">
-                ${outcomeLabel}
-              </div>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+                <tr>
+                  <td style="background-color: ${backgroundColor}; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-size: 18px; font-weight: 700; text-align: center;">
+                    ${outcomeLabel}
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
@@ -75,33 +79,53 @@ function generateOutcomeEmailHTML(
             <td style="padding: 0 30px 30px;">
               <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
                 <tr>
-                  <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                    <span style="color: #64748b; font-size: 14px;">Symbol:</span>
-                    <strong style="float: right; color: #1e293b; font-size: 16px;">${symbol}</strong>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #334155;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                      <tr>
+                        <td style="color: #94a3b8; font-size: 14px;">Symbol:</td>
+                        <td style="text-align: right; color: #f1f5f9; font-size: 16px; font-weight: 700;">${symbol}</td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                    <span style="color: #64748b; font-size: 14px;">Direction:</span>
-                    <strong style="float: right; color: ${direction === 'long' ? '#10b981' : '#ef4444'}; font-size: 16px; text-transform: uppercase;">${direction}</strong>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #334155;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                      <tr>
+                        <td style="color: #94a3b8; font-size: 14px;">Direction:</td>
+                        <td style="text-align: right; color: ${direction === 'long' ? '#10b981' : '#ef4444'}; font-size: 16px; font-weight: 700; text-transform: uppercase;">${direction}</td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                    <span style="color: #64748b; font-size: 14px;">Entry Price:</span>
-                    <strong style="float: right; color: #1e293b; font-size: 16px;">$${entryPrice.toFixed(entryPrice >= 1 ? 2 : 6)}</strong>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #334155;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                      <tr>
+                        <td style="color: #94a3b8; font-size: 14px;">Entry Price:</td>
+                        <td style="text-align: right; color: #f1f5f9; font-size: 16px; font-weight: 700;">$${entryPrice.toFixed(entryPrice >= 1 ? 2 : 6)}</td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
-                    <span style="color: #64748b; font-size: 14px;">Exit Price:</span>
-                    <strong style="float: right; color: #1e293b; font-size: 16px;">$${outcomePrice.toFixed(outcomePrice >= 1 ? 2 : 6)}</strong>
+                  <td style="padding: 12px 0; border-bottom: 1px solid #334155;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                      <tr>
+                        <td style="color: #94a3b8; font-size: 14px;">Exit Price:</td>
+                        <td style="text-align: right; color: #f1f5f9; font-size: 16px; font-weight: 700;">$${outcomePrice.toFixed(outcomePrice >= 1 ? 2 : 6)}</td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
                 <tr>
                   <td style="padding: 12px 0;">
-                    <span style="color: #64748b; font-size: 14px;">P/L:</span>
-                    <strong style="float: right; color: ${pnlColor}; font-size: 20px; font-weight: 700;">${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%</strong>
+                    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                      <tr>
+                        <td style="color: #94a3b8; font-size: 14px;">P/L:</td>
+                        <td style="text-align: right; color: ${pnlColor}; font-size: 20px; font-weight: 700;">${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%</td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
@@ -119,9 +143,9 @@ function generateOutcomeEmailHTML(
 
           <!-- Footer -->
           <tr>
-            <td style="padding: 20px 30px; text-align: center; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 12px;">
-              <p style="margin: 0 0 10px;">This is an automated notification from TraderPath.</p>
-              <p style="margin: 0;">Manage your notification preferences in <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://traderpath.io'}/settings" style="color: #14b8a6; text-decoration: none;">Settings</a>.</p>
+            <td style="padding: 20px 30px; text-align: center; border-top: 1px solid #334155; background-color: #0f172a;">
+              <p style="margin: 0 0 10px; color: #64748b; font-size: 12px;">This is an automated notification from TraderPath.</p>
+              <p style="margin: 0; color: #64748b; font-size: 12px;">Manage your notification preferences in <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://traderpath.io'}/settings" style="color: #14b8a6; text-decoration: none;">Settings</a>.</p>
             </td>
           </tr>
         </table>
@@ -173,8 +197,8 @@ function checkOutcome(
   takeProfit1: number,
   takeProfit2: number,
   direction: 'long' | 'short'
-): { outcome: SignalOutcome | null; pnlPercent: number } {
-  let outcome: SignalOutcome | null = null;
+): { outcome: SignalOutcomeValue | null; pnlPercent: number } {
+  let outcome: SignalOutcomeValue | null = null;
   let pnlPercent = 0;
 
   if (direction === 'long') {
@@ -209,7 +233,7 @@ function checkOutcome(
 // Send Telegram notification for signal update
 async function sendTelegramNotification(
   signal: any,
-  outcome: SignalOutcome,
+  outcome: SignalOutcomeValue,
   outcomePrice: number,
   pnlPercent: number
 ) {
@@ -251,7 +275,7 @@ async function sendTelegramNotification(
 // Send user notifications (Telegram/Discord/Email)
 async function sendUserNotifications(
   signal: any,
-  outcome: SignalOutcome,
+  outcome: SignalOutcomeValue,
   outcomePrice: number,
   pnlPercent: number
 ) {
@@ -379,7 +403,7 @@ export async function trackSignalOutcomes() {
 
   // Acquire distributed lock
   if (redis) {
-    const lockAcquired = await redis.set(REDIS_LOCK_KEY, '1', 'EX', REDIS_LOCK_TTL, 'NX');
+    const lockAcquired = await cache.setNX(REDIS_LOCK_KEY, '1', REDIS_LOCK_TTL);
     if (!lockAcquired) {
       console.log('[OutcomeTracker] Another instance is already running');
       return {

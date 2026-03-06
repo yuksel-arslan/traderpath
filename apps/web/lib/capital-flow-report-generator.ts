@@ -1,6 +1,6 @@
 // ===========================================
 // Capital Flow Professional Report Generator
-// 2026 Professional PDF & Email Report System
+// 2026 Professional PDF Report System
 // ===========================================
 
 import { jsPDF } from 'jspdf';

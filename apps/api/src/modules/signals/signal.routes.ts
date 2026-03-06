@@ -5,7 +5,7 @@
 
 import { FastifyInstance } from 'fastify';
 import { signalService } from './signal.service';
-import { runSignalGenerationManually } from './signal-generator.job';
+import { runSignalGenerationManually, runAutoEdgeManually } from './signal-generator.job';
 import { runSignalOutcomeTrackerManually } from './signal-outcome-tracker.job';
 import { signalMonitoring } from './signal-monitoring.service';
 import type { SignalFilterCriteria } from './types';
@@ -348,6 +348,7 @@ export async function signalRoutes(fastify: FastifyInstance) {
       try {
         const health = await signalMonitoring.getSystemHealth();
         const generatorMetrics = await signalMonitoring.getGeneratorMetrics();
+        const autoedgeMetrics = await signalMonitoring.getAutoEdgeMetrics();
         const trackerMetrics = await signalMonitoring.getTrackerMetrics();
 
         return reply.send({
@@ -356,6 +357,7 @@ export async function signalRoutes(fastify: FastifyInstance) {
             ...health,
             metrics: {
               generator: generatorMetrics,
+              autoedge: autoedgeMetrics,
               tracker: trackerMetrics,
             },
           },
@@ -402,6 +404,43 @@ export async function signalRoutes(fastify: FastifyInstance) {
         return reply.status(500).send({
           success: false,
           error: error instanceof Error ? error.message : 'Generation failed',
+        });
+      }
+    }
+  );
+
+  /**
+   * Trigger manual AutoEdge signal generation
+   * POST /api/signals/admin/generate-autoedge
+   */
+  fastify.post(
+    '/signals/admin/generate-autoedge',
+    {
+      preHandler: [fastify.authenticate],
+    },
+    async (request, reply) => {
+      const user = request.user as any;
+
+      // Admin only
+      if (!user.isAdmin) {
+        return reply.status(403).send({
+          success: false,
+          error: 'Admin access required',
+        });
+      }
+
+      try {
+        const result = await runAutoEdgeManually();
+
+        return reply.send({
+          success: true,
+          data: result,
+        });
+      } catch (error) {
+        console.error('[SignalRoutes] Manual AutoEdge generation error:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error instanceof Error ? error.message : 'AutoEdge generation failed',
         });
       }
     }
@@ -543,10 +582,12 @@ function serializeSignal(signal: any) {
     assetClass: signal.assetClass,
     market: signal.market,
     direction: signal.direction,
+    interval: signal.interval ?? null,
     entryPrice: Number(signal.entryPrice),
     stopLoss: Number(signal.stopLoss),
     takeProfit1: Number(signal.takeProfit1),
     takeProfit2: Number(signal.takeProfit2),
+    takeProfit3: signal.takeProfit3 ? Number(signal.takeProfit3) : null,
     riskRewardRatio: Number(signal.riskRewardRatio),
     classicVerdict: signal.classicVerdict,
     classicScore: Number(signal.classicScore),
@@ -554,6 +595,7 @@ function serializeSignal(signal: any) {
     mlisRecommendation: signal.mlisRecommendation,
     mlisConfidence: signal.mlisConfidence,
     overallConfidence: signal.overallConfidence,
+    winRateEstimate: signal.winRateEstimate ?? null,
     qualityScore: signal.qualityScore ?? null,
     qualityData: signal.qualityData ?? null,
     capitalFlowPhase: signal.capitalFlowPhase,

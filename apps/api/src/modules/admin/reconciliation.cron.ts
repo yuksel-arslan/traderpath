@@ -4,10 +4,11 @@
 // ===========================================
 
 import cron from 'node-cron';
+import type { ScheduledTask } from 'node-cron';
 import { reconciliationService } from './reconciliation.service';
 import { logger } from '../../core/logger';
 
-let reconciliationJob: cron.ScheduledTask | null = null;
+let reconciliationJob: ScheduledTask | null = null;
 
 /**
  * Start daily reconciliation job

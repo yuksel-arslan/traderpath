@@ -98,13 +98,15 @@ export interface LevelThreshold {
   xp: number;
   title: string;
   benefits: string[];
+  dailyBonus: number;
+  discount: number;
 }
 
 export const LEVEL_THRESHOLDS: LevelThreshold[] = [
-  { level: 1, xp: 0, title: 'Beginner', benefits: ['Access to basic features'] },
-  { level: 2, xp: 100, title: 'Trader', benefits: ['5% analysis discount'] },
-  { level: 3, xp: 300, title: 'Pro Trader', benefits: ['10% discount', 'Priority support'] },
-  { level: 4, xp: 600, title: 'Expert', benefits: ['15% discount', '1 free analysis/day'] },
-  { level: 5, xp: 1000, title: 'Master', benefits: ['20% discount', '2 free analyses/day'] },
-  { level: 6, xp: 1500, title: 'Legend', benefits: ['25% discount', '3 free analyses/day', 'Custom badge'] },
+  { level: 1, xp: 0, title: 'Beginner', dailyBonus: 0, discount: 0, benefits: ['Access to basic features'] },
+  { level: 2, xp: 100, title: 'Trader', dailyBonus: 1, discount: 5, benefits: ['5% analysis discount'] },
+  { level: 3, xp: 300, title: 'Pro Trader', dailyBonus: 2, discount: 10, benefits: ['10% discount', 'Priority support'] },
+  { level: 4, xp: 600, title: 'Expert', dailyBonus: 3, discount: 15, benefits: ['15% discount', '1 free analysis/day'] },
+  { level: 5, xp: 1000, title: 'Master', dailyBonus: 5, discount: 20, benefits: ['20% discount', '2 free analyses/day'] },
+  { level: 6, xp: 1500, title: 'Legend', dailyBonus: 7, discount: 25, benefits: ['25% discount', '3 free analyses/day', 'Custom badge'] },
 ];

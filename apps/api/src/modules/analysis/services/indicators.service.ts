@@ -48,6 +48,27 @@ export interface TrendSignal {
   strength: number;
 }
 
+export interface FibonacciLevel {
+  level: number;
+  price: number;
+  type: 'retracement' | 'extension';
+}
+
+export interface ElliottWaveResult {
+  currentWave: string;
+  waveType: 'impulse' | 'corrective';
+  direction: 'bullish' | 'bearish';
+  confidence: number;
+  waves: Array<{
+    wave: string;
+    startPrice: number;
+    endPrice: number;
+    startIndex: number;
+    endIndex: number;
+  }>;
+  projectedTarget?: number;
+}
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -1548,6 +1569,705 @@ export class IndicatorsService {
   }
 
   // ==========================================================================
+  // FIBONACCI LEVELS
+  // ==========================================================================
+
+  /**
+   * Calculate Fibonacci retracement and extension levels
+   * Uses swing high/low detection to find the major move, then projects levels
+   */
+  calculateFibonacciLevels(data: OHLCV[]): IndicatorResult {
+    if (data.length < 20) {
+      return { name: 'FIBONACCI', value: null, signal: 'neutral', strength: 0, metadata: { levels: [] } };
+    }
+
+    // Find swing high and swing low in recent data
+    let swingHigh = -Infinity;
+    let swingLow = Infinity;
+    let swingHighIdx = 0;
+    let swingLowIdx = 0;
+
+    for (let i = 0; i < data.length; i++) {
+      const candle = data[i];
+      if (candle.high > swingHigh) { swingHigh = candle.high; swingHighIdx = i; }
+      if (candle.low < swingLow) { swingLow = candle.low; swingLowIdx = i; }
+    }
+
+    const diff = swingHigh - swingLow;
+    if (diff <= 0) {
+      return { name: 'FIBONACCI', value: null, signal: 'neutral', strength: 0, metadata: { levels: [] } };
+    }
+
+    // Determine trend direction: if high came after low → uptrend (retrace down)
+    const isUptrend = swingHighIdx > swingLowIdx;
+    const currentPrice = data[data.length - 1].close;
+
+    const retracementRatios = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0];
+    const extensionRatios = [1.272, 1.618, 2.618];
+
+    const levels: FibonacciLevel[] = [];
+
+    for (const ratio of retracementRatios) {
+      const price = isUptrend
+        ? swingHigh - diff * ratio
+        : swingLow + diff * ratio;
+      levels.push({ level: ratio, price: Math.round(price * 100) / 100, type: 'retracement' });
+    }
+
+    for (const ratio of extensionRatios) {
+      const price = isUptrend
+        ? swingLow + diff * ratio
+        : swingHigh - diff * ratio;
+      levels.push({ level: ratio, price: Math.round(price * 100) / 100, type: 'extension' });
+    }
+
+    // Determine which Fibonacci zone the current price is in
+    const retracementPct = isUptrend
+      ? (swingHigh - currentPrice) / diff
+      : (currentPrice - swingLow) / diff;
+
+    let signal: string;
+    let strength: number;
+
+    if (retracementPct <= 0.236) {
+      signal = isUptrend ? 'bullish' : 'bearish';
+      strength = 75;
+    } else if (retracementPct <= 0.382) {
+      signal = isUptrend ? 'bullish' : 'bearish';
+      strength = 65;
+    } else if (retracementPct <= 0.618) {
+      signal = 'neutral';
+      strength = 50;
+    } else if (retracementPct <= 0.786) {
+      signal = isUptrend ? 'bearish' : 'bullish';
+      strength = 35;
+    } else {
+      signal = isUptrend ? 'bearish' : 'bullish';
+      strength = 20;
+    }
+
+    // Find nearest support/resistance from Fibonacci levels
+    const nearestSupport = levels
+      .filter(l => l.price < currentPrice)
+      .sort((a, b) => b.price - a.price)[0];
+    const nearestResistance = levels
+      .filter(l => l.price > currentPrice)
+      .sort((a, b) => a.price - b.price)[0];
+
+    return {
+      name: 'FIBONACCI',
+      value: Math.round(retracementPct * 1000) / 1000,
+      signal,
+      strength,
+      metadata: {
+        levels,
+        swingHigh,
+        swingLow,
+        isUptrend,
+        currentZone: `${Math.round(retracementPct * 100)}% retracement`,
+        nearestSupport: nearestSupport?.price ?? null,
+        nearestResistance: nearestResistance?.price ?? null,
+        goldenZone: {
+          upper: isUptrend ? swingHigh - diff * 0.618 : swingLow + diff * 0.618,
+          lower: isUptrend ? swingHigh - diff * 0.65 : swingLow + diff * 0.65,
+        },
+      },
+    };
+  }
+
+  // ==========================================================================
+  // ELLIOTT WAVE ANALYSIS
+  // ==========================================================================
+
+  /**
+   * Simplified Elliott Wave detection
+   * Identifies impulse (5-wave) and corrective (3-wave) patterns using pivot detection
+   */
+  calculateElliottWave(data: OHLCV[]): IndicatorResult {
+    if (data.length < 50) {
+      return { name: 'ELLIOTT_WAVE', value: null, signal: 'neutral', strength: 0, metadata: { error: 'Insufficient data (need 50+)' } };
+    }
+
+    // Step 1: Find significant pivots using ATR-based threshold
+    const atrPeriod = 14;
+    let atrSum = 0;
+    for (let i = 1; i < Math.min(atrPeriod + 1, data.length); i++) {
+      atrSum += Math.max(
+        data[i].high - data[i].low,
+        Math.abs(data[i].high - data[i - 1].close),
+        Math.abs(data[i].low - data[i - 1].close)
+      );
+    }
+    const atr = atrSum / atrPeriod;
+    const threshold = atr * 2.5; // Minimum move to qualify as a wave
+
+    // Step 2: ZigZag pivot detection
+    const pivots: Array<{ index: number; price: number; type: 'high' | 'low' }> = [];
+    let lastPivotType: 'high' | 'low' | null = null;
+
+    for (let i = 2; i < data.length - 2; i++) {
+      const c = data[i];
+      const isHigh = c.high > data[i - 1].high && c.high > data[i - 2].high &&
+                     c.high > data[i + 1].high && c.high > data[i + 2].high;
+      const isLow = c.low < data[i - 1].low && c.low < data[i - 2].low &&
+                    c.low < data[i + 1].low && c.low < data[i + 2].low;
+
+      if (isHigh && lastPivotType !== 'high') {
+        if (pivots.length > 0 && pivots[pivots.length - 1].type === 'high') {
+          if (c.high > pivots[pivots.length - 1].price) pivots[pivots.length - 1] = { index: i, price: c.high, type: 'high' };
+        } else if (pivots.length === 0 || Math.abs(c.high - pivots[pivots.length - 1].price) >= threshold) {
+          pivots.push({ index: i, price: c.high, type: 'high' });
+          lastPivotType = 'high';
+        }
+      }
+      if (isLow && lastPivotType !== 'low') {
+        if (pivots.length > 0 && pivots[pivots.length - 1].type === 'low') {
+          if (c.low < pivots[pivots.length - 1].price) pivots[pivots.length - 1] = { index: i, price: c.low, type: 'low' };
+        } else if (pivots.length === 0 || Math.abs(c.low - pivots[pivots.length - 1].price) >= threshold) {
+          pivots.push({ index: i, price: c.low, type: 'low' });
+          lastPivotType = 'low';
+        }
+      }
+    }
+
+    if (pivots.length < 6) {
+      return {
+        name: 'ELLIOTT_WAVE',
+        value: null,
+        signal: 'neutral',
+        strength: 0,
+        metadata: { error: 'Not enough pivots for wave count', pivotCount: pivots.length },
+      };
+    }
+
+    // Step 3: Try to fit impulse waves (5-wave pattern) on last pivots
+    const recentPivots = pivots.slice(-10);
+    let bestFit = this.fitElliottImpulse(recentPivots, data);
+
+    // Step 4: If impulse doesn't fit well, try corrective (ABC)
+    if (bestFit.confidence < 40) {
+      const corrFit = this.fitElliottCorrective(recentPivots, data);
+      if (corrFit.confidence > bestFit.confidence) {
+        bestFit = corrFit;
+      }
+    }
+
+    const signal = bestFit.direction === 'bullish' ? 'bullish' : bestFit.direction === 'bearish' ? 'bearish' : 'neutral';
+
+    return {
+      name: 'ELLIOTT_WAVE',
+      value: bestFit.confidence,
+      signal,
+      strength: bestFit.confidence,
+      metadata: bestFit,
+    };
+  }
+
+  private fitElliottImpulse(
+    pivots: Array<{ index: number; price: number; type: 'high' | 'low' }>,
+    data: OHLCV[]
+  ): ElliottWaveResult {
+    const result: ElliottWaveResult = {
+      currentWave: '?',
+      waveType: 'impulse',
+      direction: 'bullish',
+      confidence: 0,
+      waves: [],
+    };
+
+    if (pivots.length < 6) return result;
+
+    // Try bullish impulse: Low-High-Low-High-Low-High (1-2-3-4-5)
+    // Take last 6 alternating pivots
+    const candidates = pivots.slice(-6);
+    const startsWithLow = candidates[0].type === 'low';
+
+    if (!startsWithLow && candidates.length >= 6) {
+      // Try starting from index 1
+      candidates.shift();
+    }
+
+    if (candidates.length < 6) return result;
+
+    const isBullish = candidates[0].type === 'low';
+    if (!isBullish) {
+      // Bearish impulse: High-Low-High-Low-High-Low
+      result.direction = 'bearish';
+    }
+
+    const w1Start = candidates[0];
+    const w1End = candidates[1];
+    const w2End = candidates[2];
+    const w3End = candidates[3];
+    const w4End = candidates[4];
+    const w5End = candidates[5];
+
+    let confidence = 50; // Base confidence
+
+    if (isBullish) {
+      // Rule 1: Wave 2 cannot retrace below wave 1 start
+      if (w2End.price > w1Start.price) confidence += 10; else confidence -= 20;
+
+      // Rule 2: Wave 3 cannot be the shortest impulse wave
+      const w1Len = Math.abs(w1End.price - w1Start.price);
+      const w3Len = Math.abs(w3End.price - w2End.price);
+      const w5Len = Math.abs(w5End.price - w4End.price);
+      if (w3Len > w1Len && w3Len > w5Len) confidence += 15; // Wave 3 is longest — ideal
+      else if (w3Len >= w1Len || w3Len >= w5Len) confidence += 5;
+      else confidence -= 15;
+
+      // Rule 3: Wave 4 should not overlap wave 1 territory
+      if (w4End.price > w1End.price) confidence -= 10;
+      else confidence += 10;
+
+      // Fibonacci alignment: Wave 2 typically retraces 50-61.8% of wave 1
+      const w2Retrace = Math.abs(w1End.price - w2End.price) / w1Len;
+      if (w2Retrace >= 0.382 && w2Retrace <= 0.786) confidence += 10;
+
+      // Wave 3 often extends to 1.618x of wave 1
+      const w3Ratio = w3Len / w1Len;
+      if (w3Ratio >= 1.0 && w3Ratio <= 2.618) confidence += 5;
+    } else {
+      // Bearish rules (mirror)
+      if (w2End.price < w1Start.price) confidence += 10; else confidence -= 20;
+      const w1Len = Math.abs(w1Start.price - w1End.price);
+      const w3Len = Math.abs(w2End.price - w3End.price);
+      const w5Len = Math.abs(w4End.price - w5End.price);
+      if (w3Len > w1Len && w3Len > w5Len) confidence += 15;
+      else if (w3Len >= w1Len || w3Len >= w5Len) confidence += 5;
+      else confidence -= 15;
+      if (w4End.price < w1End.price) confidence -= 10; else confidence += 10;
+    }
+
+    confidence = Math.max(0, Math.min(100, confidence));
+
+    // Determine current wave position based on last data point
+    const lastPrice = data[data.length - 1].close;
+    let currentWave = '5';
+    if (isBullish) {
+      if (lastPrice < w1End.price) currentWave = '2';
+      else if (lastPrice < w3End.price) currentWave = '4';
+      else currentWave = '5';
+    }
+
+    // Projected target for next wave
+    const w1Len = Math.abs(w1End.price - w1Start.price);
+    const projectedTarget = isBullish
+      ? w4End.price + w1Len * 1.618
+      : w4End.price - w1Len * 1.618;
+
+    result.confidence = confidence;
+    result.currentWave = currentWave;
+    result.projectedTarget = Math.round(projectedTarget * 100) / 100;
+    result.waves = [
+      { wave: '1', startPrice: w1Start.price, endPrice: w1End.price, startIndex: w1Start.index, endIndex: w1End.index },
+      { wave: '2', startPrice: w1End.price, endPrice: w2End.price, startIndex: w1End.index, endIndex: w2End.index },
+      { wave: '3', startPrice: w2End.price, endPrice: w3End.price, startIndex: w2End.index, endIndex: w3End.index },
+      { wave: '4', startPrice: w3End.price, endPrice: w4End.price, startIndex: w3End.index, endIndex: w4End.index },
+      { wave: '5', startPrice: w4End.price, endPrice: w5End.price, startIndex: w4End.index, endIndex: w5End.index },
+    ];
+
+    return result;
+  }
+
+  private fitElliottCorrective(
+    pivots: Array<{ index: number; price: number; type: 'high' | 'low' }>,
+    _data: OHLCV[]
+  ): ElliottWaveResult {
+    const result: ElliottWaveResult = {
+      currentWave: '?',
+      waveType: 'corrective',
+      direction: 'bearish',
+      confidence: 0,
+      waves: [],
+    };
+
+    if (pivots.length < 4) return result;
+
+    // ABC corrective: 3 alternating pivots
+    const candidates = pivots.slice(-4);
+    const aStart = candidates[0];
+    const aEnd = candidates[1];
+    const bEnd = candidates[2];
+    const cEnd = candidates[3];
+
+    const isBearishCorrection = aStart.type === 'high'; // Correcting an uptrend
+    result.direction = isBearishCorrection ? 'bearish' : 'bullish';
+
+    let confidence = 45;
+
+    const aLen = Math.abs(aEnd.price - aStart.price);
+    const bLen = Math.abs(bEnd.price - aEnd.price);
+    const cLen = Math.abs(cEnd.price - bEnd.price);
+
+    // Wave B typically retraces 38.2-78.6% of wave A
+    const bRetrace = aLen > 0 ? bLen / aLen : 0;
+    if (bRetrace >= 0.382 && bRetrace <= 0.786) confidence += 15;
+
+    // Wave C often equals wave A or extends to 1.618x
+    const cRatio = aLen > 0 ? cLen / aLen : 0;
+    if (cRatio >= 0.618 && cRatio <= 1.618) confidence += 15;
+
+    // C should move beyond A's end
+    if (isBearishCorrection) {
+      if (cEnd.price < aEnd.price) confidence += 10;
+    } else {
+      if (cEnd.price > aEnd.price) confidence += 10;
+    }
+
+    confidence = Math.max(0, Math.min(100, confidence));
+
+    result.confidence = confidence;
+    result.currentWave = 'C';
+    result.waves = [
+      { wave: 'A', startPrice: aStart.price, endPrice: aEnd.price, startIndex: aStart.index, endIndex: aEnd.index },
+      { wave: 'B', startPrice: aEnd.price, endPrice: bEnd.price, startIndex: aEnd.index, endIndex: bEnd.index },
+      { wave: 'C', startPrice: bEnd.price, endPrice: cEnd.price, startIndex: bEnd.index, endIndex: cEnd.index },
+    ];
+
+    return result;
+  }
+
+  // ==========================================================================
+  // TECHNICAL ANALYSIS COMPOSITE SCORE
+  // ==========================================================================
+
+  /**
+   * Calculate a composite technical analysis score (0-100) from multiple indicators
+   * Aggregates trend, momentum, volume, and volatility signals with weighted scoring
+   */
+  calculateTAScore(data: OHLCV[], existingResults?: Map<string, IndicatorResult>): IndicatorResult {
+    if (data.length < 30) {
+      return { name: 'TA_SCORE', value: null, signal: 'neutral', strength: 0, metadata: { error: 'Insufficient data' } };
+    }
+
+    const getResult = (name: string, params?: Record<string, number>): IndicatorResult | null => {
+      if (existingResults?.has(name)) return existingResults.get(name)!;
+      try { return this.calculateIndicator(name, data, params); } catch { return null; }
+    };
+
+    // --- Trend Score (35% weight) ---
+    let trendScore = 50;
+    let trendCount = 0;
+
+    const macd = getResult('MACD');
+    if (macd?.metadata?.histogram != null) {
+      const hist = macd.metadata.histogram;
+      trendScore += hist > 0 ? 15 : hist < 0 ? -15 : 0;
+      trendCount++;
+    }
+
+    const adx = getResult('ADX');
+    if (adx?.value != null) {
+      // ADX > 25 = strong trend, adds conviction to direction
+      if (adx.value > 25) trendScore += adx.signal === 'bullish' ? 10 : -10;
+      trendCount++;
+    }
+
+    const supertrend = getResult('SUPERTREND');
+    if (supertrend?.signal) {
+      trendScore += supertrend.signal === 'bullish' ? 10 : -10;
+      trendCount++;
+    }
+
+    // EMA alignment: price vs EMA20
+    const closes = data.map(d => d.close);
+    const currentPrice = closes[closes.length - 1];
+    const ema20Vals = this.emaArray(closes, 20);
+    if (ema20Vals.length > 0) {
+      trendScore += currentPrice > ema20Vals[ema20Vals.length - 1] ? 8 : -8;
+      trendCount++;
+    }
+
+    if (trendCount > 0) trendScore = Math.max(0, Math.min(100, trendScore));
+
+    // --- Momentum Score (30% weight) ---
+    let momentumScore = 50;
+    let momentumCount = 0;
+
+    const rsi = getResult('RSI');
+    if (rsi?.value != null) {
+      if (rsi.value < 30) momentumScore += 20;       // Oversold → bullish
+      else if (rsi.value < 40) momentumScore += 10;
+      else if (rsi.value > 70) momentumScore -= 20;   // Overbought → bearish
+      else if (rsi.value > 60) momentumScore -= 10;
+      momentumCount++;
+    }
+
+    const stoch = getResult('STOCHASTIC');
+    if (stoch?.value != null) {
+      if (stoch.value < 20) momentumScore += 15;
+      else if (stoch.value > 80) momentumScore -= 15;
+      momentumCount++;
+    }
+
+    const cci = getResult('CCI');
+    if (cci?.value != null) {
+      if (cci.value < -100) momentumScore += 10;
+      else if (cci.value > 100) momentumScore -= 10;
+      momentumCount++;
+    }
+
+    if (momentumCount > 0) momentumScore = Math.max(0, Math.min(100, momentumScore));
+
+    // --- Volume Score (20% weight) ---
+    let volumeScore = 50;
+    let volumeCount = 0;
+
+    const obv = getResult('OBV');
+    if (obv?.signal) {
+      volumeScore += obv.signal === 'bullish' ? 15 : obv.signal === 'bearish' ? -15 : 0;
+      volumeCount++;
+    }
+
+    const cmf = getResult('CMF');
+    if (cmf?.value != null) {
+      volumeScore += cmf.value > 0.05 ? 15 : cmf.value < -0.05 ? -15 : 0;
+      volumeCount++;
+    }
+
+    const relVol = getResult('RELATIVE_VOLUME');
+    if (relVol?.value != null && relVol.value > 1.5) {
+      // High relative volume amplifies the current signal
+      volumeScore += currentPrice > closes[closes.length - 2] ? 10 : -10;
+      volumeCount++;
+    }
+
+    if (volumeCount > 0) volumeScore = Math.max(0, Math.min(100, volumeScore));
+
+    // --- Volatility Score (15% weight) ---
+    let volatilityScore = 50;
+    let volCount = 0;
+
+    const bbands = getResult('BOLLINGER');
+    if (bbands?.metadata) {
+      const { upper, lower } = bbands.metadata;
+      if (upper && lower) {
+        const bbWidth = (upper - lower) / ((upper + lower) / 2);
+        // Narrow BBands → squeeze → neutral; price near lower → bullish opportunity
+        if (currentPrice <= lower * 1.01) volatilityScore += 15;
+        else if (currentPrice >= upper * 0.99) volatilityScore -= 15;
+        if (bbWidth < 0.03) volatilityScore += 5; // Squeeze — breakout pending
+        volCount++;
+      }
+    }
+
+    const atr = getResult('ATR');
+    if (atr?.value != null) {
+      // ATR relative to price — high volatility can be opportunity or risk
+      const atrPct = atr.value / currentPrice;
+      if (atrPct > 0.05) volatilityScore -= 5; // Very volatile — caution
+      volCount++;
+    }
+
+    if (volCount > 0) volatilityScore = Math.max(0, Math.min(100, volatilityScore));
+
+    // --- Weighted Composite ---
+    const composite = Math.round(
+      trendScore * 0.35 +
+      momentumScore * 0.30 +
+      volumeScore * 0.20 +
+      volatilityScore * 0.15
+    );
+
+    const signal = composite >= 65 ? 'bullish' : composite <= 35 ? 'bearish' : 'neutral';
+
+    return {
+      name: 'TA_SCORE',
+      value: composite,
+      signal,
+      strength: Math.abs(composite - 50) * 2,
+      metadata: {
+        trendScore: Math.round(trendScore),
+        momentumScore: Math.round(momentumScore),
+        volumeScore: Math.round(volumeScore),
+        volatilityScore: Math.round(volatilityScore),
+        weights: { trend: 0.35, momentum: 0.30, volume: 0.20, volatility: 0.15 },
+        breakdown: {
+          macd: macd?.signal ?? 'N/A',
+          rsi: rsi?.value ?? 'N/A',
+          adx: adx?.value ?? 'N/A',
+          stochastic: stoch?.value ?? 'N/A',
+          obv: obv?.signal ?? 'N/A',
+          bollinger: bbands?.signal ?? 'N/A',
+        },
+      },
+    };
+  }
+
+  /**
+   * Helper: compute EMA values as an array (for internal use by TA Score)
+   */
+  private emaArray(closes: number[], period: number): number[] {
+    if (closes.length < period) return [];
+    const k = 2 / (period + 1);
+    const result: number[] = [];
+    let emaVal = closes.slice(0, period).reduce((a, b) => a + b, 0) / period;
+    result.push(emaVal);
+    for (let i = period; i < closes.length; i++) {
+      emaVal = closes[i] * k + emaVal * (1 - k);
+      result.push(emaVal);
+    }
+    return result;
+  }
+
+  // ==========================================================================
+  // INDICATOR SERIES (for chart rendering)
+  // ==========================================================================
+
+  /**
+   * Calculate a full time-series for a given indicator
+   * Returns values[] array for each data point — used for frontend chart rendering
+   */
+  calculateIndicatorSeries(data: OHLCV[], indicatorName: string, params?: Record<string, number>): IndicatorResult {
+    const upperName = (indicatorName || '').toUpperCase();
+    const closes = data.map(d => d.close);
+    const highs = data.map(d => d.high);
+    const lows = data.map(d => d.low);
+
+    if (data.length < 5) {
+      return { name: `SERIES_${upperName}`, value: null, signal: 'neutral', metadata: { error: 'Insufficient data' } };
+    }
+
+    let values: number[] = [];
+
+    switch (upperName) {
+      case 'EMA': {
+        const period = params?.period ?? 20;
+        values = this.emaArray(closes, period);
+        // Pad front with nullish zeros for alignment
+        values = new Array(data.length - values.length).fill(0).concat(values);
+        break;
+      }
+      case 'SMA': {
+        const period = params?.period ?? 20;
+        values = [];
+        for (let i = 0; i < data.length; i++) {
+          if (i < period - 1) { values.push(0); continue; }
+          const slice = closes.slice(i - period + 1, i + 1);
+          values.push(slice.reduce((a, b) => a + b, 0) / period);
+        }
+        break;
+      }
+      case 'RSI': {
+        const period = params?.period ?? 14;
+        values = this.rsiSeries(closes, period);
+        values = new Array(data.length - values.length).fill(0).concat(values);
+        break;
+      }
+      case 'ATR': {
+        const period = params?.period ?? 14;
+        values = [];
+        for (let i = 0; i < data.length; i++) {
+          if (i < 1) { values.push(0); continue; }
+          const tr = Math.max(
+            highs[i] - lows[i],
+            Math.abs(highs[i] - closes[i - 1]),
+            Math.abs(lows[i] - closes[i - 1])
+          );
+          if (i < period) {
+            values.push(tr);
+          } else {
+            const prevAtr = values[values.length - 1];
+            values.push((prevAtr * (period - 1) + tr) / period);
+          }
+        }
+        break;
+      }
+      case 'BOLLINGER': {
+        const period = params?.period ?? 20;
+        const stdDev = params?.stdDev ?? 2;
+        const upper: number[] = [];
+        const middle: number[] = [];
+        const lower: number[] = [];
+        for (let i = 0; i < data.length; i++) {
+          if (i < period - 1) { upper.push(0); middle.push(0); lower.push(0); continue; }
+          const slice = closes.slice(i - period + 1, i + 1);
+          const avg = slice.reduce((a, b) => a + b, 0) / period;
+          const sd = Math.sqrt(slice.map(v => Math.pow(v - avg, 2)).reduce((a, b) => a + b, 0) / period);
+          middle.push(avg);
+          upper.push(avg + sd * stdDev);
+          lower.push(avg - sd * stdDev);
+        }
+        return {
+          name: `SERIES_BOLLINGER`,
+          value: middle[middle.length - 1],
+          signal: 'neutral',
+          values: middle,
+          metadata: { upper, lower, period, stdDev },
+        };
+      }
+      case 'MACD': {
+        const fast = params?.fast ?? 12;
+        const slow = params?.slow ?? 26;
+        const sig = params?.signal ?? 9;
+        const emaFast = this.emaArray(closes, fast);
+        const emaSlow = this.emaArray(closes, slow);
+        // Align arrays
+        const offset = emaFast.length - emaSlow.length;
+        const macdLine: number[] = [];
+        for (let i = 0; i < emaSlow.length; i++) {
+          macdLine.push(emaFast[i + offset] - emaSlow[i]);
+        }
+        const signalLine = this.emaArray(macdLine, sig);
+        const sOffset = macdLine.length - signalLine.length;
+        const histogram: number[] = [];
+        for (let i = 0; i < signalLine.length; i++) {
+          histogram.push(macdLine[i + sOffset] - signalLine[i]);
+        }
+        return {
+          name: `SERIES_MACD`,
+          value: macdLine[macdLine.length - 1],
+          signal: histogram[histogram.length - 1] > 0 ? 'bullish' : 'bearish',
+          values: macdLine,
+          metadata: { signalLine, histogram },
+        };
+      }
+      default:
+        return { name: `SERIES_${upperName}`, value: null, signal: 'neutral', metadata: { error: `Series not supported for ${indicatorName}` } };
+    }
+
+    const lastVal = values[values.length - 1];
+    return {
+      name: `SERIES_${upperName}`,
+      value: lastVal,
+      signal: 'neutral',
+      values,
+    };
+  }
+
+  /**
+   * Helper: compute RSI series
+   */
+  private rsiSeries(closes: number[], period: number): number[] {
+    if (closes.length < period + 1) return [];
+    const result: number[] = [];
+    let avgGain = 0;
+    let avgLoss = 0;
+
+    for (let i = 1; i <= period; i++) {
+      const change = closes[i] - closes[i - 1];
+      if (change > 0) avgGain += change;
+      else avgLoss += Math.abs(change);
+    }
+    avgGain /= period;
+    avgLoss /= period;
+
+    const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+    result.push(100 - 100 / (1 + rs));
+
+    for (let i = period + 1; i < closes.length; i++) {
+      const change = closes[i] - closes[i - 1];
+      avgGain = (avgGain * (period - 1) + (change > 0 ? change : 0)) / period;
+      avgLoss = (avgLoss * (period - 1) + (change < 0 ? Math.abs(change) : 0)) / period;
+      const rsi = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
+      result.push(rsi);
+    }
+
+    return result;
+  }
+
+  // ==========================================================================
   // BATCH CALCULATION
   // ==========================================================================
 
@@ -1635,6 +2355,17 @@ export class IndicatorsService {
 
     // Candlestick pattern detection
     if (upperName === 'CANDLESTICK_PATTERNS') return this.detectCandlestickPatterns(data);
+
+    // Fibonacci & Elliott Wave & TA Score
+    if (upperName === 'FIBONACCI') return this.calculateFibonacciLevels(data);
+    if (upperName === 'ELLIOTT_WAVE') return this.calculateElliottWave(data);
+    if (upperName === 'TA_SCORE') return this.calculateTAScore(data);
+
+    // Indicator series (chart data)
+    if (upperName.startsWith('SERIES_')) {
+      const targetIndicator = upperName.replace('SERIES_', '');
+      return this.calculateIndicatorSeries(data, targetIndicator, params);
+    }
 
     this.logger.warn(`Unknown indicator: ${name}`);
     return null;

@@ -4,7 +4,6 @@
 // TraderPath Professional Analysis Report
 // ===========================================
 
-import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
 // ===========================================
@@ -18,6 +17,7 @@ export interface AnalysisReportData {
   tradeType?: 'scalping' | 'dayTrade' | 'swing';
   method?: 'classic' | 'mlis_pro'; // Analysis method: Classic 7-Step or MLIS Pro
   chartImage?: string;
+  assetLogoUrl?: string; // Asset's own logo (e.g. BTC, ETH icon) as data URI or URL
 
   marketPulse: {
     btcDominance: number;
@@ -105,6 +105,14 @@ export interface AnalysisReportData {
     optimalEntry?: number;
     waitFor?: { event: string; estimatedTime: string };
     gate?: { canProceed: boolean; reason: string; confidence: number; urgency?: string };
+    fibonacci?: {
+      nearGoldenZone: boolean;
+      retracementPct: number;
+      goldenZone?: { upper: number; lower: number } | null;
+      nearestFibSupport?: number | null;
+      nearestFibResistance?: number | null;
+      levels?: Array<{ level: number; price: number; type: string }>;
+    };
   };
 
   tradePlan: {
@@ -329,6 +337,36 @@ function getVerdictAction(v: { action?: string; verdict?: string } | undefined):
   return v?.action || v?.verdict || '';
 }
 
+/**
+ * Verdict-aware pulse dot for page headers.
+ * GO/CONDITIONAL_GO → green, WAIT → amber, AVOID → red.
+ * Rendered as a solid dot with a glow halo (frozen pulse frame).
+ */
+function verdictPulseDot(verdict: string | undefined): string {
+  const v = (typeof verdict === 'string' ? verdict : '').toLowerCase().replace(/-/g, '_');
+  let color: string;
+  let glowColor: string;
+  if (v === 'go') {
+    color = '#4ade80';
+    glowColor = 'rgba(74, 222, 128, 0.35)';
+  } else if (v.includes('conditional')) {
+    color = '#fbbf24';
+    glowColor = 'rgba(251, 191, 36, 0.35)';
+  } else if (v === 'avoid' || v === 'no_go' || v === 'stop') {
+    color = '#f87171';
+    glowColor = 'rgba(248, 113, 113, 0.35)';
+  } else {
+    // WAIT or unknown
+    color = '#fbbf24';
+    glowColor = 'rgba(251, 191, 36, 0.25)';
+  }
+
+  return `<span style="display:inline-block;position:relative;width:10px;height:10px;vertical-align:middle;margin-right:6px;">` +
+    `<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;background:${glowColor};"></span>` +
+    `<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:${color};box-shadow:0 0 6px ${color}, 0 0 10px ${glowColor};"></span>` +
+    `</span>`;
+}
+
 function formatIndicatorValue(value: number | string | null | undefined): string {
   if (value === null || value === undefined) return '-';
   if (typeof value === 'string') return value;
@@ -406,9 +444,10 @@ const styles = `
   .brand-trade { color: #f87171; }
   .brand-path { color: #14B8A6; }
   .header-center { text-align: center; }
-  .report-title { font-size: 11px; font-weight: 600; color: #f1f5f9; text-transform: uppercase; letter-spacing: 1px; }
+  .report-title { font-size: 11px; font-weight: 600; color: #f1f5f9; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; }
   .report-subtitle { font-size: 8px; color: #9ca3af; margin-top: 2px; }
-  .header-right { text-align: right; }
+  .header-right { text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+  .asset-logo { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
   .symbol { font-size: 14px; font-weight: 700; color: #f1f5f9; }
   .direction-tag { display: inline-block; font-size: 10px; font-weight: 700; margin-left: 6px; }
   .tag-long { color: #4ade80; }
@@ -782,10 +821,11 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
       </div>
       <div style="font-size: 9px; color: #6b7280; margin-top: 2px;">${tradeTypes[data.tradeType || ''] || 'Analysis'}</div>
 
-      <!-- Symbol and Direction -->
-      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+      <!-- Symbol and Direction with Asset Logo -->
+      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: center; gap: 10px;">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" width="36" height="36" style="border-radius: 50%; object-fit: cover;" />` : ''}
         <span class="symbol" style="font-size: 22px; font-weight: 800;">${data.symbol}/USDT</span>
-        <span class="direction-tag ${hasDirection ? (isLong ? 'tag-long' : 'tag-short') : ''}" style="font-size: 14px; margin-left: 12px; padding: 3px 10px; border-radius: 4px; border: 1px solid #374151; ${!hasDirection ? 'color: #d97706;' : isLong ? 'color: #16a34a;' : 'color: #dc2626;'}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'WAIT'}</span>
+        <span class="direction-tag ${hasDirection ? (isLong ? 'tag-long' : 'tag-short') : ''}" style="font-size: 14px; margin-left: 2px; padding: 3px 10px; border-radius: 4px; border: 1px solid #374151; ${!hasDirection ? 'color: #d97706;' : isLong ? 'color: #16a34a;' : 'color: #dc2626;'}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'WAIT'}</span>
       </div>
     </div>
 
@@ -932,10 +972,11 @@ function generatePageTradePlan(data: AnalysisReportData, totalPages: number): st
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Trade Plan</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Trade Plan</div>
         <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" class="asset-logo" />` : ''}
         <span class="symbol">${data.symbol}/USDT</span>
         <span class="direction-tag ${isLong ? 'tag-long' : 'tag-short'}">${isLong ? 'LONG' : 'SHORT'}</span>
       </div>
@@ -1031,10 +1072,11 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Tokenomics Analysis</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Tokenomics Analysis</div>
         <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" class="asset-logo" />` : ''}
         <span class="symbol">${data.symbol}/USDT</span>
       </div>
     </div>
@@ -1234,10 +1276,11 @@ function generatePageSteps12(data: AnalysisReportData, totalPages: number): stri
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Analysis Steps 1-2</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Analysis Steps 1-2</div>
         <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" class="asset-logo" />` : ''}
         <span class="symbol">${data.symbol}/USDT</span>
       </div>
     </div>
@@ -1399,10 +1442,11 @@ function generatePageSteps34(data: AnalysisReportData, totalPages: number): stri
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Analysis Steps 3-4</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Analysis Steps 3-4</div>
         <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" class="asset-logo" />` : ''}
         <span class="symbol">${data.symbol}/USDT</span>
       </div>
     </div>
@@ -1560,10 +1604,11 @@ function generatePageSteps56(data: AnalysisReportData, totalPages: number): stri
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Analysis Steps 5-6</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Analysis Steps 5-6</div>
         <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" class="asset-logo" />` : ''}
         <span class="symbol">${data.symbol}/USDT</span>
       </div>
     </div>
@@ -1727,10 +1772,11 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Final Verdict</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Final Verdict</div>
         <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" class="asset-logo" />` : ''}
         <span class="symbol">${data.symbol}/USDT</span>
       </div>
     </div>
@@ -1895,7 +1941,7 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
 }
 
 // ===========================================
-// CHART CAPTURE & PDF GENERATION
+// CHART CAPTURE & SNAPSHOT PNG GENERATION
 // ===========================================
 
 export async function captureChartAsImage(): Promise<string | null> {
@@ -2009,9 +2055,32 @@ async function renderPageToCanvas(html: string): Promise<HTMLCanvasElement> {
   return canvas;
 }
 
-interface PdfResult {
-  base64: string;
-  fileName: string;
+interface SnapshotResult {
+  snapshots: { base64: string; fileName: string }[];
+}
+
+// Fetch asset logo and convert to data URI for PDF rendering (avoids CORS)
+async function fetchAssetLogoDataUri(symbol: string): Promise<string | null> {
+  try {
+    const { getLogoUrlAsync } = await import('../../lib/asset-logos-cache');
+    const logoUrl = await getLogoUrlAsync(symbol.replace(/USDT$/i, ''));
+
+    // Already a data URI (SVG fallback) - use directly
+    if (logoUrl.startsWith('data:')) return logoUrl;
+
+    // External URL - convert to data URI
+    const response = await fetch(logoUrl, { mode: 'cors' });
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
 }
 
 // ===========================================
@@ -2033,8 +2102,11 @@ function generatePageRAG(data: AnalysisReportData, totalPages: number): string {
   <div class="page">
     <!-- Header -->
     <div style="text-align:center;padding:12px 0 15px;border-bottom:2px solid #1a1a1a;margin-bottom:12px;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f1f5f9;">RAG Intelligence Layer</div>
-      <div style="font-size:7px;color:#666;margin-top:3px;">${data.symbol} | Page 8 of ${totalPages}</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f1f5f9;">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}RAG Intelligence Layer</div>
+      <div style="font-size:7px;color:#666;margin-top:3px;display:flex;align-items:center;justify-content:center;gap:4px;">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" style="width:14px;height:14px;border-radius:50%;object-fit:cover;" />` : ''}
+        <span>${data.symbol} | Page 8 of ${totalPages}</span>
+      </div>
     </div>
 
     ${validation ? `
@@ -2191,13 +2263,13 @@ function generateSinglePageReport(data: AnalysisReportData): string {
 
   // Helper for Capital Flow layer boxes
   const getLayerBox = (num: number, title: string, content: string, badge?: string, badgeColor?: string) => `
-    <div style="flex: 1; min-width: 240px; border: 1px solid #374151; border-radius: 4px; padding: 6px 8px; background: #111111;">
+    <div style="flex: 1; min-width: 220px; max-width: 260px; border: 1px solid #374151; border-radius: 4px; padding: 6px 8px; background: #111111; overflow: hidden;">
       <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
         <span style="font-size: 7px; font-weight: 700; color: #9ca3af;">L${num}</span>
         <span style="font-size: 8px; font-weight: 600; color: #f1f5f9;">${title}</span>
         ${badge ? `<span style="margin-left: auto; font-size: 6px; font-weight: 600; padding: 1px 4px; border-radius: 2px; background: ${badgeColor || '#666'}; color: white;">${badge}</span>` : ''}
       </div>
-      <div style="font-size: 7px; color: #d1d5db; line-height: 1.4;">${content}</div>
+      <div style="font-size: 7px; color: #d1d5db; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word;">${content}</div>
     </div>
   `;
 
@@ -2226,24 +2298,24 @@ function generateSinglePageReport(data: AnalysisReportData): string {
     <head>
       <style>
         ${styles}
-        .single-page { padding: 12px 24px; max-width: 560px; margin: 0 auto; }
-        .section-box { border: 1px solid #ddd; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; background: #111111; }
+        .single-page { padding: 12px 24px; max-width: 560px; margin: 0 auto; overflow: hidden; }
+        .section-box { border: 1px solid #ddd; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; background: #111111; overflow: hidden; }
         .section-title-bar { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e0e0e0; }
         .section-num { font-size: 8px; font-weight: 700; color: #fff; background: #1a1a1a; padding: 2px 6px; border-radius: 3px; }
         .section-name { font-size: 10px; font-weight: 600; color: #f1f5f9; }
         .layer-grid { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-        .two-col { display: flex; gap: 8px; justify-content: center; }
-        .two-col > div { flex: 1; max-width: 260px; }
-        .step-mini { border: 1px solid #e5e5e5; border-radius: 3px; padding: 5px 7px; margin-bottom: 5px; background: #111111; }
+        .two-col { display: flex; gap: 8px; justify-content: center; overflow: hidden; }
+        .two-col > div { flex: 1; max-width: 260px; overflow: hidden; }
+        .step-mini { border: 1px solid #e5e5e5; border-radius: 3px; padding: 5px 7px; margin-bottom: 5px; background: #111111; overflow: hidden; }
         .step-mini-header { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
         .step-mini-num { font-size: 7px; font-weight: 700; color: #9ca3af; }
         .step-mini-title { font-size: 8px; font-weight: 600; color: #f1f5f9; }
         .step-mini-gate { margin-left: auto; font-size: 6px; font-weight: 600; }
-        .step-mini-content { font-size: 7px; color: #d1d5db; line-height: 1.35; }
+        .step-mini-content { font-size: 7px; color: #d1d5db; line-height: 1.35; word-wrap: break-word; overflow-wrap: break-word; }
         .step-mini-row { display: flex; gap: 4px; margin-top: 3px; justify-content: center; }
-        .step-mini-metric { background: #111111; border: 1px solid #eee; border-radius: 2px; padding: 2px 5px; flex: 1; text-align: center; }
+        .step-mini-metric { background: #111111; border: 1px solid #eee; border-radius: 2px; padding: 2px 5px; flex: 1; text-align: center; overflow: hidden; }
         .step-mini-metric-label { font-size: 5px; color: #6b7280; text-transform: uppercase; }
-        .step-mini-metric-value { font-size: 8px; font-weight: 600; color: #f1f5f9; }
+        .step-mini-metric-value { font-size: 8px; font-weight: 600; color: #f1f5f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .trade-decision-box { border: 1px solid #374151; border-radius: 4px; padding: 8px 12px; text-align: center; background: #111111; }
         .trade-decision-action { font-size: 20px; font-weight: 700; }
         .trade-decision-sub { font-size: 7px; color: #9ca3af; margin-top: 2px; }
@@ -2283,8 +2355,10 @@ function generateSinglePageReport(data: AnalysisReportData): string {
             <div class="report-title" style="font-size: 10px;">Asset Analysis Report</div>
             <div class="report-subtitle" style="font-size: 6px;">${data.method === 'mlis_pro' ? 'MLIS Pro' : 'Classic 7-Step'} | ${new Date(data.generatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</div>
           </div>
-          <div class="header-right" style="text-align: center;">
-            <div class="symbol" style="font-size: 12px;">${data.symbol}
+          <div class="header-right" style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px;">
+            <div style="display: flex; align-items: center; gap: 4px;">
+              ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover;" />` : ''}
+              <span class="symbol" style="font-size: 12px;">${data.symbol}</span>
               <span class="direction-tag ${isLong ? 'tag-long' : isShort ? 'tag-short' : ''}" style="font-size: 8px;">${directionStr}</span>
             </div>
             <div class="score-box" style="margin-top: 2px;">
@@ -2516,7 +2590,7 @@ function generateSinglePageReport(data: AnalysisReportData): string {
               </div>
               <div style="flex: 2; max-width: 200px; background: #111111; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
                 <div style="font-size: 6px; color: #92400e; text-transform: uppercase;">Reason</div>
-                <div style="font-size: 7px; color: #78350f;">${cf.layer4?.reason || 'Capital flow analysis based recommendation'}</div>
+                <div style="font-size: 7px; color: #78350f; word-wrap: break-word; overflow-wrap: break-word; overflow: hidden;">${(cf.layer4?.reason || 'Capital flow analysis based recommendation').slice(0, 80)}${(cf.layer4?.reason || '').length > 80 ? '...' : ''}</div>
               </div>
             </div>
           </div>
@@ -2576,7 +2650,7 @@ function generateSinglePageReport(data: AnalysisReportData): string {
   `;
 }
 
-export async function generateAnalysisReport(data: AnalysisReportData, captureChart: boolean = true, singlePage: boolean = false): Promise<PdfResult | void> {
+export async function generateAnalysisReport(data: AnalysisReportData, captureChart: boolean = true, singlePage: boolean = false): Promise<SnapshotResult | void> {
   // Validate required data
   if (!data) {
     throw new Error('Report data is required');
@@ -2591,78 +2665,78 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
       if (chartImage) data.chartImage = chartImage;
     }
 
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
+    // Fetch asset logo for snapshot rendering
+    if (!data.assetLogoUrl) {
+      const logoDataUri = await fetchAssetLogoDataUri(data.symbol);
+      if (logoDataUri) data.assetLogoUrl = logoDataUri;
+    }
 
     const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'DayTrade', swing: 'Swing' };
     const tradeType = data.tradeType ? tradeTypes[data.tradeType] || '' : '';
+    const dateStr = new Date(data.generatedAt || Date.now()).toISOString().split('T')[0];
+    const baseFileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_${dateStr}`;
 
-    // SINGLE PAGE FORMAT - Compact layout with all info on one page
+    const snapshots: { base64: string; fileName: string }[] = [];
+
+    // Helper to render a page canvas and save as PNG snapshot
+    const addSnapshot = async (html: string, suffix: string) => {
+      const canvas = await renderPageToCanvas(html);
+      const base64 = canvas.toDataURL('image/png').split(',')[1];
+      const fileName = `${baseFileName}_${suffix}.png`;
+
+      // Download the snapshot
+      const link = document.createElement('a');
+      link.download = fileName;
+      link.href = `data:image/png;base64,${base64}`;
+      link.click();
+
+      snapshots.push({ base64, fileName });
+    };
+
+    // SINGLE PAGE FORMAT - Executive Summary (1 snapshot)
     if (singlePage) {
-      const canvas = await renderPageToCanvas(generateSinglePageReport(data));
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
-
-      const fileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_Summary_${new Date().toISOString().split('T')[0]}.pdf`;
-      const pdfBase64 = pdf.output('datauristring').split(',')[1];
-      pdf.save(fileName);
-
-      return { base64: pdfBase64, fileName };
+      await addSnapshot(generateSinglePageReport(data), 'Summary');
+      return { snapshots };
     }
 
-    // MULTI-PAGE FORMAT - Detailed report (7 pages + optional RAG page)
-    const hasRAG = !!data.ragEnrichment;
+    // MULTI-PAGE FORMAT - Detailed report (7-8 snapshots)
+    const ragResearch = data.ragEnrichment?.research;
+    const hasRAG = !!data.ragEnrichment && !!(
+      (ragResearch?.summary && ragResearch.summary.length > 0) ||
+      (ragResearch?.citations && ragResearch.citations.length > 0)
+    );
     const totalPages = hasRAG ? 8 : 7;
 
-    // Page 1: Executive Summary
-    const canvas1 = await renderPageToCanvas(generatePageExecutiveSummary(data, totalPages));
-    pdf.addImage(canvas1.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 1: Executive Summary
+    await addSnapshot(generatePageExecutiveSummary(data, totalPages), '1_Summary');
 
-    // Page 2: Trade Plan (Full Chart)
-    pdf.addPage();
-    const canvas2 = await renderPageToCanvas(generatePageTradePlan(data, totalPages));
-    pdf.addImage(canvas2.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 2: Trade Plan (Full Chart)
+    await addSnapshot(generatePageTradePlan(data, totalPages), '2_TradePlan');
 
-    // Page 3: Tokenomics
-    pdf.addPage();
-    const canvas3 = await renderPageToCanvas(generatePageTokenomics(data, totalPages));
-    pdf.addImage(canvas3.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 3: Tokenomics
+    await addSnapshot(generatePageTokenomics(data, totalPages), '3_Tokenomics');
 
-    // Page 4: Steps 1-2 (Market Pulse + Asset Scanner)
-    pdf.addPage();
-    const canvas4 = await renderPageToCanvas(generatePageSteps12(data, totalPages));
-    pdf.addImage(canvas4.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 4: Steps 1-2 (Market Pulse + Asset Scanner)
+    await addSnapshot(generatePageSteps12(data, totalPages), '4_MarketAsset');
 
-    // Page 5: Steps 3-4 (Safety Check + Timing)
-    pdf.addPage();
-    const canvas5 = await renderPageToCanvas(generatePageSteps34(data, totalPages));
-    pdf.addImage(canvas5.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 5: Steps 3-4 (Safety Check + Timing)
+    await addSnapshot(generatePageSteps34(data, totalPages), '5_SafetyTiming');
 
-    // Page 6: Steps 5-6 (Trade Plan Details + Trap Check)
-    pdf.addPage();
-    const canvas6 = await renderPageToCanvas(generatePageSteps56(data, totalPages));
-    pdf.addImage(canvas6.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 6: Steps 5-6 (Trade Plan Details + Trap Check)
+    await addSnapshot(generatePageSteps56(data, totalPages), '6_PlanTrap');
 
-    // Page 7: Final Verdict
-    pdf.addPage();
-    const canvas7 = await renderPageToCanvas(generatePageVerdict(data, totalPages));
-    pdf.addImage(canvas7.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 7: Final Verdict
+    await addSnapshot(generatePageVerdict(data, totalPages), '7_Verdict');
 
-    // Page 8: RAG Intelligence Layer (optional - only if RAG enrichment data exists)
+    // Snapshot 8: RAG Intelligence Layer (optional)
     if (hasRAG) {
-      pdf.addPage();
-      const canvas8 = await renderPageToCanvas(generatePageRAG(data, totalPages));
-      pdf.addImage(canvas8.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+      await addSnapshot(generatePageRAG(data, totalPages), '8_RAG');
     }
 
-    const fileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_${new Date().toISOString().split('T')[0]}.pdf`;
-    const pdfBase64 = pdf.output('datauristring').split(',')[1];
-    pdf.save(fileName);
-
-    return { base64: pdfBase64, fileName };
+    return { snapshots };
   } catch (error) {
-    console.error('[PDF] Generation failed:', error);
-    throw new Error(`PDF generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('[Snapshot] Generation failed:', error);
+    throw new Error(`Snapshot generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

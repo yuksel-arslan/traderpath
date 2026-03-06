@@ -161,6 +161,7 @@ export const lemonSqueezyService = {
     event: string;
     data: any;
     meta: {
+      event_created_at?: string;
       custom_data?: {
         user_id?: string;
         package_id?: string;

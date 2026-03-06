@@ -115,6 +115,7 @@ model User {
   signalPreferences UserSignalPreferences?
   signalSubscription SignalSubscription?
   subscription     Subscription?
+  weeklyPlans      WeeklyPlan[]
   notifications    Notification[]
 
   @@map("users")
@@ -480,8 +481,9 @@ model PriceAlert {
   // Notification channels (stored as JSON array: ["browser", "telegram", "discord", "tradingview"])
   channels     Json      @default("[\"browser\"]")
 
-  isTriggered  Boolean  @default(false) @map("is_triggered")
-  triggeredAt  DateTime? @map("triggered_at")
+  isTriggered    Boolean   @default(false) @map("is_triggered")
+  triggeredPrice Float?    @map("triggered_price")
+  triggeredAt    DateTime? @map("triggered_at")
 
   creditsSpent Int      @default(1) @map("credits_spent")
   isActive     Boolean  @default(true) @map("is_active")
@@ -1043,12 +1045,14 @@ model Signal {
 
   // Trade Direction
   direction           String    @db.VarChar(10) // long, short
+  interval            String?   @db.VarChar(10) // Timeframe: 5m, 15m, 30m, 1h, 4h, 1d, 1W
 
   // Trade Plan (from 7-Step Analysis)
   entryPrice          Decimal   @map("entry_price") @db.Decimal(20, 8)
   stopLoss            Decimal   @map("stop_loss") @db.Decimal(20, 8)
   takeProfit1         Decimal   @map("take_profit_1") @db.Decimal(20, 8)
   takeProfit2         Decimal   @map("take_profit_2") @db.Decimal(20, 8)
+  takeProfit3         Decimal?  @map("take_profit_3") @db.Decimal(20, 8)
   riskRewardRatio     Decimal   @map("risk_reward_ratio") @db.Decimal(5, 2)
 
   // Analysis Results
@@ -1058,6 +1062,7 @@ model Signal {
   mlisRecommendation  String?   @map("mlis_recommendation") @db.VarChar(20) // STRONG_BUY, BUY, HOLD, SELL
   mlisConfidence      Int?      @map("mlis_confidence") // 0-100
   overallConfidence   Int       @map("overall_confidence") // 0-100 combined confidence
+  winRateEstimate     Int?      @map("win_rate_estimate") // 0-100 estimated win rate from trade plan
 
   // Capital Flow Context
   capitalFlowPhase    String    @map("capital_flow_phase") @db.VarChar(10) // early, mid, late, exit
@@ -1215,4 +1220,55 @@ enum NotificationType {
   SIGNAL    // New trade signal
   REWARD    // Tier upgrade or AP gain
   SYSTEM    // General announcements
+}
+
+// ===========================================
+// Weekly Subscription Plans
+// Report ($6.99/week = 7 reports) and Analysis ($6.99/week = 7 analyses + 5 AI Expert questions each)
+// ===========================================
+
+model WeeklyPlan {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Plan type
+  planType     WeeklyPlanType
+
+  // Stripe identifiers
+  stripeCustomerId     String?  @map("stripe_customer_id") @db.VarChar(255)
+  stripeSubscriptionId String?  @unique @map("stripe_subscription_id") @db.VarChar(255)
+  stripePriceId        String?  @map("stripe_price_id") @db.VarChar(255)
+
+  // Status
+  status       SubscriptionStatus @default(INACTIVE)
+
+  // Quota tracking
+  remainingQuota  Int    @default(7) @map("remaining_quota")
+  totalQuota      Int    @default(7) @map("total_quota")
+  quotaUsedThisPeriod Int @default(0) @map("quota_used_this_period")
+
+  // Billing period
+  currentPeriodStart DateTime? @map("current_period_start")
+  currentPeriodEnd   DateTime? @map("current_period_end")
+  cancelAtPeriodEnd  Boolean   @default(false) @map("cancel_at_period_end")
+
+  // Delivery preferences (for report subscriptions)
+  telegramDelivery    Boolean   @default(true) @map("telegram_delivery")
+  discordDelivery     Boolean   @default(false) @map("discord_delivery")
+
+  // Timestamps
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, planType])
+  @@index([planType])
+  @@index([status])
+  @@index([stripeCustomerId])
+  @@map("weekly_plans")
+}
+
+enum WeeklyPlanType {
+  REPORT_WEEKLY      // $6.99/week - 7 reports delivered daily
+  ANALYSIS_WEEKLY    // $6.99/week - 7 analyses + 5 AI Expert questions per analysis
 }

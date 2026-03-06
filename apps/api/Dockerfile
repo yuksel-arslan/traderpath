@@ -1,6 +1,6 @@
 # ===========================================
 # TraderPath API - Production Dockerfile
-# Multi-stage build for minimal image size
+# Multi-stage build with Chromium for Puppeteer
 # ===========================================
 
 # Stage 1: Build
@@ -9,7 +9,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@8.12.0 --activate
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 # Copy workspace files
 COPY pnpm-workspace.yaml ./
@@ -43,8 +43,23 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+# Install Chromium and dependencies for Puppeteer
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    font-noto \
+    font-noto-cjk
+
+# Set Puppeteer to use installed Chromium
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
 # Install pnpm for production
-RUN corepack enable && corepack prepare pnpm@8.12.0 --activate
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs

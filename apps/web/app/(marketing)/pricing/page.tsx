@@ -1,155 +1,54 @@
 'use client';
 
-// Pricing page - handles credit packages and signal subscriptions
+// Pricing page - Weekly Subscription Plans
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Zap,
-  Star,
-  TrendingUp,
   ArrowLeft,
-  Gem,
+  ArrowRight,
   Loader2,
-  CreditCard,
-  Crown,
-  Globe,
-  Layers,
-  BarChart3,
-  Brain,
-  Bell,
   FileText,
-  Bot,
+  BarChart3,
   Check,
   Shield,
-  Radio,
-  Send,
   Clock,
-  Target,
   Sparkles,
-  Calendar,
+  Send,
+  Brain,
+  Target,
+  MessageSquare,
+  Bot,
+  ChevronDown,
+  Zap,
+  Radio,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
-import { CREDIT_PACKAGES, FREE_SIGNUP_CREDITS, getPerCreditCost, SIGNAL_SUBSCRIPTIONS, DAILY_PASS_COSTS, ACTIVE_SUBSCRIPTIONS } from '../../../lib/pricing-config';
-import { authFetch, getAuthToken, apiBaseUrl } from '../../../lib/api';
+import {
+  WEEKLY_PLANS,
+  FREE_SIGNUP_ANALYSES,
+  ANALYSIS_INCLUDES,
+} from '../../../lib/pricing-config';
+import { authFetch, getAuthToken } from '../../../lib/api';
 import { Footer } from '../../../components/common/Footer';
-
-// Format credits with full number display (1000087 → 1,000,087)
-function formatCredits(num: number): string {
-  return num.toLocaleString('en-US');
-}
-
-// Package type from API
-interface ApiPackage {
-  id: string;
-  name: string;
-  credits: number;
-  bonus: number;
-  price: string;
-  perCredit: string;
-  popular: boolean;
-}
-
-// Icon mapping for packages by ID
-const PACKAGE_ICONS: Record<string, typeof Zap> = {
-  starter: Zap,
-  trader: Star,
-  pro: TrendingUp,
-  whale: Crown,
-};
-
-// Pricing modes
-type PricingMode = 'active' | 'signals';
 
 export default function PricingPage() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [balance, setBalance] = useState<number | null>(null);
-  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
-  const [purchasing, setPurchasing] = useState(false);
+  const [purchasing, setPurchasing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [packages, setPackages] = useState<ApiPackage[]>([]);
-  const [packagesLoading, setPackagesLoading] = useState(true);
-  const [packagesFromApi, setPackagesFromApi] = useState(false);
-  const [pricingMode, setPricingMode] = useState<PricingMode>('active');
-  const [signalPlans, setSignalPlans] = useState<{ tier: string; name: string; price: { monthly: number }; maxSignalsPerDay: number; markets: string[]; features?: string[]; deliveryChannels?: { telegram?: boolean; discord?: boolean; email?: boolean } }[]>([]);
-  const [signalPlansLoading, setSignalPlansLoading] = useState(true);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   useEffect(() => {
     checkAuthStatus();
-    fetchPackages();
-    fetchSignalPlans();
   }, []);
-
-  const fetchPackages = async () => {
-    try {
-      const res = await fetch(`${apiBaseUrl}/api/payments/packages`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.data?.packages && data.data.packages.length > 0) {
-          setPackages(data.data.packages);
-          setPackagesFromApi(true);
-          return;
-        }
-      }
-      // API failed - use static fallback (display only)
-      const fallbackPackages: ApiPackage[] = CREDIT_PACKAGES.map(pkg => ({
-        id: pkg.id,
-        name: pkg.name,
-        credits: pkg.credits,
-        bonus: pkg.bonus,
-        price: pkg.priceDisplay,
-        perCredit: getPerCreditCost(pkg),
-        popular: pkg.popular || false,
-      }));
-      setPackages(fallbackPackages);
-      setPackagesFromApi(false);
-    } catch {
-      // Use static fallback on error (display only)
-      const fallbackPackages: ApiPackage[] = CREDIT_PACKAGES.map(pkg => ({
-        id: pkg.id,
-        name: pkg.name,
-        credits: pkg.credits,
-        bonus: pkg.bonus,
-        price: pkg.priceDisplay,
-        perCredit: getPerCreditCost(pkg),
-        popular: pkg.popular || false,
-      }));
-      setPackages(fallbackPackages);
-      setPackagesFromApi(false);
-    } finally {
-      setPackagesLoading(false);
-    }
-  };
-
-  const fetchSignalPlans = async () => {
-    try {
-      const res = await fetch(`${apiBaseUrl}/api/v1/signals/subscription/plans`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.data?.plans) {
-          setSignalPlans(data.data.plans);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch signal plans:', err);
-    } finally {
-      setSignalPlansLoading(false);
-    }
-  };
 
   const checkAuthStatus = async () => {
     try {
       const token = await getAuthToken();
       if (token) {
         setIsLoggedIn(true);
-        // Fetch balance
-        const res = await authFetch('/api/user/credits');
-        if (res.ok) {
-          const data = await res.json();
-          setBalance(data.data?.balance || data.credits || 0);
-        }
       }
     } catch {
       // Not logged in
@@ -158,26 +57,19 @@ export default function PricingPage() {
     }
   };
 
-  const handlePurchase = async (packageId: string) => {
+  const handleSubscribe = async (planType: string) => {
     if (!isLoggedIn) {
       router.push('/register');
       return;
     }
 
-    // Check if packages are from API (have valid UUIDs)
-    if (!packagesFromApi) {
-      setError('Payment system is temporarily unavailable. Please try again later.');
-      return;
-    }
-
-    setPurchasing(true);
-    setSelectedPackage(packageId);
+    setPurchasing(planType);
     setError(null);
 
     try {
-      const response = await authFetch('/api/payments/create-checkout-session', {
+      const response = await authFetch('/api/weekly-plans/checkout', {
         method: 'POST',
-        body: JSON.stringify({ packageId }),
+        body: JSON.stringify({ planType }),
       });
 
       if (!response.ok) {
@@ -195,15 +87,50 @@ export default function PricingPage() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(message || 'Failed to start checkout');
-      setPurchasing(false);
-      setSelectedPackage(null);
+      setPurchasing(null);
     }
   };
 
+  const handleSignalSubscribe = async (tier: 'SIGNAL_BASIC' | 'SIGNAL_PRO') => {
+    if (!isLoggedIn) {
+      router.push('/register');
+      return;
+    }
+
+    setPurchasing(tier);
+    setError(null);
+
+    try {
+      const response = await authFetch('/api/v1/signals/subscription/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ tier }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error?.message || 'Failed to create checkout session');
+      }
+
+      const data = await response.json();
+
+      if (data.data?.url) {
+        window.location.href = data.data.url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(message || 'Failed to start checkout');
+      setPurchasing(null);
+    }
+  };
+
+  const isReport = (planType: string) => planType === 'REPORT_WEEKLY';
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Corporate Header */}
-      <header className="py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+    <div className="min-h-screen bg-white dark:bg-[#0A0A0A] flex flex-col">
+      {/* Header */}
+      <header className="py-4 border-b border-slate-200 dark:border-white/[0.06]">
         <div className="container mx-auto px-4 flex items-center justify-between">
           <Link href="/" className="inline-flex items-center gap-2">
             <span className="text-xl font-bold">
@@ -213,7 +140,7 @@ export default function PricingPage() {
           </Link>
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Home
@@ -222,77 +149,32 @@ export default function PricingPage() {
       </header>
 
       <main className="flex-1">
-        {/* Hero - Corporate Style */}
-        <section className="py-16 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950">
+        {/* Hero */}
+        <section className="pt-20 pb-8">
           <div className="container mx-auto px-4 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full mb-6">
-              <Shield className="w-4 h-4 text-emerald-500" />
-              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                Secure Payment · Cancel Anytime
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full mb-8">
+              <Shield className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 tracking-wide">
+                WEEKLY PLANS · CANCEL ANYTIME
               </span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900 dark:text-white">
-              Choose Your Trading Style
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 text-slate-900 dark:text-white tracking-tight">
+              Choose Your Plan
             </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-              Active trader? Buy credits for on-demand analysis. Prefer ready signals? Subscribe to our signal service.
-              {!isLoggedIn && ` Start with ${FREE_SIGNUP_CREDITS} free credits.`}
+            <p className="text-base text-slate-500 max-w-xl mx-auto mb-3">
+              Professional-grade trading intelligence. Pick one plan that fits your style.
             </p>
-
-            {/* Pricing Mode Toggle */}
-            <div className="inline-flex items-center p-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl">
-              <button
-                onClick={() => setPricingMode('active')}
-                className={cn(
-                  'flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all',
-                  pricingMode === 'active'
-                    ? 'bg-white dark:bg-slate-900 text-emerald-600 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                )}
-              >
-                <BarChart3 className="w-4 h-4" />
-                <span>Active Trading</span>
-                <span className="hidden sm:inline text-xs bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full">Credits</span>
-              </button>
-              <button
-                onClick={() => setPricingMode('signals')}
-                className={cn(
-                  'flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all',
-                  pricingMode === 'signals'
-                    ? 'bg-white dark:bg-slate-900 text-violet-600 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                )}
-              >
-                <Radio className="w-4 h-4" />
-                <span>Signal Service</span>
-                <span className="hidden sm:inline text-xs bg-violet-500/10 text-violet-600 px-2 py-0.5 rounded-full">Subscription</span>
-              </button>
-            </div>
+            {!isLoggedIn && (
+              <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                Start with {FREE_SIGNUP_ANALYSES} free analyses — no credit card needed
+              </p>
+            )}
           </div>
         </section>
 
-        {/* Current Balance - Only for logged in users */}
-        {isLoggedIn && balance !== null && (
-          <section className="py-6 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
-            <div className="container mx-auto px-4">
-              <div className="max-w-md mx-auto flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                    <Gem className="w-5 h-5 text-emerald-500" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Current Balance</p>
-                    <p className="text-xl font-bold">{formatCredits(balance ?? 0)} Credits</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
         {/* Error Message */}
         {error && (
-          <section className="py-4">
+          <section className="pb-4">
             <div className="container mx-auto px-4">
               <div className="max-w-md mx-auto p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-center text-sm">
                 {error}
@@ -301,605 +183,561 @@ export default function PricingPage() {
           </section>
         )}
 
-        {/* ==================== ACTIVE TRADING MODE ==================== */}
-        {pricingMode === 'active' && (
-          <>
-            {/* Monthly Subscriptions */}
-            <section className="py-16">
-              <div className="container mx-auto px-4">
-                <div className="text-center mb-12">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full mb-4">
-                    <Calendar className="w-4 h-4 text-emerald-500" />
-                    <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                      Monthly Subscription
-                    </span>
-                  </div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                    Active User Plans
-                  </h2>
-                  <p className="text-muted-foreground max-w-lg mx-auto">
-                    Get daily credits automatically. Best value for regular traders who analyze markets daily.
-                  </p>
-                </div>
+        {/* Subscription Cards */}
+        <section className="py-12">
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+              {WEEKLY_PLANS.map((plan) => {
+                const isPurchasing = purchasing === plan.planType;
+                const report = isReport(plan.planType);
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-                  {ACTIVE_SUBSCRIPTIONS.map((sub) => (
-                    <div
-                      key={sub.id}
-                      className={cn(
-                        'bg-white dark:bg-slate-900 rounded-xl border p-6 relative transition-all duration-200',
-                        sub.popular
-                          ? 'border-emerald-500 shadow-lg shadow-emerald-500/10'
-                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                      )}
-                    >
-                      {sub.popular && (
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-500 text-white text-xs font-semibold rounded-full">
-                          BEST VALUE
+                return (
+                  <div
+                    key={plan.id}
+                    className="group relative rounded-2xl overflow-hidden"
+                  >
+                    {/* Top accent bar */}
+                    <div className={cn(
+                      'h-1',
+                      report
+                        ? 'bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500'
+                        : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500'
+                    )} />
+
+                    {/* Card body */}
+                    <div className={cn(
+                      'relative bg-white dark:bg-[#111111] border border-t-0 rounded-b-2xl p-8 md:p-10 transition-all duration-300',
+                      report
+                        ? 'border-slate-200 dark:border-white/[0.08] hover:border-violet-200 dark:hover:border-violet-500/20'
+                        : 'border-slate-200 dark:border-white/[0.08] hover:border-emerald-200 dark:hover:border-emerald-500/20',
+                      'hover:shadow-2xl hover:shadow-slate-200/40 dark:hover:shadow-black/40'
+                    )}>
+                      {/* Header row */}
+                      <div className="flex items-start justify-between mb-8">
+                        <div>
+                          <div className={cn(
+                            'inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider mb-4',
+                            report
+                              ? 'bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400'
+                              : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'
+                          )}>
+                            {report ? <FileText className="w-3 h-3" /> : <BarChart3 className="w-3 h-3" />}
+                            {report ? 'Reports' : 'Analysis'}
+                          </div>
+                          <h3 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">
+                            {plan.name}
+                          </h3>
+                          <p className="text-sm text-slate-500 mt-1.5">
+                            {plan.description}
+                          </p>
                         </div>
-                      )}
-                      <div className="text-center">
-                        <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                          {sub.tier === 'starter' && <Zap className="w-6 h-6 text-emerald-500" />}
-                          {sub.tier === 'pro' && <Star className="w-6 h-6 text-emerald-500" />}
-                          {sub.tier === 'elite' && <Crown className="w-6 h-6 text-emerald-500" />}
+
+                        {/* Icon */}
+                        <div className={cn(
+                          'w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ml-4',
+                          report
+                            ? 'bg-gradient-to-br from-violet-500/10 to-purple-500/10 dark:from-violet-500/20 dark:to-purple-500/20'
+                            : 'bg-gradient-to-br from-emerald-500/10 to-teal-500/10 dark:from-emerald-500/20 dark:to-teal-500/20'
+                        )}>
+                          {report
+                            ? <FileText className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                            : <BarChart3 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                          }
                         </div>
-                        <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">{sub.name}</h3>
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
-                          ${sub.price}
-                          <span className="text-base font-normal text-muted-foreground">/mo</span>
-                        </div>
-                        <div className="flex items-center justify-center gap-2 mb-4">
-                          <Gem className="w-4 h-4 text-amber-500" />
-                          <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                            {sub.dailyCredits} credits/day
+                      </div>
+
+                      {/* Price block */}
+                      <div className={cn(
+                        'rounded-xl p-5 mb-8',
+                        'bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/[0.06]'
+                      )}>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
+                            ${plan.price.toFixed(2)}
                           </span>
+                          <span className="text-sm text-slate-400 font-medium">/week</span>
                         </div>
+                        <div className="flex items-center gap-3 mt-2">
+                          <span className={cn(
+                            'text-sm font-semibold',
+                            report ? 'text-violet-600 dark:text-violet-400' : 'text-emerald-600 dark:text-emerald-400'
+                          )}>
+                            {plan.quota} {report ? 'reports' : 'analyses'}/week
+                          </span>
+                          <span className="w-px h-3.5 bg-slate-200 dark:bg-white/10" />
+                          <span className={cn(
+                            'text-sm font-bold',
+                            report ? 'text-violet-500' : 'text-teal-500'
+                          )}>
+                            {plan.perUnit}
+                          </span>
+                          <span className="text-sm text-slate-400">each</span>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1.5">{'\u2248'} $55/month {'\u00b7'} Cancel anytime</p>
+                      </div>
 
-                        {/* Features */}
-                        <ul className="text-left space-y-2 mb-6 border-t border-slate-200 dark:border-slate-800 pt-4">
-                          {sub.features.map((feature, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-sm">
-                              <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                              <span className="text-slate-600 dark:text-slate-400">{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
+                      {/* Features */}
+                      <div className="space-y-3 mb-8">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">What&apos;s included</p>
+                        {plan.features.map((feature, i) => (
+                          <div key={i} className="flex items-start gap-3">
+                            <div className={cn(
+                              'w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
+                              report
+                                ? 'bg-violet-100 dark:bg-violet-500/15'
+                                : 'bg-emerald-100 dark:bg-emerald-500/15'
+                            )}>
+                              <Check className={cn(
+                                'w-3 h-3',
+                                report ? 'text-violet-600 dark:text-violet-400' : 'text-emerald-600 dark:text-emerald-400'
+                              )} />
+                            </div>
+                            <span className="text-sm text-slate-600 dark:text-slate-300">{feature}</span>
+                          </div>
+                        ))}
+                      </div>
 
-                        <button
-                          onClick={() => {
-                            if (!isLoggedIn) {
-                              router.push('/register');
-                            } else {
-                              router.push(`/settings?subscribe=${sub.tier}`);
-                            }
-                          }}
-                          className={cn(
-                            'w-full py-3 rounded-lg font-medium text-center transition flex items-center justify-center gap-2',
-                            sub.popular
-                              ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'
-                          )}
-                        >
-                          <CreditCard className="w-4 h-4" />
-                          {isLoggedIn ? 'Subscribe Now' : 'Get Started'}
-                        </button>
+                      {/* AI Expert badge for Analysis plan */}
+                      {plan.aiExpertQuestionsPerAnalysis > 0 && (
+                        <div className={cn(
+                          'flex items-center gap-3 p-3.5 rounded-xl mb-8',
+                          'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-500/[0.08] dark:to-orange-500/[0.08]',
+                          'border border-amber-200/60 dark:border-amber-500/20'
+                        )}>
+                          <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                            <MessageSquare className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                              AI Expert Chat Included
+                            </p>
+                            <p className="text-xs text-amber-600/80 dark:text-amber-400/70">
+                              {plan.aiExpertQuestionsPerAnalysis} questions per analysis
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* CTA Button */}
+                      <button
+                        onClick={() => handleSubscribe(plan.planType)}
+                        disabled={isPurchasing || loading}
+                        className={cn(
+                          'w-full py-3.5 px-6 rounded-xl font-semibold text-white text-sm transition-all duration-200 flex items-center justify-center gap-2',
+                          report
+                            ? 'bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40'
+                            : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40',
+                          (isPurchasing || loading) && 'opacity-50 cursor-not-allowed shadow-none'
+                        )}
+                      >
+                        {isPurchasing ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : !isLoggedIn ? (
+                          <>
+                            Sign Up & Subscribe
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        ) : (
+                          <>
+                            Subscribe Now
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+
+                      <p className="text-center text-xs text-slate-400 mt-3">
+                        Cancel anytime. Quota resets weekly.
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* AutoEdge Signal Subscriptions */}
+        <section className="py-16 border-t border-slate-100 dark:border-white/[0.04]">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full mb-4">
+                <Zap className="w-3.5 h-3.5 text-cyan-500" />
+                <span className="text-xs font-medium text-cyan-600 dark:text-cyan-400 tracking-wide">
+                  AUTOEDGE SIGNALS
+                </span>
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                AutoEdge Signal Subscriptions
+              </h2>
+              <p className="text-sm text-slate-500 max-w-lg mx-auto">
+                Receive AI-generated trade signals automatically — no manual analysis needed.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+              {/* SIGNAL_BASIC */}
+              <div className="rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#111111] p-6 md:p-8 transition-all hover:shadow-xl hover:shadow-slate-200/30 dark:hover:shadow-black/30">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-slate-100 text-slate-600 dark:bg-white/[0.06] dark:text-slate-400 mb-4">
+                  <Radio className="w-3 h-3" />
+                  Signals
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Signal Basic</h3>
+                <div className="flex items-baseline gap-1 mt-3">
+                  <span className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">$9</span>
+                  <span className="text-sm text-slate-400 font-medium">/mo</span>
+                </div>
+                <div className="space-y-3 mt-6 mb-8">
+                  {[
+                    '5–10 signals/day',
+                    'Crypto markets only',
+                    'Telegram & email delivery',
+                    'Entry / SL / TP included',
+                    'Outcome notifications',
+                  ].map((feature) => (
+                    <div key={feature} className="flex items-start gap-3">
+                      <div className="w-5 h-5 rounded-full bg-slate-100 dark:bg-white/[0.06] flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-slate-500 dark:text-slate-400" />
+                      </div>
+                      <span className="text-sm text-slate-600 dark:text-slate-300">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => handleSignalSubscribe('SIGNAL_BASIC')}
+                  disabled={purchasing === 'SIGNAL_BASIC' || loading}
+                  className={cn(
+                    'w-full py-3 px-6 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2',
+                    'bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-900 dark:text-white',
+                    (purchasing === 'SIGNAL_BASIC' || loading) && 'opacity-50 cursor-not-allowed'
+                  )}
+                >
+                  {purchasing === 'SIGNAL_BASIC' ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+                  ) : !isLoggedIn ? (
+                    <>Sign Up & Subscribe</>
+                  ) : (
+                    <>Subscribe</>
+                  )}
+                </button>
+              </div>
+
+              {/* SIGNAL_PRO */}
+              <div className="relative rounded-2xl border-2 border-teal-500/50 dark:border-teal-500/30 bg-white dark:bg-[#111111] p-6 md:p-8 transition-all hover:shadow-xl hover:shadow-teal-200/30 dark:hover:shadow-teal-900/30">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-teal-500 text-white text-[11px] font-bold px-3 py-1 rounded-full tracking-wide">
+                  Most Popular
+                </div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400 mb-4">
+                  <Zap className="w-3 h-3" />
+                  Signals Pro
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Signal Pro</h3>
+                <div className="flex items-baseline gap-1 mt-3">
+                  <span className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">$19</span>
+                  <span className="text-sm text-slate-400 font-medium">/mo</span>
+                </div>
+                <div className="space-y-3 mt-6 mb-8">
+                  {[
+                    '10–20 signals/day',
+                    'All markets (crypto, stocks, metals)',
+                    'Telegram & email delivery',
+                    'Entry / SL / TP included',
+                    'Outcome notifications',
+                    'BIST signals included',
+                  ].map((feature) => (
+                    <div key={feature} className="flex items-start gap-3">
+                      <div className="w-5 h-5 rounded-full bg-teal-100 dark:bg-teal-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+                      </div>
+                      <span className="text-sm text-slate-600 dark:text-slate-300">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => handleSignalSubscribe('SIGNAL_PRO')}
+                  disabled={purchasing === 'SIGNAL_PRO' || loading}
+                  className={cn(
+                    'w-full py-3 px-6 rounded-xl font-semibold text-white text-sm transition-all duration-200 flex items-center justify-center gap-2',
+                    'bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40',
+                    (purchasing === 'SIGNAL_PRO' || loading) && 'opacity-50 cursor-not-allowed shadow-none'
+                  )}
+                >
+                  {purchasing === 'SIGNAL_PRO' ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+                  ) : !isLoggedIn ? (
+                    <>Sign Up & Subscribe <ArrowRight className="w-4 h-4" /></>
+                  ) : (
+                    <>Subscribe <ArrowRight className="w-4 h-4" /></>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* How It Works */}
+        <section className="py-16 border-t border-slate-100 dark:border-white/[0.04]">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">HOW IT WORKS</p>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                Two Ways to Get Intelligence
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+              {/* Intelligent Report Flow */}
+              <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#111111] p-6 md:p-8">
+                <div className="flex items-center gap-3 mb-6 pb-5 border-b border-slate-100 dark:border-white/[0.06]">
+                  <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Intelligent Report</h3>
+                    <p className="text-xs text-slate-400">We do the work, you get the results</p>
+                  </div>
+                </div>
+                <div className="space-y-5">
+                  {[
+                    { icon: Sparkles, step: '01', label: 'Subscribe', desc: 'Choose your preferred assets & timeframes' },
+                    { icon: Bot, step: '02', label: 'We Analyze', desc: 'System runs full 7-Step + MLIS Pro analysis daily' },
+                    { icon: Send, step: '03', label: 'Get Reports', desc: 'Receive Snapshot PNG via Telegram & Discord' },
+                  ].map((s) => (
+                    <div key={s.step} className="flex items-start gap-4">
+                      <div className="flex flex-col items-center">
+                        <span className="text-[10px] font-bold text-violet-400 tabular-nums">{s.step}</span>
+                        <div className="w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center mt-1">
+                          <s.icon className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                        </div>
+                      </div>
+                      <div className="pt-3">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{s.label}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{s.desc}</p>
                       </div>
                     </div>
                   ))}
                 </div>
-
-                <p className="text-center text-xs text-muted-foreground mt-8">
-                  Cancel anytime. Credits reset daily. Secure payment by Lemon Squeezy.
-                </p>
               </div>
-            </section>
 
-            {/* Divider */}
-            <div className="container mx-auto px-4">
-              <div className="max-w-2xl mx-auto flex items-center gap-4 py-8">
-                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
-                <span className="text-sm text-muted-foreground">or buy credits once</span>
-                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+              {/* Capital Flow Flow */}
+              <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#111111] p-6 md:p-8">
+                <div className="flex items-center gap-3 mb-6 pb-5 border-b border-slate-100 dark:border-white/[0.06]">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+                    <BarChart3 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Capital Flow & Analysis</h3>
+                    <p className="text-xs text-slate-400">You drive, AI assists</p>
+                  </div>
+                </div>
+                <div className="space-y-5">
+                  {[
+                    { icon: Target, step: '01', label: 'Pick Your Asset', desc: 'Choose any asset, timeframe & analysis method' },
+                    { icon: Brain, step: '02', label: 'Run Analysis', desc: 'AI Concierge, Automatic, or Tailored — same price' },
+                    { icon: MessageSquare, step: '03', label: 'Ask AI Expert', desc: '5 questions per analysis with AI agents' },
+                  ].map((s) => (
+                    <div key={s.step} className="flex items-start gap-4">
+                      <div className="flex flex-col items-center">
+                        <span className="text-[10px] font-bold text-emerald-400 tabular-nums">{s.step}</span>
+                        <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center mt-1">
+                          <s.icon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                      </div>
+                      <div className="pt-3">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{s.label}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{s.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
+          </div>
+        </section>
 
-            {/* Credit Packages */}
-            <section className="py-16 bg-slate-50/50 dark:bg-slate-900/30">
-              <div className="container mx-auto px-4">
-                <div className="text-center mb-12">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-full mb-4">
-                    <Gem className="w-4 h-4 text-amber-500" />
-                    <span className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                      One-Time Purchase
-                    </span>
+        {/* Every Analysis Includes */}
+        <section className="py-16 border-t border-slate-100 dark:border-white/[0.04]">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-10">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">POWERED BY</p>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                Every Analysis Includes
+              </h2>
+              <p className="text-sm text-slate-500 max-w-lg mx-auto">
+                The same powerful dual-engine powers both plans
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-4xl mx-auto">
+              {ANALYSIS_INCLUDES.map((item, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/[0.06]"
+                >
+                  <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                    Credit Packages
-                  </h2>
-                  <p className="text-muted-foreground max-w-lg mx-auto">
-                    Buy credits once, use them anytime. No expiration. Perfect for pay-as-you-go analysis.
-                  </p>
+                  <span className="text-sm text-slate-600 dark:text-slate-300">{item}</span>
                 </div>
-                {packagesLoading ? (
-                  <div className="flex justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
-                  </div>
-                ) : packages.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    No packages available at the moment.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
-                    {packages.map((pkg) => {
-                      const nameKey = pkg.name.toLowerCase().split(' ')[0];
-                      const Icon = PACKAGE_ICONS[nameKey] || PACKAGE_ICONS[pkg.id] || Zap;
-                      const isSelected = selectedPackage === pkg.id;
-                      const isPurchasing = purchasing && isSelected;
+              ))}
+            </div>
+          </div>
+        </section>
 
-                      return (
-                        <div
-                          key={pkg.id}
-                          className={cn(
-                            'bg-white dark:bg-slate-900 rounded-xl border p-6 relative transition-all duration-200',
-                            pkg.popular
-                              ? 'border-emerald-500 shadow-lg'
-                              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700',
-                            isSelected && 'border-emerald-500'
-                          )}
-                        >
-                          {pkg.popular && (
-                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-500 text-white text-xs font-semibold rounded-full">
-                              RECOMMENDED
-                            </div>
-                          )}
-                          <div className="text-center">
-                            <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                              <Icon className="w-6 h-6 text-emerald-500" />
-                            </div>
-                            <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">{pkg.name}</h3>
-                            <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
-                              {pkg.price}
-                            </div>
-                            <p className="text-sm text-muted-foreground mb-4">{pkg.perCredit} per credit</p>
-                            <div className="py-4 border-t border-b border-slate-200 dark:border-slate-800 mb-4">
-                              <div className="text-2xl font-bold text-emerald-500">
-                                {formatCredits(pkg.credits)}
-                                {pkg.bonus > 0 && (
-                                  <span className="text-base text-amber-500 ml-1">+{pkg.bonus} bonus</span>
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground">credits</p>
-                            </div>
-                            <button
-                              onClick={() => handlePurchase(pkg.id)}
-                              disabled={purchasing}
-                              className={cn(
-                                'w-full py-3 rounded-lg font-medium text-center transition flex items-center justify-center gap-2',
-                                pkg.popular
-                                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700',
-                                purchasing && 'opacity-50 cursor-not-allowed'
-                              )}
-                            >
-                              {isPurchasing ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                  Processing...
-                                </>
-                              ) : isLoggedIn ? (
-                                <>
-                                  <CreditCard className="w-4 h-4" />
-                                  Buy Now
-                                </>
-                              ) : (
-                                'Get Started'
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <p className="text-center text-xs text-muted-foreground mt-8">
-                  Secure payment processing by Lemon Squeezy. All prices in USD.
-                </p>
-              </div>
-            </section>
+        {/* Value Comparison */}
+        <section className="py-16 border-t border-slate-100 dark:border-white/[0.04]">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-10">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">VALUE</p>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                Incredible Value
+              </h2>
+            </div>
 
-            {/* What Credits Get You */}
-            <section className="py-16 bg-slate-50 dark:bg-slate-900/50">
-              <div className="container mx-auto px-4">
-                <div className="text-center mb-12">
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                    What Your Credits Unlock
-                  </h2>
-                  <p className="text-muted-foreground">Everything you need for smarter trading decisions</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+              {/* Traditional */}
+              <div className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#111111] p-6 md:p-8">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-red-400 mb-3">Traditional Analyst</p>
+                <div className="flex items-baseline gap-1 mb-1">
+                  <span className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">$75–140</span>
                 </div>
-                <div className="max-w-4xl mx-auto">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {[
-                      { Icon: Globe, title: 'Global Capital Flow', desc: 'Layer 1-2: Track money flow across markets', badge: 'FREE', badgeColor: 'emerald' },
-                      { Icon: Layers, title: 'Sector Analysis', desc: 'Layer 3: Drill down into market sectors', badge: '5 credits/use', badgeColor: 'slate' },
-                      { Icon: Brain, title: 'AI Recommendations', desc: 'Layer 4: BUY/SELL signals with confidence scores', badge: '5 credits/use', badgeColor: 'slate' },
-                      { Icon: BarChart3, title: 'Asset Analysis', desc: '7-Step + MLIS Pro analysis', badge: '10 credits/analysis', badgeColor: 'slate' },
-                      { Icon: Bot, title: 'AI Expert Consultation', desc: '3 free questions per analysis, then 5 credits each', badge: null, badgeColor: null },
-                      { Icon: FileText, title: 'PDF Reports', desc: 'Download and share detailed analysis reports', badge: null, badgeColor: null },
-                      { Icon: Bell, title: 'Price Alerts', desc: 'Get notified when price targets are hit', badge: null, badgeColor: null },
-                      { Icon: Gem, title: 'Daily Rewards', desc: 'Earn free credits through daily activities', badge: 'EARN FREE', badgeColor: 'amber' },
-                    ].map((item, index) => (
-                      <div key={index} className="flex items-start gap-4 p-4 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
-                        <div className={cn(
-                          "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                          item.badgeColor === 'emerald' && "bg-emerald-500/10",
-                          item.badgeColor === 'amber' && "bg-amber-500/10",
-                          (!item.badgeColor || item.badgeColor === 'slate') && "bg-slate-100 dark:bg-slate-800"
-                        )}>
-                          <item.Icon className={cn(
-                            'w-5 h-5',
-                            item.badgeColor === 'emerald' && "text-emerald-500",
-                            item.badgeColor === 'amber' && "text-amber-500",
-                            (!item.badgeColor || item.badgeColor === 'slate') && "text-slate-500"
-                          )} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="font-medium text-slate-900 dark:text-white">{item.title}</p>
-                            {item.badge && (
-                              <span className={cn(
-                                "px-2 py-0.5 text-[10px] font-semibold rounded-full",
-                                item.badgeColor === 'emerald' && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-                                item.badgeColor === 'amber' && "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-                                item.badgeColor === 'slate' && "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                              )}>
-                                {item.badge}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">{item.desc}</p>
-                        </div>
+                <p className="text-sm text-slate-400 mb-6">per analysis report</p>
+                <div className="space-y-3">
+                  {[
+                    'Takes hours to days',
+                    'Limited to few indicators',
+                    'Human bias & emotion',
+                  ].map((item) => (
+                    <div key={item} className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded-full bg-red-100 dark:bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                        <Clock className="w-3 h-3 text-red-500 dark:text-red-400" />
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Why Active Trading */}
-            <section className="py-16">
-              <div className="container mx-auto px-4">
-                <div className="max-w-4xl mx-auto">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                    {[
-                      { value: 'No Subscription', desc: 'Pay once, use anytime. Credits never expire.' },
-                      { value: '4 Markets', desc: 'Crypto, Stocks, Bonds, and Precious Metals.' },
-                      { value: '40+ Indicators', desc: 'Comprehensive technical and fundamental analysis.' },
-                    ].map((item, index) => (
-                      <div key={index}>
-                        <div className="text-xl font-bold text-slate-900 dark:text-white mb-2">{item.value}</div>
-                        <p className="text-sm text-muted-foreground">{item.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
-          </>
-        )}
-
-        {/* ==================== SIGNAL SERVICE MODE ==================== */}
-        {pricingMode === 'signals' && (
-          <>
-            {/* Signal Subscription Packages */}
-            <section className="py-16">
-              <div className="container mx-auto px-4">
-                <div className="text-center mb-12">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-violet-500/10 border border-violet-500/20 rounded-full mb-4">
-                    <Radio className="w-4 h-4 text-violet-500 animate-pulse" />
-                    <span className="text-sm font-medium text-violet-600 dark:text-violet-400">
-                      Automated Trading Signals
-                    </span>
-                  </div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                    Signal Subscription Plans
-                  </h2>
-                  <p className="text-muted-foreground max-w-xl mx-auto">
-                    Receive AI-generated trading signals directly to your Telegram or Discord.
-                    Perfect for traders who want ready-to-trade setups.
-                  </p>
-                </div>
-
-                {signalPlansLoading ? (
-                  <div className="flex justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
-                  </div>
-                ) : signalPlans.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    No signal plans available at the moment.
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-                    {signalPlans
-                      .filter((plan) => plan.tier !== 'SIGNAL_PRO_YEARLY') // Only monthly plans
-                      .map((plan, index) => {
-                      const isBasic = plan.tier === 'SIGNAL_BASIC';
-                      const isPro = plan.tier === 'SIGNAL_PRO';
-                      const displayPrice = plan.price.monthly;
-
-                      return (
-                        <div
-                          key={plan.tier}
-                          className={cn(
-                            'bg-white dark:bg-slate-900 rounded-xl border p-6 relative transition-all duration-200',
-                            isPro
-                              ? 'border-violet-500 shadow-lg shadow-violet-500/10'
-                              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                          )}
-                        >
-                          {isPro && (
-                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-violet-500 text-white text-xs font-semibold rounded-full">
-                              MOST POPULAR
-                            </div>
-                          )}
-                          <div className="text-center">
-                            <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                              <Radio className="w-6 h-6 text-violet-500" />
-                            </div>
-                            <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">{plan.name}</h3>
-                            <div className="text-3xl font-bold text-slate-900 dark:text-white mb-1">
-                              {'$'}{displayPrice}
-                              <span className="text-base font-normal text-muted-foreground">/mo</span>
-                            </div>
-                            <div className="flex flex-col items-center gap-1 mb-4">
-                              <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">{plan.maxSignalsPerDay} asset signals/day</span>
-                              </div>
-                              <span className="text-xs text-violet-500">Sent every 4 hours (6x daily)</span>
-                            </div>
-
-                            {/* Markets */}
-                            <div className="py-3 border-t border-slate-200 dark:border-slate-800 mb-4">
-                              <div className="flex flex-wrap justify-center gap-1">
-                                {plan.markets.map((market: string) => (
-                                  <span
-                                    key={market}
-                                    className="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full"
-                                  >
-                                    {market.toUpperCase()}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Features */}
-                            <ul className="text-left space-y-2 mb-6">
-                              <li className="flex items-start gap-2 text-sm">
-                                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                                <span className="text-slate-600 dark:text-slate-400">
-                                  {plan.markets.length === 1 ? 'Crypto market only' : `All ${plan.markets.length} markets`}
-                                </span>
-                              </li>
-                              <li className="flex items-start gap-2 text-sm">
-                                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                                <span className="text-slate-600 dark:text-slate-400">
-                                  7-Step + MLIS Pro analysis
-                                </span>
-                              </li>
-                              {plan.deliveryChannels?.telegram && (
-                                <li className="flex items-start gap-2 text-sm">
-                                  <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                                  <span className="text-slate-600 dark:text-slate-400">
-                                    Telegram delivery
-                                  </span>
-                                </li>
-                              )}
-                              {plan.deliveryChannels?.discord && (
-                                <li className="flex items-start gap-2 text-sm">
-                                  <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                                  <span className="text-slate-600 dark:text-slate-400">
-                                    Discord delivery
-                                  </span>
-                                </li>
-                              )}
-                              {plan.deliveryChannels?.email && (
-                                <li className="flex items-start gap-2 text-sm">
-                                  <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                                  <span className="text-slate-600 dark:text-slate-400">
-                                    Email delivery
-                                  </span>
-                                </li>
-                              )}
-                            </ul>
-
-                            <button
-                              onClick={() => {
-                                if (!isLoggedIn) {
-                                  router.push('/register');
-                                } else {
-                                  router.push(`/settings?subscribe=${plan.tier}`);
-                                }
-                              }}
-                              className={cn(
-                                'w-full py-3 rounded-lg font-medium text-center transition flex items-center justify-center gap-2',
-                                isPro
-                                  ? 'bg-violet-500 text-white hover:bg-violet-600'
-                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'
-                              )}
-                            >
-                              <Send className="w-4 h-4" />
-                              {isLoggedIn ? 'Subscribe Now' : 'Get Started'}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <p className="text-center text-xs text-muted-foreground mt-8">
-                  Cancel anytime. Secure payment processing by Lemon Squeezy.
-                </p>
-              </div>
-            </section>
-
-            {/* What Signals Get You */}
-            <section className="py-16 bg-slate-50 dark:bg-slate-900/50">
-              <div className="container mx-auto px-4">
-                <div className="text-center mb-12">
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                    What Your Subscription Includes
-                  </h2>
-                  <p className="text-muted-foreground">Complete trading signals with all the details you need</p>
-                </div>
-                <div className="max-w-4xl mx-auto">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {[
-                      { Icon: Globe, title: 'Capital Flow Analysis', desc: 'Every signal starts with global market flow analysis', badge: 'INCLUDED', badgeColor: 'violet' },
-                      { Icon: Brain, title: '7-Step + MLIS Validation', desc: 'Full AI-powered analysis validates each opportunity', badge: 'INCLUDED', badgeColor: 'violet' },
-                      { Icon: Target, title: 'Entry, SL, TP Levels', desc: 'Precise entry price, stop loss, and take profit targets', badge: 'INCLUDED', badgeColor: 'violet' },
-                      { Icon: Clock, title: 'Real-Time Delivery', desc: 'Signals delivered instantly to Telegram/Discord/Email', badge: 'INCLUDED', badgeColor: 'violet' },
-                      { Icon: BarChart3, title: 'Multi-Market Coverage', desc: 'Signals across Crypto, Stocks, Metals, and Bonds', badge: 'PRO', badgeColor: 'amber' },
-                      { Icon: TrendingUp, title: 'Win Rate Tracking', desc: 'Track signal performance and success rates', badge: 'INCLUDED', badgeColor: 'violet' },
-                      { Icon: Bell, title: 'Outcome Notifications', desc: 'Get notified when TP or SL is hit', badge: 'INCLUDED', badgeColor: 'violet' },
-                      { Icon: Calendar, title: 'Signal History', desc: 'Access your past signals and outcomes', badge: 'INCLUDED', badgeColor: 'violet' },
-                    ].map((item, index) => (
-                      <div key={index} className="flex items-start gap-4 p-4 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
-                        <div className={cn(
-                          "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                          item.badgeColor === 'violet' && "bg-violet-500/10",
-                          item.badgeColor === 'amber' && "bg-amber-500/10"
-                        )}>
-                          <item.Icon className={cn(
-                            'w-5 h-5',
-                            item.badgeColor === 'violet' && "text-violet-500",
-                            item.badgeColor === 'amber' && "text-amber-500"
-                          )} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="font-medium text-slate-900 dark:text-white">{item.title}</p>
-                            <span className={cn(
-                              "px-2 py-0.5 text-[10px] font-semibold rounded-full",
-                              item.badgeColor === 'violet' && "bg-violet-500/10 text-violet-600 dark:text-violet-400",
-                              item.badgeColor === 'amber' && "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                            )}>
-                              {item.badge}
-                            </span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{item.desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* How Signal Service Works */}
-            <section className="py-16 bg-slate-50 dark:bg-slate-900/50">
-              <div className="container mx-auto px-4">
-                <div className="text-center mb-12">
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                    How It Works
-                  </h2>
-                  <p className="text-muted-foreground">Automated signals delivered straight to your phone</p>
-                </div>
-                <div className="max-w-4xl mx-auto">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    {[
-                      { Icon: Globe, title: 'Capital Flow Scan', desc: 'Every hour, we scan global capital flows across 4 markets' },
-                      { Icon: Target, title: 'Asset Selection', desc: 'AI identifies high-probability trading opportunities' },
-                      { Icon: Brain, title: '7-Step + MLIS', desc: 'Full analysis with AI confirmation validates each signal' },
-                      { Icon: Send, title: 'Instant Delivery', desc: 'Signals with Entry, SL, TP sent to Telegram/Discord' },
-                    ].map((item, index) => (
-                      <div key={index} className="text-center">
-                        <div className="w-12 h-12 mx-auto mb-4 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                          <item.Icon className="w-6 h-6 text-violet-500" />
-                        </div>
-                        <div className="text-sm font-medium text-slate-900 dark:text-white mb-1">{item.title}</div>
-                        <p className="text-xs text-muted-foreground">{item.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Signal Quality Stats */}
-            <section className="py-16">
-              <div className="container mx-auto px-4">
-                <div className="max-w-4xl mx-auto">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                    {[
-                      { value: '5 Assets', label: 'Signals per day', desc: 'Sent every 4 hours (6x daily)' },
-                      { value: '7-Step + MLIS', label: 'Analysis Method', desc: 'Full validation before signal' },
-                      { value: '4 Markets', label: 'Coverage', desc: 'Crypto, Stocks, Metals, Bonds' },
-                    ].map((item, index) => (
-                      <div key={index}>
-                        <div className="text-2xl font-bold text-violet-500 mb-1">{item.value}</div>
-                        <div className="text-sm font-medium text-slate-900 dark:text-white mb-1">{item.label}</div>
-                        <p className="text-xs text-muted-foreground">{item.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Comparison Box */}
-            <section className="py-8">
-              <div className="container mx-auto px-4">
-                <div className="max-w-2xl mx-auto p-6 bg-slate-100 dark:bg-slate-800 rounded-xl">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                      <Sparkles className="w-5 h-5 text-amber-500" />
+                      <span className="text-sm text-slate-500">{item}</span>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-white mb-2">
-                        Not sure which to choose?
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        <strong>Active Trading (Credits)</strong> is for traders who want to do their own analysis and make their own decisions.
-                        <br />
-                        <strong>Signal Service (Subscription)</strong> is for passive traders who want ready-to-trade signals delivered automatically.
-                      </p>
-                      <button
-                        onClick={() => setPricingMode('active')}
-                        className="text-sm text-violet-600 dark:text-violet-400 hover:underline"
-                      >
-                        View Active Trading pricing →
-                      </button>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
-            </section>
-          </>
-        )}
+
+              {/* TraderPath */}
+              <div className="relative rounded-xl bg-white dark:bg-[#111111] p-6 md:p-8 border-2 border-emerald-500/50 dark:border-emerald-500/30">
+                <div className="absolute -top-3 left-6 px-3 py-1 bg-emerald-500 text-white text-[11px] font-bold rounded-full tracking-wide">
+                  97% SAVINGS
+                </div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-500 mb-3">TraderPath</p>
+                <div className="flex items-baseline gap-1 mb-1">
+                  <span className="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">$2.00</span>
+                </div>
+                <p className="text-sm text-slate-400 mb-6">per analysis or report</p>
+                <div className="space-y-3">
+                  {[
+                    'Results in ~60 seconds',
+                    '40+ indicators analyzed',
+                    'AI-powered, no bias',
+                  ].map((item) => (
+                    <div key={item} className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                        <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <span className="text-sm text-emerald-700 dark:text-emerald-300">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="py-16 border-t border-slate-100 dark:border-white/[0.04]">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-10">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">FAQ</p>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                Frequently Asked Questions
+              </h2>
+            </div>
+
+            <div className="max-w-2xl mx-auto divide-y divide-slate-100 dark:divide-white/[0.06] border border-slate-200 dark:border-white/[0.08] rounded-xl overflow-hidden">
+              {[
+                {
+                  q: 'What is the difference between the two subscriptions?',
+                  a: 'Intelligent Report Subscription delivers daily reports to you automatically via Telegram & Discord. Capital Flow & Asset Analysis Subscription gives you 7 analyses per week to run yourself with any method (AI Concierge, Automatic, or Tailored), plus 5 AI Expert questions per analysis.',
+                },
+                {
+                  q: 'What report types will I receive?',
+                  a: 'Each subscription produces Executive Summary (3-4 Snapshot PNGs with key metrics) or Detailed Analysis Report (6-8 Snapshot PNGs with full indicator data). Delivered inline via Telegram & Discord.',
+                },
+                {
+                  q: 'How does the weekly billing work?',
+                  a: 'You are billed $13.99 every 7 days. Your quota resets to 7 at each renewal. Cancel anytime — your access continues until the end of the current billing period.',
+                },
+                {
+                  q: 'What markets are supported?',
+                  a: 'Crypto, Stocks, Metals, and Bonds. Choose any supported asset and timeframe (5m, 15m, 30m, 1h, 2h, 4h, 1d, 1W).',
+                },
+                {
+                  q: 'Can I try before subscribing?',
+                  a: `Yes! Sign up and get ${FREE_SIGNUP_ANALYSES} free analyses — no credit card required. Experience the full 7-Step + MLIS Pro analysis engine before committing.`,
+                },
+                {
+                  q: 'Can I switch between plans?',
+                  a: 'Yes. Cancel your current plan and subscribe to the other one. Your remaining access continues until the end of the current billing period.',
+                },
+              ].map((faq, i) => (
+                <button
+                  key={i}
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full text-left px-6 py-4 bg-white dark:bg-[#111111] hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{faq.q}</h3>
+                    <ChevronDown className={cn(
+                      'w-4 h-4 text-slate-400 flex-shrink-0 transition-transform duration-200',
+                      openFaq === i && 'rotate-180'
+                    )} />
+                  </div>
+                  <div className={cn(
+                    'overflow-hidden transition-all duration-200',
+                    openFaq === i ? 'max-h-40 mt-2 opacity-100' : 'max-h-0 opacity-0'
+                  )}>
+                    <p className="text-sm text-slate-500 leading-relaxed">{faq.a}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* CTA */}
-        {!isLoggedIn && (
-          <section className="py-16 bg-slate-50 dark:bg-slate-900/50">
-            <div className="container mx-auto px-4">
-              <div className="max-w-xl mx-auto text-center">
-                <h2 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">
-                  Start Trading Smarter Today
-                </h2>
-                <p className="text-muted-foreground mb-6">
-                  Create your free account and receive {FREE_SIGNUP_CREDITS} credits to get started.
-                </p>
+        <section className="py-20 border-t border-slate-100 dark:border-white/[0.04]">
+          <div className="container mx-auto px-4 text-center">
+            <div className="max-w-lg mx-auto">
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-3 tracking-tight">
+                Ready to Trade Smarter?
+              </h2>
+              <p className="text-base text-slate-500 mb-8">
+                AI-powered trading intelligence for just $2 per analysis.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-sm mx-auto">
                 <Link
-                  href="/register"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-500 text-white rounded-lg font-medium hover:bg-emerald-600 transition-colors"
+                  href={isLoggedIn ? '/analyze' : '/register'}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-emerald-500/25"
                 >
-                  <Check className="w-4 h-4" />
-                  Create Free Account
+                  {isLoggedIn ? 'Start Analyzing' : 'Try Free'}
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  href="/how-it-works"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white dark:bg-[#111111] border border-slate-200 dark:border-white/[0.1] text-slate-900 dark:text-white text-sm font-semibold rounded-xl transition-colors hover:border-slate-300 dark:hover:border-white/[0.2]"
+                >
+                  Learn More
                 </Link>
               </div>
             </div>
-          </section>
-        )}
+          </div>
+        </section>
       </main>
 
       <Footer />

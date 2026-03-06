@@ -16,7 +16,7 @@ import {
   RefreshCw,
   AlertCircle
 } from 'lucide-react';
-import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
+import { CoinIcon } from '../../../components/common/CoinIcon';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
 
@@ -28,6 +28,7 @@ interface PriceAlert {
   currentPrice?: number;
   isActive: boolean;
   isTriggered: boolean;
+  triggeredPrice?: number;
   triggeredAt?: string;
   createdAt: string;
   alertType?: string;
@@ -299,14 +300,7 @@ export default function AlertsPage() {
             >
               <div className="flex items-center gap-3 sm:gap-4">
                 {/* Coin Icon */}
-                <img
-                  src={getCoinIcon(alert.symbol)}
-                  alt={alert.symbol}
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-contain"
-                  onError={(e) => {
-                    e.currentTarget.src = FALLBACK_COIN_ICON;
-                  }}
-                />
+                <CoinIcon symbol={alert.symbol.replace(/USDT$/i, '')} size={40} className="w-8 h-8 sm:w-10 sm:h-10" />
 
                 {/* Alert Info */}
                 <div>
@@ -340,6 +334,11 @@ export default function AlertsPage() {
                   <p className="text-lg font-semibold mt-1">
                     ${Number(alert.targetPrice).toLocaleString(undefined, { maximumFractionDigits: 8 })}
                   </p>
+                  {alert.isTriggered && alert.triggeredPrice != null && (
+                    <p className="text-sm text-amber-500 font-medium">
+                      Triggered @ ${Number(alert.triggeredPrice).toLocaleString(undefined, { maximumFractionDigits: 8 })}
+                    </p>
+                  )}
                   <p className="text-sm text-muted-foreground flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {alert.isTriggered && alert.triggeredAt

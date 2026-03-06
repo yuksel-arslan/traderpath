@@ -379,6 +379,17 @@ export interface CapitalFlowSummary {
 
   // Cache info
   cacheExpiry?: Date;
+
+  // Data source tracking — helps UI show live/stale indicators
+  dataSource?: 'live' | 'cached' | 'fallback';
+
+  // Granular per-component data source tracking
+  dataSources?: {
+    fred: 'live' | 'fallback';       // Fed BS, M2, Yields, RRP, TGA
+    yahoo: 'live' | 'fallback';      // DXY, VIX, Stocks, Metals, Bonds
+    binance: 'live' | 'fallback';    // Crypto flow
+    defillama: 'live' | 'fallback';  // DeFi TVL, Sectors
+  };
 }
 
 // AI-generated insights for each layer

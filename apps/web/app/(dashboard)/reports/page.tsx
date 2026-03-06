@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CoinIcon } from '../../../components/common/CoinIcon';
-import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../lib/coin-icons';
 import {
   FileText,
   Trash2,
@@ -20,11 +19,13 @@ import {
   Zap,
   Activity,
   Calendar,
-  Mail,
   Loader2,
   ChevronDown,
   Layers,
   Globe,
+  Download,
+  Send,
+  Image,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
@@ -39,12 +40,12 @@ const TRADE_TYPE_CONFIG: Record<TradeType, { label: string; icon: typeof Zap; co
   capital_flow: { label: 'Capital Flow', icon: Globe, color: 'blue' },
 };
 
-// Verdict configuration for badges
-const VERDICT_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  go: { label: 'GO', bg: 'bg-green-500/20', text: 'text-green-600 dark:text-green-400' },
-  conditional_go: { label: 'COND', bg: 'bg-yellow-500/20', text: 'text-yellow-600 dark:text-yellow-400' },
-  wait: { label: 'WAIT', bg: 'bg-orange-500/20', text: 'text-orange-600 dark:text-orange-400' },
-  avoid: { label: 'AVOID', bg: 'bg-red-500/20', text: 'text-red-600 dark:text-red-400' },
+// Verdict configuration for badges (intelligence colors)
+const VERDICT_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
+  go: { label: 'GO', bg: 'rgba(0,245,160,0.1)', color: '#00F5A0' },
+  conditional_go: { label: 'COND', bg: 'rgba(0,212,255,0.1)', color: '#00D4FF' },
+  wait: { label: 'WAIT', bg: 'rgba(255,184,0,0.1)', color: '#FFB800' },
+  avoid: { label: 'AVOID', bg: 'rgba(255,71,87,0.1)', color: '#FF4757' },
 };
 
 // Helper to normalize verdict string
@@ -103,6 +104,8 @@ interface AnalysisHistoryResponse {
       symbol: string;
       interval: string;
       totalScore: number | null;
+      method: string | null;
+      outcome: string | null;
       verdict: string;
       hasTradePlan: boolean;
       direction: string | null;
@@ -121,6 +124,42 @@ interface AnalysisHistoryResponse {
       offset: number;
     };
   };
+}
+
+// Map interval to trade type based on CLAUDE.md rules
+function getTradeTypeFromInterval(interval: string): TradeType {
+  switch (interval) {
+    case '5m':
+    case '15m':
+      return 'scalping';
+    case '30m':
+    case '1h':
+    case '2h':
+    case '4h':
+      return 'dayTrade';
+    case '1d':
+    case '1W':
+      return 'swing';
+    default:
+      return 'dayTrade';
+  }
+}
+
+// Map DB outcome values to frontend outcome values
+function mapOutcome(outcome: string | null): 'correct' | 'incorrect' | 'pending' | null {
+  if (!outcome) return null;
+  switch (outcome) {
+    case 'tp1_hit':
+    case 'tp2_hit':
+    case 'tp3_hit':
+      return 'correct';
+    case 'sl_hit':
+      return 'incorrect';
+    case 'pending':
+      return 'pending';
+    default:
+      return null;
+  }
 }
 
 // Date filter options
@@ -182,6 +221,9 @@ export default function ReportsPage() {
             verdict: analysis.verdict || 'N/A',
             score: analysis.totalScore ? Number(analysis.totalScore) : 0, // Score is already 0-10 scale from backend
             direction: analysis.direction,
+            tradeType: analysis.symbol === 'CAPITAL_FLOW' ? 'capital_flow' as TradeType : getTradeTypeFromInterval(analysis.interval),
+            method: (analysis.method || 'classic') as AnalysisMethod,
+            outcome: mapOutcome(analysis.outcome),
             interval: analysis.interval,
             hasTradePlan: analysis.hasTradePlan,
             entryPrice: analysis.entryPrice || undefined,
@@ -233,13 +275,6 @@ export default function ReportsPage() {
     } catch (error) {
       console.error('Failed to delete analysis:', error);
     }
-  };
-
-  // Send report via email - redirects to analysis details page for full screenshot
-  const handleSendEmail = (report: Report) => {
-    // Redirect to analysis details page with email=true parameter
-    // The details page will capture the full screenshot and send the email
-    router.push(`/analyze/details/${report.id}?email=true`);
   };
 
   // Navigate to AI Expert with report context
@@ -313,6 +348,109 @@ Could you share your risk assessment and recommendations based on this analysis?
       }
     } catch (error) {
       console.error('Failed to prepare AI Expert context:', error);
+    }
+  };
+
+  // Download snapshot PNGs for a report
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [snapshotDropdownId, setSnapshotDropdownId] = useState<string | null>(null);
+
+  const handleDownloadSnapshots = async (report: Report, type: 'executive' | 'detailed' = 'executive') => {
+    setDownloadingId(report.id);
+    setSnapshotDropdownId(null);
+    try {
+      // First find the reportId from reports API (analysis ID → report)
+      const reportResponse = await authFetch(`/api/reports/by-analysis/${report.id}`);
+      if (!reportResponse.ok) {
+        alert('Report not found. View the analysis first to generate a report.');
+        return;
+      }
+      const reportResult = await reportResponse.json();
+      const reportId = reportResult.data?.id;
+      if (!reportId) {
+        alert('Report not found.');
+        return;
+      }
+
+      const response = await authFetch(`/api/reports/${reportId}/snapshots`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        alert(err.error?.message || 'Failed to generate snapshots');
+        return;
+      }
+
+      const data = await response.json();
+      if (data.success && data.data?.snapshots) {
+        // Download each snapshot as PNG
+        for (const snapshot of data.data.snapshots) {
+          const link = document.createElement('a');
+          link.href = `data:image/png;base64,${snapshot.base64}`;
+          link.download = `TraderPath_${report.symbol}_${snapshot.id}.png`;
+          link.click();
+          // Small delay between downloads
+          await new Promise(r => setTimeout(r, 300));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to download snapshots:', error);
+      alert('Failed to download snapshots');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleSendReport = async (report: Report, type: 'executive' | 'detailed' = 'executive') => {
+    setSendingId(report.id);
+    setSnapshotDropdownId(null);
+    try {
+      // Find report ID
+      const reportResponse = await authFetch(`/api/reports/by-analysis/${report.id}`);
+      if (!reportResponse.ok) {
+        alert('Report not found. View the analysis first to generate a report.');
+        return;
+      }
+      const reportResult = await reportResponse.json();
+      const reportId = reportResult.data?.id;
+      if (!reportId) {
+        alert('Report not found.');
+        return;
+      }
+
+      const response = await authFetch(`/api/reports/${reportId}/distribute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        alert(err.error?.message || 'Failed to send report');
+        return;
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        const { telegramSent, discordSent } = data.data;
+        const channels: string[] = [];
+        if (telegramSent > 0) channels.push('Telegram');
+        if (discordSent > 0) channels.push('Discord');
+        if (channels.length > 0) {
+          alert(`Report sent via ${channels.join(' & ')}!`);
+        } else {
+          alert('No notification channels configured. Set up Telegram or Discord in Settings.');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send report:', error);
+      alert('Failed to send report');
+    } finally {
+      setSendingId(null);
     }
   };
 
@@ -444,213 +582,202 @@ Could you share your risk assessment and recommendations based on this analysis?
   };
 
   return (
-    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white overflow-hidden">
-      <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 flex flex-col h-full">
+    <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
+      <div className="max-w-[1400px] mx-auto py-6 px-4 sm:px-6 space-y-4">
         {/* Header */}
-        <div className="shrink-0 pt-4 pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
-                <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
-              </div>
-              <span className="text-sm font-sans font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
-                REPORTS
-              </span>
-              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
-                Analysis history · Live tracking
-              </span>
+        <header className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
+              <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
             </div>
+            <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
+              REPORTS
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-gray-400 dark:text-white/40 uppercase tracking-wider hidden sm:inline">
+              Analysis History
+            </span>
             <button
               onClick={() => fetchReports()}
               disabled={isLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-sans rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors text-neutral-500 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] hover:border-gray-300 dark:hover:border-white/[0.12] transition-all text-gray-600 dark:text-white/60 disabled:opacity-50"
             >
               <RefreshCw className={cn("w-3.5 h-3.5", isLoading && "animate-spin")} />
               Refresh
             </button>
           </div>
-        </div>
+        </header>
 
-        {/* Content */}
-        <main className="flex-1 min-h-0 overflow-y-auto">
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center mb-4">
-        {/* Symbol Search */}
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
-          <input
-            type="text"
-            placeholder="Search symbol..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-2.5 py-1.5 text-xs font-sans bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-[#14B8A6]/50"
-          />
-        </div>
-
-        {/* Date Filter */}
-        <div className="flex bg-white dark:bg-neutral-950 rounded-lg p-0.5 border border-neutral-200 dark:border-neutral-800">
-          {[
-            { value: 'all', label: 'All' },
-            { value: 'today', label: 'Today' },
-            { value: 'week', label: 'Week' },
-            { value: 'month', label: 'Month' },
-          ].map((f) => (
-            <button
-              key={f.value}
-              onClick={() => setDateFilter(f.value as DateFilter)}
-              className={cn(
-                "px-2.5 py-1 text-[11px] font-sans rounded-md transition-colors",
-                dateFilter === f.value
-                  ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900"
-                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Trade Type Filter */}
-        {/* Trade Type Filter Dropdown */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-neutral-500 dark:text-neutral-400">Type:</span>
-          <div className="relative">
-            <select
-              value={tradeTypeFilter}
-              onChange={(e) => setTradeTypeFilter(e.target.value as TradeType | 'all')}
-              className="appearance-none bg-white dark:bg-neutral-950 text-neutral-700 dark:text-neutral-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 focus:ring-2 focus:ring-teal-500 cursor-pointer"
-            >
-              <option value="all">All</option>
-              {(Object.keys(TRADE_TYPE_CONFIG) as TradeType[]).map((type) => (
-                <option key={type} value={type}>
-                  {TRADE_TYPE_CONFIG[type].label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
-          </div>
-        </div>
-
-        {/* Verdict Filter Dropdown */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-neutral-500 dark:text-neutral-400">Verdict:</span>
-          <div className="relative">
-            <select
-              value={verdictFilter}
-              onChange={(e) => setVerdictFilter(e.target.value as VerdictFilter)}
-              className="appearance-none bg-white dark:bg-neutral-950 text-neutral-700 dark:text-neutral-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 focus:ring-2 focus:ring-teal-500 cursor-pointer"
-            >
-              <option value="all">All</option>
-              <option value="go">GO</option>
-              <option value="conditional_go">COND</option>
-              <option value="wait">WAIT</option>
-              <option value="avoid">AVOID</option>
-            </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
-          </div>
-        </div>
-
-        {/* Outcome Filter Dropdown */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-neutral-500 dark:text-neutral-400">Status:</span>
-          <div className="relative">
-            <select
-              value={outcomeFilter}
-              onChange={(e) => setOutcomeFilter(e.target.value as OutcomeFilter)}
-              className="appearance-none bg-white dark:bg-neutral-950 text-neutral-700 dark:text-neutral-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 focus:ring-2 focus:ring-teal-500 cursor-pointer"
-            >
-              {OUTCOME_FILTERS.map((f) => (
-                <option key={f.value} value={f.value}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
-          </div>
-        </div>
-
-        {/* Sort Dropdown */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-neutral-500 dark:text-neutral-400">Sort:</span>
-          <div className="relative">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="appearance-none bg-white dark:bg-neutral-950 text-neutral-700 dark:text-neutral-200 text-xs font-medium pl-3 pr-8 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 focus:ring-2 focus:ring-teal-500 cursor-pointer"
-            >
-              {SORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
-          </div>
-        </div>
-
-        {/* Results Count Badge */}
-        <div className="ml-auto hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800">
-          <span className="text-xs text-neutral-500 dark:text-neutral-400">Showing</span>
-          <span className="text-sm font-bold text-neutral-900 dark:text-white">
-            {hasActiveFilters ? `${filteredReports.length}/${reports.length}` : filteredReports.length}
-          </span>
-          <span className="text-xs text-neutral-500 dark:text-neutral-400">reports</span>
-          {hasActiveFilters && (
-            <button
-              onClick={clearFilters}
-              className="ml-2 text-xs text-teal-500 hover:text-teal-600 dark:hover:text-teal-400 font-medium"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Reports List */}
-      {error ? (
-        <div className="relative overflow-hidden rounded-xl border border-red-500/20 bg-red-50 dark:bg-red-900/20 p-8 text-center">
-          <div className="relative z-10">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
-              <XCircle className="w-6 h-6 text-red-500" />
+        {/* Filters */}
+        <div className="rounded-xl p-4 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            {/* Symbol Search */}
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-white/30" />
+              <input
+                type="text"
+                placeholder="Search symbol..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-[#00F5A0]/30"
+              />
             </div>
-            <h3 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-2">Error Loading Reports</h3>
-            <p className="text-red-600 dark:text-red-300 mb-4">{error}</p>
+
+            {/* Date Filter */}
+            <div className="flex bg-white dark:bg-white/[0.03] rounded-lg p-0.5 border border-gray-200 dark:border-white/[0.06]">
+              {[
+                { value: 'all', label: 'All' },
+                { value: 'today', label: 'Today' },
+                { value: 'week', label: 'Week' },
+                { value: 'month', label: 'Month' },
+              ].map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setDateFilter(f.value as DateFilter)}
+                  className={cn(
+                    "px-2.5 py-1 text-xs rounded-md font-medium transition-all",
+                    dateFilter === f.value
+                      ? "bg-gray-200 dark:bg-white/10 text-gray-900 dark:text-white"
+                      : "text-gray-400 dark:text-white/30 hover:text-gray-600 dark:hover:text-white/50"
+                  )}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Trade Type Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-white/40 uppercase tracking-wider">Type</span>
+              <div className="relative">
+                <select
+                  value={tradeTypeFilter}
+                  onChange={(e) => setTradeTypeFilter(e.target.value as TradeType | 'all')}
+                  className="appearance-none bg-white dark:bg-white/[0.03] text-gray-700 dark:text-white/80 text-xs font-medium pl-3 pr-8 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.06] focus:ring-1 focus:ring-[#00F5A0]/30 cursor-pointer"
+                >
+                  <option value="all">All</option>
+                  {(Object.keys(TRADE_TYPE_CONFIG) as TradeType[]).map((type) => (
+                    <option key={type} value={type}>
+                      {TRADE_TYPE_CONFIG[type].label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-white/30 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Verdict Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-white/40 uppercase tracking-wider">Verdict</span>
+              <div className="relative">
+                <select
+                  value={verdictFilter}
+                  onChange={(e) => setVerdictFilter(e.target.value as VerdictFilter)}
+                  className="appearance-none bg-white dark:bg-white/[0.03] text-gray-700 dark:text-white/80 text-xs font-medium pl-3 pr-8 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.06] focus:ring-1 focus:ring-[#00F5A0]/30 cursor-pointer"
+                >
+                  <option value="all">All</option>
+                  <option value="go">GO</option>
+                  <option value="conditional_go">COND</option>
+                  <option value="wait">WAIT</option>
+                  <option value="avoid">AVOID</option>
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-white/30 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Outcome Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-white/40 uppercase tracking-wider">Status</span>
+              <div className="relative">
+                <select
+                  value={outcomeFilter}
+                  onChange={(e) => setOutcomeFilter(e.target.value as OutcomeFilter)}
+                  className="appearance-none bg-white dark:bg-white/[0.03] text-gray-700 dark:text-white/80 text-xs font-medium pl-3 pr-8 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.06] focus:ring-1 focus:ring-[#00F5A0]/30 cursor-pointer"
+                >
+                  {OUTCOME_FILTERS.map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-white/30 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Sort */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-white/40 uppercase tracking-wider">Sort</span>
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  className="appearance-none bg-white dark:bg-white/[0.03] text-gray-700 dark:text-white/80 text-xs font-medium pl-3 pr-8 py-1.5 rounded-lg border border-gray-200 dark:border-white/[0.06] focus:ring-1 focus:ring-[#00F5A0]/30 cursor-pointer"
+                >
+                  {SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-white/30 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Results Count */}
+            <div className="ml-auto hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/[0.03] rounded-lg border border-gray-200 dark:border-white/[0.06]">
+              <span className="text-xs text-gray-500 dark:text-white/40">Showing</span>
+              <span className="text-sm font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                {hasActiveFilters ? `${filteredReports.length}/${reports.length}` : filteredReports.length}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-white/40">reports</span>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="ml-2 text-xs font-medium transition-colors"
+                  style={{ color: '#00F5A0' }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Reports List */}
+        {error ? (
+          <div className="rounded-xl p-8 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] text-center">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,71,87,0.1)' }}>
+              <XCircle className="w-6 h-6" style={{ color: '#FF4757' }} />
+            </div>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">Error Loading Reports</h3>
+            <p className="text-sm text-gray-500 dark:text-white/40 mb-4">{error}</p>
             <button
               onClick={() => fetchReports()}
-              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:scale-105"
+              style={{ background: 'linear-gradient(135deg, #00F5A0, #00D4FF)', color: '#0A0B0F' }}
             >
-              <RefreshCw className="w-4 h-4 inline mr-2" />
+              <RefreshCw className="w-4 h-4" />
               Try Again
             </button>
           </div>
-        </div>
-      ) : isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <div className="relative">
-            <div className="absolute inset-0 bg-teal-500/30 rounded-full blur-xl animate-pulse" />
-            <RefreshCw className="relative w-10 h-10 animate-spin text-teal-500" />
-          </div>
-          <p className="text-neutral-500 dark:text-neutral-400 text-sm">Loading your reports...</p>
-        </div>
-      ) : filteredReports.length === 0 ? (
-        <div className="relative overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800 bg-gradient-to-br from-neutral-50 to-white dark:from-neutral-900 dark:to-neutral-800 p-12">
-          {/* Background Effects - Teal/Red */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-red-400/10 rounded-full blur-3xl" />
-
-          <div className="relative z-10 text-center">
-            <div className="relative inline-block mb-6">
-              <div className="absolute inset-0 bg-teal-500/20 rounded-xl blur-xl" />
-              <div className="relative w-20 h-20 rounded-xl bg-gradient-to-br from-teal-500/20 to-red-400/20 border border-teal-500/20 dark:border-white/10 flex items-center justify-center">
-                <FileText className="w-10 h-10 text-teal-500" />
-              </div>
+        ) : isLoading ? (
+          <div className="rounded-xl p-20 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] flex flex-col items-center justify-center gap-4">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,245,160,0.1)' }}>
+              <RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#00F5A0' }} />
             </div>
-            <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-3">
+            <p className="text-sm text-gray-500 dark:text-white/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Loading your reports...</p>
+          </div>
+        ) : filteredReports.length === 0 ? (
+          <div className="rounded-xl p-10 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] text-center">
+            <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: 'rgba(0,245,160,0.1)' }}>
+              <FileText className="w-6 h-6" style={{ color: '#00F5A0' }} />
+            </div>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">
               {hasActiveFilters ? 'No Matching Reports' : 'No Reports Yet'}
             </h3>
-            <p className="text-neutral-500 dark:text-neutral-400 mb-6 max-w-md mx-auto">
+            <p className="text-sm text-gray-500 dark:text-white/40 mb-6 max-w-sm mx-auto">
               {hasActiveFilters
                 ? 'No reports match your current filters. Try adjusting your search criteria.'
                 : 'Create your first analysis report to start tracking your trades and building your performance history.'}
@@ -658,106 +785,41 @@ Could you share your risk assessment and recommendations based on this analysis?
             {hasActiveFilters ? (
               <button
                 onClick={clearFilters}
-                className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-red-400 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-teal-500/25 transition-all duration-300"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:scale-105"
+                style={{ background: 'linear-gradient(135deg, #00F5A0, #00D4FF)', color: '#0A0B0F' }}
               >
                 Clear Filters
-                <span className="group-hover:translate-x-1 transition-transform">→</span>
               </button>
             ) : (
               <button
                 onClick={() => router.push('/analyze')}
-                className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-red-400 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-teal-500/25 transition-all duration-300"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:scale-105"
+                style={{ background: 'linear-gradient(135deg, #00F5A0, #00D4FF)', color: '#0A0B0F' }}
               >
-                <Zap className="w-5 h-5" />
                 Start Analysis
-                <span className="group-hover:translate-x-1 transition-transform">→</span>
               </button>
             )}
           </div>
-        </div>
-      ) : (
-        <div className="space-y-4">
+        ) : (
+          <div className="space-y-3">
           {filteredReports.map((report) => {
             // Helper to check if report is active (outcome is null or 'pending')
             const isActive = !report.outcome || report.outcome === 'pending';
 
-            // Calculate proximity to TP/SL for dynamic background
-            let bgIntensity = 5; // default
-            let bgColor = 'blue'; // default for active
-
-            if (report.outcome === 'correct') {
-              bgColor = 'green';
-              bgIntensity = 20;
-            } else if (report.outcome === 'incorrect') {
-              bgColor = 'red';
-              bgIntensity = 20;
-            } else if (report.entryPrice && report.currentPrice && report.stopLoss && report.takeProfit1) {
-              const entry = report.entryPrice;
-              const current = report.currentPrice;
-              const sl = report.stopLoss;
-              const tp = report.takeProfit1;
-              const isLong = report.direction === 'long';
-
-              // Calculate position between SL and TP (0 = at SL, 100 = at TP)
-              const totalRange = isLong ? tp - sl : sl - tp;
-              const currentPos = isLong ? current - sl : sl - current;
-              const positionPercent = totalRange !== 0 ? (currentPos / totalRange) * 100 : 50;
-
-              if (positionPercent >= 50) {
-                // Moving towards TP - green
-                bgColor = 'green';
-                // Intensity increases as it gets closer to TP (50% -> 5, 100% -> 25)
-                bgIntensity = Math.round(5 + ((positionPercent - 50) / 50) * 20);
-              } else {
-                // Moving towards SL - red
-                bgColor = 'red';
-                // Intensity increases as it gets closer to SL (50% -> 5, 0% -> 25)
-                bgIntensity = Math.round(5 + ((50 - positionPercent) / 50) * 20);
-              }
-            }
-
-            const bgClass = `bg-${bgColor}-500/${bgIntensity}`;
-            const borderClass = `border-${bgColor}-500/50`;
-
             return (
             <div
               key={report.id}
-              className={cn(
-                "border rounded-xl p-4 hover:shadow-lg transition-all duration-150 relative overflow-hidden bg-white dark:bg-white/[0.02] backdrop-blur-sm",
-                report.outcome === 'correct' && "border-teal-500/30",
-                report.outcome === 'incorrect' && "border-red-500/30",
-                isActive && "border-white/10 dark:border-white/[0.06]"
-              )}
-              style={{
-                background: report.outcome === 'correct'
-                  ? `linear-gradient(to right, rgba(20, 184, 166, 0.05), rgba(20, 184, 166, 0.15))`
+              className="rounded-xl p-5 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] hover:border-gray-300 dark:hover:border-white/[0.12] transition-all relative overflow-hidden"
+              style={
+                report.outcome === 'correct'
+                  ? { borderLeftWidth: '3px', borderLeftColor: '#00F5A0' }
                   : report.outcome === 'incorrect'
-                  ? `linear-gradient(to right, rgba(251, 146, 60, 0.05), rgba(251, 146, 60, 0.15))`
-                  : `linear-gradient(to right, rgba(20, 184, 166, 0.02), rgba(20, 184, 166, 0.08))`
-              }}
+                  ? { borderLeftWidth: '3px', borderLeftColor: '#FF4757' }
+                  : isActive
+                  ? { borderLeftWidth: '3px', borderLeftColor: '#00D4FF' }
+                  : {}
+              }
             >
-              {/* Status Corner Ribbon - Teal/Red */}
-              {isActive && (
-                <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden">
-                  <div className="absolute top-3 -right-6 w-24 text-center py-0.5 bg-teal-500 text-white text-[10px] font-bold rotate-45 shadow-sm">
-                    LIVE
-                  </div>
-                </div>
-              )}
-              {report.outcome === 'correct' && (
-                <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden">
-                  <div className="absolute top-3 -right-6 w-24 text-center py-0.5 bg-teal-500 text-white text-[10px] font-bold rotate-45 shadow-sm">
-                    TP HIT ✓
-                  </div>
-                </div>
-              )}
-              {report.outcome === 'incorrect' && (
-                <div className="absolute top-0 right-0 w-20 h-20 overflow-hidden">
-                  <div className="absolute top-3 -right-6 w-24 text-center py-0.5 bg-red-500 text-white text-[10px] font-bold rotate-45 shadow-sm">
-                    SL HIT ✗
-                  </div>
-                </div>
-              )}
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 {/* Report Info */}
                 <div className="flex items-center gap-4 min-w-0">
@@ -766,24 +828,25 @@ Could you share your risk assessment and recommendations based on this analysis?
                       <Globe className="w-6 h-6 text-white" />
                     </div>
                   ) : (
-                    <CoinIcon symbol={report.symbol} size={48} className="shrink-0" />
+                    <CoinIcon symbol={report.symbol.replace(/USDT$/i, '')} size={48} className="shrink-0" />
                   )}
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-lg">
-                        {report.symbol === 'CAPITAL_FLOW' ? 'Capital Flow Report' : report.symbol}
+                      <h3 className="font-bold text-sm text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        {report.symbol === 'CAPITAL_FLOW' ? 'Capital Flow Report' : report.symbol.replace(/USDT$/i, '')}
                       </h3>
                       {report.direction && (
-                        <span className={cn(
-                          "px-2 py-0.5 rounded text-xs font-medium",
-                          report.direction === 'long'
-                            ? "bg-teal-500/10 text-teal-600 dark:text-teal-400"
-                            : "bg-red-500/10 text-red-600 dark:text-red-400"
-                        )}>
+                        <span
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                          style={{
+                            background: report.direction === 'long' ? 'rgba(0,245,160,0.1)' : 'rgba(255,71,87,0.1)',
+                            color: report.direction === 'long' ? '#00F5A0' : '#FF4757',
+                          }}
+                        >
                           {report.direction === 'long' ? (
-                            <TrendingUp className="w-3 h-3 inline mr-1" />
+                            <TrendingUp className="w-3 h-3" />
                           ) : (
-                            <TrendingDown className="w-3 h-3 inline mr-1" />
+                            <TrendingDown className="w-3 h-3" />
                           )}
                           {report.direction.toUpperCase()}
                         </span>
@@ -793,10 +856,10 @@ Could you share your risk assessment and recommendations based on this analysis?
                         const normalizedVerdict = normalizeVerdict(report.verdict);
                         const config = VERDICT_CONFIG[normalizedVerdict] || VERDICT_CONFIG.wait;
                         return (
-                          <span className={cn(
-                            "px-2 py-0.5 rounded text-xs font-bold",
-                            config.bg, config.text
-                          )}>
+                          <span
+                            className="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                            style={{ background: config.bg, color: config.color }}
+                          >
                             {config.label}
                           </span>
                         );
@@ -825,24 +888,24 @@ Could you share your risk assessment and recommendations based on this analysis?
                           MLIS
                         </span>
                       )}
-                      {/* Outcome Status Badge - Teal/Red */}
+                      {/* Outcome Status Badge */}
                       {report.outcome === 'correct' && (
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center gap-1">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ background: 'rgba(0,245,160,0.1)', color: '#00F5A0' }}>
                           <CheckCircle2 className="w-3 h-3" />
                           TP HIT
                         </span>
                       )}
                       {report.outcome === 'incorrect' && (
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-600 dark:text-red-400 flex items-center gap-1">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ background: 'rgba(255,71,87,0.1)', color: '#FF4757' }}>
                           <XCircle className="w-3 h-3" />
                           SL HIT
                         </span>
                       )}
                       {isActive && (
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-teal-500/20 text-teal-600 dark:text-teal-400 flex items-center gap-1.5 animate-pulse">
-                          <span className="w-2 h-2 bg-teal-500 rounded-full animate-ping" />
+                        <span className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ background: 'rgba(0,212,255,0.1)', color: '#00D4FF' }}>
+                          <span className="w-1.5 h-1.5 rounded-full animate-ping" style={{ background: '#00D4FF' }} />
                           <Timer className="w-3 h-3" />
-                          LIVE TRACKING
+                          LIVE
                         </span>
                       )}
                       {/* Sample Report Badge */}
@@ -853,65 +916,53 @@ Could you share your risk assessment and recommendations based on this analysis?
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-gray-400 dark:text-white/30 mt-0.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       {new Date(report.generatedAt).toLocaleDateString('en-US', {
                         day: 'numeric',
                         month: 'short',
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
+                      {report.interval && (
+                        <span className="ml-2 text-gray-300 dark:text-white/20">
+                          {report.interval}
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
 
                 {/* Score + Price + P/L + Distance Display */}
-                <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 bg-neutral-100 dark:bg-neutral-900/50 rounded-lg border border-neutral-200 dark:border-neutral-800 flex-wrap justify-center sm:justify-start">
-                  {/* Score as percentage - Teal/Red */}
-                  <div className={cn(
-                    "text-center px-2 py-1 rounded-lg min-w-[50px]",
-                    report.score >= 7 ? "bg-teal-100 dark:bg-teal-500/20" :
-                    report.score >= 5 ? "bg-amber-100 dark:bg-amber-500/20" : "bg-red-100 dark:bg-red-500/20"
-                  )}>
-                    <div className="text-[10px] text-neutral-500 dark:text-muted-foreground">Score</div>
-                    <div className={cn(
-                      "font-bold text-sm",
-                      report.score >= 7 ? "text-teal-600 dark:text-teal-400" :
-                      report.score >= 5 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"
-                    )}>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.04] flex-wrap justify-center sm:justify-start">
+                  {/* Score */}
+                  <div className="text-center px-2 py-1 rounded-md min-w-[50px]" style={{ background: report.score >= 7 ? 'rgba(0,245,160,0.08)' : report.score >= 5 ? 'rgba(255,184,0,0.08)' : 'rgba(255,71,87,0.08)' }}>
+                    <div className="text-[10px] text-gray-400 dark:text-white/30 uppercase tracking-wider">Score</div>
+                    <div className="font-bold text-sm" style={{ color: report.score >= 7 ? '#00F5A0' : report.score >= 5 ? '#FFB800' : '#FF4757', fontFamily: "'JetBrains Mono', monospace" }}>
                       {(report.score * 10).toFixed(0)}%
                     </div>
                   </div>
 
                   {report.currentPrice && (
                     <>
-                      <div className="text-neutral-300 dark:text-muted-foreground/30">|</div>
+                      <div className="w-px h-6 bg-gray-200 dark:bg-white/[0.06]" />
 
-                      {/* P/L Percentage - Teal/Red */}
-                      <div className={cn(
-                        "text-center px-2 py-1 rounded-lg min-w-[60px]",
-                        (report.unrealizedPnL || 0) >= 0
-                          ? "bg-teal-100 dark:bg-teal-500/20"
-                          : "bg-red-100 dark:bg-red-500/20"
-                      )}>
-                        <div className="text-[10px] text-neutral-500 dark:text-muted-foreground">P/L</div>
-                        <div className={cn(
-                          "font-bold text-sm",
-                          (report.unrealizedPnL || 0) >= 0 ? "text-teal-600 dark:text-teal-400" : "text-red-600 dark:text-red-400"
-                        )}>
+                      {/* P/L */}
+                      <div className="text-center px-2 py-1 rounded-md min-w-[60px]" style={{ background: (report.unrealizedPnL || 0) >= 0 ? 'rgba(0,245,160,0.08)' : 'rgba(255,71,87,0.08)' }}>
+                        <div className="text-[10px] text-gray-400 dark:text-white/30 uppercase tracking-wider">P/L</div>
+                        <div className="font-bold text-sm" style={{ color: (report.unrealizedPnL || 0) >= 0 ? '#00F5A0' : '#FF4757', fontFamily: "'JetBrains Mono', monospace" }}>
                           {(report.unrealizedPnL || 0) >= 0 ? '+' : ''}{(report.unrealizedPnL || 0).toFixed(2)}%
                         </div>
                       </div>
 
-                      {/* Distance to TP - for active trades or show 100% for TP hit */}
+                      {/* Distance to TP */}
                       {report.takeProfit1 && (
                         report.outcome === 'correct' ? (
-                          // TP Hit - show 100% in teal
-                          <div className="text-center px-2 py-1 rounded-lg min-w-[60px] bg-teal-100 dark:bg-teal-500/20">
-                            <div className="text-[10px] text-neutral-500 dark:text-muted-foreground flex items-center justify-center gap-1">
+                          <div className="text-center px-2 py-1 rounded-md min-w-[60px]" style={{ background: 'rgba(0,245,160,0.08)' }}>
+                            <div className="text-[10px] text-gray-400 dark:text-white/30 flex items-center justify-center gap-1">
                               <Target className="w-3 h-3" />
                               TP
                             </div>
-                            <div className="font-bold text-sm text-teal-600 dark:text-teal-400">
+                            <div className="font-bold text-sm" style={{ color: '#00F5A0', fontFamily: "'JetBrains Mono', monospace" }}>
                               100%
                             </div>
                           </div>
@@ -921,33 +972,21 @@ Could you share your risk assessment and recommendations based on this analysis?
                           const entry = report.entryPrice || current;
                           const isLong = report.direction === 'long';
 
-                          // Calculate progress towards TP (0% = at entry, 100% = at TP)
                           const totalDistance = isLong ? (tp1 - entry) : (entry - tp1);
                           const coveredDistance = isLong ? (current - entry) : (entry - current);
-
-                          // Progress as percentage (can exceed 100% if price passed TP)
                           const progress = totalDistance !== 0
                             ? Math.min(100, Math.max(0, (coveredDistance / totalDistance) * 100))
                             : 0;
 
-                          // Distance remaining to TP
-                          const distanceToTP = Math.max(0, 100 - progress);
+                          const progressColor = progress >= 80 ? '#00F5A0' : progress >= 50 ? '#FFB800' : '#64748b';
 
                           return (
-                            <div className={cn(
-                              "text-center px-2 py-1 rounded-lg min-w-[60px]",
-                              progress >= 80 ? "bg-teal-100 dark:bg-teal-500/20" :
-                              progress >= 50 ? "bg-amber-100 dark:bg-amber-500/20" : "bg-neutral-100 dark:bg-neutral-500/20"
-                            )}>
-                              <div className="text-[10px] text-neutral-500 dark:text-muted-foreground flex items-center justify-center gap-1">
+                            <div className="text-center px-2 py-1 rounded-md min-w-[60px]" style={{ background: progress >= 80 ? 'rgba(0,245,160,0.08)' : progress >= 50 ? 'rgba(255,184,0,0.08)' : 'rgba(100,116,139,0.08)' }}>
+                              <div className="text-[10px] text-gray-400 dark:text-white/30 flex items-center justify-center gap-1">
                                 <Target className="w-3 h-3" />
                                 TP
                               </div>
-                              <div className={cn(
-                                "font-bold text-sm",
-                                progress >= 80 ? "text-teal-600 dark:text-teal-400" :
-                                progress >= 50 ? "text-amber-600 dark:text-amber-400" : "text-neutral-500 dark:text-neutral-400"
-                              )}>
+                              <div className="font-bold text-sm" style={{ color: progressColor, fontFamily: "'JetBrains Mono', monospace" }}>
                                 {progress.toFixed(0)}%
                               </div>
                             </div>
@@ -958,79 +997,132 @@ Could you share your risk assessment and recommendations based on this analysis?
                   )}
                 </div>
 
-                {/* Actions - Teal/Red Theme */}
-                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-center sm:justify-end">
-                  {/* Details Button */}
+                {/* Actions */}
+                <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-center sm:justify-end">
+                  {/* Details */}
                   <button
                     onClick={() => router.push(
                       report.symbol === 'CAPITAL_FLOW'
                         ? `/reports/capital-flow/${report.id}`
                         : `/analyze/details/${report.id}`
                     )}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-teal-100 dark:bg-teal-500/10 hover:bg-teal-200 dark:hover:bg-teal-500/20 text-teal-600 dark:text-teal-500 transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border border-gray-200 dark:border-white/[0.06] hover:border-gray-300 dark:hover:border-white/[0.12] text-gray-600 dark:text-white/60 bg-white dark:bg-white/[0.03]"
                     title="View Details"
                   >
-                    <Eye className="w-4 h-4" />
-                    <span className="text-sm font-medium hidden sm:inline">Details</span>
+                    <Eye className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Details</span>
                   </button>
-                  {/* AI Expert Button - only show if no comment yet */}
+                  {/* Download Snapshots */}
+                  {report.symbol !== 'CAPITAL_FLOW' && (
+                    <div className="relative">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSnapshotDropdownId(snapshotDropdownId === report.id ? null : report.id); }}
+                        disabled={downloadingId === report.id || sendingId === report.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border border-teal-200 dark:border-teal-500/20 hover:border-teal-300 dark:hover:border-teal-500/40 text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-500/5 disabled:opacity-50"
+                        title="Download / Send Report"
+                      >
+                        {downloadingId === report.id || sendingId === report.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Image className="w-3.5 h-3.5" />
+                        )}
+                        <span className="hidden sm:inline">Snapshot</span>
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                      {snapshotDropdownId === report.id && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setSnapshotDropdownId(null)} />
+                          <div className="absolute right-0 mt-1.5 w-52 bg-white dark:bg-[#12131A] rounded-lg shadow-lg border border-gray-200 dark:border-white/[0.08] z-50 overflow-hidden">
+                            <div className="px-3 py-2 border-b border-gray-100 dark:border-white/[0.06]">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-white/30">Download PNG</span>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDownloadSnapshots(report, 'executive'); }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs font-medium text-gray-700 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition"
+                            >
+                              <Download className="w-3.5 h-3.5 text-teal-500" />
+                              <div>
+                                <div>Executive Summary</div>
+                                <div className="text-[10px] text-gray-400 dark:text-white/30">3-4 PNG snapshots</div>
+                              </div>
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDownloadSnapshots(report, 'detailed'); }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs font-medium text-gray-700 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition"
+                            >
+                              <Download className="w-3.5 h-3.5 text-blue-500" />
+                              <div>
+                                <div>Detailed Analysis</div>
+                                <div className="text-[10px] text-gray-400 dark:text-white/30">6-8 PNG snapshots</div>
+                              </div>
+                            </button>
+                            <div className="px-3 py-2 border-t border-gray-100 dark:border-white/[0.06]">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-white/30">Send via</span>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleSendReport(report, 'executive'); }}
+                              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-xs font-medium text-gray-700 dark:text-white/70 hover:bg-gray-50 dark:hover:bg-white/[0.04] transition"
+                            >
+                              <Send className="w-3.5 h-3.5 text-emerald-500" />
+                              <div>
+                                <div>Telegram / Discord</div>
+                                <div className="text-[10px] text-gray-400 dark:text-white/30">Send Executive Summary</div>
+                              </div>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {/* AI Expert */}
                   {!report.aiExpertComment && report.analysisId && (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleAskAIExpert(report); }}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-100 dark:bg-red-500/10 hover:bg-red-200 dark:hover:bg-red-500/20 text-red-600 dark:text-red-500 transition"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border border-gray-200 dark:border-white/[0.06] hover:border-gray-300 dark:hover:border-white/[0.12] text-gray-600 dark:text-white/60 bg-white dark:bg-white/[0.03]"
                       title="Ask AI Expert"
                     >
-                      <Bot className="w-4 h-4" />
-                      <span className="text-sm font-medium hidden sm:inline">AI Expert</span>
+                      <Bot className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">AI Expert</span>
                     </button>
                   )}
-                  {/* Email Button */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleSendEmail(report); }}
-                    className="p-2 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition"
-                    title="Send Email"
-                  >
-                    <Mail className="w-5 h-5" />
-                  </button>
-                  {/* Delete Button */}
+                  {/* Delete */}
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDelete(report.id); }}
-                    className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/10 text-red-500 transition"
+                    className="p-1.5 rounded-lg text-gray-400 dark:text-white/30 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
                     title="Delete"
                   >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
             </div>
           );
           })}
-        </div>
-      )}
+          </div>
+        )}
 
-      {/* Pagination */}
-      {pagination.total > pagination.limit && (
-        <div className="flex justify-center items-center gap-2">
-          <button
-            onClick={() => setPagination(p => ({ ...p, offset: Math.max(0, p.offset - p.limit) }))}
-            disabled={pagination.offset === 0}
-            className="px-3 py-1.5 text-sm bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-900 transition disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <span className="px-3 py-1.5 text-sm text-gray-500 dark:text-neutral-400">
-            {Math.floor(pagination.offset / pagination.limit) + 1} / {Math.ceil(pagination.total / pagination.limit)}
-          </span>
-          <button
-            onClick={() => setPagination(p => ({ ...p, offset: p.offset + p.limit }))}
-            disabled={pagination.offset + pagination.limit >= pagination.total}
-            className="px-3 py-1.5 text-sm bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-900 transition disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
-      )}
-        </main>
+        {/* Pagination */}
+        {pagination.total > pagination.limit && (
+          <div className="flex justify-center items-center gap-2 pt-2">
+            <button
+              onClick={() => setPagination(p => ({ ...p, offset: Math.max(0, p.offset - p.limit) }))}
+              disabled={pagination.offset === 0}
+              className="px-3 py-1.5 text-xs font-medium bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] rounded-lg hover:border-gray-300 dark:hover:border-white/[0.12] transition-all text-gray-600 dark:text-white/60 disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <span className="px-3 py-1.5 text-xs text-gray-400 dark:text-white/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              {Math.floor(pagination.offset / pagination.limit) + 1} / {Math.ceil(pagination.total / pagination.limit)}
+            </span>
+            <button
+              onClick={() => setPagination(p => ({ ...p, offset: p.offset + p.limit }))}
+              disabled={pagination.offset + pagination.limit >= pagination.total}
+              className="px-3 py-1.5 text-xs font-medium bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06] rounded-lg hover:border-gray-300 dark:hover:border-white/[0.12] transition-all text-gray-600 dark:text-white/60 disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

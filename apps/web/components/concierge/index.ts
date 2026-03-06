@@ -1,5 +1,5 @@
 export { ChatInput } from './ChatInput';
-export { ChatMessages } from './ChatMessages';
+export { ChatMessages, StyledMessage } from './ChatMessages';
 export { ResultCard } from './ResultCard';
 export { QuickCommands } from './QuickCommands';
 export { useConcierge } from './useConcierge';

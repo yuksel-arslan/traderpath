@@ -31,10 +31,19 @@ interface TimingData {
   currentPrice: number;
   optimalEntry: number;
   tradeNow: boolean;
+  reason?: string;
   entryZones: EntryZone[];
   conditions: Condition[];
   waitFor?: WaitFor;
   aiInsight?: string;
+  fibonacci?: {
+    nearGoldenZone: boolean;
+    retracementPct: number;
+    goldenZone?: { upper: number; lower: number } | null;
+    nearestFibSupport?: number | null;
+    nearestFibResistance?: number | null;
+    levels?: Array<{ level: number; price: number; type: string }>;
+  };
 }
 
 interface TimingAnalysisProps {

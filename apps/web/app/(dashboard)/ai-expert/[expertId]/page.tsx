@@ -349,26 +349,26 @@ function AnswerFooter({
         return;
       }
 
-      // Generate PDF with better error handling
+      // Generate Snapshot PNG with better error handling
       try {
         const { generateAnalysisReport } = await import('../../../../components/reports/AnalysisReport');
         await generateAnalysisReport({
           ...reportData.data.reportData,
           aiExpertComment: reportData.data.aiExpertComment || content,
         });
-      } catch (pdfError) {
-        console.error('PDF generation error:', pdfError);
-        // Refund credits if PDF generation fails
+      } catch (snapshotError) {
+        console.error('Snapshot generation error:', snapshotError);
+        // Refund credits if snapshot generation fails
         await authFetch('/api/credits/add', {
           method: 'POST',
           body: JSON.stringify({
             amount: 10,
-            reason: 'Refund: PDF generation failed',
+            reason: 'Refund: Snapshot generation failed',
             type: 'REFUND'
           }),
         });
-        const errorMsg = pdfError instanceof Error ? pdfError.message : 'Unknown PDF error';
-        setDownloadError(`PDF generation failed: ${errorMsg} - credits refunded`);
+        const errorMsg = snapshotError instanceof Error ? snapshotError.message : 'Unknown error';
+        setDownloadError(`Snapshot generation failed: ${errorMsg} - credits refunded`);
         return;
       }
 
@@ -666,7 +666,7 @@ export default function AIExpertChatPage() {
 
   const Icon = expert.icon;
   const isAdmin = user?.isAdmin === true;
-  const hasEnoughCredits = isAdmin || (credits?.balance || 0) >= 3;
+  const hasEnoughCredits = isAdmin || (credits?.balance || 0) >= 5;
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">

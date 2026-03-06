@@ -55,6 +55,10 @@ const DAY_INDICATORS: ReadonlyArray<{ name: string; params?: Record<string, numb
 
   // --- Patterns ---
   { name: 'CANDLESTICK_PATTERNS' },
+
+  // --- Fibonacci & Wave Analysis ---
+  { name: 'FIBONACCI' },
+  { name: 'ELLIOTT_WAVE' },
 ] as const;
 
 export const DAY_INDICATOR_NAMES: readonly string[] = DAY_INDICATORS.map(i => i.name);

@@ -24,12 +24,11 @@ import {
   Crosshair,
   Check,
   FileText,
-  Mail,
   Zap,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { cn } from '../../../../../lib/utils';
-import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../../lib/coin-icons';
+import { CoinIcon } from '../../../../../components/common/CoinIcon';
 import { TradePlanChart } from '../../../../../components/analysis/TradePlanChart';
 import { TradeDecisionVisual } from '../../../../../components/analysis/TradeDecisionVisual';
 import { WebResearchPanel } from '../../../../../components/analysis/WebResearchPanel';
@@ -112,19 +111,10 @@ export default function AnalysisDetailsPage() {
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-  const [whatsappSent, setWhatsappSent] = useState(false);
-  const [whatsappPhoneModal, setWhatsappPhoneModal] = useState(false);
-  const [whatsappPhone, setWhatsappPhone] = useState('');
-  const [whatsappSending, setWhatsappSending] = useState(false);
-  const [autoEmailInProgress, setAutoEmailInProgress] = useState(false);
-  const [autoEmailDone, setAutoEmailDone] = useState(false);
-  const autoEmailTriggered = useRef(false);
-  const [autoPdfInProgress, setAutoPdfInProgress] = useState(false);
-  const [autoPdfDone, setAutoPdfDone] = useState(false);
-  const autoPdfTriggered = useRef(false);
+  const [downloadingSnapshot, setDownloadingSnapshot] = useState(false);
+  const [autoSnapshotInProgress, setAutoSnapshotInProgress] = useState(false);
+  const [autoSnapshotDone, setAutoSnapshotDone] = useState(false);
+  const autoSnapshotTriggered = useRef(false);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -149,319 +139,18 @@ export default function AnalysisDetailsPage() {
     fetchAnalysis();
   }, [analysisId]);
 
-  // Auto-email handler for ?email=true parameter
-  const handleAutoEmail = useCallback(async () => {
-    if (!pageRef.current || !analysis || autoEmailTriggered.current) return;
+  // Auto-snapshot handler for ?snapshot=true parameter
+  const handleAutoSnapshot = useCallback(async () => {
+    if (!pageRef.current || !analysis || autoSnapshotTriggered.current) return;
 
-    autoEmailTriggered.current = true;
-    setAutoEmailInProgress(true);
-
-    try {
-      // Wait for chart to render
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Snapshot canvases to static images so html2canvas can capture them
-      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
-
-      let canvas: HTMLCanvasElement;
-      try {
-        canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
-          scale: 1.5,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          windowWidth: 1200,
-          onclone: (clonedDoc) => {
-            // Force light mode in the cloned document
-            clonedDoc.documentElement.classList.remove('dark');
-            const clonedElement = clonedDoc.querySelector('[data-export-container]');
-            if (clonedElement) {
-              (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-              (clonedElement as HTMLElement).style.color = '#111827';
-              clonedElement.classList.remove('dark');
-            }
-          },
-        });
-      } finally {
-        restoreCanvases();
-      }
-
-      const imageBase64 = canvas.toDataURL('image/jpeg', 0.80);
-
-      // Send via email
-      const response = await authFetch('/api/reports/email-screenshot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          analysisId: analysis.id,
-          symbol: analysis.symbol,
-          interval: analysis.interval,
-          screenshot: imageBase64,
-          score: analysis.totalScore,
-          direction: analysis.step5Result?.direction || analysis.step7Result?.direction || 'long',
-        }),
-      });
-
-      if (response.ok) {
-        setAutoEmailDone(true);
-        setEmailSent(true);
-        // Dismiss overlay after 2 seconds - let user stay on page
-        setTimeout(() => {
-          setAutoEmailInProgress(false);
-        }, 2000);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        const msg = errorData?.error?.message || errorData?.message || `Email failed (${response.status})`;
-        console.error('Auto email send failed:', response.status, errorData);
-        alert(msg);
-        setAutoEmailInProgress(false);
-      }
-    } catch (err) {
-      console.error('Failed to auto send email:', err);
-      alert('Failed to send email: ' + (err instanceof Error ? err.message : 'Unknown error'));
-      setAutoEmailInProgress(false);
-    }
-  }, [analysis]);
-
-  // Trigger auto-email when analysis is loaded and email=true parameter is present
-  useEffect(() => {
-    const shouldAutoEmail = searchParams.get('email') === 'true';
-    if (shouldAutoEmail && analysis && !loading && !autoEmailTriggered.current) {
-      handleAutoEmail();
-    }
-  }, [searchParams, analysis, loading, handleAutoEmail]);
-
-  // Auto-PDF handler for ?pdf=true parameter
-  const handleAutoPdf = useCallback(async () => {
-    if (!pageRef.current || !analysis || autoPdfTriggered.current) return;
-
-    autoPdfTriggered.current = true;
-    setAutoPdfInProgress(true);
+    autoSnapshotTriggered.current = true;
+    setAutoSnapshotInProgress(true);
 
     try {
       // Wait for chart to render
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Dynamic import jsPDF
-      const { jsPDF } = await import('jspdf');
-
       // Snapshot canvases to static images so html2canvas can capture them
-      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
-
-      let canvas: HTMLCanvasElement;
-      try {
-        canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
-          scale: 2,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          windowWidth: 1400,
-          onclone: (clonedDoc) => {
-            // Force light mode in the cloned document
-            clonedDoc.documentElement.classList.remove('dark');
-            const clonedElement = clonedDoc.querySelector('[data-export-container]');
-            if (clonedElement) {
-              (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-              (clonedElement as HTMLElement).style.color = '#111827';
-              (clonedElement as HTMLElement).style.padding = '24px';
-              clonedElement.classList.remove('dark');
-            }
-          },
-        });
-      } finally {
-        restoreCanvases();
-      }
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
-
-      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-
-      const symbol = analysis.symbol || 'Analysis';
-      const date = new Date().toISOString().split('T')[0];
-      pdf.save(`TraderPath_${symbol}_${date}.pdf`);
-
-      setAutoPdfDone(true);
-      // Dismiss overlay after 2 seconds - let user stay on page
-      setTimeout(() => {
-        setAutoPdfInProgress(false);
-      }, 2000);
-    } catch (err) {
-      console.error('Failed to auto generate PDF:', err);
-      alert('Failed to generate PDF. Please try again.');
-      setAutoPdfInProgress(false);
-    }
-  }, [analysis]);
-
-  // Trigger auto-PDF when analysis is loaded and pdf=true parameter is present
-  useEffect(() => {
-    const shouldAutoPdf = searchParams.get('pdf') === 'true';
-    if (shouldAutoPdf && analysis && !loading && !autoPdfTriggered.current) {
-      handleAutoPdf();
-    }
-  }, [searchParams, analysis, loading, handleAutoPdf]);
-
-  // Download PDF (light mode capture)
-  const handleDownloadPdf = async () => {
-    if (!pageRef.current || downloadingPdf || !analysis) return;
-
-    setDownloadingPdf(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Dynamic import jsPDF
-      const { jsPDF } = await import('jspdf');
-
-      // Snapshot canvases to static images so html2canvas can capture them
-      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
-
-      let canvas: HTMLCanvasElement;
-      try {
-        canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
-          scale: 2,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          foreignObjectRendering: false,
-          removeContainer: true,
-          imageTimeout: 5000,
-          onclone: (clonedDoc) => {
-            // Force light mode in the cloned document
-            clonedDoc.documentElement.classList.remove('dark');
-            const clonedElement = clonedDoc.querySelector('[data-export-container]');
-            if (clonedElement) {
-              (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-              (clonedElement as HTMLElement).style.color = '#111827';
-              clonedElement.classList.remove('dark');
-            }
-          },
-        });
-      } finally {
-        restoreCanvases();
-      }
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
-
-      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-
-      const symbol = analysis.symbol || 'Analysis';
-      const date = new Date().toISOString().split('T')[0];
-      pdf.save(`TraderPath_${symbol}_${date}.pdf`);
-    } catch (err) {
-      console.error('Failed to download PDF:', err);
-      alert('Failed to download PDF: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    } finally {
-      setDownloadingPdf(false);
-    }
-  };
-
-  // Send Email with PDF attachment
-  const handleEmailReport = async () => {
-    if (!pageRef.current || sendingEmail || !analysis) return;
-
-    setSendingEmail(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Dynamic import jsPDF
-      const { jsPDF } = await import('jspdf');
-
-      // Snapshot canvases to static images so html2canvas can capture them
-      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
-
-      let canvas: HTMLCanvasElement;
-      try {
-        canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
-          scale: 2,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          foreignObjectRendering: false,
-          removeContainer: true,
-          imageTimeout: 5000,
-          onclone: (clonedDoc) => {
-            // Force light mode in the cloned document
-            clonedDoc.documentElement.classList.remove('dark');
-            const clonedElement = clonedDoc.querySelector('[data-export-container]');
-            if (clonedElement) {
-              (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
-              (clonedElement as HTMLElement).style.color = '#111827';
-              clonedElement.classList.remove('dark');
-            }
-          },
-        });
-      } finally {
-        restoreCanvases();
-      }
-
-      // Generate PDF
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
-      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-
-      // Get PDF as base64
-      const pdfBase64 = pdf.output('datauristring').split(',')[1];
-
-      // Send email with PDF attachment
-      const response = await authFetch('/api/reports/email-pdf-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          analysisId: analysis.id,
-          symbol: analysis.symbol,
-          interval: analysis.interval,
-          pdfBase64,
-          score: analysis.totalScore,
-          direction: analysis.step5Result?.direction || analysis.step7Result?.direction || 'long',
-          verdict: typeof step7.verdict === 'string' ? step7.verdict.toUpperCase() : 'WAIT',
-        }),
-      });
-
-      if (response.ok) {
-        setEmailSent(true);
-        setTimeout(() => setEmailSent(false), 3000);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        const msg = errorData?.error?.message || errorData?.message || `Email failed (${response.status})`;
-        console.error('Email send failed:', response.status, errorData);
-        alert(msg);
-      }
-    } catch (err) {
-      console.error('Failed to send email:', err);
-      alert('Failed to send email: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    } finally {
-      setSendingEmail(false);
-    }
-  };
-
-  // Send via WhatsApp - captures screenshot and sends via Twilio
-  const handleWhatsAppReport = async (phoneNumber: string) => {
-    if (!pageRef.current || whatsappSending || !analysis || !phoneNumber) return;
-
-    setWhatsappSending(true);
-    setWhatsappPhoneModal(false);
-    try {
       const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
 
       let canvas: HTMLCanvasElement;
@@ -472,7 +161,69 @@ export default function AnalysisDetailsPage() {
           logging: false,
           useCORS: true,
           allowTaint: true,
-          windowWidth: 1200,
+          windowWidth: 1400,
+          onclone: (clonedDoc) => {
+            clonedDoc.documentElement.classList.add('dark');
+            const clonedElement = clonedDoc.querySelector('[data-export-container]');
+            if (clonedElement) {
+              (clonedElement as HTMLElement).style.overflow = 'visible';
+              (clonedElement as HTMLElement).style.backgroundColor = '#0A0A0A';
+              (clonedElement as HTMLElement).style.color = '#e5e7eb';
+              (clonedElement as HTMLElement).style.padding = '24px';
+            }
+          },
+        });
+      } finally {
+        restoreCanvases();
+      }
+
+      // Download as PNG snapshot
+      const link = document.createElement('a');
+      link.download = `TraderPath_${analysis.symbol || 'Analysis'}_${new Date(analysis.createdAt || Date.now()).toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+
+      setAutoSnapshotDone(true);
+      setTimeout(() => {
+        setAutoSnapshotInProgress(false);
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to auto generate snapshot:', err);
+      alert('Failed to generate snapshot. Please try again.');
+      setAutoSnapshotInProgress(false);
+    }
+  }, [analysis]);
+
+  // Trigger auto-snapshot when analysis is loaded and snapshot=true parameter is present
+  useEffect(() => {
+    const shouldAutoSnapshot = searchParams.get('snapshot') === 'true';
+    if (shouldAutoSnapshot && analysis && !loading && !autoSnapshotTriggered.current) {
+      handleAutoSnapshot();
+    }
+  }, [searchParams, analysis, loading, handleAutoSnapshot]);
+
+  // Download Snapshot PNG (dark mode capture)
+  const handleDownloadSnapshot = async () => {
+    if (!pageRef.current || downloadingSnapshot || !analysis) return;
+
+    setDownloadingSnapshot(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Snapshot canvases to static images so html2canvas can capture them
+      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
+
+      let canvas: HTMLCanvasElement;
+      try {
+        canvas = await html2canvas(pageRef.current, {
+          backgroundColor: '#0A0A0A',
+          scale: 2,
+          logging: false,
+          useCORS: true,
+          allowTaint: true,
+          foreignObjectRendering: false,
+          removeContainer: true,
+          imageTimeout: 5000,
           onclone: (clonedDoc) => {
             clonedDoc.documentElement.classList.add('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
@@ -487,41 +238,22 @@ export default function AnalysisDetailsPage() {
         restoreCanvases();
       }
 
-      const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
-
-      const response = await authFetch('/api/reports/whatsapp-screenshot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          analysisId: analysis.id,
-          symbol: analysis.symbol,
-          interval: analysis.interval || '4h',
-          screenshot: imageBase64,
-          score: analysis.totalScore || 0,
-          direction: analysis.step5Result?.direction || analysis.step7Result?.direction || 'long',
-          phoneNumber,
-        }),
-      });
-
-      if (response.ok) {
-        setWhatsappSent(true);
-        setTimeout(() => setWhatsappSent(false), 3000);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('WhatsApp send failed:', response.status, errorData);
-        alert(errorData?.error?.message || 'Failed to send WhatsApp message. Please try again.');
-      }
+      // Download as PNG snapshot
+      const link = document.createElement('a');
+      link.download = `TraderPath_${analysis.symbol || 'Analysis'}_${new Date(analysis.createdAt || Date.now()).toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
     } catch (err) {
-      console.error('Failed to send WhatsApp:', err);
-      alert('Failed to send WhatsApp message');
+      console.error('Failed to download snapshot:', err);
+      alert('Failed to download snapshot: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
-      setWhatsappSending(false);
+      setDownloadingSnapshot(false);
     }
   };
 
   const getTradeType = (interval: string): 'scalping' | 'dayTrade' | 'swing' => {
     if (interval === '5m' || interval === '15m') return 'scalping';
-    if (interval === '1h' || interval === '4h') return 'dayTrade';
+    if (interval === '30m' || interval === '1h' || interval === '2h' || interval === '4h') return 'dayTrade';
     return 'swing';
   };
 
@@ -620,106 +352,23 @@ export default function AnalysisDetailsPage() {
 
   return (
     <>
-      {/* WhatsApp phone number modal */}
-      {whatsappPhoneModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setWhatsappPhoneModal(false)}>
-          <div className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-gray-800 rounded-lg p-6 shadow-sm max-w-sm mx-4 w-full" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-[#25D366]/10 flex items-center justify-center">
-                <svg className="w-5 h-5 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Send via WhatsApp</h3>
-                <p className="text-sm text-gray-500">Report screenshot will be sent</p>
-              </div>
-            </div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
-              Phone Number
-            </label>
-            <input
-              type="tel"
-              value={whatsappPhone}
-              onChange={(e) => setWhatsappPhone(e.target.value)}
-              placeholder="+905551234567"
-              className="w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-[#111111] text-gray-900 dark:text-gray-100 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition-colors mb-1"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && whatsappPhone.trim()) {
-                  handleWhatsAppReport(whatsappPhone.trim());
-                }
-              }}
-            />
-            <p className="text-xs text-gray-400 mb-4">Include country code (e.g., +90 for Turkey)</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setWhatsappPhoneModal(false)}
-                className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium px-4 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleWhatsAppReport(whatsappPhone.trim())}
-                disabled={!whatsappPhone.trim()}
-                className="bg-[#25D366] hover:bg-[#20bd5a] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-md transition-colors"
-              >
-                Send Report
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* WhatsApp sending overlay */}
-      {whatsappSending && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#111111] border border-gray-200 dark:border-gray-800 rounded-lg p-8 shadow-sm text-center max-w-md mx-4">
-            <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-[#25D366]" />
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Sending via WhatsApp...</h2>
-            <p className="text-sm text-gray-500">Capturing report screenshot and sending to WhatsApp...</p>
-          </div>
-        </div>
-      )}
-
-      {/* Auto-email overlay - shows on top of page content */}
-      {autoEmailInProgress && (
+      {/* Auto-Snapshot overlay - shows on top of page content */}
+      {autoSnapshotInProgress && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl text-center max-w-md mx-4">
-            {autoEmailDone ? (
+            {autoSnapshotDone ? (
               <>
                 <div className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
                   <Check className="w-8 h-8 text-green-500" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Email Sent!</h2>
-                <p className="text-gray-500 dark:text-slate-400">Your analysis screenshot has been sent to your email. Redirecting...</p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Snapshot Downloaded!</h2>
+                <p className="text-gray-500 dark:text-slate-400">Your analysis report has been saved as PNG snapshot.</p>
               </>
             ) : (
               <>
                 <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-teal-500" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Sending Email...</h2>
-                <p className="text-gray-500 dark:text-slate-400">Capturing full analysis screenshot and sending to your email...</p>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Auto-PDF overlay - shows on top of page content */}
-      {autoPdfInProgress && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl text-center max-w-md mx-4">
-            {autoPdfDone ? (
-              <>
-                <div className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
-                  <Check className="w-8 h-8 text-green-500" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">PDF Downloaded!</h2>
-                <p className="text-gray-500 dark:text-slate-400">Your analysis report has been saved as PDF. Redirecting...</p>
-              </>
-            ) : (
-              <>
-                <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-red-500" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Generating PDF...</h2>
-                <p className="text-gray-500 dark:text-slate-400">Creating your analysis report as PDF. This may take a moment...</p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Generating Snapshot...</h2>
+                <p className="text-gray-500 dark:text-slate-400">Creating your analysis report as PNG snapshot. This may take a moment...</p>
               </>
             )}
           </div>
@@ -735,50 +384,19 @@ export default function AnalysisDetailsPage() {
               <span>Back to Analyze</span>
             </Link>
 
-            {/* Download PDF and Email Report Buttons */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleDownloadPdf}
-                disabled={downloadingPdf}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg"
-              >
-                {downloadingPdf ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <FileText className="w-4 h-4" />
-                )}
-                <span>{downloadingPdf ? 'Generating...' : 'Download PDF'}</span>
-              </button>
-              <button
-                onClick={handleEmailReport}
-                disabled={sendingEmail}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50",
-                  emailSent
-                    ? "bg-green-500 text-white"
-                    : "bg-slate-700 hover:bg-slate-600 text-white"
-                )}
-              >
-                {sendingEmail ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : emailSent ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <Mail className="w-4 h-4" />
-                )}
-                <span>{sendingEmail ? 'Sending...' : emailSent ? 'Sent!' : 'Email Report'}</span>
-              </button>
-
-              {/* WhatsApp Share Button */}
-              <button
-                onClick={() => setWhatsappPhoneModal(true)}
-                disabled={whatsappSending}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition bg-[#25D366] hover:bg-[#1ebe5a] disabled:opacity-50 text-white"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                <span>{whatsappSending ? 'Sending...' : whatsappSent ? 'Sent!' : 'WhatsApp'}</span>
-              </button>
-            </div>
+            {/* Download Snapshot Button */}
+            <button
+              onClick={handleDownloadSnapshot}
+              disabled={downloadingSnapshot}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg"
+            >
+              {downloadingSnapshot ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileText className="w-4 h-4" />
+              )}
+              <span>{downloadingSnapshot ? 'Generating...' : 'Download Snapshot'}</span>
+            </button>
           </div>
 
         {/* Main Card */}
@@ -808,17 +426,10 @@ export default function AnalysisDetailsPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
-              <img
-                src={getCoinIcon(analysis.symbol)}
-                alt={analysis.symbol}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-contain"
-                onError={(e) => {
-                  e.currentTarget.src = FALLBACK_COIN_ICON;
-                }}
-              />
+              <CoinIcon symbol={analysis.symbol.replace(/USDT$/i, '')} size={48} className="w-10 h-10 sm:w-12 sm:h-12" />
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{analysis.symbol}/USDT Analysis</h1>
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{analysis.symbol}{isNonCrypto ? '' : '/USDT'} Analysis</h1>
                   {/* Timeframe Badge */}
                   <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-full uppercase">
                     {analysis.interval || '4H'}
@@ -1282,7 +893,7 @@ export default function AnalysisDetailsPage() {
                 <div className="divide-y divide-slate-100 dark:divide-slate-700/40">
                   {chainItems.map((item, i) => (
                     <div key={i} className="flex items-center justify-between px-4 py-2.5">
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 flex-shrink-0">
                         <div className={cn(
                           "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0",
                           item.status === true ? "bg-green-500" :
@@ -1298,7 +909,7 @@ export default function AnalysisDetailsPage() {
                         </div>
                         <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{item.label}</span>
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-slate-400 text-right max-w-[50%] truncate" title={item.detail}>
+                      <span className="text-xs text-gray-500 dark:text-slate-400 text-right max-w-[55%] overflow-hidden break-words">
                         {item.detail}
                       </span>
                     </div>
@@ -1313,7 +924,7 @@ export default function AnalysisDetailsPage() {
             <TradeDecisionVisual
               verdict={(step7.verdict || (Number(step7.overallScore) >= 7 ? 'go' : Number(step7.overallScore) >= 5 ? 'conditional_go' : Number(step7.overallScore) >= 3 ? 'wait' : 'avoid')) as 'go' | 'conditional_go' | 'wait' | 'avoid'}
               direction={isNeutral ? null : (isLong ? 'long' : 'short')}
-              score={Number(step7.overallScore) * 10 || Number(analysis.totalScore) * 10 || 50}
+              score={typeof step7.overallScore === 'number' ? step7.overallScore * 10 : (analysis.totalScore ?? 5) * 10}
               symbol={analysis.symbol}
               size="lg"
             />
@@ -1356,7 +967,10 @@ export default function AnalysisDetailsPage() {
                   support={step2.levels?.support}
                   resistance={step2.levels?.resistance}
                   forecastBands={step7?.ragEnrichment?.forecastBands || []}
+                  fibonacciLevels={step4?.fibonacci?.levels || []}
+                  elliottWave={step2?.elliottWave}
                   tradeType={getTradeType(analysis.interval)}
+                  interval={analysis.interval}
                   chartId="trade-plan-chart"
                   analysisTime={analysis.createdAt}
                   tradePlanStatus={step5.tradePlanStatus}

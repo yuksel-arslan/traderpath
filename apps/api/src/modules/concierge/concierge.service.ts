@@ -2,7 +2,17 @@ import { prisma } from '../../core/database';
 import { creditService } from '../credits/credit.service';
 import { aiExpertService } from '../ai-expert/ai-expert.service';
 import { callGeminiWithRetry } from '../../core/gemini';
-import { INTENT_DETECTION_PROMPT, RESPONSE_TEMPLATES } from './system-prompt';
+import {
+  INTENT_DETECTION_PROMPT,
+  RESPONSE_TEMPLATES,
+  buildCapitalFlowSummaryContext,
+  buildCapitalFlowLiquidityContext,
+  buildCapitalFlowMarketsContext,
+  buildCapitalFlowRecommendationContext,
+  buildAnalysisResultContext,
+  buildSectorsContext,
+} from './system-prompt';
+import { synthesizeWithAI } from './response-synthesizer';
 import { coinScoreCacheService, CoinScore } from '../analysis/services/coin-score-cache.service';
 import * as capitalFlowService from '../capital-flow/capital-flow.service';
 import { translationService, SUPPORTED_LANGUAGES } from '../translation/translation.service';
@@ -57,6 +67,16 @@ interface ConciergeResponse {
     tradePlan?: TradePlan;
     currentPrice?: number;
   };
+  // MLIS analysis result
+  mlisResult?: {
+    recommendation: string;
+    direction: string;
+    confidence: number;
+    riskLevel: string;
+    layers: Record<string, { score: number; signals: string[] }>;
+    keySignals: string[];
+    riskFactors: string[];
+  };
 }
 
 // Expanded asset list - 80+ assets including crypto, stocks, bonds, metals
@@ -103,7 +123,7 @@ const SUPPORTED_ASSETS = [
 
 // Asset name aliases for natural language (Turkish and English)
 const ASSET_ALIASES: Record<string, string> = {
-  // Crypto aliases
+  // Crypto aliases (English)
   'bitcoin': 'btc',
   'ethereum': 'eth',
   'binance': 'bnb',
@@ -127,6 +147,23 @@ const ASSET_ALIASES: Record<string, string> = {
   'fetch': 'fet',
   'singularity': 'agix',
 
+  // Crypto aliases (Turkish)
+  'eteryum': 'eth',
+  'etherium': 'eth',
+  'bitekoyn': 'btc',
+  'bitkoin': 'btc',
+  'solena': 'sol',
+  'dogekoyn': 'doge',
+  'dojkoyn': 'doge',
+  'doçkoyn': 'doge',
+  'litekoyn': 'ltc',
+  'kozmoz': 'atom',
+  'çeynlink': 'link',
+  'shibarium': 'shib',
+  'bonk coin': 'bonk',
+  'sui coin': 'sui',
+  'sei coin': 'sei',
+
   // Metal aliases (Turkish and English)
   'altın': 'gld',
   'altin': 'gld',
@@ -139,7 +176,7 @@ const ASSET_ALIASES: Record<string, string> = {
   'paladyum': 'pall',
   'palladium': 'pall',
 
-  // Stock aliases (Turkish)
+  // Stock aliases (Turkish and English)
   'apple': 'aapl',
   'microsoft': 'msft',
   'google': 'googl',
@@ -163,6 +200,7 @@ function detectIntent(message: string): {
   intent: string;
   symbol?: string;
   interval?: string;
+  intervalExplicit?: boolean;
   expertType?: string;
   market?: string;
 } {
@@ -263,6 +301,7 @@ function detectIntent(message: string): {
 
   // CAPITAL_FLOW_RECOMMENDATION - AI recommendation based on flow
   // Also handles "alınır mı?", "satmalı mıyım?", "should I buy?" style questions
+  // Also handles "analyze the best X asset" patterns
   if (
     lower.includes('ne yapmalı') ||
     lower.includes('what should i') ||
@@ -275,6 +314,10 @@ function detectIntent(message: string): {
     lower.includes('öner') ||
     lower.includes('recommend') ||
     lower.includes('tavsiye') ||
+    (lower.includes('best') && lower.includes('asset')) ||
+    (lower.includes('best') && (lower.includes('crypto') || lower.includes('stock') || lower.includes('coin'))) ||
+    (lower.includes('analyze') && lower.includes('best')) ||
+    (lower.includes('en iyi') && (lower.includes('kripto') || lower.includes('hisse') || lower.includes('coin'))) ||
     (lower.includes('şimdi') && (lower.includes('ne') || lower.includes('what'))) ||
     // Buy/sell question patterns (Turkish)
     lower.includes('alınır mı') ||
@@ -686,6 +729,11 @@ function detectIntent(message: string): {
 
   // Analysis intent - coin detected
   if (detectedCoin) {
+    // Check if user explicitly requested analysis (e.g., "analiz yap", "analyze", "analiz et")
+    const hasAnalysisAction = /\b(analiz|analyze|analysis|check|kontrol|incele)\b/i.test(lower) ||
+      lower.includes('analiz yap') || lower.includes('analiz et') || lower.includes('nasıl') ||
+      lower.includes('durumu') || lower.includes('how is');
+
     // Detect interval - check if user explicitly specified
     let interval = ''; // empty means not specified
     let intervalExplicit = false;
@@ -719,10 +767,13 @@ function detectIntent(message: string): {
       intervalExplicit = true;
     }
 
-    console.log(`[Concierge] Detected: symbol=${detectedCoin}, interval=${interval || 'NOT_SPECIFIED'}, explicit=${intervalExplicit}, message="${lower}"`);
+    // If user explicitly asked for analysis (e.g., "analiz yap", "analyze"), use default 4h
+    const shouldRunDirectly = intervalExplicit || hasAnalysisAction;
+
+    console.log(`[Concierge] Detected: symbol=${detectedCoin}, interval=${interval || 'NOT_SPECIFIED'}, explicit=${intervalExplicit}, analysisAction=${hasAnalysisAction}, direct=${shouldRunDirectly}, message="${lower}"`);
 
     return {
-      intent: intervalExplicit ? 'ANALYSIS' : 'ANALYSIS_NEEDS_CLARIFICATION',
+      intent: shouldRunDirectly ? 'ANALYSIS' : 'ANALYSIS_NEEDS_CLARIFICATION',
       symbol: detectedCoin.toUpperCase(),
       interval: interval || '4h', // fallback for later use
       intervalExplicit,
@@ -875,9 +926,9 @@ class ConciergeService {
       const creditBalanceObj = await creditService.getBalance(userId);
       const creditBalance = creditBalanceObj.balance;
 
-      // SMART LANGUAGE DETECTION - Always detect from message first
-      const messageLanguage = this.detectLanguageFromMessage(message);
-      let detectedLanguage = messageLanguage !== 'en' ? messageLanguage : language;
+      // All responses are in English — platform is English-first
+      // eslint-disable-next-line prefer-const
+      let detectedLanguage = 'en';
 
       console.log(`[Concierge] Message: "${message.substring(0, 50)}...", Detected language: ${detectedLanguage}`);
 
@@ -909,10 +960,7 @@ class ConciergeService {
           targetPrice = geminiResult.targetPrice;
           direction = geminiResult.direction;
           market = geminiResult.market;
-          // Use Gemini's language detection if available
-          if (geminiResult.language) {
-            detectedLanguage = geminiResult.language;
-          }
+          // Language detection from Gemini intentionally skipped — all responses are English
         }
       } catch (error) {
         console.error('[Concierge] Gemini intent detection failed:', error);
@@ -933,19 +981,19 @@ class ConciergeService {
       switch (intent) {
         // ===== CAPITAL FLOW INTENTS =====
         case 'CAPITAL_FLOW_SUMMARY':
-          return await this.handleCapitalFlowSummary(detectedLanguage, creditBalance);
+          return await this.handleCapitalFlowSummary(detectedLanguage, creditBalance, message);
 
         case 'CAPITAL_FLOW_LIQUIDITY':
-          return await this.handleCapitalFlowLiquidity(detectedLanguage, creditBalance);
+          return await this.handleCapitalFlowLiquidity(detectedLanguage, creditBalance, message);
 
         case 'CAPITAL_FLOW_MARKETS':
-          return await this.handleCapitalFlowMarkets(detectedLanguage, creditBalance);
+          return await this.handleCapitalFlowMarkets(detectedLanguage, creditBalance, message);
 
         case 'CAPITAL_FLOW_SECTORS':
-          return await this.handleCapitalFlowSectors(market || 'crypto', detectedLanguage, creditBalance);
+          return await this.handleCapitalFlowSectors(market || 'crypto', detectedLanguage, creditBalance, message);
 
         case 'CAPITAL_FLOW_RECOMMENDATION':
-          return await this.handleCapitalFlowRecommendation(detectedLanguage, creditBalance, symbol);
+          return await this.handleCapitalFlowRecommendation(detectedLanguage, creditBalance, symbol, message);
 
         // ===== PLATFORM INTENTS =====
         case 'PLATFORM_INFO':
@@ -1078,65 +1126,61 @@ class ConciergeService {
 
   // ===== CAPITAL FLOW HANDLERS =====
 
-  private async handleCapitalFlowSummary(language: string, creditBalance: number): Promise<ConciergeResponse> {
+  private async handleCapitalFlowSummary(language: string, creditBalance: number, userMessage?: string): Promise<ConciergeResponse> {
     try {
       const summary = await capitalFlowService.getCapitalFlowSummary();
-
-      // Format global liquidity (English base)
       const liquidity = summary.globalLiquidity;
-      const liquidityText = `📊 LAYER 1: GLOBAL LIQUIDITY
+      const rec = summary.recommendation;
 
-Fed Balance Sheet: $${(liquidity.fedBalanceSheet.value / 1e12).toFixed(2)}T (${liquidity.fedBalanceSheet.change30d > 0 ? '+' : ''}${liquidity.fedBalanceSheet.change30d.toFixed(1)}% 30D)
-→ Status: ${liquidity.fedBalanceSheet.trend === 'expanding' ? 'Expanding ✅' : liquidity.fedBalanceSheet.trend === 'contracting' ? 'Contracting ⚠️' : 'Stable'}
+      // Build structured context for AI synthesis
+      const dataContext = buildCapitalFlowSummaryContext({
+        liquidityBias: summary.liquidityBias,
+        fedTrend: liquidity.fedBalanceSheet.trend,
+        dxyTrend: liquidity.dxy.trend,
+        dxyValue: liquidity.dxy.value,
+        vixValue: liquidity.vix.value,
+        vixLevel: liquidity.vix.level,
+        markets: summary.markets.map(m => ({
+          market: m.market,
+          flow7d: m.flow7d,
+          flow30d: m.flow30d,
+          phase: m.phase,
+          rotationSignal: m.rotationSignal,
+        })),
+        recommendation: {
+          action: rec.action,
+          primaryMarket: rec.primaryMarket,
+          confidence: rec.confidence,
+          reason: rec.reason,
+        },
+      });
 
-M2 Money Supply: $${(liquidity.m2MoneySupply.value / 1e12).toFixed(2)}T (YoY: ${liquidity.m2MoneySupply.yoyGrowth > 0 ? '+' : ''}${liquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%)
-
-DXY (Dollar): ${liquidity.dxy.value.toFixed(2)} (${liquidity.dxy.trend === 'weakening' ? 'Weakening → Risk-On ✅' : liquidity.dxy.trend === 'strengthening' ? 'Strengthening → Risk-Off ⚠️' : 'Stable'})
-
-VIX (Fear): ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level === 'low' ? 'Low → Calm Market' : liquidity.vix.level === 'elevated' ? 'Elevated → Caution' : 'High → Panic ⚠️'})
-
-Yield Curve (10Y-2Y): ${liquidity.yieldCurve.spread10y2y.toFixed(2)}bp ${liquidity.yieldCurve.inverted ? '⚠️ INVERTED (Recession signal)' : '✅ Normal'}`;
-
-      // Format market flows (English base)
+      // Template fallback
       const marketsText = summary.markets.map(m => {
         const phaseEmoji = m.phase === 'early' ? '🟢' : m.phase === 'mid' ? '🟡' : m.phase === 'late' ? '🟠' : '🔴';
         const flowSign = m.flow7d > 0 ? '+' : '';
-        return `${m.market.toUpperCase()}: ${flowSign}${m.flow7d.toFixed(1)}% 7D | ${phaseEmoji} ${m.phase.toUpperCase()} phase (${m.daysInPhase}D)`;
+        return `${m.market.toUpperCase()}: ${flowSign}${m.flow7d.toFixed(1)}% 7D | ${phaseEmoji} ${m.phase.toUpperCase()} (${m.daysInPhase}D)`;
       }).join('\n');
 
-      // Format recommendation (English base)
-      const rec = summary.recommendation;
-      const recText = `🎯 RECOMMENDATION: ${rec.primaryMarket.toUpperCase()} market (${rec.confidence}% confidence)
-Action: ${rec.action === 'analyze' ? '✅ ANALYZE' : rec.action === 'wait' ? '⏳ WAIT' : '⛔ AVOID'}
-${rec.reason}`;
+      const templateFallback = `🌐 **Capital Flow Radar**
 
-      const biasText = `\n📈 Liquidity Bias: ${summary.liquidityBias === 'risk_on' ? 'RISK-ON ✅' : summary.liquidityBias === 'risk_off' ? 'RISK-OFF ⚠️' : 'NEUTRAL'}`;
+📈 Liquidity Bias: **${summary.liquidityBias === 'risk_on' ? 'RISK-ON' : summary.liquidityBias === 'risk_off' ? 'RISK-OFF' : 'NEUTRAL'}**
+DXY: ${liquidity.dxy.value.toFixed(2)} (${liquidity.dxy.trend}) | VIX: ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level})
 
-      // Build English message
-      const messageEn = `═══════════════════════════════════
-CAPITAL FLOW RADAR 🌐
-"Where money flows, potential exists"
-═══════════════════════════════════
-
-${liquidityText}
-${biasText}
-
-═══════════════════════════════════
-📊 LAYER 2: MARKET FLOW
-═══════════════════════════════════
+📊 Market Flows:
 ${marketsText}
 
-═══════════════════════════════════
-${recText}
-═══════════════════════════════════
+🎯 Recommendation: **${rec.action.toUpperCase()} ${rec.primaryMarket.toUpperCase()}** (${rec.confidence}%)
+${rec.reason}`;
 
-💡 For more details:
-• "Global liquidity status" - Layer 1 detail
-• "Which market is leading?" - Layer 2 detail
-• "${rec.primaryMarket} sectors" - Layer 3 detail`;
-
-      // Translate to target language if needed (supports 18 languages)
-      const message = await this.translateIfNeeded(messageEn, language);
+      // AI-powered synthesis
+      const message = await synthesizeWithAI({
+        intent: 'CAPITAL_FLOW_SUMMARY',
+        userMessage: userMessage || 'Where is capital flowing?',
+        dataContext,
+        language,
+        templateFallback,
+      });
 
       return {
         success: true,
@@ -1163,46 +1207,44 @@ ${recText}
     }
   }
 
-  private async handleCapitalFlowLiquidity(language: string, creditBalance: number): Promise<ConciergeResponse> {
+  private async handleCapitalFlowLiquidity(language: string, creditBalance: number, userMessage?: string): Promise<ConciergeResponse> {
     try {
       const liquidity = await capitalFlowService.getGlobalLiquidity();
 
-      // Build English message
-      const messageEn = `═══════════════════════════════════
-📊 LAYER 1: GLOBAL LIQUIDITY
-═══════════════════════════════════
+      // Build structured context for AI synthesis
+      const dataContext = buildCapitalFlowLiquidityContext({
+        fedBalanceSheet: liquidity.fedBalanceSheet,
+        m2MoneySupply: liquidity.m2MoneySupply,
+        dxy: liquidity.dxy,
+        vix: liquidity.vix,
+        yieldCurve: liquidity.yieldCurve,
+      });
 
-🏦 FED BALANCE SHEET
-Value: $${(liquidity.fedBalanceSheet.value / 1e12).toFixed(2)} Trillion
-30D Change: ${liquidity.fedBalanceSheet.change30d > 0 ? '+' : ''}${liquidity.fedBalanceSheet.change30d.toFixed(2)}%
-Trend: ${liquidity.fedBalanceSheet.trend === 'expanding' ? '📈 EXPANDING (Liquidity increasing)' : liquidity.fedBalanceSheet.trend === 'contracting' ? '📉 CONTRACTING (Liquidity decreasing)' : '➡️ STABLE'}
+      // Template fallback
+      const conclusion = liquidity.fedBalanceSheet.trend === 'expanding' && liquidity.dxy.trend === 'weakening'
+        ? 'RISK-ON: Favorable for risk assets'
+        : liquidity.fedBalanceSheet.trend === 'contracting' || liquidity.dxy.trend === 'strengthening'
+        ? 'RISK-OFF: Safe havens preferred'
+        : 'MIXED signals: Cautious approach';
 
-💵 M2 MONEY SUPPLY
-Value: $${(liquidity.m2MoneySupply.value / 1e12).toFixed(2)} Trillion
-30D Change: ${liquidity.m2MoneySupply.change30d > 0 ? '+' : ''}${liquidity.m2MoneySupply.change30d.toFixed(2)}%
-YoY Growth: ${liquidity.m2MoneySupply.yoyGrowth > 0 ? '+' : ''}${liquidity.m2MoneySupply.yoyGrowth.toFixed(2)}%
+      const templateFallback = `📊 **Layer 1: Global Liquidity**
 
-💱 DXY (DOLLAR INDEX)
-Value: ${liquidity.dxy.value.toFixed(2)}
-7D Change: ${liquidity.dxy.change7d > 0 ? '+' : ''}${liquidity.dxy.change7d.toFixed(2)}%
-Trend: ${liquidity.dxy.trend === 'weakening' ? '📉 WEAKENING → Bullish for risk assets ✅' : liquidity.dxy.trend === 'strengthening' ? '📈 STRENGTHENING → Bearish for risk assets ⚠️' : '➡️ STABLE'}
+🏦 Fed: $${(liquidity.fedBalanceSheet.value / 1e12).toFixed(2)}T (${liquidity.fedBalanceSheet.trend})
+💵 M2: $${(liquidity.m2MoneySupply.value / 1e12).toFixed(2)}T (YoY: ${liquidity.m2MoneySupply.yoyGrowth > 0 ? '+' : ''}${liquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%)
+💱 DXY: ${liquidity.dxy.value.toFixed(2)} (${liquidity.dxy.trend})
+😱 VIX: ${liquidity.vix.value.toFixed(1)} (${liquidity.vix.level})
+📈 Yield Curve: ${liquidity.yieldCurve.spread10y2y.toFixed(2)}bp ${liquidity.yieldCurve.inverted ? '⚠️ INVERTED' : '✅ Normal'}
 
-😱 VIX (FEAR INDEX)
-Value: ${liquidity.vix.value.toFixed(2)}
-Level: ${liquidity.vix.level === 'low' ? '🟢 LOW (Calm market, complacency)' : liquidity.vix.level === 'elevated' ? '🟡 ELEVATED (Rising concern)' : '🔴 HIGH (Panic mode)'}
+📌 **${conclusion}**`;
 
-📈 YIELD CURVE (10Y-2Y)
-Spread: ${liquidity.yieldCurve.spread10y2y.toFixed(2)} basis points
-Status: ${liquidity.yieldCurve.inverted ? '⚠️ INVERTED - Recession signal!' : '✅ NORMAL CURVE'}
-Interpretation: ${liquidity.yieldCurve.interpretation}
-
-═══════════════════════════════════
-📌 CONCLUSION
-═══════════════════════════════════
-${liquidity.fedBalanceSheet.trend === 'expanding' && liquidity.dxy.trend === 'weakening' ? '✅ RISK-ON environment: Favorable for risk assets (crypto, stocks)' : liquidity.fedBalanceSheet.trend === 'contracting' || liquidity.dxy.trend === 'strengthening' ? '⚠️ RISK-OFF environment: Safe havens (bonds, gold) may be preferred' : '➡️ MIXED signals: Cautious approach recommended'}`;
-
-      // Translate to target language if needed (supports 18 languages)
-      const message = await this.translateIfNeeded(messageEn, language);
+      // AI-powered synthesis
+      const message = await synthesizeWithAI({
+        intent: 'CAPITAL_FLOW_LIQUIDITY',
+        userMessage: userMessage || 'Global liquidity status',
+        dataContext,
+        language,
+        templateFallback,
+      });
 
       return {
         success: true,
@@ -1229,50 +1271,48 @@ ${liquidity.fedBalanceSheet.trend === 'expanding' && liquidity.dxy.trend === 'we
     }
   }
 
-  private async handleCapitalFlowMarkets(language: string, creditBalance: number): Promise<ConciergeResponse> {
+  private async handleCapitalFlowMarkets(language: string, creditBalance: number, userMessage?: string): Promise<ConciergeResponse> {
     try {
       const markets = await capitalFlowService.getAllMarketFlows();
 
-      // Build English market cards
-      const marketCards = markets.map(m => {
-        const phaseEmoji = m.phase === 'early' ? '🟢' : m.phase === 'mid' ? '🟡' : m.phase === 'late' ? '🟠' : '🔴';
-        const rotationEmoji = m.rotationSignal === 'entering' ? '📥' : m.rotationSignal === 'exiting' ? '📤' : '➡️';
-        const flow7dSign = m.flow7d > 0 ? '+' : '';
-        const flow30dSign = m.flow30d > 0 ? '+' : '';
-
-        return `═══════════════════════════════════
-${m.market.toUpperCase()} MARKET
-═══════════════════════════════════
-📊 Flow (7D): ${flow7dSign}${m.flow7d.toFixed(2)}%
-📊 Flow (30D): ${flow30dSign}${m.flow30d.toFixed(2)}%
-🚀 Velocity: ${m.flowVelocity > 0 ? 'Accelerating ↑' : m.flowVelocity < 0 ? 'Decelerating ↓' : 'Stable'}
-
-${phaseEmoji} Phase: ${m.phase.toUpperCase()} (${m.daysInPhase} days)
-${rotationEmoji} Rotation: ${m.rotationSignal === 'entering' ? 'CAPITAL ENTERING' : m.rotationSignal === 'exiting' ? 'CAPITAL EXITING' : 'STABLE'}
-
-${m.phase === 'early' ? '✅ OPTIMAL ENTRY TIMING' : m.phase === 'mid' ? '⚠️ CAN ENTER (carefully)' : m.phase === 'late' ? '⛔ NEW ENTRY NOT RECOMMENDED' : '🚫 NEVER ENTER'}`;
+      // Build structured context for AI synthesis
+      const dataContext = buildCapitalFlowMarketsContext({
+        markets: markets.map(m => ({
+          market: m.market,
+          flow7d: m.flow7d,
+          flow30d: m.flow30d,
+          flowVelocity: m.flowVelocity,
+          phase: m.phase,
+          daysInPhase: m.daysInPhase,
+          rotationSignal: m.rotationSignal,
+        })),
       });
 
-      // Find best market
+      // Find best market for template
       const bestMarket = markets.reduce((best, m) =>
         m.flow7d > best.flow7d && (m.phase === 'early' || m.phase === 'mid') ? m : best
       , markets[0]);
 
-      // Build English message
-      const messageEn = `═══════════════════════════════════
-📊 LAYER 2: MARKET FLOW
-"Where is money going?"
-═══════════════════════════════════
+      // Template fallback
+      const marketLines = markets.map(m => {
+        const phaseEmoji = m.phase === 'early' ? '🟢' : m.phase === 'mid' ? '🟡' : m.phase === 'late' ? '🟠' : '🔴';
+        return `${phaseEmoji} **${m.market.toUpperCase()}**: ${m.flow7d > 0 ? '+' : ''}${m.flow7d.toFixed(1)}% 7D | ${m.phase.toUpperCase()} (${m.daysInPhase}D) | ${m.rotationSignal === 'entering' ? '📥 Entering' : m.rotationSignal === 'exiting' ? '📤 Exiting' : '➡️ Stable'}`;
+      }).join('\n');
 
-${marketCards.join('\n\n')}
+      const templateFallback = `📊 **Layer 2: Market Flow**
 
-═══════════════════════════════════
-🎯 BEST OPPORTUNITY: ${bestMarket.market.toUpperCase()}
-${bestMarket.flow7d > 0 ? `+${bestMarket.flow7d.toFixed(2)}% weekly inflow` : 'Relatively strong'} | ${bestMarket.phase.toUpperCase()} phase
-═══════════════════════════════════`;
+${marketLines}
 
-      // Translate to target language if needed (supports 18 languages)
-      const message = await this.translateIfNeeded(messageEn, language);
+🎯 **Best Opportunity:** ${bestMarket.market.toUpperCase()} — ${bestMarket.flow7d > 0 ? `+${bestMarket.flow7d.toFixed(1)}%` : 'Relatively strong'} | ${bestMarket.phase.toUpperCase()} phase`;
+
+      // AI-powered synthesis
+      const message = await synthesizeWithAI({
+        intent: 'CAPITAL_FLOW_MARKETS',
+        userMessage: userMessage || 'Which market is leading?',
+        dataContext,
+        language,
+        templateFallback,
+      });
 
       return {
         success: true,
@@ -1299,53 +1339,58 @@ ${bestMarket.flow7d > 0 ? `+${bestMarket.flow7d.toFixed(2)}% weekly inflow` : 'R
     }
   }
 
-  private async handleCapitalFlowSectors(market: string, language: string, creditBalance: number): Promise<ConciergeResponse> {
+  private async handleCapitalFlowSectors(market: string, language: string, creditBalance: number, userMessage?: string): Promise<ConciergeResponse> {
     try {
       const marketFlow = await capitalFlowService.getMarketFlow(market as 'crypto' | 'stocks' | 'bonds' | 'metals');
 
       if (!marketFlow.sectors || marketFlow.sectors.length === 0) {
-        const noDataMessage = await this.translateIfNeeded(
-          `No sector data available for ${market.toUpperCase()} market.`,
-          language
-        );
         return {
           success: true,
           intent: 'CAPITAL_FLOW_SECTORS',
-          message: noDataMessage,
+          message: `No sector data available for ${market.toUpperCase()} market.`,
           creditsSpent: 0,
           creditsRemaining: creditBalance,
           detectedLanguage: language,
         };
       }
 
-      // Build English sector cards
-      const sectorCards = marketFlow.sectors
-        .sort((a, b) => b.flow7d - a.flow7d)
-        .map((s, i) => {
-          const rankEmoji = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  ';
-          const flowSign = s.flow7d > 0 ? '+' : '';
-          return `${rankEmoji} ${s.name}: ${flowSign}${s.flow7d.toFixed(2)}% (7D) | TVL: $${(s.tvl / 1e9).toFixed(2)}B`;
-        });
+      // Build structured context for AI synthesis
+      const sortedSectors = [...marketFlow.sectors].sort((a, b) => b.flow7d - a.flow7d);
+      const dataContext = buildSectorsContext({
+        market,
+        sectors: sortedSectors.map(s => ({
+          name: s.name,
+          flow7d: s.flow7d,
+          flow30d: s.flow30d,
+          dominance: s.dominance,
+          topAssets: s.topAssets || [],
+        })),
+      });
 
-      const topSector = marketFlow.sectors.sort((a, b) => b.flow7d - a.flow7d)[0];
+      const topSector = sortedSectors[0];
 
-      // Build English message
-      const messageEn = `═══════════════════════════════════
-📊 LAYER 3: ${market.toUpperCase()} SECTOR FLOW
-═══════════════════════════════════
+      // Template fallback
+      const sectorLines = sortedSectors.map((s, i) => {
+        const rankEmoji = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  ';
+        return `${rankEmoji} **${s.name}**: ${s.flow7d > 0 ? '+' : ''}${s.flow7d.toFixed(1)}% 7D | ${s.dominance.toFixed(1)}% dom`;
+      }).join('\n');
 
-${sectorCards.join('\n')}
+      const templateFallback = `📊 **Layer 3: ${market.toUpperCase()} Sectors**
 
-═══════════════════════════════════
-🎯 STRONGEST SECTOR: ${topSector.name}
-${topSector.flow7d > 0 ? `+${topSector.flow7d.toFixed(2)}% weekly inflow` : 'Relatively strong'}
-═══════════════════════════════════
+${sectorLines}
 
-💡 Next step: Analyze assets in this sector
-Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
+🎯 **Strongest:** ${topSector.name} — ${topSector.flow7d > 0 ? `+${topSector.flow7d.toFixed(1)}%` : 'Relatively strong'}
 
-      // Translate to target language if needed (supports 18 languages)
-      const message = await this.translateIfNeeded(messageEn, language);
+📌 Next Step: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
+
+      // AI-powered synthesis
+      const message = await synthesizeWithAI({
+        intent: 'CAPITAL_FLOW_SECTORS',
+        userMessage: userMessage || `${market} sectors`,
+        dataContext,
+        language,
+        templateFallback,
+      });
 
       return {
         success: true,
@@ -1372,144 +1417,60 @@ Example: "Analyze ${topSector.topAssets?.[0] || 'BTC'}"`;
     }
   }
 
-  private async handleCapitalFlowRecommendation(language: string, creditBalance: number, assetHint?: string): Promise<ConciergeResponse> {
+  private async handleCapitalFlowRecommendation(language: string, creditBalance: number, assetHint?: string, userMessage?: string): Promise<ConciergeResponse> {
     try {
       // Get full summary to access market flows
       const summary = await capitalFlowService.getCapitalFlowSummary();
       const recommendation = summary.recommendation;
 
-      // Find markets with positive and negative flows
-      const sortedMarkets = [...summary.markets].sort((a, b) => b.flow30d - a.flow30d);
-      const inflowMarket = sortedMarkets[0]; // Highest positive flow
-      const outflowMarket = sortedMarkets[sortedMarkets.length - 1]; // Lowest/negative flow
+      // Build structured context for AI synthesis
+      const dataContext = buildCapitalFlowRecommendationContext({
+        recommendation: {
+          action: recommendation.action,
+          primaryMarket: recommendation.primaryMarket,
+          confidence: recommendation.confidence,
+          reason: recommendation.reason,
+          suggestedAssets: recommendation.suggestedAssets,
+        },
+        liquidityBias: summary.liquidityBias,
+        markets: summary.markets.map(m => ({
+          market: m.market,
+          flow7d: m.flow7d,
+          flow30d: m.flow30d,
+          phase: m.phase,
+          rotationSignal: m.rotationSignal,
+        })),
+        assetHint,
+      });
 
-      // Market name translations
-      const marketNamesTr: Record<string, string> = {
-        crypto: 'Kripto',
-        stocks: 'Hisseler',
-        bonds: 'Bonolar',
-        metals: 'Metaller'
-      };
+      // Template fallback
+      const actionEmoji = recommendation.action === 'analyze' ? '✅' : recommendation.action === 'wait' ? '⏳' : '⛔';
+      let templateFallback = `🎯 **AI Recommendation**
 
-      // If asset hint is provided, generate a dynamic response based on actual data
+${actionEmoji} **${recommendation.action.toUpperCase()} ${recommendation.primaryMarket.toUpperCase()}** (${recommendation.confidence}% confidence)
+
+${recommendation.reason}`;
+
+      if (recommendation.suggestedAssets && recommendation.suggestedAssets.length > 0) {
+        const assetList = recommendation.suggestedAssets
+          .slice(0, 3)
+          .map(a => `• **${a.symbol}** (${a.name}) — ${a.reason}`)
+          .join('\n');
+        templateFallback += `\n\n📌 Suggested Assets:\n${assetList}`;
+      }
+
       if (assetHint) {
-        // Determine asset market and names
-        let assetMarket = 'crypto';
-        let assetNameTr = assetHint;
-        let assetNameEn = assetHint;
-        let analysisSymbol = assetHint;
-        let assetEmojiIcon = '🪙';
-        let marketNameTr = 'Kripto';
-        let marketNameEn = 'Crypto';
-
-        if (assetHint === 'GOLD' || assetHint === 'SILVER') {
-          assetMarket = 'metals';
-          assetNameTr = assetHint === 'GOLD' ? 'Altın' : 'Gümüş';
-          assetNameEn = assetHint === 'GOLD' ? 'Gold' : 'Silver';
-          analysisSymbol = assetHint === 'GOLD' ? 'GLD' : 'SLV';
-          assetEmojiIcon = '🥇';
-          marketNameTr = 'Metal';
-          marketNameEn = 'Metals';
-        } else if (assetHint === 'STOCKS' || assetHint === 'SPY' || assetHint === 'QQQ' || assetHint === 'AAPL' || assetHint === 'MSFT' || assetHint === 'GOOGL' || assetHint === 'TSLA') {
-          assetMarket = 'stocks';
-          assetNameTr = assetHint === 'STOCKS' ? 'Hisse Senetleri' : assetHint;
-          assetNameEn = assetHint === 'STOCKS' ? 'Stocks' : assetHint;
-          analysisSymbol = assetHint === 'STOCKS' ? 'SPY' : assetHint;
-          assetEmojiIcon = '📈';
-          marketNameTr = 'Hisse';
-          marketNameEn = 'Stocks';
-        } else if (assetHint === 'BONDS' || assetHint === 'TLT' || assetHint === 'IEF' || assetHint === 'BND') {
-          assetMarket = 'bonds';
-          assetNameTr = assetHint === 'BONDS' ? 'Tahviller' : assetHint;
-          assetNameEn = assetHint === 'BONDS' ? 'Bonds' : assetHint;
-          analysisSymbol = assetHint === 'BONDS' ? 'TLT' : assetHint;
-          assetEmojiIcon = '📊';
-          marketNameTr = 'Tahvil';
-          marketNameEn = 'Bonds';
-        }
-
-        // Get actual flow data for the asset's market
-        const assetMarketFlow = summary.markets.find(m => m.market === assetMarket);
-        const flow30d = assetMarketFlow?.flow30d ?? 0;
-        const flowVelocity = assetMarketFlow?.flowVelocity ?? 0;
-        const phase = assetMarketFlow?.phase ?? 'mid';
-        const rotationSignal = assetMarketFlow?.rotationSignal ?? 'stable';
-
-        // Get inflow market data
-        const inflowFlow30d = inflowMarket?.flow30d ?? 0;
-        const inflowMarketNameTr = marketNamesTr[inflowMarket?.market || 'bonds'] || 'Bonolar';
-        const inflowMarketNameEn = inflowMarket?.market ? inflowMarket.market.charAt(0).toUpperCase() + inflowMarket.market.slice(1) : 'Bonds';
-
-        // Generate dynamic response based on actual data
-        const organicMessage = this.generateDataDrivenAssetResponse({
-          language,
-          assetNameTr,
-          assetNameEn,
-          assetEmojiIcon,
-          analysisSymbol,
-          marketNameTr,
-          marketNameEn,
-          flow30d,
-          flowVelocity,
-          phase,
-          rotationSignal,
-          inflowMarketNameTr,
-          inflowMarketNameEn,
-          inflowFlow30d,
-        });
-
-        return {
-          success: true,
-          intent: 'CAPITAL_FLOW_RECOMMENDATION',
-          message: organicMessage,
-          creditsSpent: 0,
-          creditsRemaining: creditBalance,
-          detectedLanguage: language,
-        };
+        templateFallback += `\n\n📌 Next Step: "Analyze ${assetHint}" for detailed technical analysis`;
       }
 
-      // Determine next steps based on action (English base)
-      let nextSteps: string;
-      if (recommendation.action === 'analyze') {
-        nextSteps = `1. "${recommendation.primaryMarket} sectors" - Sector analysis
-2. Select an asset from strong sector
-3. "Analyze BTC" or "BTC mlis pro" - Asset analysis`;
-      } else if (recommendation.action === 'wait') {
-        nextSteps = `Wait for now:
-• Liquidity conditions uncertain
-• Clear direction signal pending
-• Monitor with "Where is money flowing?"`;
-      } else {
-        nextSteps = `Risk management advised:
-• Reduce positions
-• Tighten stop-losses
-• Consider safe havens (gold, bonds)`;
-      }
-
-      // Build English message
-      const messageEn = `🎯 AI RECOMMENDATION
-"Where money flows, potential exists"
-
-📊 RECOMMENDED MARKET: ${recommendation.primaryMarket.toUpperCase()}
-
-${actionEmoji} ACTION: ${recommendation.action === 'analyze' ? 'ANALYZE' : recommendation.action === 'wait' ? 'WAIT' : 'AVOID'}
-
-📈 CONFIDENCE: ${recommendation.confidence}%
-[${confidenceBar}]
-
-💡 REASONING:
-${recommendation.reason}
-
-📌 NEXT STEPS:
-${nextSteps}`;
-
-      // Translate main message to target language if needed
-      let message = await this.translateIfNeeded(messageEn, language);
-
-      // Add asset-specific advice (already localized)
-      if (assetAdvice) {
-        message += assetAdvice;
-      }
+      // AI-powered synthesis
+      const message = await synthesizeWithAI({
+        intent: 'CAPITAL_FLOW_RECOMMENDATION',
+        userMessage: userMessage || `What should I trade?${assetHint ? ` Should I buy ${assetHint}?` : ''}`,
+        dataContext,
+        language,
+        templateFallback,
+      });
 
       return {
         success: true,
@@ -1789,7 +1750,7 @@ ${recommendation}
 
     // Detect the type of conversational message
     let responseText: string;
-    let detectedLanguage = language; // Start with user preference
+    let detectedLanguage = 'en'; // All responses in English
 
     // Language switch requests - detect from message content
     // Multi-language support: Users can request any supported language
@@ -1905,20 +1866,8 @@ ${recommendation}
     ) {
       // Detect language from greeting
       if (lower.includes('merhaba') || lower.includes('selam') || lower.includes('günaydın') || lower.includes('iyi akşamlar')) {
-        detectedLanguage = 'tr';
       }
-      responseText = detectedLanguage === 'tr'
-        ? `Merhaba! Ben TraderPath AI Concierge. Size nasıl yardımcı olabilirim?
-
-Şunları yapabilirim:
-• Coin analizi (örn: "BTC analiz")
-• Grafik gösterimi (örn: "ETH grafiği")
-• Teknik sorulara cevap (örn: "RSI nedir?")
-• Fiyat alarmı kurma
-• Ve daha fazlası...
-
-Ne yapmak istersiniz?`
-        : `Hello! I'm TraderPath AI Concierge. How can I help you?
+      responseText = `Hello! I'm TraderPath AI Concierge. How can I help you?
 
 I can:
 • Analyze coins (e.g., "Analyze BTC")
@@ -1936,13 +1885,7 @@ What would you like to do?`;
       lower.includes('sağol') ||
       lower.includes('eyvallah')
     ) {
-      // Detect language from thanks
-      if (lower.includes('teşekkür') || lower.includes('sağol') || lower.includes('eyvallah')) {
-        detectedLanguage = 'tr';
-      }
-      responseText = detectedLanguage === 'tr'
-        ? `Rica ederim! Başka bir konuda yardımcı olabilir miyim? Yeni bir analiz yapmak veya sorularınızı sormaktan çekinmeyin.`
-        : `You're welcome! Is there anything else I can help you with? Feel free to run another analysis or ask questions.`;
+      responseText = `You're welcome! Is there anything else I can help you with? Feel free to run another analysis or ask questions.`;
     }
     // Acknowledgment
     else if (
@@ -1951,13 +1894,7 @@ What would you like to do?`;
       lower === 'anladım' ||
       lower === 'okay'
     ) {
-      // Detect language from acknowledgment
-      if (lower === 'tamam' || lower === 'anladım') {
-        detectedLanguage = 'tr';
-      }
-      responseText = detectedLanguage === 'tr'
-        ? `Harika! Başka bir şey için buradayım. Bir coin analiz etmemi ister misiniz?`
-        : `Great! I'm here if you need anything else. Would you like me to analyze a coin?`;
+      responseText = `Great! I'm here if you need anything else. Would you like me to analyze a coin?`;
     }
     // Voice preference request
     else if (
@@ -1966,27 +1903,12 @@ What would you like to do?`;
       lower.includes('sesli konuş') ||
       lower.includes('speak to me')
     ) {
-      // Detect language from voice request
-      if (lower.includes('sesli yanıt') || lower.includes('sesli konuş')) {
-        detectedLanguage = 'tr';
-      }
-      responseText = detectedLanguage === 'tr'
-        ? `Sesli yanıt özelliği aktif! Tarayıcınızın ses çıkışı açıksa yanıtlarımı sesli olarak duyabilirsiniz.
-
-Şimdi ne yapmak istersiniz? Örneğin "BTC analiz" diyerek bir analiz başlatabilirsiniz.`
-        : `Voice response is enabled! If your browser's audio output is on, you can hear my responses spoken aloud.
+      responseText = `Voice response is enabled! If your browser's audio output is on, you can hear my responses spoken aloud.
 
 What would you like to do now? For example, say "Analyze BTC" to start an analysis.`;
     }
     // Default conversational response - route to AI Experts for intelligent answers
     else {
-      // Try to detect Turkish from common words
-      const turkishWords = ['ne', 'nasıl', 'nedir', 'neden', 'hangi', 'kaç', 'kim', 'yap', 'ver', 'göster', 'anlat', 'söyle', 'istiyorum', 'ister', 'misin', 'musun', 'bana', 'sana', 'için', 'ile', 'var', 'yok', 'bir', 'bu', 'şu', 'o', 've', 'ama', 'fakat', 'çünkü', 'eğer', 'ise'];
-      const hasTurkish = turkishWords.some(word => lower.includes(word));
-      if (hasTurkish) {
-        detectedLanguage = 'tr';
-      }
-
       // Check if it looks like a question that needs expert response
       const questionIndicators = ['?', 'what', 'how', 'why', 'when', 'which', 'explain', 'ne', 'nasıl', 'neden', 'nedir', 'açıkla', 'anlat'];
       const isQuestion = questionIndicators.some(q => lower.includes(q));
@@ -1996,22 +1918,20 @@ What would you like to do now? For example, say "Analyze BTC" to start an analys
         try {
           const expertType = this.detectExpertForQuestion(message);
 
-          const languageInstruction = detectedLanguage === 'tr'
-            ? '\n\n[IMPORTANT: Respond in Turkish (Türkçe yanıt ver). Be helpful and provide useful trading insights.]'
-            : '\n\n[Be helpful and provide useful trading insights.]';
+          const languageInstruction = '\n\n[Be helpful and provide useful trading insights.]';
 
           const response = await aiExpertService.chat({
-            expertId: expertType,
+            expertId: expertType as 'aria' | 'nexus' | 'oracle' | 'sentinel',
             message: message + languageInstruction,
             userId,
           });
 
           if (response.response) {
             const expertInfo: Record<string, { emoji: string; name: string }> = {
-              aria: { emoji: '🔬', name: detectedLanguage === 'tr' ? 'Teknik Uzman' : 'Technical Expert' },
-              nexus: { emoji: '⚖️', name: detectedLanguage === 'tr' ? 'Risk Uzmanı' : 'Risk Expert' },
-              oracle: { emoji: '🐋', name: detectedLanguage === 'tr' ? 'Balina Takipçisi' : 'Whale Tracker' },
-              sentinel: { emoji: '🛡️', name: detectedLanguage === 'tr' ? 'Güvenlik Uzmanı' : 'Security Expert' },
+              aria: { emoji: '🔬', name: 'Technical Expert' },
+              nexus: { emoji: '⚖️', name: 'Risk Expert' },
+              oracle: { emoji: '🐋', name: 'Whale Tracker' },
+              sentinel: { emoji: '🛡️', name: 'Security Expert' },
             };
             const expert = expertInfo[expertType] || expertInfo.aria;
 
@@ -2030,16 +1950,7 @@ What would you like to do now? For example, say "Analyze BTC" to start an analys
       }
 
       // Static fallback
-      responseText = detectedLanguage === 'tr'
-        ? `Anlıyorum. Size şu konularda yardımcı olabilirim:
-
-• Coin analizi: "BTC analiz" veya "ETH nasıl?"
-• Grafik görüntüleme: "BTC grafiği göster"
-• Teknik sorular: "RSI nedir?" veya "MACD nasıl çalışır?"
-• Hesap durumu: "kredim" veya "son analizlerim"
-
-Hangisini yapmak istersiniz?`
-        : `I understand. I can help you with:
+      responseText = `I understand. I can help you with:
 
 • Coin analysis: "Analyze BTC" or "How is ETH?"
 • Chart viewing: "Show BTC chart"
@@ -2514,7 +2425,7 @@ Example: "Alert me when ETH hits 4000"`,
           userId,
           symbol: alertCoin,
           targetPrice: alertPrice,
-          condition: 'ABOVE', // Could detect ABOVE/BELOW from message
+          direction: 'ABOVE', // Could detect ABOVE/BELOW from message
           isActive: true,
         },
       });
@@ -2572,8 +2483,8 @@ You'll be notified when ${alertCoin} reaches this price.`,
     }
 
     const alertList = alerts.map(a => {
-      const condition = a.condition === 'ABOVE' ? '↑' : '↓';
-      return `${condition} ${a.symbol} @ $${Number(a.targetPrice).toLocaleString()}`;
+      const directionArrow = a.direction === 'ABOVE' ? '↑' : '↓';
+      return `${directionArrow} ${a.symbol} @ $${Number(a.targetPrice).toLocaleString()}`;
     }).join('\n');
 
     const alertText = language === 'tr'
@@ -2934,13 +2845,22 @@ Or visit /scheduled for detailed settings.`,
 
     // Create the schedule
     try {
+      // Calculate next run time based on frequency
+      const now = new Date();
+      const nextRun = new Date(now);
+      nextRun.setUTCHours(9, 0, 0, 0); // 9 AM UTC
+      if (nextRun <= now) {
+        nextRun.setDate(nextRun.getDate() + 1); // Next day if already past 9 AM
+      }
+
       await prisma.scheduledReport.create({
         data: {
-          userId,
+          user: { connect: { id: userId } },
           symbol: symbol.toUpperCase(),
           interval,
           frequency,
           scheduleHour: 9, // Default to 9 AM UTC
+          nextRunAt: nextRun,
           deliverEmail: true,
           isActive: true,
         },
@@ -3348,6 +3268,84 @@ Type "top coins" to see results when complete.`;
     const upperSymbol = symbol.toUpperCase();
     const isTurkish = language === 'tr';
 
+    // Check for existing recent analysis (within 4 hours) before spending credits
+    try {
+      const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+      const existingAnalysis = await prisma.analysis.findFirst({
+        where: {
+          userId,
+          symbol: upperSymbol,
+          interval,
+          createdAt: { gte: fourHoursAgo },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (existingAnalysis) {
+        const verdictResult = existingAnalysis.step7Result as Record<string, any> || {};
+        const tradePlanResult = existingAnalysis.step5Result as Record<string, any> || {};
+        const verdict = verdictResult.verdict?.toUpperCase() || 'WAIT';
+        const score = existingAnalysis.totalScore || verdictResult.overallScore || 5;
+        const direction = tradePlanResult?.direction || undefined;
+        const synthesis = this.generateNaturalResponse(upperSymbol, interval, verdict, score, language);
+
+        let tradePlan: any | undefined;
+        if (tradePlanResult) {
+          tradePlan = {
+            averageEntry: tradePlanResult.averageEntry,
+            stopLoss: tradePlanResult.stopLoss,
+            takeProfits: tradePlanResult.takeProfits,
+            direction: tradePlanResult.direction || direction,
+            riskReward: tradePlanResult.riskReward,
+          };
+        }
+
+        const verdictLabel = verdict === 'GO' ? 'GO'
+          : verdict === 'AVOID' ? (isTurkish ? 'KACIN' : 'AVOID')
+          : verdict === 'CONDITIONAL_GO' ? (isTurkish ? 'SARTLI' : 'COND')
+          : (isTurkish ? 'BEKLE' : 'WAIT');
+
+        const timeAgo = Math.round((Date.now() - existingAnalysis.createdAt.getTime()) / 60000);
+        const timeLabel = isTurkish
+          ? `${timeAgo} dakika once yapildi`
+          : `from ${timeAgo} minutes ago`;
+
+        const analysisMessage = isTurkish
+          ? `${upperSymbol} ${interval.toUpperCase()} Analizi (mevcut — ${timeLabel})
+
+Karar: ${verdictLabel}
+Skor: ${score}/10
+
+${synthesis}`
+          : `${upperSymbol} ${interval.toUpperCase()} Analysis (existing — ${timeLabel})
+
+Verdict: ${verdictLabel}
+Score: ${score}/10
+
+${synthesis}`;
+
+        console.log(`[Concierge] Returning existing analysis ${existingAnalysis.id} for ${upperSymbol} ${interval} (${timeAgo}min ago)`);
+
+        return {
+          success: true,
+          intent: 'ANALYSIS',
+          message: analysisMessage,
+          creditsSpent: 0,
+          creditsRemaining: creditBalance,
+          analysisId: existingAnalysis.id,
+          verdict,
+          score,
+          direction,
+          tradePlan,
+          voltranSynthesis: synthesis,
+          detectedLanguage: language,
+        };
+      }
+    } catch (error) {
+      console.error('[Concierge] Error checking existing analysis:', error);
+      // Continue to create new analysis
+    }
+
     // Check credits
     if (creditBalance < ANALYSIS_COST) {
       return {
@@ -3372,7 +3370,6 @@ Type "top coins" to see results when complete.`;
       const chargeResult = await creditService.charge(
         userId,
         ANALYSIS_COST,
-        'ANALYSIS',
         'concierge_analysis',
         { symbol: upperSymbol, interval, tradeType }
       );
@@ -3382,11 +3379,11 @@ Type "top coins" to see results when complete.`;
           success: false,
           intent: 'ANALYSIS',
           message: isTurkish
-            ? `Kredi çekimi başarısız: ${chargeResult.error || 'Bilinmeyen hata'}`
-            : `Credit charge failed: ${chargeResult.error || 'Unknown error'}`,
+            ? 'Kredi çekimi başarısız. Yetersiz bakiye olabilir.'
+            : 'Credit charge failed. Insufficient balance.',
           creditsSpent: 0,
           creditsRemaining: creditBalance,
-          error: chargeResult.error,
+          error: 'CREDIT_CHARGE_FAILED',
         };
       }
 
@@ -3408,12 +3405,25 @@ Type "top coins" to see results when complete.`;
         trapCheck,
       });
 
+      // Get capital flow phase for trade plan SL adjustment
+      let cfPhase: 'early' | 'mid' | 'late' | 'exit' | undefined;
+      try {
+        const cfSummary = await capitalFlowService.getCapitalFlowSummary();
+        const rawPhase = cfSummary?.recommendation?.phase?.toLowerCase();
+        if (rawPhase === 'early' || rawPhase === 'mid' || rawPhase === 'late' || rawPhase === 'exit') {
+          cfPhase = rawPhase;
+        }
+      } catch {
+        // proceed without phase
+      }
+
       // Generate trade plan
       const tradePlanResult = await analysisEngine.integratedTradePlan(
         upperSymbol,
         preliminaryVerdict,
         { marketPulse, assetScan, safetyCheck, timing, trapCheck },
-        10000 // Default account size
+        10000, // Default account size
+        cfPhase
       );
 
       // Generate final verdict
@@ -3457,9 +3467,7 @@ Type "top coins" to see results when complete.`;
       // Build response
       const verdict = verdictResult.verdict?.toUpperCase() || 'WAIT';
       const score = verdictResult.overallScore || 5;
-      const direction = tradePlanResult?.direction || verdictResult.direction;
-
-      const synthesis = this.generateNaturalResponse(upperSymbol, interval, verdict, score, language);
+      const direction = tradePlanResult?.direction || undefined;
 
       // Build trade plan for response
       let tradePlan: any | undefined;
@@ -3469,29 +3477,60 @@ Type "top coins" to see results when complete.`;
           stopLoss: tradePlanResult.stopLoss,
           takeProfits: tradePlanResult.takeProfits,
           direction: tradePlanResult.direction || direction,
-          riskRewardRatio: tradePlanResult.riskRewardRatio,
+          riskReward: tradePlanResult.riskReward,
         };
       }
 
-      // Localized labels
+      // Build structured context for AI synthesis
+      const tradeType_ = getTradeType(interval);
+      const tp1 = tradePlanResult?.takeProfits?.[0];
+      const tp2 = tradePlanResult?.takeProfits?.[1];
+      const dataContext = buildAnalysisResultContext({
+        symbol: upperSymbol,
+        interval,
+        tradeType: tradeType_,
+        verdict,
+        score,
+        direction: direction || 'unknown',
+        entry: Number(tradePlanResult?.averageEntry) || 0,
+        stopLoss: typeof tradePlanResult?.stopLoss === 'number' ? tradePlanResult.stopLoss : Number((tradePlanResult?.stopLoss as any)?.price) || 0,
+        takeProfit1: typeof tp1 === 'number' ? tp1 : Number(tp1?.price) || 0,
+        takeProfit2: typeof tp2 === 'number' ? tp2 : tp2?.price ? Number(tp2.price) : undefined,
+        riskReward: tradePlanResult?.riskReward || 0,
+        reasoning: verdictResult.aiSummary || verdictResult.recommendation || '',
+        stepResults: [
+          { step: 'Market Pulse', score: (marketPulse as Record<string, any>)?.score || 0, verdict: String((marketPulse as Record<string, any>)?.verdict || 'N/A'), summary: String((marketPulse as Record<string, any>)?.summary || '') },
+          { step: 'Asset Scanner', score: (assetScan as Record<string, any>)?.score || 0, verdict: String((assetScan as Record<string, any>)?.verdict || 'N/A'), summary: String((assetScan as Record<string, any>)?.summary || '') },
+          { step: 'Safety Check', score: (safetyCheck as Record<string, any>)?.score || 0, verdict: String((safetyCheck as Record<string, any>)?.verdict || 'N/A'), summary: String((safetyCheck as Record<string, any>)?.summary || '') },
+          { step: 'Timing', score: (timing as Record<string, any>)?.score || 0, verdict: String((timing as Record<string, any>)?.verdict || 'N/A'), summary: String((timing as Record<string, any>)?.summary || '') },
+          { step: 'Trap Check', score: (trapCheck as Record<string, any>)?.score || 0, verdict: String((trapCheck as Record<string, any>)?.verdict || 'N/A'), summary: String((trapCheck as Record<string, any>)?.summary || '') },
+        ],
+      });
+
+      // Template fallback
       const verdictLabel = verdict === 'GO' ? 'GO'
         : verdict === 'AVOID' ? (isTurkish ? 'KAÇIN' : 'AVOID')
         : verdict === 'CONDITIONAL_GO' ? (isTurkish ? 'ŞARTLI' : 'COND')
         : (isTurkish ? 'BEKLE' : 'WAIT');
 
-      const analysisMessage = isTurkish
-        ? `${upperSymbol} ${interval.toUpperCase()} Analizi
-
-Karar: ${verdictLabel}
-Skor: ${score}/10
-
-${synthesis}`
-        : `${upperSymbol} ${interval.toUpperCase()} Analysis
+      const templateFallback = `${upperSymbol} ${interval.toUpperCase()} Analysis
 
 Verdict: ${verdictLabel}
 Score: ${score}/10
 
-${synthesis}`;
+${this.generateNaturalResponse(upperSymbol, interval, verdict, score, language)}`;
+
+      // AI-powered synthesis for analysis results
+      let analysisMessage = await synthesizeWithAI({
+        intent: 'ANALYSIS',
+        userMessage: `Analyze ${upperSymbol} ${interval}`,
+        dataContext,
+        language,
+        templateFallback,
+      });
+
+      // Append report link
+      analysisMessage += `\n\n📊 ${isTurkish ? 'Detaylı rapor için' : 'For detailed report'}: /report?symbol=${upperSymbol}`;
 
       return {
         success: true,
@@ -3504,7 +3543,7 @@ ${synthesis}`;
         score: score,
         direction: direction,
         tradePlan: tradePlan,
-        voltranSynthesis: synthesis,
+        voltranSynthesis: analysisMessage,
         detectedLanguage: language,
       };
 
@@ -3733,22 +3772,18 @@ ${mlisResult.keySignals.slice(0, 3).map(s => `• ${s}`).join('\n')}`;
 
       const expert = expertInfo[expertType] || expertInfo.aria;
 
-      // Add language instruction to the question
-      const languageInstruction = language === 'tr'
-        ? '\n\n[IMPORTANT: Respond in Turkish (Türkçe yanıt ver)]'
-        : language !== 'en'
-          ? `\n\n[IMPORTANT: Respond in ${language}]`
-          : '';
+      // All responses in English
+      const languageInstruction = '';
 
       // Use AI Expert for question with language context
       const response = await aiExpertService.chat({
-        expertId: expertType,
+        expertId: expertType as 'aria' | 'nexus' | 'oracle' | 'sentinel',
         message: question + languageInstruction,
         userId,
       });
 
       // The chat response has 'response' field, not 'reply'
-      const aiResponse = response.response || (language === 'tr' ? 'Yanıt oluşturulamadı.' : 'I couldn\'t generate a response.');
+      const aiResponse = response.response || 'I couldn\'t generate a response.';
 
       const formattedReply = `${expert.emoji} ${expert.name}
 
@@ -3905,35 +3940,24 @@ Quel est votre style? (scalp/day trade/swing)`,
 
       console.log(`[Concierge] Routing unknown intent to ${expertType.toUpperCase()} expert`);
 
-      // Add language instruction
-      const languageInstruction = language === 'tr'
-        ? '\n\n[IMPORTANT: Respond in Turkish (Türkçe yanıt ver). Be helpful and conversational.]'
-        : language !== 'en'
-          ? `\n\n[IMPORTANT: Respond in ${language}. Be helpful and conversational.]`
-          : '\n\n[Be helpful and conversational. If the question is about trading, provide useful insights.]';
-
       // Add context about what the user might want
-      const contextPrompt = language === 'tr'
-        ? `Kullanıcı şunu sordu: "${message}"\n\nLütfen yardımcı bir şekilde yanıt ver. Eğer soru trading ile ilgiliyse, bilgi ve tavsiyeler sun. Eğer platform hakkındaysa, TraderPath'in özelliklerini açıkla.`
-        : `User asked: "${message}"\n\nPlease respond helpfully. If the question is about trading, provide insights and advice. If about the platform, explain TraderPath features.`;
+      const contextPrompt = `User asked: "${message}"\n\nPlease respond helpfully. If the question is about trading, provide insights and advice. If about the platform, explain TraderPath features.\n\n[Be helpful and conversational. If the question is about trading, provide useful insights.]`;
 
       // Use AI Expert for intelligent response
       const response = await aiExpertService.chat({
-        expertId: expertType,
-        message: contextPrompt + languageInstruction,
+        expertId: expertType as 'aria' | 'nexus' | 'oracle' | 'sentinel',
+        message: contextPrompt,
         userId,
       });
 
-      const aiResponse = response.response || (language === 'tr'
-        ? 'Üzgünüm, şu an yanıt üretemiyorum. Lütfen farklı bir şekilde sormayı deneyin.'
-        : 'Sorry, I couldn\'t generate a response. Please try asking differently.');
+      const aiResponse = response.response || 'Sorry, I couldn\'t generate a response. Please try asking differently.';
 
       // Get expert info for formatting
       const expertInfo: Record<string, { emoji: string; name: string }> = {
-        aria: { emoji: '🔬', name: language === 'tr' ? 'Teknik Uzman' : 'Technical Expert' },
-        nexus: { emoji: '⚖️', name: language === 'tr' ? 'Risk Uzmanı' : 'Risk Expert' },
-        oracle: { emoji: '🐋', name: language === 'tr' ? 'Balina Takipçisi' : 'Whale Tracker' },
-        sentinel: { emoji: '🛡️', name: language === 'tr' ? 'Güvenlik Uzmanı' : 'Security Expert' },
+        aria: { emoji: '🔬', name: 'Technical Expert' },
+        nexus: { emoji: '⚖️', name: 'Risk Expert' },
+        oracle: { emoji: '🐋', name: 'Whale Tracker' },
+        sentinel: { emoji: '🛡️', name: 'Security Expert' },
       };
 
       const expert = expertInfo[expertType] || expertInfo.aria;
@@ -3949,8 +3973,7 @@ Quel est votre style? (scalp/day trade/swing)`,
       console.error('[Concierge] AI Expert fallback failed:', error);
 
       // Return static template as last resort
-      const lang = language === 'tr' ? 'tr' : 'en';
-      const templates = RESPONSE_TEMPLATES[lang];
+      const templates = RESPONSE_TEMPLATES.en;
 
       return {
         success: true,

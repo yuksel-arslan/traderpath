@@ -4,9 +4,36 @@
  * Express middleware for automatic error collection
  */
 
-import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 import { collectError } from './bilge.service';
 import { nanoid } from 'nanoid';
+
+// Express-compatible types for middleware that bridges Express/Fastify patterns
+interface Request {
+  headers: Record<string, string | string[] | undefined>;
+  originalUrl?: string;
+  url: string;
+  method: string;
+  user?: { id?: string };
+  requestId?: string;
+}
+
+interface Response {
+  headersSent: boolean;
+  setHeader(name: string, value: string): void;
+  status(code: number): Response;
+  json(body: unknown): void;
+  statusCode: number;
+  on(event: string, callback: () => void): void;
+}
+
+type NextFunction = (err?: Error) => void;
+
+type ErrorRequestHandler = (
+  error: Error,
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => void | Promise<void>;
 
 /**
  * Request ID middleware
@@ -14,7 +41,7 @@ import { nanoid } from 'nanoid';
  */
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction): void {
   const requestId = (req.headers['x-request-id'] as string) || nanoid();
-  (req as any).requestId = requestId;
+  req.requestId = requestId;
   res.setHeader('x-request-id', requestId);
   next();
 }
@@ -39,26 +66,28 @@ export const errorCollectorMiddleware: ErrorRequestHandler = async (
     await collectError({
       message: error.message,
       stack: error.stack,
-      code: (error as any).code,
+      code: (error as unknown as { code?: string }).code,
       endpoint: req.originalUrl || req.url,
       method: req.method,
-      userId: (req as any).user?.id,
-      requestId: (req as any).requestId,
+      userId: req.user?.id,
+      requestId: req.requestId,
       project: 'traderpath',
     });
-  } catch (collectError) {
+  } catch (collectErr) {
     // Don't let collection errors break the response
-    console.error('[BILGE] Error collection failed:', collectError);
+    console.error('[BILGE] Error collection failed:', collectErr);
   }
 
   // Determine status code
-  const statusCode = (error as any).statusCode || (error as any).status || 500;
+  const statusCode = (error as unknown as { statusCode?: number; status?: number }).statusCode
+    || (error as unknown as { statusCode?: number; status?: number }).status
+    || 500;
 
   // Send error response
   res.status(statusCode).json({
     success: false,
     error: error.message || 'Internal server error',
-    requestId: (req as any).requestId,
+    requestId: req.requestId,
   });
 };
 
@@ -67,7 +96,7 @@ export const errorCollectorMiddleware: ErrorRequestHandler = async (
  * Catches errors in async route handlers
  */
 export function asyncHandler(
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>
 ): (req: Request, res: Response, next: NextFunction) => void {
   return (req: Request, res: Response, next: NextFunction): void => {
     Promise.resolve(fn(req, res, next)).catch(next);
@@ -92,7 +121,7 @@ export async function reportError(
     await collectError({
       message: error.message,
       stack: error.stack,
-      code: (error as any).code,
+      code: (error as unknown as { code?: string }).code,
       endpoint: context?.endpoint,
       method: context?.method,
       userId: context?.userId,
@@ -110,7 +139,8 @@ export async function reportError(
  */
 export function installGlobalErrorHandlers(): void {
   // Unhandled Promise Rejections
-  process.on('unhandledRejection', async (reason: any, promise: Promise<any>) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  process.on('unhandledRejection', async (reason: unknown, _promise: Promise<unknown>) => {
     console.error('[BILGE] Unhandled Promise Rejection:', reason);
 
     await reportError(

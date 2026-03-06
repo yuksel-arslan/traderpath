@@ -99,9 +99,9 @@ export const signalSubscriptionService = {
   async getUserSignalSubscription(userId: string) {
     // Try cache first
     const cacheKey = `signal-subscription:${userId}`;
-    const cached = await cache.get(cacheKey);
+    const cached = await cache.get<typeof DEFAULT_FREE_SUBSCRIPTION>(cacheKey);
     if (cached) {
-      return JSON.parse(cached);
+      return cached;
     }
 
     try {
@@ -183,7 +183,7 @@ export const signalSubscriptionService = {
     let customerId = subscription.stripeCustomerId;
 
     if (!customerId) {
-      const customer = await stripeService.createCustomer(userEmail, { userId });
+      const customer = await stripeService.getOrCreateCustomer({ email: userEmail, userId });
       customerId = customer.id;
 
       await prisma.signalSubscription.update({
@@ -201,12 +201,15 @@ export const signalSubscriptionService = {
     // Create or get Stripe price
     const priceId = await this.getOrCreateStripePrice(tier, priceAmount, interval);
 
-    // Create checkout session
-    const session = await stripeService.createCheckoutSession({
-      customerId,
-      priceId,
-      successUrl,
-      cancelUrl,
+    // Create checkout session via raw Stripe for signal-specific subscription
+    const stripe = stripeService.getStripe();
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: {
         userId,
         tier,
@@ -234,21 +237,24 @@ export const signalSubscriptionService = {
 
     // Try to get from cache first
     if (cache) {
-      const cachedPriceId = await cache.get(cacheKey);
+      const cachedPriceId = await cache.get<string>(cacheKey);
       if (cachedPriceId) {
         console.log(`[SignalSubscription] Using cached price ID for ${tier} ${interval}:`, cachedPriceId);
-        return cachedPriceId;
+        return cachedPriceId as string;
       }
     }
 
-    // Create new price in Stripe
+    // Create new price in Stripe via raw Stripe client
     const productName = `TraderPath ${config.name}`;
-    const price = await stripeService.createPrice({
-      productName,
-      unitAmount: amount,
+    const stripe = stripeService.getStripe();
+    const price = await stripe.prices.create({
       currency: 'usd',
-      interval,
-      metadata: { tier },
+      unit_amount: amount,
+      recurring: { interval },
+      product_data: {
+        name: productName,
+        metadata: { tier },
+      },
     });
 
     console.log(`[SignalSubscription] Created new Stripe price for ${tier} ${interval}:`, price.id);
@@ -440,6 +446,6 @@ export const signalSubscriptionService = {
       throw new Error('No Stripe customer found');
     }
 
-    return await stripeService.createPortalSession(subscription.stripeCustomerId, returnUrl);
+    return await stripeService.createPortalSession({ customerId: subscription.stripeCustomerId, returnUrl });
   },
 };

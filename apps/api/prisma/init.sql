@@ -328,7 +328,17 @@ CREATE TABLE "cost_settings" (
     "credit_cost_full_analysis" INTEGER NOT NULL DEFAULT 25,
     "credit_cost_quick_check" INTEGER NOT NULL DEFAULT 5,
     "credit_cost_smart_entry" INTEGER NOT NULL DEFAULT 12,
+    -- Credit Costs for MLIS Pro Analysis (5-Layer Neural Network)
+    "credit_cost_mlis_pro_analysis" INTEGER NOT NULL DEFAULT 10,
+    "credit_cost_mlis_technical_layer" INTEGER NOT NULL DEFAULT 2,
+    "credit_cost_mlis_momentum_layer" INTEGER NOT NULL DEFAULT 2,
+    "credit_cost_mlis_volatility_layer" INTEGER NOT NULL DEFAULT 2,
+    "credit_cost_mlis_volume_layer" INTEGER NOT NULL DEFAULT 2,
+    "credit_cost_mlis_verdict_layer" INTEGER NOT NULL DEFAULT 2,
+    -- Credit Costs for Capital Flow
+    "credit_cost_capital_flow_l3_l4" INTEGER NOT NULL DEFAULT 5,
     -- Credit Costs for Features
+    "credit_cost_ai_concierge" INTEGER NOT NULL DEFAULT 5,
     "credit_cost_ai_expert" INTEGER NOT NULL DEFAULT 10,
     "credit_cost_pdf_report" INTEGER NOT NULL DEFAULT 5,
     "credit_cost_translation" INTEGER NOT NULL DEFAULT 5,
@@ -336,6 +346,8 @@ CREATE TABLE "cost_settings" (
     "credit_cost_add_to_report" INTEGER NOT NULL DEFAULT 2,
     "credit_cost_price_alert" INTEGER NOT NULL DEFAULT 1,
     "credit_cost_watchlist_slot" INTEGER NOT NULL DEFAULT 3,
+    -- Credit Economy (Marketplace)
+    "credit_cost_analysis_purchase" INTEGER NOT NULL DEFAULT 15,
     -- Auto-pricing settings
     "auto_pricing_enabled" BOOLEAN NOT NULL DEFAULT false,
     "auto_pricing_interval" INTEGER NOT NULL DEFAULT 24,

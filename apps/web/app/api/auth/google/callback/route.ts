@@ -9,7 +9,11 @@ import { NextRequest, NextResponse } from 'next/server';
 // Allow Vercel serverless function to run up to 60s (Pro plan)
 export const maxDuration = 60;
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io';
+const _rawApiUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io').replace(/\/+$/, '');
+const API_URL =
+  process.env.NODE_ENV === 'production' && _rawApiUrl.includes('localhost')
+    ? 'https://api.traderpath.io'
+    : _rawApiUrl;
 
 // Timeout per backend request attempt (12 seconds)
 // Two attempts = max 25s total (well within Vercel limits)
@@ -199,9 +203,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=no_token', baseUrl));
     }
 
-    // Create response with redirect to terminal
+    // Create response with redirect to dashboard
     // If first login, add query params so the frontend can show welcome modal
-    const redirectUrl = new URL('/terminal', baseUrl);
+    const redirectUrl = new URL('/dashboard', baseUrl);
     if (isFirstLogin && firstLoginBonus) {
       redirectUrl.searchParams.set('firstLogin', 'true');
       redirectUrl.searchParams.set('bonus', String(firstLoginBonus));

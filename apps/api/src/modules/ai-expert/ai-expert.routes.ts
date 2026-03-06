@@ -32,7 +32,7 @@ const chatSchema = z.object({
 });
 
 // Constants for AI Expert pricing
-const FREE_QUESTIONS_PER_ANALYSIS = 3;
+const FREE_QUESTIONS_PER_ANALYSIS = 5;
 const AI_EXPERT_QUESTION_COST = 5;
 
 export async function aiExpertRoutes(fastify: FastifyInstance) {
@@ -107,10 +107,9 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
       };
 
       // Get dynamic credit costs
-      const [aiExpertCost, addToReportCost, emailSendCost] = await Promise.all([
+      const [aiExpertCost, addToReportCost] = await Promise.all([
         creditCostsService.getCreditCost('AI_EXPERT_QUESTION'),
         creditCostsService.getCreditCost('ADD_TO_REPORT'),
-        creditCostsService.getCreditCost('EMAIL_SEND'),
       ]);
 
       return reply.send({
@@ -127,13 +126,11 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
             stage1_education: { cost: 0, description: 'FREE - Learn the concept' },
             stage2_analysis: { cost: aiExpertCost, description: 'Real coin analysis' },
             add_to_report: { cost: addToReportCost, description: 'Add to report' },
-            send_email: { cost: emailSendCost, description: 'Send via email' },
           },
           howItWorks: {
             step1: '🎓 Ask a question → Get FREE educational answer',
             step2: `📊 Choose a coin → ${aiExpertCost} credits for real analysis`,
             step3: `📋 Add to report → ${addToReportCost} credits`,
-            step4: `📧 Send email → ${emailSendCost} credits`,
           },
         },
       });
@@ -442,154 +439,6 @@ export async function aiExpertRoutes(fastify: FastifyInstance) {
         return reply.code(500).send({
           success: false,
           error: { code: 'REPORT_ERROR', message: 'Failed to add to report. Credits refund attempted.' },
-        });
-      }
-    }
-  );
-
-  // ===========================================
-  // POST /api/ai-expert/send-report-email
-  // Send expert report via email (1 credit)
-  // ===========================================
-  fastify.post(
-    '/api/ai-expert/send-report-email',
-    {
-      preHandler: authenticate,
-    },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const userId = (request as any).user?.id;
-      if (!userId) {
-        return reply.code(401).send({
-          success: false,
-          error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
-        });
-      }
-
-      const body = request.body as {
-        reportId: string;
-        email?: string; // Optional, defaults to user's email
-      };
-
-      if (!body.reportId) {
-        return reply.code(400).send({
-          success: false,
-          error: { code: 'VALIDATION_ERROR', message: 'reportId is required' },
-        });
-      }
-
-      // Get user info for email
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { email: true, name: true },
-      });
-
-      if (!user) {
-        return reply.code(404).send({
-          success: false,
-          error: { code: 'USER_NOT_FOUND', message: 'User not found' },
-        });
-      }
-
-      const targetEmail = body.email || user.email;
-      if (!targetEmail) {
-        return reply.code(400).send({
-          success: false,
-          error: { code: 'NO_EMAIL', message: 'Email address is required' },
-        });
-      }
-
-      // Credits to send email
-      const cost = await creditCostsService.getCreditCost('EMAIL_SEND');
-      const chargeResult = await creditService.charge(
-        userId,
-        cost,
-        'send_report_email',
-        { reportId: body.reportId, email: targetEmail }
-      );
-
-      if (!chargeResult.success) {
-        return reply.code(402).send({
-          success: false,
-          error: {
-            code: 'INSUFFICIENT_CREDITS',
-            message: `Sending email requires ${cost} credits.`,
-            required: cost,
-          },
-        });
-      }
-
-      try {
-        // Get report data
-        const report = await prisma.report.findFirst({
-          where: { id: body.reportId, userId },
-        });
-
-        if (!report) {
-          try {
-            await creditService.add(userId, cost, 'BONUS', 'email_refund_not_found', { isRefund: true });
-          } catch (refundError) {
-            fastify.log.error({ err: refundError, userId, cost }, 'Failed to refund credits');
-          }
-          return reply.code(404).send({
-            success: false,
-            error: { code: 'REPORT_NOT_FOUND', message: 'Report not found. Credits refund attempted.' },
-          });
-        }
-
-        const reportData = report.reportData as Record<string, unknown>;
-        const expertInsights = (reportData.expertInsights || []) as Array<{
-          expertName: string;
-          insight: string;
-        }>;
-
-        // Format insights for email
-        const insightsText = expertInsights
-          .map((e) => `**${e.expertName}:**\n${e.insight}`)
-          .join('\n\n---\n\n');
-
-        // Send email
-        const { emailService } = await import('../email/email.service');
-        const result = await emailService.sendExpertReport(targetEmail, {
-          userName: user.name || 'Trader',
-          symbol: report.symbol,
-          expertName: expertInsights.length > 0 ? expertInsights[0].expertName : 'AI Expert',
-          expertInsights: insightsText || 'No expert insights added yet.',
-          reportUrl: `${process.env.APP_URL || 'https://traderpath.io'}/reports/${report.id}`,
-          generatedAt: report.generatedAt.toLocaleDateString('en-US'),
-        });
-
-        if (!result.success) {
-          try {
-            await creditService.add(userId, cost, 'BONUS', 'email_send_error_refund', { isRefund: true });
-          } catch (refundError) {
-            fastify.log.error({ err: refundError, userId, cost }, 'Failed to refund credits');
-          }
-          return reply.code(500).send({
-            success: false,
-            error: { code: 'EMAIL_ERROR', message: 'Failed to send email. Credits refund attempted.' },
-          });
-        }
-
-        return reply.send({
-          success: true,
-          data: {
-            message: `Report sent to ${targetEmail}.`,
-            email: targetEmail,
-            reportId: report.id,
-            symbol: report.symbol,
-            creditsUsed: cost,
-            newBalance: chargeResult.newBalance,
-          },
-        });
-      } catch (error) {
-        try {
-          await creditService.add(userId, cost, 'BONUS', 'email_error_refund', { isRefund: true });
-        } catch (refundError) {
-          fastify.log.error({ err: refundError, userId, cost }, 'Failed to refund credits');
-        }
-        return reply.code(500).send({
-          success: false,
-          error: { code: 'EMAIL_ERROR', message: 'Failed to send email. Credits refund attempted.' },
         });
       }
     }

@@ -613,14 +613,26 @@ export default async function adminRoutes(app: FastifyInstance) {
           creditCostFullAnalysis: settings.creditCostFullAnalysis,
           creditCostQuickCheck: settings.creditCostQuickCheck,
           creditCostSmartEntry: settings.creditCostSmartEntry,
+          // MLIS Pro Analysis
+          creditCostMlisProAnalysis: settings.creditCostMlisProAnalysis,
+          creditCostMlisTechnicalLayer: settings.creditCostMlisTechnicalLayer,
+          creditCostMlisMomentumLayer: settings.creditCostMlisMomentumLayer,
+          creditCostMlisVolatilityLayer: settings.creditCostMlisVolatilityLayer,
+          creditCostMlisVolumeLayer: settings.creditCostMlisVolumeLayer,
+          creditCostMlisVerdictLayer: settings.creditCostMlisVerdictLayer,
+          // Capital Flow
+          creditCostCapitalFlowL3L4: settings.creditCostCapitalFlowL3L4,
           // Features
           creditCostAiExpert: settings.creditCostAiExpert,
+          creditCostAiConcierge: settings.creditCostAiConcierge,
           creditCostPdfReport: settings.creditCostPdfReport,
           creditCostTranslation: settings.creditCostTranslation,
           creditCostEmailSend: settings.creditCostEmailSend,
           creditCostAddToReport: settings.creditCostAddToReport,
           creditCostPriceAlert: settings.creditCostPriceAlert,
           creditCostWatchlistSlot: settings.creditCostWatchlistSlot,
+          // Credit Economy
+          creditCostAnalysisPurchase: settings.creditCostAnalysisPurchase,
         } : null,
         updatedAt: settings?.updatedAt,
       },
@@ -648,14 +660,26 @@ export default async function adminRoutes(app: FastifyInstance) {
       creditCostFullAnalysis?: number;
       creditCostQuickCheck?: number;
       creditCostSmartEntry?: number;
+      // MLIS Pro Analysis
+      creditCostMlisProAnalysis?: number;
+      creditCostMlisTechnicalLayer?: number;
+      creditCostMlisMomentumLayer?: number;
+      creditCostMlisVolatilityLayer?: number;
+      creditCostMlisVolumeLayer?: number;
+      creditCostMlisVerdictLayer?: number;
+      // Capital Flow
+      creditCostCapitalFlowL3L4?: number;
       // Features
       creditCostAiExpert?: number;
+      creditCostAiConcierge?: number;
       creditCostPdfReport?: number;
       creditCostTranslation?: number;
       creditCostEmailSend?: number;
       creditCostAddToReport?: number;
       creditCostPriceAlert?: number;
       creditCostWatchlistSlot?: number;
+      // Credit Economy
+      creditCostAnalysisPurchase?: number;
     };
 
     // Validate all values are non-negative integers
@@ -701,13 +725,22 @@ export default async function adminRoutes(app: FastifyInstance) {
       creditCostFullAnalysis: defaults.BUNDLE_FULL_ANALYSIS,
       creditCostQuickCheck: defaults.BUNDLE_QUICK_CHECK,
       creditCostSmartEntry: defaults.BUNDLE_SMART_ENTRY,
+      creditCostMlisProAnalysis: defaults.BUNDLE_MLIS_PRO_ANALYSIS,
+      creditCostMlisTechnicalLayer: defaults.MLIS_LAYER_TECHNICAL,
+      creditCostMlisMomentumLayer: defaults.MLIS_LAYER_MOMENTUM,
+      creditCostMlisVolatilityLayer: defaults.MLIS_LAYER_VOLATILITY,
+      creditCostMlisVolumeLayer: defaults.MLIS_LAYER_VOLUME,
+      creditCostMlisVerdictLayer: defaults.MLIS_LAYER_VERDICT,
+      creditCostCapitalFlowL3L4: defaults.CAPITAL_FLOW_L3_L4,
       creditCostAiExpert: defaults.AI_EXPERT_QUESTION,
+      creditCostAiConcierge: defaults.AI_CONCIERGE_MESSAGE,
       creditCostPdfReport: defaults.PDF_REPORT,
       creditCostTranslation: defaults.REPORT_TRANSLATION,
       creditCostEmailSend: defaults.EMAIL_SEND,
       creditCostAddToReport: defaults.ADD_TO_REPORT,
       creditCostPriceAlert: defaults.PRICE_ALERT,
       creditCostWatchlistSlot: defaults.WATCHLIST_SLOT,
+      creditCostAnalysisPurchase: defaults.ANALYSIS_PURCHASE,
     });
 
     return reply.send({
@@ -1687,23 +1720,23 @@ export default async function adminRoutes(app: FastifyInstance) {
           // Stripe revenue (subscriptions)
           prisma.subscription.aggregate({
             where: {
-              status: { in: ['active', 'past_due', 'canceled'] },
+              status: { in: ['ACTIVE', 'PAST_DUE', 'CANCELED'] },
             },
             _count: true,
           }).then(async (result) => {
             // Estimate based on active subscriptions
             const subscriptions = await prisma.subscription.findMany({
               where: {
-                status: { in: ['active', 'past_due'] },
+                status: { in: ['ACTIVE', 'PAST_DUE'] },
               },
               select: { tier: true },
             });
 
             let estimatedMRR = 0;
             for (const sub of subscriptions) {
-              if (sub.tier === 'starter') estimatedMRR += 29;
-              else if (sub.tier === 'pro') estimatedMRR += 59;
-              else if (sub.tier === 'elite') estimatedMRR += 79;
+              if (sub.tier === 'STARTER') estimatedMRR += 29;
+              else if (sub.tier === 'PRO') estimatedMRR += 59;
+              else if (sub.tier === 'ELITE') estimatedMRR += 79;
             }
             return estimatedMRR;
           }),
@@ -1732,12 +1765,12 @@ export default async function adminRoutes(app: FastifyInstance) {
         // Subscription Metrics
         const [activeSubscriptions, subscriptionsByTier, totalSubscriptions] = await Promise.all([
           prisma.subscription.count({
-            where: { status: 'active' },
+            where: { status: 'ACTIVE' },
           }),
 
           prisma.subscription.groupBy({
             by: ['tier'],
-            where: { status: 'active' },
+            where: { status: 'ACTIVE' },
             _count: true,
           }),
 
@@ -1746,15 +1779,15 @@ export default async function adminRoutes(app: FastifyInstance) {
 
         // Calculate MRR (Monthly Recurring Revenue)
         const subscriptions = await prisma.subscription.findMany({
-          where: { status: 'active' },
+          where: { status: 'ACTIVE' },
           select: { tier: true },
         });
 
         let mrr = 0;
         for (const sub of subscriptions) {
-          if (sub.tier === 'starter') mrr += 29;
-          else if (sub.tier === 'pro') mrr += 59;
-          else if (sub.tier === 'elite') mrr += 79;
+          if (sub.tier === 'STARTER') mrr += 29;
+          else if (sub.tier === 'PRO') mrr += 59;
+          else if (sub.tier === 'ELITE') mrr += 79;
         }
 
         // Time-series revenue data (last 30 days)
@@ -2118,7 +2151,7 @@ export default async function adminRoutes(app: FastifyInstance) {
         // Find users who had failed payments recently
         const failedPayments = await prisma.subscription.findMany({
           where: {
-            status: 'past_due',
+            status: 'PAST_DUE',
           },
           include: {
             user: {
@@ -2230,6 +2263,86 @@ export default async function adminRoutes(app: FastifyInstance) {
         return reply.status(500).send({
           success: false,
           error: { code: 'REPROCESS_ERROR', message: `Failed to reprocess: ${error.message}` },
+        });
+      }
+    }
+  );
+
+  // ===========================================
+  // GET /api/admin/weekly-plans - Weekly plan subscribers overview
+  // ===========================================
+  app.get(
+    '/weekly-plans',
+    { preHandler: requireAdmin },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const [
+          allPlans,
+          activePlans,
+          plansByType,
+          recentPlans,
+        ] = await Promise.all([
+          prisma.weeklyPlan.count(),
+          prisma.weeklyPlan.count({ where: { status: 'ACTIVE' } }),
+          prisma.weeklyPlan.groupBy({
+            by: ['planType', 'status'],
+            _count: true,
+          }),
+          prisma.weeklyPlan.findMany({
+            take: 20,
+            orderBy: { updatedAt: 'desc' },
+            include: {
+              user: {
+                select: { id: true, email: true, name: true },
+              },
+            },
+          }),
+        ]);
+
+        // Calculate Weekly Recurring Revenue (WRR)
+        const activeByType = plansByType.filter(p => p.status === 'ACTIVE');
+        let wrr = 0;
+        for (const group of activeByType) {
+          wrr += group._count * 13.99;
+        }
+
+        return reply.send({
+          success: true,
+          data: {
+            total: allPlans,
+            active: activePlans,
+            wrr: wrr.toFixed(2),
+            mrr: (wrr * 4.33).toFixed(2),
+            byType: plansByType.map(p => ({
+              planType: p.planType,
+              status: p.status,
+              count: p._count,
+            })),
+            recent: recentPlans.map(plan => ({
+              id: plan.id,
+              userId: plan.userId,
+              userEmail: plan.user.email,
+              userName: plan.user.name,
+              planType: plan.planType,
+              status: plan.status,
+              remainingQuota: plan.remainingQuota,
+              totalQuota: plan.totalQuota,
+              quotaUsedThisPeriod: plan.quotaUsedThisPeriod,
+              currentPeriodStart: plan.currentPeriodStart,
+              currentPeriodEnd: plan.currentPeriodEnd,
+              cancelAtPeriodEnd: plan.cancelAtPeriodEnd,
+              telegramDelivery: plan.telegramDelivery,
+              discordDelivery: plan.discordDelivery,
+              createdAt: plan.createdAt,
+              updatedAt: plan.updatedAt,
+            })),
+          },
+        });
+      } catch (error: any) {
+        app.log.error({ error: error.message }, 'Failed to fetch weekly plans');
+        return reply.status(500).send({
+          success: false,
+          error: { code: 'WEEKLY_PLANS_ERROR', message: 'Failed to fetch weekly plans data' },
         });
       }
     }

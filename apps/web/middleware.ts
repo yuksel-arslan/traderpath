@@ -21,12 +21,10 @@ const protectedPaths = [
   '/ai-expert',
   '/concierge',
   '/scheduled',
-  '/signals',
   '/methodology',
   '/top-coins',
   '/notifications',
   '/terminal',
-  '/trades',
 ];
 
 // Routes that should redirect to dashboard if already authenticated

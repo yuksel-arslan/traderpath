@@ -21,15 +21,6 @@ import {
 } from './bilge.service';
 import { FeedbackCategory, FeedbackStatus, IdeaStatus, ErrorSeverity, ErrorCategory } from './types';
 
-// Middleware type
-interface AuthenticatedRequest extends FastifyRequest {
-  user?: {
-    id: string;
-    email: string;
-    isAdmin: boolean;
-  };
-}
-
 /**
  * BILGE Routes Plugin
  */
@@ -45,7 +36,7 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
   app.get(
     '/api/bilge/health',
     { preHandler: [app.authenticate] },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       if (!request.user?.isAdmin) {
         return reply.status(403).send({ success: false, error: 'Admin access required' });
       }
@@ -72,7 +63,7 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
   app.get(
     '/api/bilge/dashboard',
     { preHandler: [app.authenticate] },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       if (!request.user?.isAdmin) {
         return reply.status(403).send({ success: false, error: 'Admin access required' });
       }
@@ -119,7 +110,7 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
   app.get(
     '/api/bilge/errors',
     { preHandler: [app.authenticate] },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       if (!request.user?.isAdmin) {
         return reply.status(403).send({ success: false, error: 'Admin access required' });
       }
@@ -161,7 +152,7 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
   app.post(
     '/api/bilge/errors/:id/resolve',
     { preHandler: [app.authenticate] },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       if (!request.user?.isAdmin) {
         return reply.status(403).send({ success: false, error: 'Admin access required' });
       }
@@ -258,7 +249,7 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
   app.get(
     '/api/bilge/patterns',
     { preHandler: [app.authenticate] },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       if (!request.user?.isAdmin) {
         return reply.status(403).send({ success: false, error: 'Admin access required' });
       }
@@ -287,7 +278,7 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
   app.get(
     '/api/bilge/reports/weekly',
     { preHandler: [app.authenticate] },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       if (!request.user?.isAdmin) {
         return reply.status(403).send({ success: false, error: 'Admin access required' });
       }
@@ -318,7 +309,7 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
   app.post(
     '/api/bilge/feedback',
     { preHandler: [app.authenticate] },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const user = request.user;
         if (!user) {
@@ -383,7 +374,7 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
   app.get(
     '/api/bilge/feedback',
     { preHandler: [app.authenticate] },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       if (!request.user?.isAdmin) {
         return reply.status(403).send({ success: false, error: 'Admin access required' });
       }
@@ -423,7 +414,7 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
   app.post(
     '/api/bilge/feedback/:id/approve',
     { preHandler: [app.authenticate] },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       if (!request.user?.isAdmin) {
         return reply.status(403).send({ success: false, error: 'Admin access required' });
       }
@@ -461,7 +452,7 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
   app.post(
     '/api/bilge/feedback/:id/reject',
     { preHandler: [app.authenticate] },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       if (!request.user?.isAdmin) {
         return reply.status(403).send({ success: false, error: 'Admin access required' });
       }
@@ -499,7 +490,7 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
   app.post(
     '/api/bilge/feedback/:id/respond',
     { preHandler: [app.authenticate] },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       if (!request.user?.isAdmin) {
         return reply.status(403).send({ success: false, error: 'Admin access required' });
       }
@@ -558,7 +549,7 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
   app.get(
     '/api/bilge/ideas',
     { preHandler: [app.authenticate] },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       if (!request.user?.isAdmin) {
         return reply.status(403).send({ success: false, error: 'Admin access required' });
       }
@@ -596,7 +587,7 @@ export async function bilgeRoutes(app: FastifyInstance): Promise<void> {
   app.post(
     '/api/bilge/ideas/generate',
     { preHandler: [app.authenticate] },
-    async (request: AuthenticatedRequest, reply: FastifyReply) => {
+    async (request: FastifyRequest, reply: FastifyReply) => {
       if (!request.user?.isAdmin) {
         return reply.status(403).send({ success: false, error: 'Admin access required' });
       }

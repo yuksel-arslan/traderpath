@@ -210,8 +210,8 @@ class EmailService {
                 <h3 style="color: #3b82f6; margin: 0 0 15px; font-size: 18px;">
                   Expert Opinion
                 </h3>
-                <p style="color: #e2e8f0; font-size: 15px; line-height: 1.6; margin: 0; white-space: pre-wrap;">
-${data.expertInsights}
+                <p style="color: #e2e8f0; font-size: 15px; line-height: 1.6; margin: 0; word-break: break-word; word-wrap: break-word;">
+                  ${data.expertInsights.replace(/\n/g, '<br/>')}
                 </p>
               </div>
 
@@ -332,25 +332,28 @@ TraderPath - Professional Trading Analysis
               </p>
 
               <!-- Symbol & Verdict -->
-              <div style="display: flex; justify-content: space-between; margin-bottom: 25px;">
-                <div style="background: #1e293b; border-radius: 12px; padding: 20px; text-align: center; flex: 1; margin-right: 10px;">
-                  <span style="color: white; font-size: 32px; font-weight: bold;">
-                    ${data.symbol}
-                  </span>
-                  <p style="color: #94a3b8; margin: 10px 0 0; font-size: 14px;">
-                    ${data.direction.toUpperCase()}
-                  </p>
-                </div>
-                <div style="background: ${verdictColor}20; border: 2px solid ${verdictColor}; border-radius: 12px; padding: 20px; text-align: center; flex: 1; margin-left: 10px;">
-                  <span style="font-size: 24px;">${verdictEmoji}</span>
-                  <p style="color: ${verdictColor}; font-size: 24px; font-weight: bold; margin: 5px 0;">
-                    ${data.verdict}
-                  </p>
-                  <p style="color: #94a3b8; margin: 5px 0 0; font-size: 14px;">
-                    Score: ${data.score}/100
-                  </p>
-                </div>
-              </div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
+                <tr>
+                  <td width="48%" style="background: #1e293b; border-radius: 12px; padding: 20px; text-align: center; vertical-align: top;">
+                    <span style="color: white; font-size: 32px; font-weight: bold;">
+                      ${data.symbol}
+                    </span>
+                    <p style="color: #94a3b8; margin: 10px 0 0; font-size: 14px;">
+                      ${data.direction.toUpperCase()}
+                    </p>
+                  </td>
+                  <td width="4%"></td>
+                  <td width="48%" style="background: ${verdictColor}20; border: 2px solid ${verdictColor}; border-radius: 12px; padding: 20px; text-align: center; vertical-align: top;">
+                    <span style="font-size: 24px;">${verdictEmoji}</span>
+                    <p style="color: ${verdictColor}; font-size: 24px; font-weight: bold; margin: 5px 0;">
+                      ${data.verdict}
+                    </p>
+                    <p style="color: #94a3b8; margin: 5px 0 0; font-size: 14px;">
+                      Score: ${data.score}/100
+                    </p>
+                  </td>
+                </tr>
+              </table>
 
               <!-- Trade Plan -->
               <div style="background-color: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 25px;">
@@ -967,7 +970,7 @@ TraderPath - Professional Trading Analysis
           <tr>
             <td style="padding: 40px;">
               <div style="text-align: center; margin-bottom: 30px;">
-                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 50%; margin: 0 auto 20px; text-align: center; line-height: 80px;">
                   <span style="font-size: 40px; line-height: 80px;">✓</span>
                 </div>
                 <h2 style="color: #22c55e; font-size: 24px; margin: 0;">
@@ -1404,7 +1407,7 @@ Thank you for being part of our community!
           <tr>
             <td style="padding: 40px;">
               <div style="text-align: center; margin-bottom: 30px;">
-                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 50%; margin: 0 auto 20px; text-align: center; line-height: 80px;">
                   <span style="font-size: 40px; line-height: 80px;">⚠️</span>
                 </div>
                 <h2 style="color: #d97706; font-size: 24px; margin: 0;">

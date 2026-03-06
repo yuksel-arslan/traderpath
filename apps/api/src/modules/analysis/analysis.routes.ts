@@ -19,8 +19,9 @@ import { prisma } from '../../core/database';
 import { coinScoreCacheService, CoinScore } from './services/coin-score-cache.service';
 import { analyzeMLIS, MLISResult } from './services/mlis.service';
 import { logger } from '../../core/logger';
-import { fetchCandles, getAssetClass } from './providers/multi-asset-data-provider';
+import { fetchCandles, getAssetClass, fetchTicker } from './providers/multi-asset-data-provider';
 import { getCapitalFlowModifier, CapitalFlowModifier } from '../capital-flow/capital-flow.service';
+import { weeklyPlanService } from '../weekly-plans/weekly-plan.service';
 import {
   MarketType,
   MLISConfirmation,
@@ -729,22 +730,47 @@ Warn about potential traps and give protective advice.`;
   app.post('/full', {
     preHandler: authenticate,
   }, async (request: FastifyRequest, reply: FastifyReply) => {
+    // Outer try/catch to prevent global error handler from masking the real error
+    let bodySymbol = 'unknown';
+    let resolvedInterval = 'unknown';
+    let resolvedTradeType = 'unknown';
+    try {
     const userId = getUser(request).id;
     const isAdmin = getUser(request).isAdmin || false;
     const body = fullAnalysisSchema.parse(request.body);
+    bodySymbol = body.symbol;
     // Resolve tradeType from interval if provided
     const tradeType = resolveTradeType(body.interval, body.tradeType as TradeType);
+    resolvedTradeType = tradeType;
     // IMPORTANT: Use the interval exactly as provided by frontend, with fallback for legacy clients
     // Frontend MUST send interval (5m, 15m, 30m, 1h, 4h, 1d)
     const interval = body.interval || (tradeType === 'scalping' ? '15m' : tradeType === 'dayTrade' ? '4h' : '1d');
+    resolvedInterval = interval;
 
     // Debug log to track interval issues
     console.log(`[ANALYSIS] Symbol: ${body.symbol}, Requested interval: ${body.interval}, Resolved interval: ${interval}, TradeType: ${tradeType}`);
 
-    // Check for Daily Pass system (100 credits/day, max 10 analyses)
-    // Admin users bypass the daily pass system
+    // Check weekly plan first, then fall back to daily pass
+    let usedWeeklyPlan = false;
     let usedDailyPass = false;
+
     if (!isAdmin) {
+      // Weekly plan check — subscribers bypass daily pass
+      try {
+        const weeklyPlan = await weeklyPlanService.getUserPlan(userId, 'ANALYSIS_WEEKLY');
+        if (weeklyPlan && (weeklyPlan as Record<string, unknown>).status === 'ACTIVE' && ((weeklyPlan as Record<string, unknown>).remainingQuota as number) > 0) {
+          const consumed = await weeklyPlanService.consumeQuota(userId, 'ANALYSIS_WEEKLY');
+          if (consumed.success) {
+            usedWeeklyPlan = true;
+          }
+        }
+      } catch {
+        // weekly plan check failed — fall through to daily pass
+      }
+    }
+
+    // Daily Pass system — only if weekly plan was not used
+    if (!isAdmin && !usedWeeklyPlan) {
       const { dailyPassService } = await import('../passes/daily-pass.service');
       const passCheck = await dailyPassService.checkPass(userId, 'ASSET_ANALYSIS');
 
@@ -793,6 +819,41 @@ Warn about potential traps and give protective advice.`;
       usedDailyPass = true;
     }
 
+    // Duplicate analysis check — warn if same symbol+interval analyzed recently
+    const recentDuplicateHours = 4; // Check within last 4 hours
+    const recentDuplicateCutoff = new Date(Date.now() - recentDuplicateHours * 60 * 60 * 1000);
+    const recentDuplicate = await prisma.analysis.findFirst({
+      where: {
+        userId,
+        symbol: body.symbol,
+        interval: interval,
+        createdAt: { gte: recentDuplicateCutoff },
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        totalScore: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // If force=true query param or body field is set, skip the warning
+    const forceAnalysis = (request.query as Record<string, string>)?.force === 'true';
+
+    if (recentDuplicate && !forceAnalysis) {
+      const minutesAgo = Math.round((Date.now() - recentDuplicate.createdAt.getTime()) / 60000);
+      return reply.status(409).send({
+        success: false,
+        error: {
+          code: 'RECENT_ANALYSIS_EXISTS',
+          message: `${body.symbol} was already analyzed on ${interval} timeframe ${minutesAgo} minutes ago (Score: ${Number(recentDuplicate.totalScore || 0).toFixed(1)}/10). Run again?`,
+          existingAnalysisId: recentDuplicate.id,
+          analyzedMinutesAgo: minutesAgo,
+          score: Number(recentDuplicate.totalScore || 0),
+        },
+      });
+    }
+
     // Capital Flow Top-Down Validation Gate
     // If capitalFlowContext is provided, verify the asset is in the recommended list
     const capitalFlowContext = body.capitalFlowContext;
@@ -826,11 +887,26 @@ Warn about potential traps and give protective advice.`;
       // Step 1-5: Run all prerequisite analysis steps in parallel
       // All steps use trade type specific timeframes and indicators
       const [marketPulse, assetScan, safetyCheck, timing, trapCheck] = await Promise.all([
-        analysisEngine.getMarketPulse(),
-        analysisEngine.scanAsset(body.symbol, tradeType),
-        analysisEngine.safetyCheck(body.symbol, tradeType),
-        analysisEngine.timingAnalysis(body.symbol, tradeType),
-        analysisEngine.trapCheck(body.symbol, tradeType),
+        analysisEngine.getMarketPulse().catch(err => {
+          logger.error({ err, step: 'marketPulse' }, '[Analysis] Step 1 failed');
+          throw new Error(`Step 1 (Market Pulse) failed: ${err instanceof Error ? err.message : String(err)}`);
+        }),
+        analysisEngine.scanAsset(body.symbol, tradeType, interval).catch(err => {
+          logger.error({ err, step: 'scanAsset', symbol: body.symbol }, '[Analysis] Step 2 failed');
+          throw new Error(`Step 2 (Asset Scan) failed for ${body.symbol}: ${err instanceof Error ? err.message : String(err)}`);
+        }),
+        analysisEngine.safetyCheck(body.symbol, tradeType, interval).catch(err => {
+          logger.error({ err, step: 'safetyCheck', symbol: body.symbol }, '[Analysis] Step 3 failed');
+          throw new Error(`Step 3 (Safety Check) failed for ${body.symbol}: ${err instanceof Error ? err.message : String(err)}`);
+        }),
+        analysisEngine.timingAnalysis(body.symbol, tradeType, interval).catch(err => {
+          logger.error({ err, step: 'timing', symbol: body.symbol }, '[Analysis] Step 4 failed');
+          throw new Error(`Step 4 (Timing) failed for ${body.symbol}: ${err instanceof Error ? err.message : String(err)}`);
+        }),
+        analysisEngine.trapCheck(body.symbol, tradeType, interval).catch(err => {
+          logger.error({ err, step: 'trapCheck', symbol: body.symbol }, '[Analysis] Step 5 failed');
+          throw new Error(`Step 5 (Trap Check) failed for ${body.symbol}: ${err instanceof Error ? err.message : String(err)}`);
+        }),
       ]);
 
       // Step 6: Preliminary Verdict - decides GO/WAIT/AVOID BEFORE trade plan
@@ -842,27 +918,32 @@ Warn about potential traps and give protective advice.`;
         trapCheck,
       });
 
+      // Pre-compute Capital Flow phase for trade plan SL adjustment
+      let capitalFlowModifier: CapitalFlowModifier | null = null;
+      let capitalFlowPhase: 'early' | 'mid' | 'late' | 'exit' | undefined;
+      try {
+        const preAssetMarket = getAssetClass(body.symbol) as MarketType;
+        const preDirection = preliminaryVerdict.direction?.toUpperCase() === 'SHORT' ? 'SHORT' : 'LONG';
+        capitalFlowModifier = await getCapitalFlowModifier(preAssetMarket, preDirection as 'LONG' | 'SHORT');
+        capitalFlowPhase = (capitalFlowModifier.phase?.toLowerCase() as 'early' | 'mid' | 'late' | 'exit') || undefined;
+      } catch (cfError) {
+        logger.warn({ error: cfError, symbol: body.symbol }, '[Analysis] Capital Flow phase pre-fetch failed');
+      }
+
       // Step 7: Integrated Trade Plan - only generated for GO/CONDITIONAL_GO signals
-      // Uses ALL previous step data for intelligent decision making
+      // Uses ALL previous step data + capital flow phase for SL adjustment
       let tradePlan = await analysisEngine.integratedTradePlan(
         body.symbol,
         preliminaryVerdict,
         { marketPulse, assetScan, safetyCheck, timing, trapCheck },
-        body.accountSize
+        body.accountSize,
+        capitalFlowPhase
       );
 
       // Step 7.5: Apply Capital Flow Modifier to Trade Plan confidence
       // "Para nereye akıyorsa potansiyel oradadır" - Capital Flow integration
-      let capitalFlowModifier: CapitalFlowModifier | null = null;
-      if (tradePlan) {
+      if (tradePlan && capitalFlowModifier) {
         try {
-          // Get asset market type (crypto, stocks, bonds, metals)
-          const assetMarket = getAssetClass(body.symbol) as MarketType;
-          const direction = tradePlan.direction?.toUpperCase() === 'SHORT' ? 'SHORT' : 'LONG';
-
-          // Get Capital Flow modifier based on global liquidity, market phase, and flow direction
-          capitalFlowModifier = await getCapitalFlowModifier(assetMarket, direction);
-
           // Apply modifier to trade plan confidence
           // Original confidence × Capital Flow modifier = Adjusted confidence
           const originalConfidence = tradePlan.confidence;
@@ -870,7 +951,7 @@ Warn about potential traps and give protective advice.`;
           tradePlan.confidence = adjustedConfidence;
 
           // Add Capital Flow context to trade plan
-          (tradePlan as Record<string, unknown>).capitalFlowContext = {
+          (tradePlan as unknown as Record<string, unknown>).capitalFlowContext = {
             originalConfidence,
             adjustedConfidence,
             modifier: capitalFlowModifier.modifier,
@@ -885,8 +966,8 @@ Warn about potential traps and give protective advice.`;
 
           logger.info({
             symbol: body.symbol,
-            assetMarket,
-            direction,
+            assetMarket: getAssetClass(body.symbol),
+            direction: tradePlan.direction,
             originalConfidence,
             adjustedConfidence,
             modifier: capitalFlowModifier.modifier,
@@ -933,7 +1014,7 @@ Warn about potential traps and give protective advice.`;
           tradePlan.confidence = mlisConfirmation.adjustedConfidence;
 
           // Store MLIS context in trade plan
-          (tradePlan as Record<string, unknown>).mlisConfirmation = {
+          (tradePlan as unknown as Record<string, unknown>).mlisConfirmation = {
             confirmationStatus: mlisConfirmation.confirmationStatus,
             agreementLevel: mlisConfirmation.agreementLevel,
             agreementReason: mlisConfirmation.agreementReason,
@@ -992,8 +1073,9 @@ Warn about potential traps and give protective advice.`;
       // Adds contextual intelligence on top of core analysis (non-blocking)
       let ragEnrichment: RAGEnrichmentResult | null = null;
       try {
-        // Determine research mode from request or default to 'fast'
-        const ragMode: ResearchMode = (body as Record<string, unknown>).ragMode as ResearchMode || 'fast';
+        // Determine research mode from request or default to 'news'
+        // 'news' mode calls Gemini for real market context (~$0.001 per analysis)
+        const ragMode: ResearchMode = (body as Record<string, unknown>).ragMode as ResearchMode || 'news';
         const assetClass = getAssetClass(body.symbol);
 
         // Build engine output for RAG orchestrator (read-only view of core analysis)
@@ -1002,13 +1084,13 @@ Warn about potential traps and give protective advice.`;
           atr: assetScan.indicators?.atr || assetScan.currentPrice * 0.02,
           direction: (tradePlan?.direction?.toLowerCase() || preliminaryVerdict.direction?.toLowerCase() || 'neutral') as 'long' | 'short' | 'neutral',
           confidence: tradePlan?.confidence ?? preliminaryVerdict.confidence ?? 50,
-          supports: assetScan.keyLevels?.supports || [],
-          resistances: assetScan.keyLevels?.resistances || [],
+          supports: assetScan.levels?.support || [],
+          resistances: assetScan.levels?.resistance || [],
           rsi: assetScan.indicators?.rsi,
-          adx: assetScan.indicators?.adx,
-          bbWidth: assetScan.indicators?.bollingerBands?.bandwidth,
-          trendStrength: assetScan.indicators?.trendStrength,
-          volume24hRatio: assetScan.volume24hRatio,
+          adx: undefined,
+          bbWidth: undefined,
+          trendStrength: undefined,
+          volume24hRatio: undefined,
           macdHistogram: assetScan.indicators?.macd?.histogram,
           tradePlan: tradePlan ? {
             direction: tradePlan.direction,
@@ -1027,14 +1109,18 @@ Warn about potential traps and give protective advice.`;
             })),
             sentiment: { overall: marketPulse.newsSentiment.overall || 'neutral', score: marketPulse.newsSentiment.score || 0 },
           } : undefined,
-          economicCalendar: timing.economicCalendar || undefined,
+          economicCalendar: marketPulse.economicCalendar ? {
+            events: (marketPulse.economicCalendar.todayEvents || []).map(e => ({ title: e.title, impact: e.impact })),
+            shouldBlockTrade: marketPulse.economicCalendar.riskLevel === 'high',
+            blockReason: marketPulse.economicCalendar.riskReason,
+          } : undefined,
         };
 
         // Capital Flow context for RAG (if available)
         const cfCtx = capitalFlowModifier ? {
           phase: (capitalFlowModifier.phase || 'mid') as Phase,
           bias: (capitalFlowModifier.action === 'avoid' ? 'risk_off' : capitalFlowModifier.action === 'analyze' ? 'risk_on' : 'neutral') as LiquidityBias,
-          direction: capitalFlowModifier.marketAlignment === 'aligned' ? 'entering' as const : capitalFlowModifier.marketAlignment === 'counter' ? 'exiting' as const : 'stable' as const,
+          direction: capitalFlowModifier.marketAlignment ? 'entering' as const : 'stable' as const,
         } : undefined;
 
         ragEnrichment = await ragOrchestrator.enrichAnalysis(
@@ -1051,8 +1137,8 @@ Warn about potential traps and give protective advice.`;
           hasResearch: !!ragEnrichment.research,
           hasForecast: !!ragEnrichment.forecastBands,
           strategyCount: ragEnrichment.strategies?.strategies?.length || 0,
-          validationPassed: ragEnrichment.validation?.passed,
-          capitalFlowAligned: ragEnrichment.capitalFlowAligned,
+          validationPassed: ragEnrichment.validations?.enginePlan?.overallStatus === 'pass',
+          capitalFlowAligned: ragEnrichment.capitalFlowAlignment?.aligned,
           costUsd: ragEnrichment.totalCostUsd,
         }, '[Analysis] Step 9: RAG enrichment completed');
       } catch (ragError) {
@@ -1146,15 +1232,16 @@ Warn about potential traps and give protective advice.`;
                   stopLoss: s.stopLoss,
                   takeProfits: s.takeProfits,
                   riskReward: s.riskReward,
-                  counterFlow: s.counterFlow,
                 })),
               } : null,
-              validation: ragEnrichment.validation ? {
-                passed: ragEnrichment.validation.passed,
-                checks: ragEnrichment.validation.checks,
-                summary: ragEnrichment.validation.summary,
+              validation: ragEnrichment.validations?.enginePlan ? {
+                passed: ragEnrichment.validations.enginePlan.overallStatus === 'pass',
+                blockers: ragEnrichment.validations.enginePlan.checks.filter(c => c.severity === 'block' && !c.passed).length,
+                warnings: ragEnrichment.validations.enginePlan.checks.filter(c => c.severity === 'warn' && !c.passed).length,
+                checks: ragEnrichment.validations.enginePlan.checks,
+                summary: `${ragEnrichment.validations.enginePlan.passedCount} passed, ${ragEnrichment.validations.enginePlan.warnCount} warnings, ${ragEnrichment.validations.enginePlan.blockCount} blocks`,
               } : null,
-              capitalFlowAligned: ragEnrichment.capitalFlowAligned,
+              capitalFlowAligned: ragEnrichment.capitalFlowAlignment?.aligned ?? null,
             } : null,
           } as object,
           totalScore: verdict.overallScore,
@@ -1203,39 +1290,165 @@ Warn about potential traps and give protective advice.`;
         logger.error({ error: xpErr }, '[XP] Failed to award analysis XP');
       }
 
-      // Send analysis completion notifications (Telegram, Discord only) - fire and forget
-      // NOTE: Automatic email removed - users can send email manually from Recent Analyses
-      (async () => {
-        try {
-          // Get user with notification settings
-          const userWithNotifs = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { name: true, telegramChatId: true, discordWebhookUrl: true },
-          });
+      // ===== Signal Auto-Publish: Confidence > 70% → add to Signals & notify subscribers =====
+      // Runs as fire-and-forget so the analysis response is not delayed
+      if (tradePlan && tradePlan.confidence > 70 && ['go', 'conditional_go'].includes(verdict.verdict)) {
+        (async () => {
+          try {
+            const { signalService } = await import('../signals/signal.service');
+            const { formatTelegramSignal } = await import('../signals/telegram-formatter');
+            const { signalSubscriptionService } = await import('../signals/signal-subscription.service');
+            const { notificationCenterService } = await import('../notifications/notification-center.service');
 
-          if (!userWithNotifs) return;
+            const assetClass = getAssetClass(body.symbol) as 'crypto' | 'stocks' | 'metals' | 'bonds';
+            const market = assetClass; // market equals assetClass
 
-          // Only send if user has social notifications configured
-          if (!userWithNotifs.telegramChatId && !userWithNotifs.discordWebhookUrl) return;
+            // Build signal direction
+            const signalDirection: 'long' | 'short' = tradePlan.direction?.toLowerCase() === 'short' ? 'short' : 'long';
 
-          const notifData = {
-            symbol: body.symbol,
-            verdict: verdict.verdict,
-            score: verdict.overallScore,
-            direction: tradePlan?.direction || 'neutral',
-            entryPrice: tradePlan?.averageEntry ? `$${tradePlan.averageEntry}` : 'N/A',
-            stopLoss: tradePlan?.stopLoss?.price ? `$${tradePlan.stopLoss.price}` : 'N/A',
-            takeProfit1: tradePlan?.takeProfits?.[0]?.price ? `$${tradePlan.takeProfits[0].price}` : 'N/A',
-            tradeType: tradeType === 'scalping' ? 'Scalping' : tradeType === 'dayTrade' ? 'Day Trade' : 'Swing Trade',
-          };
+            // Calculate overall confidence (trade plan confidence already includes CF + MLIS adjustments)
+            const overallConfidence = Math.round(tradePlan.confidence);
 
-          // Send social notifications (Telegram, Discord)
-          const { socialNotificationService } = await import('../notifications/social-notification.service');
-          await socialNotificationService.sendAnalysisSummaryNotifications(userWithNotifs, notifData);
-        } catch (notifError) {
-          logger.error({ error: notifError, symbol: body.symbol }, '[Analysis] Notification error');
-        }
-      })();
+            // Check for duplicate signals (same symbol + direction within 4 hours)
+            const isDuplicate = await signalService.isDuplicateSignal(body.symbol, signalDirection, 4);
+            if (isDuplicate) {
+              logger.info({ symbol: body.symbol, direction: signalDirection }, '[Signal] Skipping - duplicate signal exists');
+              return;
+            }
+
+            // Build SignalData
+            const signalData = {
+              symbol: body.symbol,
+              assetClass,
+              market,
+              direction: signalDirection,
+              interval,
+              entryPrice: tradePlan.averageEntry || 0,
+              stopLoss: tradePlan.stopLoss?.price || 0,
+              takeProfit1: tradePlan.takeProfits?.[0]?.price || 0,
+              takeProfit2: tradePlan.takeProfits?.[1]?.price || 0,
+              takeProfit3: tradePlan.takeProfits?.[2]?.price || undefined,
+              riskRewardRatio: tradePlan.riskReward || 0,
+              classicVerdict: verdict.verdict.toUpperCase() as 'GO' | 'CONDITIONAL_GO',
+              classicScore: verdict.overallScore,
+              mlisConfirmation: mlisConfirmation?.confirmationStatus === 'CONFIRMED',
+              mlisRecommendation: mlisConfirmation?.mlisRecommendation as 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL' | undefined,
+              mlisConfidence: mlisConfirmation?.mlisConfidence,
+              overallConfidence,
+              winRateEstimate: tradePlan.winRateEstimate || undefined,
+              capitalFlowPhase: (capitalFlowModifier?.phase || 'mid') as 'early' | 'mid' | 'late' | 'exit',
+              capitalFlowBias: (capitalFlowModifier?.action === 'avoid' ? 'risk_off' : capitalFlowModifier?.action === 'analyze' ? 'risk_on' : 'neutral') as 'risk_on' | 'risk_off' | 'neutral',
+              sectorFlow: undefined,
+              classicAnalysisId: savedAnalysis.id,
+              mlisAnalysisId: savedAnalysis.id,
+            };
+
+            // Validate signal quality
+            const validation = signalService.validateSignalQuality(signalData);
+            if (!validation.valid) {
+              logger.info({ symbol: body.symbol, reasons: validation.reasons }, '[Signal] Quality validation failed');
+              return;
+            }
+
+            // Create the signal
+            const signalId = await signalService.createSignal(signalData);
+            if (!signalId) {
+              logger.warn({ symbol: body.symbol }, '[Signal] Signal creation returned empty ID (table missing?)');
+              return;
+            }
+
+            logger.info({ symbol: body.symbol, signalId, confidence: overallConfidence }, '[Signal] Auto-published from user analysis');
+
+            // Publish to Telegram channel (global)
+            const TELEGRAM_CHANNEL_ID = process.env['TELEGRAM_SIGNAL_CHANNEL_ID'];
+            const TELEGRAM_BOT_TOKEN = process.env['TELEGRAM_BOT_TOKEN'];
+            let telegramMessageId: string | undefined;
+
+            if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHANNEL_ID) {
+              try {
+                const message = formatTelegramSignal(signalData, signalId);
+                const response = await fetch(
+                  `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+                  {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      chat_id: TELEGRAM_CHANNEL_ID,
+                      text: message,
+                      parse_mode: 'HTML',
+                      disable_web_page_preview: true,
+                    }),
+                  }
+                );
+                const tgResult = await response.json() as { ok: boolean; result?: { message_id?: number }; description?: string };
+                if (tgResult.ok) {
+                  telegramMessageId = tgResult.result?.message_id?.toString();
+                }
+              } catch (tgErr) {
+                logger.warn({ error: tgErr }, '[Signal] Telegram channel publish failed');
+              }
+            }
+
+            // Mark signal as published
+            await signalService.markAsPublished(signalId, telegramMessageId);
+
+            // Notify subscribers who match this signal's criteria
+            const targetUsers = await signalService.getTargetUsers(signalData);
+
+            for (const prefs of targetUsers) {
+              try {
+                // Check subscription tier allows this market
+                const canReceive = await signalSubscriptionService.canReceiveSignals(prefs.user.id, market);
+                if (!canReceive) continue;
+
+                // In-app notification
+                await notificationCenterService.create({
+                  userId: prefs.user.id,
+                  type: 'SIGNAL',
+                  title: `New Signal: ${body.symbol} ${signalDirection.toUpperCase()}`,
+                  message: `${verdict.verdict.toUpperCase()} | Score ${verdict.overallScore}/10 | Confidence ${overallConfidence}%${tradePlan.winRateEstimate ? ` | Win Rate ${tradePlan.winRateEstimate}%` : ''} | Entry $${tradePlan.averageEntry}`,
+                  metadata: { signalId, symbol: body.symbol, direction: signalDirection, confidence: overallConfidence, winRate: tradePlan.winRateEstimate },
+                });
+
+                // Telegram notification to individual user
+                if (prefs.telegramEnabled && prefs.telegramChatId) {
+                  const { socialNotificationService: sns } = await import('../notifications/social-notification.service');
+                  const tgMessage = formatTelegramSignal(signalData, signalId);
+                  await sns.sendTelegramMessage(prefs.telegramChatId, tgMessage);
+                }
+
+                // Discord notification to individual user
+                if (prefs.discordEnabled && prefs.discordWebhookUrl) {
+                  const { socialNotificationService: sns } = await import('../notifications/social-notification.service');
+                  await sns.sendDiscordMessage(prefs.discordWebhookUrl, {
+                    title: `New Signal: ${body.symbol} ${signalDirection.toUpperCase()}`,
+                    description: `**${verdict.verdict.toUpperCase()}** | Score ${verdict.overallScore}/10`,
+                    color: signalDirection === 'long' ? 0x00F5A0 : 0xFF4757,
+                    fields: [
+                      { name: 'Confidence', value: `${overallConfidence}%`, inline: true },
+                      { name: 'Win Rate', value: `${tradePlan.winRateEstimate || 'N/A'}%`, inline: true },
+                      { name: 'R:R', value: `${tradePlan.riskReward || 'N/A'}`, inline: true },
+                      { name: 'Entry', value: `$${tradePlan.averageEntry}`, inline: true },
+                      { name: 'Stop Loss', value: `$${tradePlan.stopLoss?.price || 'N/A'}`, inline: true },
+                      { name: 'TP1', value: `$${tradePlan.takeProfits?.[0]?.price || 'N/A'}`, inline: true },
+                      { name: 'TP2', value: `$${tradePlan.takeProfits?.[1]?.price || 'N/A'}`, inline: true },
+                      ...(tradePlan.takeProfits?.[2]?.price ? [{ name: 'TP3', value: `$${tradePlan.takeProfits[2].price}`, inline: true }] : []),
+                    ],
+                  });
+                }
+
+                // Email notification disabled (email service cancelled)
+              } catch (subErr) {
+                logger.warn({ error: subErr, userId: prefs.user.id }, '[Signal] Subscriber notification failed');
+              }
+            }
+
+            logger.info({ signalId, subscribersNotified: targetUsers.length }, '[Signal] Subscriber notifications sent');
+          } catch (signalError) {
+            logger.error({ error: signalError, symbol: body.symbol }, '[Signal] Auto-publish failed');
+          }
+        })();
+      }
 
       // Build AI prompt based on whether trade plan exists
       const tradeTypeLabel = tradeType === 'scalping' ? 'scalping (15min-2h)' : tradeType === 'dayTrade' ? 'day trading (2-24 hours)' : 'swing trading (1-14 days)';
@@ -1378,16 +1591,16 @@ Explain the key risks and what conditions would need to change before trading th
                 stopLoss: s.stopLoss,
                 takeProfits: s.takeProfits,
                 riskReward: s.riskReward,
-                counterFlow: s.counterFlow,
               })),
             } : null,
-            validation: ragEnrichment.validation ? {
-              passed: ragEnrichment.validation.passed,
-              blockers: ragEnrichment.validation.checks.filter(c => c.severity === 'block' && !c.passed).length,
-              warnings: ragEnrichment.validation.checks.filter(c => c.severity === 'warn' && !c.passed).length,
-              summary: ragEnrichment.validation.summary,
+            validation: ragEnrichment.validations?.enginePlan ? {
+              passed: ragEnrichment.validations.enginePlan.overallStatus === 'pass',
+              blockers: ragEnrichment.validations.enginePlan.checks.filter(c => c.severity === 'block' && !c.passed).length,
+              warnings: ragEnrichment.validations.enginePlan.checks.filter(c => c.severity === 'warn' && !c.passed).length,
+              checks: ragEnrichment.validations.enginePlan.checks,
+              summary: `${ragEnrichment.validations.enginePlan.passedCount} passed, ${ragEnrichment.validations.enginePlan.warnCount} warnings, ${ragEnrichment.validations.enginePlan.blockCount} blocks`,
             } : null,
-            capitalFlowAligned: ragEnrichment.capitalFlowAligned,
+            capitalFlowAligned: ragEnrichment.capitalFlowAlignment?.aligned ?? null,
           } : null,
         },
         creditsSpent: cost,
@@ -1397,10 +1610,21 @@ Explain the key risks and what conditions would need to change before trading th
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error({ error, errorMessage }, 'Full Analysis error');
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      logger.error({ error, errorMessage, errorStack, symbol: body.symbol, interval, tradeType }, 'Full Analysis error (inner catch)');
       return reply.status(500).send({
         success: false,
-        error: { code: 'ANALYSIS_ERROR', message: `Failed to complete analysis: ${errorMessage}` },
+        error: { code: 'ANALYSIS_ERROR', message: `Analysis failed for ${body.symbol} (${interval}): ${errorMessage}` },
+      });
+    }
+    } catch (outerError) {
+      // Catches errors BEFORE the analysis try block (schema validation, daily pass, duplicate check, etc.)
+      const errorMessage = outerError instanceof Error ? outerError.message : 'Unknown error';
+      const errorStack = outerError instanceof Error ? outerError.stack : undefined;
+      logger.error({ error: outerError, errorMessage, errorStack, symbol: bodySymbol, interval: resolvedInterval, tradeType: resolvedTradeType }, 'Full Analysis error (outer catch - pre-analysis phase)');
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'ANALYSIS_SETUP_ERROR', message: `Analysis setup failed for ${bodySymbol}: ${errorMessage}` },
       });
     }
   });
@@ -1427,6 +1651,8 @@ Explain the key risks and what conditions would need to change before trading th
           symbol: true,
           interval: true,
           totalScore: true,
+          method: true,
+          outcome: true,
           creditsSpent: true,
           createdAt: true,
           expiresAt: true,
@@ -1449,6 +1675,8 @@ Explain the key risks and what conditions would need to change before trading th
           symbol: a.symbol,
           interval: a.interval,
           totalScore: a.totalScore,
+          method: a.method,
+          outcome: a.outcome,
           verdict: verdictData?.verdict || 'N/A',
           hasTradePlan: verdictData?.hasTradePlan || !!tradePlan,
           direction: tradePlan?.direction || null,
@@ -1561,11 +1789,15 @@ Explain the key risks and what conditions would need to change before trading th
     try {
       const userId = getUser(request).id;
 
-      // Get user's analyses with trade plans (have entry price)
+      // Get user's analyses: active (not expired) OR recently completed (TP/SL hit)
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       const analyses = await prisma.analysis.findMany({
         where: {
           userId,
-          expiresAt: { gt: new Date() }, // Only active analyses
+          OR: [
+            { expiresAt: { gt: new Date() } }, // Active analyses
+            { outcome: { not: null }, createdAt: { gt: sevenDaysAgo } }, // Recently completed (TP/SL hit)
+          ],
         },
         orderBy: { createdAt: 'desc' },
         take: 20,
@@ -1592,28 +1824,57 @@ Explain the key risks and what conditions would need to change before trading th
         });
       }
 
-      // Extract unique symbols
-      const symbols = [...new Set(analyses.map(a => a.symbol as string))];
+      // Extract unique symbols (normalize: strip trailing USDT, uppercase)
+      const rawSymbols = [...new Set(analyses.map(a => a.symbol as string))];
+      const normalizeSymbol = (s: string) => s.toUpperCase().replace(/USDT$/i, '');
+      const symbols = [...new Set(rawSymbols.map(normalizeSymbol))];
 
-      // Fetch current prices from Binance
+      // Fetch prices from appropriate sources per asset class
       const prices: Record<string, number> = {};
       try {
-        const pairs = symbols.map((s: string) => `"${s.toUpperCase()}USDT"`).join(',');
+        const pairs = symbols.map((s: string) => `"${s}USDT"`).join(',');
         const response = await fetch(
           `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
         );
         if (response.ok) {
-          const responseText = await response.text();
-          if (responseText && responseText.trim() !== '') {
-            const data = JSON.parse(responseText) as Array<{ symbol: string; price: string }>;
-            for (const item of data) {
-              const symbol = item.symbol.replace('USDT', '');
-              prices[symbol] = parseFloat(item.price);
+          try {
+            const responseText = await response.text();
+            if (responseText && responseText.trim() !== '') {
+              const data = JSON.parse(responseText) as Array<{ symbol: string; price: string }>;
+              for (const item of data) {
+                const base = item.symbol.replace(/USDT$/, '');
+                const price = parseFloat(item.price);
+                // Store with multiple key formats for robust lookup
+                prices[base] = price;
+                prices[base.toLowerCase()] = price;
+                prices[base + 'USDT'] = price;
+                prices[base.toLowerCase() + 'USDT'] = price;
+              }
             }
+          } catch (err) {
+            logger.warn({ error: err }, 'Failed to fetch crypto prices from Binance');
           }
         }
       } catch (err) {
-        logger.warn({ error: err }, 'Failed to fetch prices');
+        logger.warn({ error: err }, 'Failed to fetch prices from Binance');
+      }
+
+      // Fallback: use multi-asset data provider if Binance returned no prices
+      if (Object.keys(prices).length === 0 && symbols.length > 0) {
+        try {
+          const { fetchTicker } = await import('./providers/multi-asset-data-provider');
+          await Promise.all(symbols.map(async (sym: string) => {
+            try {
+              const ticker = await fetchTicker(sym);
+              prices[sym] = ticker.price;
+              prices[sym.toLowerCase()] = ticker.price;
+              prices[sym + 'USDT'] = ticker.price;
+              prices[sym.toLowerCase() + 'USDT'] = ticker.price;
+            } catch { /* skip */ }
+          }));
+        } catch (err) {
+          logger.warn({ error: err }, 'Failed to fetch prices from fallback provider');
+        }
       }
 
       // Calculate next candle close time based on intervals present
@@ -1650,7 +1911,8 @@ Explain the key risks and what conditions would need to change before trading th
 
         const entryPrice = tradePlan?.averageEntry as number || tradePlan?.entryPrice as number || null;
         const direction = (tradePlan?.direction as string || 'long').toLowerCase();
-        const currentPrice = prices[a.symbol] || null;
+        const sym = a.symbol as string;
+        const currentPrice = prices[sym] || prices[sym.toUpperCase()] || prices[sym.toUpperCase().replace(/USDT$/i, '')] || null;
 
         let unrealizedPnL: number | null = null;
         if (entryPrice && entryPrice > 0 && currentPrice) {
@@ -1944,12 +2206,20 @@ Explain the key risks and what conditions would need to change before trading th
         ? firstUser.createdAt.toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0];
 
+      // Count total tradeable assets from asset-logos data
+      const { CRYPTO_LOGOS, STOCK_LOGOS, METAL_LOGOS, BOND_LOGOS } = await import('../asset-logos/asset-logos.data.js');
+      const totalAssets = Object.keys(CRYPTO_LOGOS).length
+        + Object.keys(STOCK_LOGOS).length
+        + Object.keys(METAL_LOGOS).length
+        + Object.keys(BOND_LOGOS).length;
+
       return reply.send({
         success: true,
         data: {
           platform: {
             totalUsers,
             totalAnalyses,
+            totalAssets,
             dailyAnalyses,
             weeklyAnalyses,
             monthlyAnalyses,
@@ -2141,6 +2411,12 @@ Explain the key risks and what conditions would need to change before trading th
       let allTimeClassicPnL = 0;
       let allTimeMlisPnL = 0;
 
+      // Track wins/losses for winRate and avgRR
+      let allTimeWins = 0;
+      let allTimeLosses = 0;
+      let allTimeWinPnLSum = 0;
+      let allTimeLossPnLSum = 0;
+
       allClosedAnalyses.forEach(analysis => {
         const pnl = calculatePnL(analysis);
         if (pnl !== 0) {
@@ -2151,10 +2427,29 @@ Explain the key risks and what conditions would need to change before trading th
             allTimeClassicPnL += pnl;
           }
         }
+        // Win/loss tracking for all trades with outcomes
+        const isWin = analysis.outcome === 'tp1_hit' || analysis.outcome === 'tp2_hit' || analysis.outcome === 'tp3_hit';
+        if (isWin) {
+          allTimeWins++;
+          allTimeWinPnLSum += Math.abs(pnl);
+        } else {
+          allTimeLosses++;
+          allTimeLossPnLSum += Math.abs(pnl);
+        }
       });
 
       const allTimeTotalPnL = Number(allTimePnLSum.toFixed(1));
       const allTimeTotalTrades = allClosedAnalyses.length;
+
+      // Win rate = TP hits / total closed * 100
+      const winRate = allTimeTotalTrades > 0
+        ? Number(((allTimeWins / allTimeTotalTrades) * 100).toFixed(1))
+        : 0;
+
+      // Average R:R = avg win P/L / avg loss P/L
+      const avgWin = allTimeWins > 0 ? allTimeWinPnLSum / allTimeWins : 0;
+      const avgLoss = allTimeLosses > 0 ? allTimeLossPnLSum / allTimeLosses : 0;
+      const avgRR = avgLoss > 0 ? Number((avgWin / avgLoss).toFixed(2)) : 0;
 
       return reply.send({
         success: true,
@@ -2168,6 +2463,8 @@ Explain the key risks and what conditions would need to change before trading th
             classicTrades,
             mlisTrades,
             period: days,
+            winRate,
+            avgRR,
             // All-time totals (same as platform-stats)
             allTimeTotalPnL,
             allTimeTotalTrades,
@@ -2275,9 +2572,17 @@ Explain the key risks and what conditions would need to change before trading th
       const activeCount = activeAnalyses.length;
 
       // Fetch current prices for active analyses to calculate active performance
+      // Only count analyses with trade plans (GO/CONDITIONAL_GO verdicts)
+      const activeWithTradePlan = activeAnalyses.filter(a => {
+        const tp = a.step5Result as Record<string, unknown> | null;
+        return tp && (tp.averageEntry || tp.entryPrice);
+      });
       let activeProfitable = 0;
-      if (activeCount > 0) {
-        const activeSymbols = [...new Set(activeAnalyses.map(a => a.symbol as string))];
+      if (activeWithTradePlan.length > 0) {
+        const activeSymbols = [...new Set(activeWithTradePlan.map(a => {
+          const s = a.symbol as string;
+          return s.toUpperCase().replace(/USDT$/i, '');
+        }))];
         const prices: Record<string, number> = {};
 
         // Use multi-asset data provider (supports crypto, stocks, metals, bonds)
@@ -2286,7 +2591,9 @@ Explain the key risks and what conditions would need to change before trading th
           const tickerPromises = activeSymbols.map(async (sym: string) => {
             try {
               const ticker = await fetchTicker(sym);
-              prices[sym.toUpperCase()] = ticker.price;
+              prices[sym] = ticker.price;
+              prices[sym.toLowerCase()] = ticker.price;
+              prices[sym + 'USDT'] = ticker.price;
             } catch {
               // Skip symbols that fail to fetch
             }
@@ -2297,7 +2604,7 @@ Explain the key risks and what conditions would need to change before trading th
         }
 
         // Calculate how many active analyses are profitable
-        activeAnalyses.forEach(analysis => {
+        activeWithTradePlan.forEach(analysis => {
           const tradePlan = analysis.step5Result as Record<string, unknown> | null;
 
           const entryPrice = Number(
@@ -2305,14 +2612,14 @@ Explain the key risks and what conditions would need to change before trading th
             tradePlan?.entryPrice
           ) || 0;
 
-          const sym = (analysis.symbol as string).toUpperCase();
-          const currentPrice = prices[sym] || 0;
+          const rawSym = (analysis.symbol as string);
+          const currentPrice = prices[rawSym] || prices[rawSym.toUpperCase()] || prices[rawSym.toUpperCase().replace(/USDT$/i, '')] || 0;
           const direction = ((tradePlan?.direction as string) || 'long').toLowerCase();
 
           if (entryPrice > 0 && currentPrice > 0) {
             const pnl = direction === 'short'
-              ? entryPrice - currentPrice
-              : currentPrice - entryPrice;
+              ? ((entryPrice - currentPrice) / entryPrice) * 100
+              : ((currentPrice - entryPrice) / entryPrice) * 100;
             if (pnl > 0) {
               activeProfitable++;
             }
@@ -2467,21 +2774,26 @@ Explain the key risks and what conditions would need to change before trading th
         take: 10
       });
 
-      // Fetch current prices for all symbols
-      const symbols = [...new Set(reportsWithExpiration.map(r => r.symbol as string))];
+      // Fetch current prices for all symbols (normalize: strip trailing USDT)
+      const rawReportSymbols = [...new Set(reportsWithExpiration.map(r => r.symbol as string))];
+      const normalizedReportSymbols = [...new Set(rawReportSymbols.map(s => s.toUpperCase().replace(/USDT$/i, '')))];
       const prices: Record<string, number> = {};
 
-      if (symbols.length > 0) {
+      if (normalizedReportSymbols.length > 0) {
         try {
-          const pairs = symbols.map((s: string) => `"${s.toUpperCase()}USDT"`).join(',');
+          const pairs = normalizedReportSymbols.map((s: string) => `"${s}USDT"`).join(',');
           const priceResponse = await fetch(
             `https://api.binance.com/api/v3/ticker/price?symbols=[${pairs}]`
           );
           if (priceResponse.ok) {
             const priceData = await priceResponse.json();
             for (const item of priceData) {
-              const symbol = item.symbol.replace('USDT', '');
-              prices[symbol] = parseFloat(item.price);
+              const base = item.symbol.replace(/USDT$/, '');
+              const price = parseFloat(item.price);
+              prices[base] = price;
+              prices[base.toLowerCase()] = price;
+              prices[base + 'USDT'] = price;
+              prices[base.toLowerCase() + 'USDT'] = price;
             }
           }
         } catch (err) {
@@ -2664,55 +2976,17 @@ Explain the key risks and what conditions would need to change before trading th
       const tradeType = (request.query.tradeType || 'dayTrade') as TradeType;
       const timeframe = request.query.timeframe || '4h';
 
-      // Validate timeframe against the 6 standard values
-      if (!isValidTimeframe(timeframe)) {
-        return reply.status(400).send({
-          success: false,
-          error: { code: 'INVALID_TIMEFRAME', message: `Invalid timeframe '${timeframe}'. Accepted: ${VALID_TIMEFRAMES.join(', ')}` },
-        });
-      }
-      const interval = timeframe; // standard timeframes map 1-to-1 to Binance intervals
+      const interval = timeframe || '4h';
 
-      // Fetch kline data from Binance (500 candles for good chart data)
-      const response = await fetch(
-        `https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}USDT&interval=${interval}&limit=500`
-      );
+      // Fetch candles using multi-asset provider (handles Binance + Yahoo Finance fallback)
+      const ohlcv = await fetchCandles(symbol, interval, 500);
 
-      if (!response.ok) {
+      if (!ohlcv || ohlcv.length === 0) {
         return reply.status(400).send({
           success: false,
           error: { code: 'FETCH_ERROR', message: 'Failed to fetch market data' }
         });
       }
-
-      // Safely parse JSON response
-      const responseText = await response.text();
-      if (!responseText || responseText.trim() === '') {
-        return reply.status(400).send({
-          success: false,
-          error: { code: 'EMPTY_RESPONSE', message: 'Empty response from Binance API' }
-        });
-      }
-
-      let klines: (string | number)[][];
-      try {
-        klines = JSON.parse(responseText);
-      } catch {
-        return reply.status(400).send({
-          success: false,
-          error: { code: 'PARSE_ERROR', message: 'Invalid JSON response from Binance API' }
-        });
-      }
-
-      // Convert Binance klines to OHLCV format
-      const ohlcv = klines.map((k: (string | number)[]) => ({
-        timestamp: Number(k[0]),
-        open: parseFloat(k[1] as string),
-        high: parseFloat(k[2] as string),
-        low: parseFloat(k[3] as string),
-        close: parseFloat(k[4] as string),
-        volume: parseFloat(k[5] as string),
-      }));
 
       // Define indicators per step based on trade type (40+ indicators total)
       // Trade type specific configurations with different periods and indicator focus
@@ -6153,14 +6427,16 @@ Explain the key risks and what conditions would need to change before trading th
    */
   const chartCandlesSchema = z.object({
     symbol: z.string().min(1),
-    interval: z.enum(['5m', '15m', '30m', '1h', '4h', '1d']).default('1h'),
+    interval: z.enum(['5m', '15m', '30m', '1h', '2h', '4h', '1d', '1W']).default('1h'),
     limit: z.coerce.number().min(10).max(500).default(100),
+    // Optional: fetch candles up to this timestamp (ms) for historical analysis viewing
+    endTime: z.coerce.number().optional(),
   });
 
   app.get('/chart/candles', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const query = chartCandlesSchema.parse(request.query);
-      const { symbol, interval, limit } = query;
+      const { symbol, interval, limit, endTime } = query;
 
       // Clean symbol (remove USDT suffix if present for display)
       let cleanSymbol = symbol.toUpperCase().trim();
@@ -6174,10 +6450,11 @@ Explain the key risks and what conditions would need to change before trading th
 
       // Detect asset class
       const assetClass = getAssetClass(cleanSymbol);
-      logger.info({ symbol: cleanSymbol, assetClass, interval, limit }, 'Chart candles request');
+      logger.info({ symbol: cleanSymbol, assetClass, interval, limit, endTime }, 'Chart candles request');
 
       // Fetch candles using multi-asset provider
-      const candles = await fetchCandles(cleanSymbol, interval, limit);
+      // If endTime is specified, fetch candles up to that timestamp (for historical analysis charts)
+      const candles = await fetchCandles(cleanSymbol, interval, limit, endTime);
 
       // Transform to frontend format
       const chartData = candles.map(c => ({

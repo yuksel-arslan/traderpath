@@ -354,7 +354,7 @@ export class FREDBondsProvider extends MarketDataProvider {
     }
   }
 
-  async fetchFundamentals(symbol: string): Promise<BondFundamentals> {
+  override async fetchFundamentals(symbol: string): Promise<BondFundamentals> {
     const resolved = this.resolveSymbol(symbol);
 
     if (this.isTreasuryYield(resolved.normalized)) {

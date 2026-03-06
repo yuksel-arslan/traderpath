@@ -55,7 +55,7 @@ function calculateAllIndicators(candles: IndicatorOHLCV[]): ProcessedIndicators 
   const ema20Result = indicatorsService.calculateEMA(candles, 20);
   const ema50Result = indicatorsService.calculateEMA(candles, 50);
   const atrResult = indicatorsService.calculateATR(candles, 14);
-  const bbResult = indicatorsService.calculateBollingerBands(candles);
+  const bbResult = indicatorsService.calculateBollinger(candles);
   const obvResult = indicatorsService.calculateOBV(candles);
 
   // Determine trend direction from EMA alignment
@@ -173,6 +173,7 @@ export async function multiMarketRoutes(app: FastifyInstance) {
         stocks: getSupportedSymbols('stocks'),
         bonds: getSupportedSymbols('bonds'),
         metals: getSupportedSymbols('metals'),
+        bist: getSupportedSymbols('bist'),
       };
 
       return reply.send({

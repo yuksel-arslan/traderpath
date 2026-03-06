@@ -57,51 +57,51 @@ const LAYERS = [
   {
     number: 1,
     title: 'GLOBAL LIQUIDITY',
-    subtitle: 'Is the macro environment favorable?',
-    metrics: ['Fed Balance Sheet', 'M2 Money Supply', 'DXY Index', 'VIX Level'],
+    subtitle: 'M2 Supply, FED Balance Sheet, DXY, VIX, US10Y, Yield Curve — 6 macro indicators that move all markets.',
+    metrics: ['Fed Balance Sheet', 'M2 Money Supply', 'DXY Index', 'VIX Level', 'US10Y', 'Yield Curve'],
     page: '/flow',
   },
   {
     number: 2,
     title: 'MARKET FLOW',
-    subtitle: 'Where is capital flowing?',
-    metrics: ['Crypto', 'Stocks', 'Bonds', 'Metals'],
+    subtitle: 'Track capital rotation across Crypto, Stocks, Bonds, Metals, BIST. Identify market phase: EARLY, MID, LATE, or EXIT.',
+    metrics: ['Crypto', 'Stocks', 'Bonds', 'Metals', 'BIST'],
     page: '/flow',
   },
   {
     number: 3,
     title: 'SECTOR ACTIVITY',
-    subtitle: 'Which sectors lead within the market?',
-    metrics: ['DeFi', 'Layer 2', 'AI Tokens', 'Tech Stocks'],
+    subtitle: 'Deep sector analysis with flow bars, volume profiles, and rotation signals across 25+ sectors.',
+    metrics: ['DeFi', 'Layer 2', 'AI Tokens', 'Tech Stocks', 'Flow Bars', 'Volume Profiles'],
     page: '/flow',
   },
   {
     number: 4,
-    title: 'VERDICT ENGINE',
-    subtitle: 'AI-powered GO / WAIT / AVOID signal',
-    metrics: ['7-Step Analysis', '40+ Indicators', 'ML Confirmation', 'Trade Plan'],
+    title: 'AI RECOMMENDATION',
+    subtitle: '5-factor gate check produces BUY/SELL signals with confidence scores and specific asset recommendations.',
+    metrics: ['Gate Check', 'Confidence Score', 'Asset Picks', 'Direction Signal'],
     page: '/terminal',
   },
   {
     number: 5,
-    title: 'ASSET SCREENER',
-    subtitle: 'Search, sort, filter all tradeable assets',
-    metrics: ['Score Ranking', 'Flow Score', 'RSI / MACD', 'Phase Tracking'],
+    title: 'ASSET SCREENING',
+    subtitle: '200+ assets scored and ranked. Real-time price, volume, momentum, and on-chain data.',
+    metrics: ['Score Ranking', 'Flow Score', 'RSI / MACD', 'Phase Tracking', 'On-Chain Data'],
     page: '/screener',
   },
   {
     number: 6,
-    title: 'RISK ASSESSMENT',
-    subtitle: 'Counter-flow and economic event validation',
-    metrics: ['Capital Flow Monitor', 'Economic Calendar', 'Anomaly Detection', 'Plan Validation'],
+    title: '7-STEP + MLIS ANALYSIS',
+    subtitle: 'Market Pulse, Asset Scan, Safety Check, Timing, Trade Plan, Trap Check, Final Verdict — validated by Multi-Layer Intelligence Scoring.',
+    metrics: ['7-Step Pipeline', '40+ Indicators', 'ML Confirmation', 'MLIS Scoring'],
     page: '/terminal',
   },
   {
     number: 7,
     title: 'TRADE VISUALIZER',
-    subtitle: 'Interactive chart with Entry / SL / TP overlay',
-    metrics: ['Candlestick Chart', 'Price Levels', 'Forecast Bands', 'Multi-Strategy'],
-    page: '/trades',
+    subtitle: 'TradingView-powered charts with Entry, SL, TP overlays. 48-hour price forecast with confidence intervals.',
+    metrics: ['TradingView Charts', 'Entry/SL/TP Overlay', '48h Forecast', 'Confidence Bands'],
+    page: '/terminal',
   },
 ];
 
@@ -197,8 +197,8 @@ export function FlowAccordion() {
           </p>
           <p className="text-[10px] sm:text-xs font-sans text-slate-400 max-w-lg leading-relaxed">
             Built on{' '}
-            <span className="text-slate-300 dark:text-slate-300 font-medium">Lean Construction</span>{' '}
-            principles — eliminate noise, pull decisions from data, and maintain
+            <span className="text-slate-300 dark:text-slate-300 font-medium">Hierarchical Decision Architecture</span>{' '}
+            — eliminate noise, derive decisions from data, and maintain
             continuous flow from macro insight to micro execution. No wasted analysis,
             no speculative guesswork.
           </p>

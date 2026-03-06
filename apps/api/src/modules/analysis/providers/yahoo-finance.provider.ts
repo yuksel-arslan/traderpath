@@ -220,7 +220,7 @@ export class YahooFinanceStockProvider extends MarketDataProvider {
     }
   }
 
-  async fetchFundamentals(symbol: string): Promise<StockFundamentals> {
+  override async fetchFundamentals(symbol: string): Promise<StockFundamentals> {
     const resolved = this.resolveSymbol(symbol);
     const cacheKey = `yahoo:fundamentals:${resolved.normalized}`;
 
@@ -436,7 +436,7 @@ export class YahooFinanceMetalsProvider extends MarketDataProvider {
     }
   }
 
-  async fetchFundamentals(symbol: string): Promise<MetalsFundamentals> {
+  override async fetchFundamentals(symbol: string): Promise<MetalsFundamentals> {
     const resolved = this.resolveSymbol(symbol);
     const marketData = await this.fetchMarketData(symbol);
 

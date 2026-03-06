@@ -70,7 +70,7 @@ export default function AdminModelsPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>(['BTC', 'ETH', 'SOL', 'BNB', 'XRP']);
   const [epochs, setEpochs] = useState(50);
-  const [tradeType, setTradeType] = useState<'scalp' | 'swing' | 'position'>('swing');
+  const [tradeType, setTradeType] = useState<'scalp' | 'day' | 'swing' | 'position'>('swing');
   const [trainingLogs, setTrainingLogs] = useState<string[]>([]);
 
   // Gemini settings state
@@ -88,9 +88,10 @@ export default function AdminModelsPage() {
   const availableSymbols = ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'MATIC'];
 
   const tradeTypeOptions = [
-    { value: 'scalp', label: 'Scalp', description: '1-4 saat, yüksek frekanslı' },
-    { value: 'swing', label: 'Swing', description: '1-7 gün, orta vadeli' },
-    { value: 'position', label: 'Position', description: '1-4 hafta, uzun vadeli' },
+    { value: 'scalp', label: 'Scalper', description: '5-15 dakika, yüksek frekanslı' },
+    { value: 'day', label: 'Day Trader', description: '1-4 saat' },
+    { value: 'swing', label: 'Swing Trader', description: '1-7 gün' },
+    { value: 'position', label: 'Position Trader', description: '1-4 hafta' },
   ];
 
   const fetchGeminiSettings = useCallback(async () => {
@@ -591,7 +592,7 @@ export default function AdminModelsPage() {
               {tradeTypeOptions.map(option => (
                 <button
                   key={option.value}
-                  onClick={() => setTradeType(option.value as 'scalp' | 'swing' | 'position')}
+                  onClick={() => setTradeType(option.value as 'scalp' | 'day' | 'swing' | 'position')}
                   disabled={modelStatus?.status === 'training'}
                   className={`p-3 rounded-lg border text-left transition ${
                     tradeType === option.value
@@ -766,9 +767,10 @@ export default function AdminModelsPage() {
                 className="px-3 py-2 bg-background border rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none"
               >
                 <option value="all">All Trade Types</option>
-                <option value="scalp">Scalp</option>
-                <option value="swing">Swing</option>
-                <option value="position">Position</option>
+                <option value="scalp">Scalper</option>
+                <option value="day">Day Trader</option>
+                <option value="swing">Swing Trader</option>
+                <option value="position">Position Trader</option>
               </select>
             </div>
             <button
@@ -826,8 +828,8 @@ export default function AdminModelsPage() {
               <CheckCircle className="w-5 h-5 text-green-500" />
               Active Models by Trade Type
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {['scalp', 'swing', 'position'].map((type) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {['scalp', 'day', 'swing', 'position'].map((type) => {
                 const activeModel = tftModels.find(m => m.isActive && m.tradeType === type);
                 return (
                   <div

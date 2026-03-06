@@ -4,11 +4,11 @@
  * Daily credit allocation for active subscribers (00:00 UTC)
  */
 
-import cron from 'node-cron';
+import cron, { type ScheduledTask } from 'node-cron';
 import { subscriptionService } from './subscription.service';
 import { logger } from '../../core/logger';
 
-let dailyCreditsJob: cron.ScheduledTask | null = null;
+let dailyCreditsJob: ScheduledTask | null = null;
 
 /**
  * Start the daily credit allocation cron job

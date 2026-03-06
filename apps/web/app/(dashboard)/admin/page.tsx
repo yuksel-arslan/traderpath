@@ -157,6 +157,9 @@ export default function AdminPage() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [cleanupResult, setCleanupResult] = useState<string | null>(null);
+  const [isGeneratingSignals, setIsGeneratingSignals] = useState(false);
+  const [isGeneratingAutoEdge, setIsGeneratingAutoEdge] = useState(false);
+  const [signalHealth, setSignalHealth] = useState<any>(null);
 
   // Grant credits modal state
   const [grantModalOpen, setGrantModalOpen] = useState(false);
@@ -170,12 +173,13 @@ export default function AdminPage() {
     setError(null);
 
     try {
-      const [healthRes, systemRes, statsRes, activityRes, signalStatsRes] = await Promise.all([
+      const [healthRes, systemRes, statsRes, activityRes, signalStatsRes, signalHealthRes] = await Promise.all([
         authFetch('/api/admin/health'),
         authFetch('/api/admin/system'),
         authFetch('/api/admin/stats'),
         authFetch('/api/admin/activity'),
         authFetch('/api/v1/signals/stats'),
+        authFetch('/api/v1/signals/admin/health'),
       ]);
 
       if (healthRes.status === 403) {
@@ -203,6 +207,12 @@ export default function AdminPage() {
         const data = await signalStatsRes.json();
         if (data.success && data.data) {
           setSignalStats(data.data);
+        }
+      }
+      if (signalHealthRes.ok) {
+        const data = await signalHealthRes.json();
+        if (data.success && data.data) {
+          setSignalHealth(data.data);
         }
       }
     } catch (err) {
@@ -284,6 +294,58 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleGenerateSignals = async () => {
+    setIsGeneratingSignals(true);
+    try {
+      const response = await authFetch('/api/v1/signals/admin/generate', {
+        method: 'POST',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const r = data.data;
+        setCleanupResult(`Signal generation complete: ${r.generated} generated, ${r.published} published, ${r.skipped} skipped`);
+        setTimeout(() => setCleanupResult(null), 8000);
+        fetchData(true);
+      } else {
+        const err = await response.json();
+        setCleanupResult(`Signal generation failed: ${err.error || 'Unknown error'}`);
+        setTimeout(() => setCleanupResult(null), 5000);
+      }
+    } catch (err) {
+      console.error(err);
+      setCleanupResult('Signal generation request failed');
+      setTimeout(() => setCleanupResult(null), 5000);
+    } finally {
+      setIsGeneratingSignals(false);
+    }
+  };
+
+  const handleGenerateAutoEdge = async () => {
+    setIsGeneratingAutoEdge(true);
+    try {
+      const response = await authFetch('/api/v1/signals/admin/generate-autoedge', {
+        method: 'POST',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const r = data.data;
+        setCleanupResult(`AutoEdge complete: ${r.generated} generated, ${r.published} published, ${r.skipped} skipped (${r.processed} scanned)`);
+        setTimeout(() => setCleanupResult(null), 8000);
+        fetchData(true);
+      } else {
+        const err = await response.json();
+        setCleanupResult(`AutoEdge failed: ${err.error || 'Unknown error'}`);
+        setTimeout(() => setCleanupResult(null), 5000);
+      }
+    } catch (err) {
+      console.error(err);
+      setCleanupResult('AutoEdge request failed');
+      setTimeout(() => setCleanupResult(null), 5000);
+    } finally {
+      setIsGeneratingAutoEdge(false);
     }
   };
 
@@ -702,16 +764,148 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Maintenance Actions */}
+            {/* Signal Generation */}
+            <div className="bg-card border rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Activity className="w-5 h-5 text-indigo-500" />
+                Signal Generation
+              </h3>
+              <div className="space-y-3">
+                {/* Signal Generator (4h) — Status + Trigger */}
+                <div className="p-3 bg-background border rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${
+                        signalHealth?.generator?.active ? 'bg-green-500 animate-pulse' :
+                        signalHealth?.generator?.status === 'never_run' ? 'bg-gray-400' : 'bg-red-500'
+                      }`} />
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Signal Generator
+                      </span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                        signalHealth?.generator?.active
+                          ? 'bg-green-500/10 text-green-500'
+                          : signalHealth?.generator?.status === 'never_run'
+                          ? 'bg-gray-500/10 text-gray-500'
+                          : 'bg-red-500/10 text-red-500'
+                      }`}>
+                        {signalHealth?.generator?.active ? 'ACTIVE' : signalHealth?.generator?.status === 'never_run' ? 'NOT STARTED' : 'INACTIVE'}
+                      </span>
+                    </div>
+                    {signalHealth?.generator?.lastRun && (
+                      <span className="text-[10px] text-muted-foreground">
+                        Last: {new Date(signalHealth.generator.lastRun).toLocaleTimeString()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground">
+                      Every 4h — Capital Flow → 7-Step cycle
+                      {signalHealth?.metrics?.generator && (
+                        <span className="ml-2 text-foreground">
+                          ({signalHealth.metrics.generator.totalRuns} runs, {signalHealth.metrics.generator.signalsGenerated} signals)
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleGenerateSignals}
+                      disabled={isGeneratingSignals}
+                      className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-indigo-500/10 text-indigo-500 rounded-md hover:bg-indigo-500/20 transition disabled:opacity-50"
+                    >
+                      {isGeneratingSignals ? <RefreshCw className="w-3 h-3 animate-spin" /> : <TrendingUp className="w-3 h-3" />}
+                      {isGeneratingSignals ? 'Running...' : 'Run Now'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* AutoEdge (15m) — Status + Trigger */}
+                <div className="p-3 bg-background border rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${
+                        signalHealth?.autoedge?.active ? 'bg-green-500 animate-pulse' :
+                        signalHealth?.autoedge?.status === 'never_run' ? 'bg-gray-400' : 'bg-red-500'
+                      }`} />
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        AutoEdge v2
+                      </span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                        signalHealth?.autoedge?.active
+                          ? 'bg-green-500/10 text-green-500'
+                          : signalHealth?.autoedge?.status === 'never_run'
+                          ? 'bg-gray-500/10 text-gray-500'
+                          : 'bg-red-500/10 text-red-500'
+                      }`}>
+                        {signalHealth?.autoedge?.active ? 'ACTIVE' : signalHealth?.autoedge?.status === 'never_run' ? 'NOT STARTED' : 'INACTIVE'}
+                      </span>
+                    </div>
+                    {signalHealth?.autoedge?.lastRun && (
+                      <span className="text-[10px] text-muted-foreground">
+                        Last: {new Date(signalHealth.autoedge.lastRun).toLocaleTimeString()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground">
+                      Every 15m — Top 10 Binance 15m→5m
+                      {signalHealth?.metrics?.autoedge && (
+                        <span className="ml-2 text-foreground">
+                          ({signalHealth.metrics.autoedge.totalRuns} runs, {signalHealth.metrics.autoedge.signalsGenerated} signals)
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleGenerateAutoEdge}
+                      disabled={isGeneratingAutoEdge}
+                      className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-500 rounded-md hover:bg-emerald-500/20 transition disabled:opacity-50"
+                    >
+                      {isGeneratingAutoEdge ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                      {isGeneratingAutoEdge ? 'Running...' : 'Run Now'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Outcome Tracker Status */}
+                {signalHealth?.tracker && (
+                  <div className="p-3 bg-background border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${
+                        signalHealth.tracker.status === 'healthy' ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                      }`} />
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Outcome Tracker
+                      </span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                        signalHealth.tracker.status === 'healthy'
+                          ? 'bg-green-500/10 text-green-500'
+                          : 'bg-red-500/10 text-red-500'
+                      }`}>
+                        {signalHealth.tracker.status === 'healthy' ? 'ACTIVE' : 'INACTIVE'}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground ml-auto">
+                        Every 15m — TP/SL tracking
+                        {signalHealth.tracker.lastRun && (
+                          <> · Last: {new Date(signalHealth.tracker.lastRun).toLocaleTimeString()}</>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Maintenance Actions */}
+          <div className="mt-6">
             <div className="bg-card border rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <Zap className="w-5 h-5 text-primary" />
                 Maintenance Actions
               </h3>
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <button
                   onClick={handleCleanup}
-                  className="w-full flex items-center justify-between p-3 bg-background border rounded-lg hover:bg-accent transition"
+                  className="flex items-center justify-between p-3 bg-background border rounded-lg hover:bg-accent transition"
                 >
                   <div className="flex items-center gap-3">
                     <Trash2 className="w-5 h-5 text-red-500" />
@@ -723,7 +917,7 @@ export default function AdminPage() {
                 </button>
                 <button
                   onClick={handleClearCache}
-                  className="w-full flex items-center justify-between p-3 bg-background border rounded-lg hover:bg-accent transition"
+                  className="flex items-center justify-between p-3 bg-background border rounded-lg hover:bg-accent transition"
                 >
                   <div className="flex items-center gap-3">
                     <HardDrive className="w-5 h-5 text-yellow-500" />

@@ -11,7 +11,7 @@ import { creditCostsService } from '../costs/credit-costs.service';
 import { emailService } from '../email/email.service';
 import { notificationService } from '../notifications/notification.service';
 import { logger } from '../../core/logger';
-import cron from 'node-cron';
+import cron, { type ScheduledTask } from 'node-cron';
 
 // Cost for scheduled analysis - fetched dynamically from settings
 
@@ -22,7 +22,7 @@ interface ScheduledReportResult {
 }
 
 class ScheduledReportsService {
-  private cronJob: cron.ScheduledTask | null = null;
+  private cronJob: ScheduledTask | null = null;
 
   /**
    * Start the cron job to check and run scheduled analyses
@@ -219,7 +219,7 @@ class ScheduledReportsService {
         },
       });
 
-      logger.info(`[ScheduledReports] Analysis completed for ${symbol} - ${verdict.action}`);
+      logger.info(`[ScheduledReports] Analysis completed for ${symbol} - ${verdict.verdict}`);
 
       return { success: true, analysisId: savedAnalysis.id };
     } catch (error) {
@@ -255,20 +255,20 @@ class ScheduledReportsService {
 
     const direction = tradePlan?.direction || 'N/A';
     const score = Math.round((verdict.overallScore || 0) * 10);
-    const action = verdict.action || 'N/A';
+    const verdictLabel = verdict.verdict || 'N/A';
 
     // Email notification
     if (deliverEmail && user.email) {
       try {
         await emailService.sendEmail({
           to: user.email,
-          subject: `TraderPath: ${symbol}/USDT - ${action} (${score}/100)`,
+          subject: `TraderPath: ${symbol}/USDT - ${verdictLabel} (${score}/100)`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #10b981;">Scheduled Analysis Complete</h2>
               <p><strong>${symbol}/USDT</strong> - ${new Date().toLocaleString('tr-TR')}</p>
               <div style="background: #1e293b; color: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <p style="font-size: 24px; margin: 0;"><strong>${action}</strong> - ${direction.toUpperCase()}</p>
+                <p style="font-size: 24px; margin: 0;"><strong>${verdictLabel}</strong> - ${direction.toUpperCase()}</p>
                 <p style="font-size: 36px; color: ${score >= 70 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444'}; margin: 10px 0;">${score}/100</p>
               </div>
               ${tradePlan ? `
@@ -283,44 +283,36 @@ class ScheduledReportsService {
               </p>
             </div>
           `,
-          text: `${symbol}/USDT - ${action} (${score}/100) - ${direction}`,
+          text: `${symbol}/USDT - ${verdictLabel} (${score}/100) - ${direction}`,
         });
       } catch (error) {
         logger.error('[ScheduledReports] Failed to send email:', error);
       }
     }
 
-    // Telegram notification
-    if (deliverTelegram && user.telegramChatId) {
+    // Telegram & Discord notifications via social notification service
+    if ((deliverTelegram && user.telegramChatId) || (deliverDiscord && user.discordWebhookUrl)) {
       try {
-        await notificationService.sendTelegram(user.telegramChatId, {
-          symbol,
-          verdict: action,
-          score,
-          direction,
-          entry: tradePlan?.averageEntry,
-          stopLoss: tradePlan?.stopLoss?.price,
-          takeProfit1: tradePlan?.takeProfit1,
-        });
+        const { socialNotificationService } = await import('../notifications/social-notification.service');
+        await socialNotificationService.sendAnalysisSummaryNotifications(
+          {
+            telegramChatId: deliverTelegram ? user.telegramChatId : null,
+            discordWebhookUrl: deliverDiscord ? user.discordWebhookUrl : null,
+            name: user.name,
+          },
+          {
+            symbol,
+            verdict: verdictLabel,
+            score,
+            direction,
+            entryPrice: tradePlan?.averageEntry ? `$${tradePlan.averageEntry}` : 'N/A',
+            stopLoss: tradePlan?.stopLoss?.price ? `$${tradePlan.stopLoss.price}` : 'N/A',
+            takeProfit1: tradePlan?.takeProfit1 ? `$${tradePlan.takeProfit1}` : 'N/A',
+            tradeType: 'Scheduled',
+          },
+        );
       } catch (error) {
-        logger.error('[ScheduledReports] Failed to send Telegram:', error);
-      }
-    }
-
-    // Discord notification
-    if (deliverDiscord && user.discordWebhookUrl) {
-      try {
-        await notificationService.sendDiscord(user.discordWebhookUrl, {
-          symbol,
-          verdict: action,
-          score,
-          direction,
-          entry: tradePlan?.averageEntry,
-          stopLoss: tradePlan?.stopLoss?.price,
-          takeProfit1: tradePlan?.takeProfit1,
-        });
-      } catch (error) {
-        logger.error('[ScheduledReports] Failed to send Discord:', error);
+        logger.error('[ScheduledReports] Failed to send social notifications:', error);
       }
     }
   }

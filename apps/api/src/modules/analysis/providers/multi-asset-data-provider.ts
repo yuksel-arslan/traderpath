@@ -40,6 +40,40 @@ const CACHE_TTL = {
 };
 
 // ============================================================================
+// BINANCE CIRCUIT BREAKER
+// When Binance returns HTTP 451 (geo-block), skip ALL subsequent Binance calls
+// for CIRCUIT_BREAKER_TTL to avoid wasting 3-7 seconds per call on retries.
+// ============================================================================
+
+let binanceCircuitOpen = false;
+let binanceCircuitOpenedAt = 0;
+const CIRCUIT_BREAKER_TTL = 5 * 60 * 1000; // 5 minutes
+
+function isBinanceBlocked(): boolean {
+  if (!binanceCircuitOpen) return false;
+  // Auto-reset after TTL
+  if (Date.now() - binanceCircuitOpenedAt > CIRCUIT_BREAKER_TTL) {
+    binanceCircuitOpen = false;
+    console.log('[CircuitBreaker] Binance circuit breaker reset - will retry Binance on next call');
+    return false;
+  }
+  return true;
+}
+
+function tripBinanceCircuitBreaker(reason: string): void {
+  if (!binanceCircuitOpen) {
+    binanceCircuitOpen = true;
+    binanceCircuitOpenedAt = Date.now();
+    console.warn(`[CircuitBreaker] Binance circuit breaker TRIPPED: ${reason}. All Binance calls will skip to Yahoo fallback for ${CIRCUIT_BREAKER_TTL / 1000}s`);
+  }
+}
+
+/** Exported so analysis.engine.ts can check before direct Binance calls */
+export function isBinanceAvailable(): boolean {
+  return !isBinanceBlocked();
+}
+
+// ============================================================================
 // FETCH WITH RETRY
 // ============================================================================
 
@@ -56,14 +90,34 @@ async function fetchWithRetry(url: string, options?: RequestInit, retries = 3): 
 
       if (response.ok) return response;
 
+      // HTTP 451 = geo-block: trip circuit breaker and fail immediately (no retries)
+      if (response.status === 451) {
+        const isBinanceUrl = url.includes('binance.com');
+        if (isBinanceUrl) {
+          tripBinanceCircuitBreaker(`HTTP 451 from ${new URL(url).hostname}`);
+        }
+        throw new Error(`HTTP 451: Unavailable For Legal Reasons (geo-blocked)`);
+      }
+
       if (response.status === 429) {
         await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
         continue;
       }
 
+      // HTTP 418 (Binance IP ban) or 403 - also trip circuit breaker
+      if ((response.status === 418 || response.status === 403) && url.includes('binance.com')) {
+        tripBinanceCircuitBreaker(`HTTP ${response.status} from Binance`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     } catch (error) {
       if (i === retries - 1) throw error;
+      // Don't retry if circuit breaker tripped
+      const errMsg = error instanceof Error ? error.message : '';
+      if (errMsg.includes('circuit breaker') || errMsg.includes('451') || errMsg.includes('418')) {
+        throw error;
+      }
       await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
     }
   }
@@ -79,11 +133,18 @@ const BINANCE_INTERVAL_MAP: Record<string, string> = {
   '15m': '15m',
   '30m': '30m',
   '1h': '1h',
+  '2h': '2h',
   '4h': '4h',
   '1d': '1d',
+  '1W': '1w',
 };
 
 async function fetchBinanceCandles(symbol: string, interval: string, limit: number = 500): Promise<OHLCV[]> {
+  // Circuit breaker: skip Binance entirely if geo-blocked
+  if (isBinanceBlocked()) {
+    throw new Error('Binance circuit breaker open - skipping to fallback');
+  }
+
   const binanceInterval = BINANCE_INTERVAL_MAP[interval] || '4h';
 
   // Normalize symbol: remove any suffix and add USDT
@@ -97,11 +158,14 @@ async function fetchBinanceCandles(symbol: string, interval: string, limit: numb
   }
   const binanceSymbol = `${normalizedSymbol}USDT`;
 
-  const cacheKey = `binance:candles:${binanceSymbol}:${binanceInterval}:${limit}`;
+  const cacheKey = `binance:candles:${binanceSymbol}:${binanceInterval}:${limit}:${endTime || 'latest'}`;
   const cached = getCached<OHLCV[]>(cacheKey);
   if (cached) return cached;
 
-  const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${binanceInterval}&limit=${limit}`;
+  let url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${binanceInterval}&limit=${limit}`;
+  if (endTime) {
+    url += `&endTime=${endTime}`;
+  }
   const response = await fetchWithRetry(url);
   const data = await response.json();
 
@@ -119,6 +183,11 @@ async function fetchBinanceCandles(symbol: string, interval: string, limit: numb
 }
 
 async function fetchBinanceTicker(symbol: string): Promise<MarketData> {
+  // Circuit breaker: skip Binance entirely if geo-blocked
+  if (isBinanceBlocked()) {
+    throw new Error('Binance circuit breaker open - skipping to fallback');
+  }
+
   let normalizedSymbol = symbol.toUpperCase();
   const suffixes = ['USDT', 'BUSD', 'USD', 'PERP', 'USDC'];
   for (const suffix of suffixes) {
@@ -188,8 +257,10 @@ const YAHOO_INTERVAL_MAP: Record<string, string> = {
   '15m': '15m',
   '30m': '30m',
   '1h': '60m',
+  '2h': '60m', // Yahoo doesn't have 2h directly, we'll aggregate
   '4h': '60m', // Yahoo doesn't have 4h directly, we'll aggregate
   '1d': '1d',
+  '1W': '1wk',
 };
 
 const YAHOO_RANGE_MAP: Record<string, string> = {
@@ -197,8 +268,10 @@ const YAHOO_RANGE_MAP: Record<string, string> = {
   '15m': '5d',
   '30m': '1mo',
   '1h': '1mo',
+  '2h': '3mo',
   '4h': '6mo',
   '1d': '1y',
+  '1W': '5y',
 };
 
 async function fetchYahooCandles(symbol: string, interval: string, limit: number = 500): Promise<OHLCV[]> {
@@ -228,7 +301,8 @@ async function fetchYahooCandles(symbol: string, interval: string, limit: number
     candles = await tryFetchYahooData(yahooSymbol, '1d', '2y');
 
     if (candles.length < MIN_CANDLES_REQUIRED) {
-      throw new Error(`Insufficient data for ${symbol}. Yahoo Finance returned only ${candles.length} candles. Try using 1D timeframe for better results.`);
+      console.warn(`[Yahoo] Insufficient data for ${symbol}: only ${candles.length} candles after daily fallback. Returning available data.`);
+      return candles;
     }
 
     // Note: We're returning daily data even though user requested intraday
@@ -244,9 +318,10 @@ async function fetchYahooCandles(symbol: string, interval: string, limit: number
     console.log(`[Yahoo] Aggregated ${candles.length} 1h candles to ${finalCandles.length} ${originalInterval} candles for ${yahooSymbol}`);
   }
 
-  // Final validation
+  // Final validation - return whatever we have instead of throwing
   if (finalCandles.length < 10) {
-    throw new Error(`Unable to fetch sufficient data for ${symbol}. Only ${finalCandles.length} candles available. Please try a different timeframe (1D recommended for ETFs).`);
+    console.warn(`[Yahoo] Low candle count for ${symbol}: ${finalCandles.length} candles. Analysis may be less accurate.`);
+    return finalCandles;
   }
 
   setCache(cacheKey, finalCandles, CACHE_TTL.CANDLES);
@@ -325,16 +400,46 @@ async function fetchYahooTicker(symbol: string): Promise<MarketData> {
 
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=2d`;
 
-  const response = await fetchWithRetry(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    },
-  });
-
-  const data = await response.json();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any;
+  try {
+    const response = await fetchWithRetry(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    });
+    data = await response.json();
+  } catch (fetchError) {
+    const errMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+    console.warn(`[Yahoo] Ticker fetch failed for ${symbol}: ${errMsg}. Returning zero-price fallback.`);
+    const assetClass = detectAssetClass(symbol);
+    return {
+      symbol: symbol.toUpperCase(),
+      assetClass,
+      price: 0,
+      change24h: 0,
+      changePercent24h: 0,
+      high24h: 0,
+      low24h: 0,
+      volume24h: 0,
+      lastUpdated: new Date(),
+    } as MarketData;
+  }
 
   if (!data.chart?.result?.[0]) {
-    throw new Error(`No data returned from Yahoo Finance for ${symbol}`);
+    console.warn(`[Yahoo] No ticker data returned for ${symbol}, returning zero-price fallback`);
+    const assetClass = detectAssetClass(symbol);
+    return {
+      symbol: symbol.toUpperCase(),
+      assetClass,
+      price: 0,
+      change24h: 0,
+      changePercent24h: 0,
+      high24h: 0,
+      low24h: 0,
+      volume24h: 0,
+      lastUpdated: new Date(),
+    } as MarketData;
   }
 
   const result = data.chart.result[0];
@@ -414,32 +519,51 @@ function cryptoToYahooSymbol(symbol: string): string {
 export async function fetchCandles(
   symbol: string,
   interval: string,
-  limit: number = 500
+  limit: number = 500,
+  endTime?: number
 ): Promise<CandleData[]> {
   const assetClass = detectAssetClass(symbol);
 
-  console.log(`[MultiAssetProvider] Fetching candles for ${symbol} (${assetClass}) - interval: ${interval}`);
+  console.log(`[MultiAssetProvider] Fetching candles for ${symbol} (${assetClass}) - interval: ${interval}${endTime ? ` endTime: ${new Date(endTime).toISOString()}` : ''}`);
 
   try {
     if (assetClass === 'crypto') {
+      // If Binance is known to be blocked, skip directly to Yahoo
+      if (isBinanceBlocked()) {
+        const yahooSymbol = cryptoToYahooSymbol(symbol);
+        return await fetchYahooCandles(yahooSymbol, interval, limit);
+      }
       try {
-        return await fetchBinanceCandles(symbol, interval, limit);
+        return await fetchBinanceCandles(symbol, interval, limit, endTime);
       } catch (binanceError) {
         // Binance failed (HTTP 451 geo-block, rate limit, etc.) — fallback to Yahoo Finance
         const errMsg = binanceError instanceof Error ? binanceError.message : String(binanceError);
         console.warn(`[MultiAssetProvider] Binance failed for ${symbol}: ${errMsg}. Falling back to Yahoo Finance.`);
         const yahooSymbol = cryptoToYahooSymbol(symbol);
-        return await fetchYahooCandles(yahooSymbol, interval, limit);
+        const candles = await fetchYahooCandles(yahooSymbol, interval, limit);
+        // For Yahoo fallback, filter by endTime manually if specified
+        if (endTime && candles.length > 0) {
+          const filtered = candles.filter(c => c.timestamp <= endTime);
+          return filtered.slice(-limit);
+        }
+        return candles;
       }
     } else {
       // stocks, bonds, metals, bist - use Yahoo Finance
       // BIST symbols use .IS suffix (e.g., THYAO.IS, GARAN.IS)
       const resolved = resolveSymbol(symbol);
-      return await fetchYahooCandles(resolved.normalized, interval, limit);
+      const candles = await fetchYahooCandles(resolved.normalized, interval, limit);
+      // For Yahoo, filter by endTime manually if specified
+      if (endTime && candles.length > 0) {
+        const filtered = candles.filter(c => c.timestamp <= endTime);
+        return filtered.slice(-limit);
+      }
+      return candles;
     }
   } catch (error) {
     console.error(`[MultiAssetProvider] Error fetching candles for ${symbol}:`, error);
-    throw error;
+    // Return empty array instead of throwing - callers handle empty candles gracefully
+    return [];
   }
 }
 
@@ -455,6 +579,22 @@ export async function fetchTicker(symbol: string): Promise<TickerData> {
 
   try {
     if (assetClass === 'crypto') {
+      // If Binance is known to be blocked, skip directly to Yahoo
+      if (isBinanceBlocked()) {
+        const yahooSymbol = cryptoToYahooSymbol(symbol);
+        const data = await fetchYahooTicker(yahooSymbol);
+        return {
+          symbol: symbol.toUpperCase().replace(/USDT|BUSD|USD|PERP|USDC$/, ''),
+          assetClass: 'crypto',
+          price: data.price,
+          change24h: data.change24h,
+          changePercent24h: data.changePercent24h,
+          high24h: data.high24h,
+          low24h: data.low24h,
+          volume24h: data.volume24h,
+          marketCap: data.marketCap,
+        };
+      }
       try {
         const data = await fetchBinanceTicker(symbol);
         return {
@@ -502,8 +642,19 @@ export async function fetchTicker(symbol: string): Promise<TickerData> {
       };
     }
   } catch (error) {
-    console.error(`[MultiAssetProvider] Error fetching ticker for ${symbol}:`, error);
-    throw error;
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[MultiAssetProvider] Error fetching ticker for ${symbol}: ${errMsg}. Returning zero-price fallback.`);
+    const assetClass = detectAssetClass(symbol);
+    return {
+      symbol: symbol.toUpperCase(),
+      assetClass,
+      price: 0,
+      change24h: 0,
+      changePercent24h: 0,
+      high24h: 0,
+      low24h: 0,
+      volume24h: 0,
+    };
   }
 }
 

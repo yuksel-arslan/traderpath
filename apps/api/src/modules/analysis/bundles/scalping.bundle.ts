@@ -43,6 +43,9 @@ const SCALPING_INDICATORS: ReadonlyArray<{ name: string; params?: Record<string,
 
   // --- Candlestick patterns ---
   { name: 'CANDLESTICK_PATTERNS' },
+
+  // --- Fibonacci (scalping'de Elliott Wave gereksiz - uzun vadeli yapı) ---
+  { name: 'FIBONACCI' },
 ] as const;
 
 export const SCALPING_INDICATOR_NAMES: readonly string[] = SCALPING_INDICATORS.map(i => i.name);
