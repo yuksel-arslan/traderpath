@@ -38,6 +38,25 @@ const MARKET_ASSETS: Record<string, string[]> = {
 // Maximum assets to analyze per run (API cost control)
 const MAX_ASSETS_PER_RUN = 5;
 
+// ─── AutoEdge Configuration ────────────────────────────────────────────────────────
+// AutoEdge v2:
+//   - Binance top 10 hacimli USDT perp (dinamik)
+//   - Hiyerarşik: 15m GO → 5m konfirmasyon → sinyal üret
+//   - LONG ve SHORT her iki yön
+//   - Sadece GO verdict + confidence ≥70
+const AUTOEDGE_CONFIG = {
+  topN:            10,                     // Binance'ten kaç varlık alınsın
+  primaryInterval: '15m',                  // 1. kademe analiz
+  confirmInterval: '5m',                   // 2. kademe konfirmasyon
+  tradeType:       'scalping' as const,
+  minConfidence:   70,
+  allowedVerdicts: ['GO'] as const,
+  cronSchedule:    '*/15 * * * *',
+  lockKey:         'autoedge-generator:running',
+  lockTTL:         600,                    // 10 dakika (10 varlık daha uzun sürer)
+} as const;
+// ─────────────────────────────────────────────────────────────────────────────────
+
 // Lock key to prevent concurrent runs
 const LOCK_KEY = 'signal-generator:running';
 const LOCK_TTL = 1800; // 30 minutes
@@ -355,10 +374,13 @@ function selectAssetsToAnalyze(
  * Run integrated 7-Step + MLIS Pro Analysis
  * This is a SINGLE analysis that includes both Classic steps and MLIS confirmation
  */
-async function runIntegratedAnalysis(symbol: string, assetClass: string): Promise<any | null> {
+async function runIntegratedAnalysis(
+  symbol: string,
+  assetClass: string,
+  interval: string = '1d',
+  tradeType: 'scalping' | 'dayTrade' | 'swing' = 'swing',
+): Promise<any | null> {
   try {
-    const tradeType = 'swing'; // Default for signals
-    const interval = '1d';
 
     // Create analysis record (system-generated for signal generation)
     const analysis = await prisma.analysis.create({
@@ -384,13 +406,15 @@ async function runIntegratedAnalysis(symbol: string, assetClass: string): Promis
       { marketPulse, assetScan, safetyCheck, timing, trapCheck }
     );
 
-    // Generate trade plan if verdict is positive
+    // Generate trade plan only for GO verdict
+    // WAIT, AVOID, CONDITIONAL_GO → trade plan oluşturulmaz (AutoEdge koşulu)
     let tradePlan = null;
-    if (['go', 'conditional_go'].includes(preliminaryVerdict.verdict)) {
+    if (preliminaryVerdict.verdict === 'go') {
       tradePlan = await analysisEngine.tradePlan(
         symbol,
         10000, // Default account size
-        tradeType
+        tradeType,
+        interval,
       );
     }
 
@@ -614,4 +638,303 @@ export function stopSignalGeneratorJob() {
  */
 export async function runSignalGenerationManually(): Promise<SignalGenerationResult> {
   return generateSignals();
+}
+
+// =============================================================================
+// AUTOEDGE SIGNAL GENERATOR v2
+// Top 10 Binance USDT perp (hacme göre dinamik)
+// Hiyerarşik: 15m GO → 5m konfirmasyon → sinyal üret (LONG + SHORT)
+// =============================================================================
+
+let autoedgeCronJob: ScheduledTask | null = null;
+
+/**
+ * Binance 24h ticker'dan en yüksek hacimli USDT perpetual sözleşmelerini döner.
+ * API key gerekmez.
+ */
+async function fetchTopBinanceSymbols(topN: number): Promise<string[]> {
+  try {
+    const res = await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr');
+    if (!res.ok) throw new Error(`Binance API ${res.status}`);
+    const tickers = await res.json() as Array<{ symbol: string; quoteVolume: string }>;
+
+    return tickers
+      .filter(t => t.symbol.endsWith('USDT'))
+      .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
+      .slice(0, topN)
+      .map(t => t.symbol.replace('USDT', ''));
+  } catch (err) {
+    console.error('[AutoEdge] Binance top symbols fetch failed:', err);
+    // Fallback — statik liste
+    return ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'AVAX', 'DOGE', 'LINK', 'DOT'];
+  }
+}
+
+/**
+ * Tek sembol için hiyerarşik analiz:
+ * 1. 15m analizi çalıştır — GO değilse dur
+ * 2. 5m analizi çalıştır — GO değilse dur
+ * 3. İkisi de GO + confidence ≥70 + MLIS confirm → sinyal üret
+ */
+async function runAutoEdgeHierarchicalAnalysis(symbol: string): Promise<{
+  signal: SignalData;
+  qualityEnrichment?: SignalQualityEnrichment;
+} | null> {
+
+  // ── 1. KADEME: 15m Analiz ─────────────────────────────────────────────────
+  console.log(`[AutoEdge] ${symbol} — 15m analiz başlıyor`);
+  const analysis15m = await runIntegratedAnalysis(
+    symbol, 'crypto',
+    AUTOEDGE_CONFIG.primaryInterval,
+    AUTOEDGE_CONFIG.tradeType,
+  );
+
+  if (!analysis15m) {
+    console.log(`[AutoEdge] ${symbol} 15m analiz başarısız`);
+    return null;
+  }
+
+  const verdict15m = analysis15m.verdict as string;
+  if (!AUTOEDGE_CONFIG.allowedVerdicts.includes(verdict15m as any)) {
+    console.log(`[AutoEdge] ${symbol} 15m verdict: ${verdict15m} — skip`);
+    return null;
+  }
+
+  const direction15m: 'long' | 'short' = analysis15m.direction === 'short' ? 'short' : 'long';
+  console.log(`[AutoEdge] ${symbol} 15m GO ✓ — direction: ${direction15m}`);
+
+  // ── 2. KADEME: 5m Konfirmasyon ────────────────────────────────────────────
+  console.log(`[AutoEdge] ${symbol} — 5m konfirmasyon başlıyor`);
+  const analysis5m = await runIntegratedAnalysis(
+    symbol, 'crypto',
+    AUTOEDGE_CONFIG.confirmInterval,
+    AUTOEDGE_CONFIG.tradeType,
+  );
+
+  if (!analysis5m) {
+    console.log(`[AutoEdge] ${symbol} 5m analiz başarısız`);
+    return null;
+  }
+
+  const verdict5m = analysis5m.verdict as string;
+  if (!AUTOEDGE_CONFIG.allowedVerdicts.includes(verdict5m as any)) {
+    console.log(`[AutoEdge] ${symbol} 5m verdict: ${verdict5m} — konfirmasyon yok, skip`);
+    return null;
+  }
+
+  const direction5m: 'long' | 'short' = analysis5m.direction === 'short' ? 'short' : 'long';
+
+  // Yön uyumu kontrolü — 15m ve 5m aynı yönü göstermeli
+  if (direction15m !== direction5m) {
+    console.log(`[AutoEdge] ${symbol} yön uyumsuz: 15m=${direction15m} 5m=${direction5m} — skip`);
+    return null;
+  }
+
+  console.log(`[AutoEdge] ${symbol} 5m GO ✓ — yön uyumu: ${direction15m}`);
+
+  // ── 3. Confidence & MLIS Kontrolü ────────────────────────────────────────
+  // İki analizin ortalaması alınır
+  const combinedScore = (analysis15m.totalScore + analysis5m.totalScore) / 2;
+  const combinedMlisConfidence = (
+    (analysis15m.mlisConfidence || 50) + (analysis5m.mlisConfidence || 50)
+  ) / 2;
+
+  const overallConfidence = calculateOverallConfidence(
+    combinedScore,
+    combinedMlisConfidence,
+    70,
+  );
+
+  if (overallConfidence < AUTOEDGE_CONFIG.minConfidence) {
+    console.log(`[AutoEdge] ${symbol} confidence ${overallConfidence}% < ${AUTOEDGE_CONFIG.minConfidence}% — skip`);
+    return null;
+  }
+
+  // Her iki analizden en az birinin MLIS onayı olmalı
+  if (!analysis15m.mlisConfirmation && !analysis5m.mlisConfirmation) {
+    console.log(`[AutoEdge] ${symbol} — MLIS ikisini de onaylamadı, skip`);
+    return null;
+  }
+
+  // Trade plan: 15m daha güvenilir SL/TP için 15m analizden al
+  if (!analysis15m.tradePlan) {
+    console.log(`[AutoEdge] ${symbol} — 15m trade plan yok, skip`);
+    return null;
+  }
+
+  // ── 4. Sinyal Oluştur ────────────────────────────────────────────────────
+  const signalData: SignalData = {
+    symbol,
+    assetClass: 'crypto',
+    market:     'crypto',
+    direction:  direction15m,
+    interval:   AUTOEDGE_CONFIG.primaryInterval,   // 15m sinyal
+    entryPrice:      analysis15m.tradePlan.averageEntry || 0,
+    stopLoss:        analysis15m.tradePlan.stopLoss?.price || 0,
+    takeProfit1:     analysis15m.tradePlan.takeProfits?.[0]?.price || 0,
+    takeProfit2:     analysis15m.tradePlan.takeProfits?.[1]?.price || 0,
+    riskRewardRatio: analysis15m.tradePlan.riskReward || 0,
+    classicVerdict:  'GO',
+    classicScore:    combinedScore,
+    mlisConfirmation:   analysis15m.mlisConfirmation || analysis5m.mlisConfirmation,
+    mlisRecommendation: analysis15m.mlisRecommendation,
+    mlisConfidence:     Math.round(combinedMlisConfidence),
+    overallConfidence,
+    winRateEstimate:    analysis15m.tradePlan.winRateEstimate,
+    capitalFlowPhase:   'mid',
+    capitalFlowBias:    'neutral',
+  };
+
+  // Quality score
+  let qualityEnrichment: SignalQualityEnrichment | undefined;
+  try {
+    const scoringInput: ScoringInput = {
+      signal: signalData,
+      rsi:          analysis15m.step7Result?.indicatorSummary?.rsi,
+      macdHistogram: analysis15m.step7Result?.indicatorSummary?.macdHistogram,
+      adx:          analysis15m.step7Result?.indicatorSummary?.adx,
+      volumeConfirm: analysis15m.step7Result?.indicatorSummary?.volumeConfirm,
+      atr:          analysis15m.step7Result?.indicatorSummary?.atr,
+      bbWidth:      analysis15m.step7Result?.indicatorSummary?.bbWidth,
+      l1LiquidityBias: 'neutral',
+      l2MarketPhase:   'mid',
+    };
+    qualityEnrichment = calculateSignalQuality(scoringInput);
+    console.log(`[AutoEdge] ${symbol} quality: ${qualityEnrichment.qualityScore.qualityScore}/100`);
+  } catch (e) {
+    console.warn(`[AutoEdge] Quality scoring failed for ${symbol}:`, e);
+  }
+
+  return { signal: signalData, qualityEnrichment };
+}
+
+/**
+ * Ana AutoEdge döngüsü:
+ * 1. Binance top 10 USDT perp çek
+ * 2. Her sembol için hiyerarşik analiz
+ * 3. Geçenleri sinyal olarak yayınla
+ */
+export async function generateAutoEdgeSignal(): Promise<SignalGenerationResult> {
+  const result: SignalGenerationResult = {
+    processed: 0,
+    generated: 0,
+    published: 0,
+    skipped:   0,
+    errors:    [],
+  };
+
+  try {
+    const tableExists = await checkSignalsTableExists();
+    if (!tableExists) return result;
+
+    if (redis) {
+      const acquired = await cache.setNX(AUTOEDGE_CONFIG.lockKey, '1', AUTOEDGE_CONFIG.lockTTL);
+      if (!acquired) {
+        console.log('[AutoEdge] Another instance running, skipping');
+        return result;
+      }
+    }
+
+    // Binance top 10
+    const symbols = await fetchTopBinanceSymbols(AUTOEDGE_CONFIG.topN);
+    console.log(`[AutoEdge] Scanning ${symbols.length} symbols:`, symbols.join(', '));
+
+    for (const symbol of symbols) {
+      try {
+        result.processed++;
+
+        // Duplicate kontrolü — son 15 dakikada bu sembol için sinyal var mı?
+        const dupLong  = await signalService.isDuplicateSignal(symbol, 'long',  0.25);
+        const dupShort = await signalService.isDuplicateSignal(symbol, 'short', 0.25);
+        if (dupLong && dupShort) {
+          console.log(`[AutoEdge] ${symbol} — duplicate, skip`);
+          result.skipped++;
+          continue;
+        }
+
+        // Hiyerarşik analiz
+        const analysisResult = await runAutoEdgeHierarchicalAnalysis(symbol);
+
+        if (!analysisResult) {
+          result.skipped++;
+          continue;
+        }
+
+        const { signal, qualityEnrichment } = analysisResult;
+
+        // Validation
+        const validation = signalService.validateSignalQuality(signal);
+        if (!validation.valid) {
+          console.log(`[AutoEdge] ${symbol} validation failed:`, validation.reasons);
+          result.skipped++;
+          continue;
+        }
+
+        // Kaydet
+        const signalId = await signalService.createSignal(signal, qualityEnrichment);
+        result.generated++;
+        console.log(`[AutoEdge] ✓ Signal created: ${symbol} ${signal.direction.toUpperCase()} @ ${AUTOEDGE_CONFIG.primaryInterval}`);
+
+        // Telegram
+        if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHANNEL_ID) {
+          try {
+            const message = formatTelegramSignal(signal, signalId, qualityEnrichment);
+            const telegramMsgId = await sendTelegramMessage(TELEGRAM_CHANNEL_ID, message);
+            await signalService.markAsPublished(signalId, telegramMsgId);
+            result.published++;
+          } catch (e) {
+            console.error(`[AutoEdge] Telegram failed for ${symbol}:`, e);
+          }
+        }
+
+        // Rate limit — analizler arası bekleme
+        await sleep(3000);
+
+      } catch (err) {
+        console.error(`[AutoEdge] Error for ${symbol}:`, err);
+        result.errors.push({
+          symbol,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+      }
+    }
+
+    console.log('[AutoEdge] Cycle complete:', result);
+    return result;
+
+  } catch (error) {
+    console.error('[AutoEdge] Fatal error:', error);
+    throw error;
+  } finally {
+    if (redis) await redis.del(AUTOEDGE_CONFIG.lockKey);
+  }
+}
+
+export function startAutoEdgeJob() {
+  if (autoedgeCronJob) {
+    console.log('[AutoEdge] Job already running');
+    return;
+  }
+  console.log(`[AutoEdge] Starting — top ${AUTOEDGE_CONFIG.topN} Binance USDT perp — ${AUTOEDGE_CONFIG.cronSchedule}`);
+  autoedgeCronJob = cron.schedule(AUTOEDGE_CONFIG.cronSchedule, async () => {
+    console.log('[AutoEdge] Cron triggered at', new Date().toISOString());
+    try {
+      await generateAutoEdgeSignal();
+    } catch (error) {
+      console.error('[AutoEdge] Cron error:', error);
+    }
+  });
+  console.log('[AutoEdge] Cron job started');
+}
+
+export function stopAutoEdgeJob() {
+  if (autoedgeCronJob) {
+    autoedgeCronJob.stop();
+    autoedgeCronJob = null;
+    console.log('[AutoEdge] Cron job stopped');
+  }
+}
+
+export async function runAutoEdgeManually(): Promise<SignalGenerationResult> {
+  return generateAutoEdgeSignal();
 }

@@ -19,6 +19,10 @@ export {
   stopSignalGeneratorJob,
   runSignalGenerationManually,
   generateSignals,
+  startAutoEdgeJob,
+  stopAutoEdgeJob,
+  runAutoEdgeManually,
+  generateAutoEdgeSignal,
 } from './signal-generator.job';
 export {
   startSignalOutcomeTracker,
