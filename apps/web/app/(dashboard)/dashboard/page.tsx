@@ -6,6 +6,7 @@
 // ===========================================
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
@@ -15,6 +16,9 @@ import {
   ArrowDownRight,
   AlertTriangle,
   RefreshCw,
+  Zap,
+  Activity,
+  Target,
 } from 'lucide-react';
 import { getApiUrl, authFetch } from '../../../lib/api';
 import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
@@ -339,6 +343,7 @@ const CACHE_DURATION = 5 * 60 * 1000;
 // Main Page
 // ===========================================
 export default function DashboardPage() {
+  const queryClient = useQueryClient();
   const [selectedMarkets, setSelectedMarkets] = useMarketFilter();
   const [bistSubSector, setBistSubSector] = useBistSubSector();
 
@@ -350,10 +355,15 @@ export default function DashboardPage() {
   const [platformPerformanceData, setPlatformPerformanceData] = useState<PlatformPerformanceData | null>(null);
   const [capitalFlow, setCapitalFlow] = useState<CapitalFlowSummary | null>(null);
   const [signalStats, setSignalStats] = useState<SignalStats | null>(null);
+  const [signalHealth, setSignalHealth] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const initialLoadDone = useRef(false);
+
+  // Admin detection from cached user-info query
+  const userInfo = queryClient.getQueryData<{ isAdmin?: boolean }>(['user-info']);
+  const isAdmin = userInfo?.isAdmin === true;
 
   // ===========================================
   // Data Fetching (preserved from original)
@@ -510,6 +520,20 @@ export default function DashboardPage() {
           };
           setSignalStats(newSignalStats);
         }
+      }
+
+      // Fetch signal health for admin users (generator + autoedge metrics)
+      const cachedUserInfo = queryClient.getQueryData<{ isAdmin?: boolean }>(['user-info']);
+      if (cachedUserInfo?.isAdmin) {
+        try {
+          const healthRes = await authFetch('/api/v1/signals/admin/health');
+          if (healthRes.ok) {
+            const healthData = await healthRes.json();
+            if (healthData.success) {
+              setSignalHealth(healthData.data);
+            }
+          }
+        } catch {}
       }
 
       try {
@@ -968,6 +992,164 @@ export default function DashboardPage() {
             {/* Quick Actions (full width) */}
             <IntelligenceQuickActions />
           </>
+        )}
+
+        {/* Admin-only: Signal Generator Stats */}
+        {isAdmin && signalStats && (
+          <div className="rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/[0.06]">
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                  <Activity className="w-4 h-4 text-indigo-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    Signal Generators
+                  </h3>
+                  <p className="text-[10px] text-gray-500 dark:text-white/40 uppercase tracking-wider">
+                    Admin Only
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/admin"
+                className="text-xs font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                Admin Panel &rarr;
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-5">
+              {/* Signal Generator (4h cycle) */}
+              <div className="rounded-lg p-4 bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06]">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="w-4 h-4 text-indigo-500" />
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Signal Generator</span>
+                </div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  {signalStats.totalSignals}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-white/40 mt-1">
+                  {signalStats.activeSignals} active
+                </p>
+                {signalHealth?.generator?.lastRunAt && (
+                  <p className="text-[10px] text-gray-400 dark:text-white/30 mt-2">
+                    Last: {new Date(signalHealth.generator.lastRunAt).toLocaleTimeString()}
+                  </p>
+                )}
+              </div>
+
+              {/* AutoEdge Stats */}
+              <div className="rounded-lg p-4 bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06]">
+                <div className="flex items-center gap-2 mb-3">
+                  <Zap className="w-4 h-4 text-[#00F5A0]" />
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">AutoEdge v2</span>
+                </div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  {signalHealth?.generator?.signalsGenerated ?? '—'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-white/40 mt-1">
+                  generated total
+                </p>
+                <p className="text-[10px] text-gray-400 dark:text-white/30 mt-2">
+                  15m→5m hierarchical
+                </p>
+              </div>
+
+              {/* Win Rate */}
+              <div className="rounded-lg p-4 bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06]">
+                <div className="flex items-center gap-2 mb-3">
+                  <Target className="w-4 h-4 text-[#00F5A0]" />
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Win Rate</span>
+                </div>
+                <p
+                  className="text-2xl font-bold"
+                  style={{
+                    color: signalStats.winRate >= 60 ? '#00F5A0' : signalStats.winRate >= 40 ? '#FFB800' : '#FF4757',
+                    fontFamily: "'JetBrains Mono', monospace",
+                  }}
+                >
+                  {signalStats.winRate.toFixed(1)}%
+                </p>
+                <p className="text-xs text-gray-500 dark:text-white/40 mt-1">
+                  {signalStats.closedSignals} closed
+                </p>
+              </div>
+
+              {/* Health Status */}
+              <div className="rounded-lg p-4 bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06]">
+                <div className="flex items-center gap-2 mb-3">
+                  <PulseDot
+                    color={signalHealth?.generator?.lastStatus === 'success' ? '#00F5A0' : '#FF4757'}
+                    size={6}
+                  />
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Health</span>
+                </div>
+                <p className="text-sm font-bold text-gray-900 dark:text-white capitalize">
+                  {signalHealth?.generator?.lastStatus ?? 'Unknown'}
+                </p>
+                {signalHealth?.generator?.consecutiveFailures > 0 && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {signalHealth.generator.consecutiveFailures} consecutive failures
+                  </p>
+                )}
+                {signalHealth?.generator?.averageConfidence > 0 && (
+                  <p className="text-xs text-gray-500 dark:text-white/40 mt-1">
+                    Avg confidence: {signalHealth.generator.averageConfidence.toFixed(0)}%
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Recent Signals Row */}
+            {signalStats.recentSignals.length > 0 && (
+              <div className="px-5 pb-5">
+                <p className="text-[10px] font-medium text-gray-500 dark:text-white/40 uppercase tracking-wider mb-3">
+                  Recent Signals
+                </p>
+                <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+                  {signalStats.recentSignals.map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex-shrink-0 rounded-lg px-4 py-3 bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06] min-w-[180px]"
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-1">
+                        <span className="text-sm font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          {s.symbol}
+                        </span>
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                          s.direction === 'long'
+                            ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10'
+                            : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10'
+                        }`}>
+                          {s.direction.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-400 dark:text-white/30">
+                          {new Date(s.publishedAt).toLocaleDateString()}
+                        </span>
+                        {s.pnlPercent != null && (
+                          <span
+                            className="text-xs font-bold"
+                            style={{
+                              color: s.pnlPercent >= 0 ? '#00F5A0' : '#FF4757',
+                              fontFamily: "'JetBrains Mono', monospace",
+                            }}
+                          >
+                            {s.pnlPercent >= 0 ? '+' : ''}{s.pnlPercent.toFixed(2)}%
+                          </span>
+                        )}
+                        {s.pnlPercent == null && s.outcome && (
+                          <span className="text-[10px] text-gray-400 capitalize">{s.outcome}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Tour trigger */}
