@@ -2673,7 +2673,7 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
 
     const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'DayTrade', swing: 'Swing' };
     const tradeType = data.tradeType ? tradeTypes[data.tradeType] || '' : '';
-    const dateStr = new Date().toISOString().split('T')[0];
+    const dateStr = new Date(data.generatedAt || Date.now()).toISOString().split('T')[0];
     const baseFileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_${dateStr}`;
 
     const snapshots: { base64: string; fileName: string }[] = [];

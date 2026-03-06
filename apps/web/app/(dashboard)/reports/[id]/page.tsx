@@ -318,7 +318,7 @@ export default function ReportViewPage() {
       const imageBase64 = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       const symbol = report.symbol || 'Report';
-      const date = new Date().toISOString().split('T')[0];
+      const date = new Date(report.generatedAt || Date.now()).toISOString().split('T')[0];
       link.download = `TraderPath_${symbol}_${date}.png`;
       link.href = imageBase64;
       link.click();
@@ -366,7 +366,7 @@ export default function ReportViewPage() {
       const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
       const link = document.createElement('a');
       const symbol = report.symbol || 'Report';
-      const date = new Date().toISOString().split('T')[0];
+      const date = new Date(report.generatedAt || Date.now()).toISOString().split('T')[0];
       link.download = `TraderPath_${symbol}_${date}.jpg`;
       link.href = imageBase64;
       link.click();
@@ -732,7 +732,7 @@ export default function ReportViewPage() {
                   support={report.assetScan?.levels?.support}
                   resistance={report.assetScan?.levels?.resistance}
                   tradeType={report.tradeType}
-                  interval={report.interval}
+                  interval={reportMeta?.interval || report.interval}
                   analysisTime={report.generatedAt}
                   fibonacciLevels={report.timing?.fibonacci?.levels}
                   elliottWave={report.assetScan?.elliottWave}

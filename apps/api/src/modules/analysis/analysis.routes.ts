@@ -6461,7 +6461,7 @@ Explain the key risks and what conditions would need to change before trading th
    */
   const chartCandlesSchema = z.object({
     symbol: z.string().min(1),
-    interval: z.enum(['5m', '15m', '30m', '1h', '4h', '1d']).default('1h'),
+    interval: z.enum(['5m', '15m', '30m', '1h', '2h', '4h', '1d', '1W']).default('1h'),
     limit: z.coerce.number().min(10).max(500).default(100),
     // Optional: fetch candles up to this timestamp (ms) for historical analysis viewing
     endTime: z.coerce.number().optional(),
