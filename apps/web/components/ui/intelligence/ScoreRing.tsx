@@ -23,18 +23,20 @@ export function ScoreRing({
   color,
   className,
 }: ScoreRingProps) {
+  // Guard against NaN/undefined/null scores
+  const safeScore = typeof score === 'number' && !isNaN(score) ? Math.max(0, Math.min(100, score)) : 0;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const [offset, setOffset] = useState(circumference);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setOffset(circumference - (score / 100) * circumference);
+      setOffset(circumference - (safeScore / 100) * circumference);
     }, 300);
     return () => clearTimeout(timer);
-  }, [score, circumference]);
+  }, [safeScore, circumference]);
 
-  const resolvedColor = color || getScoreColor(score);
+  const resolvedColor = color || getScoreColor(safeScore);
 
   return (
     <div className={className} style={{ width: size, height: size, position: 'relative' }}>
@@ -68,7 +70,7 @@ export function ScoreRing({
           className="font-bold text-gray-900 dark:text-white"
           style={{ fontSize: size * 0.28, fontFamily: "'JetBrains Mono', monospace" }}
         >
-          {score}
+          {safeScore}
         </span>
       </div>
     </div>

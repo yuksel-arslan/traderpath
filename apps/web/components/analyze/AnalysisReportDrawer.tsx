@@ -240,7 +240,7 @@ export function AnalysisReportDrawer({ analysisId, onClose }: AnalysisReportDraw
                   <div className="flex gap-4">
                     {/* Score */}
                     <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
-                      <ScoreRing score={analysis.totalScore ?? 0} size={72} strokeWidth={4} />
+                      <ScoreRing score={Math.round((analysis.totalScore ?? 0) * 10)} size={72} strokeWidth={4} />
                       <span className="text-[10px] text-gray-400 dark:text-white/30 mt-1 uppercase tracking-wider">Score</span>
                     </div>
 

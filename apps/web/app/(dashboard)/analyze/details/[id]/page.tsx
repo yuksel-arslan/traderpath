@@ -429,7 +429,7 @@ export default function AnalysisDetailsPage() {
               <CoinIcon symbol={analysis.symbol.replace(/USDT$/i, '')} size={48} className="w-10 h-10 sm:w-12 sm:h-12" />
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{analysis.symbol}/USDT Analysis</h1>
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{analysis.symbol}{isNonCrypto ? '' : '/USDT'} Analysis</h1>
                   {/* Timeframe Badge */}
                   <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-full uppercase">
                     {analysis.interval || '4H'}
@@ -924,7 +924,7 @@ export default function AnalysisDetailsPage() {
             <TradeDecisionVisual
               verdict={(step7.verdict || (Number(step7.overallScore) >= 7 ? 'go' : Number(step7.overallScore) >= 5 ? 'conditional_go' : Number(step7.overallScore) >= 3 ? 'wait' : 'avoid')) as 'go' | 'conditional_go' | 'wait' | 'avoid'}
               direction={isNeutral ? null : (isLong ? 'long' : 'short')}
-              score={Number(step7.overallScore) * 10 || Number(analysis.totalScore) * 10 || 50}
+              score={typeof step7.overallScore === 'number' ? step7.overallScore * 10 : (analysis.totalScore ?? 5) * 10}
               symbol={analysis.symbol}
               size="lg"
             />
