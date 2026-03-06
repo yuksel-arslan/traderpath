@@ -220,6 +220,14 @@ const nextConfig = {
         source: '/api/scheduled/:path*',
         destination: 'http://127.0.0.1:4000/api/scheduled/:path*',
       },
+      {
+        source: '/api/v1/:path*',
+        destination: 'http://127.0.0.1:4000/api/v1/:path*',
+      },
+      {
+        source: '/api/weekly-plans/:path*',
+        destination: 'http://127.0.0.1:4000/api/weekly-plans/:path*',
+      },
     ];
   },
 
