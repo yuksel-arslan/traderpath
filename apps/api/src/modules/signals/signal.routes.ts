@@ -348,6 +348,7 @@ export async function signalRoutes(fastify: FastifyInstance) {
       try {
         const health = await signalMonitoring.getSystemHealth();
         const generatorMetrics = await signalMonitoring.getGeneratorMetrics();
+        const autoedgeMetrics = await signalMonitoring.getAutoEdgeMetrics();
         const trackerMetrics = await signalMonitoring.getTrackerMetrics();
 
         return reply.send({
@@ -356,6 +357,7 @@ export async function signalRoutes(fastify: FastifyInstance) {
             ...health,
             metrics: {
               generator: generatorMetrics,
+              autoedge: autoedgeMetrics,
               tracker: trackerMetrics,
             },
           },

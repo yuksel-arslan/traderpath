@@ -6,6 +6,7 @@
 // ===========================================
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
@@ -15,6 +16,9 @@ import {
   ArrowDownRight,
   AlertTriangle,
   RefreshCw,
+  Zap,
+  Activity,
+  Target,
 } from 'lucide-react';
 import { getApiUrl, authFetch } from '../../../lib/api';
 import { OnboardingTour, TourTriggerButton, TourStep } from '@/components/onboarding/OnboardingTour';
@@ -339,6 +343,7 @@ const CACHE_DURATION = 5 * 60 * 1000;
 // Main Page
 // ===========================================
 export default function DashboardPage() {
+  const queryClient = useQueryClient();
   const [selectedMarkets, setSelectedMarkets] = useMarketFilter();
   const [bistSubSector, setBistSubSector] = useBistSubSector();
 
@@ -350,10 +355,15 @@ export default function DashboardPage() {
   const [platformPerformanceData, setPlatformPerformanceData] = useState<PlatformPerformanceData | null>(null);
   const [capitalFlow, setCapitalFlow] = useState<CapitalFlowSummary | null>(null);
   const [signalStats, setSignalStats] = useState<SignalStats | null>(null);
+  const [signalHealth, setSignalHealth] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const initialLoadDone = useRef(false);
+
+  // Admin detection from cached user-info query
+  const userInfo = queryClient.getQueryData<{ isAdmin?: boolean }>(['user-info']);
+  const isAdmin = userInfo?.isAdmin === true;
 
   // ===========================================
   // Data Fetching (preserved from original)
@@ -510,6 +520,20 @@ export default function DashboardPage() {
           };
           setSignalStats(newSignalStats);
         }
+      }
+
+      // Fetch signal health for admin users (generator + autoedge metrics)
+      const cachedUserInfo = queryClient.getQueryData<{ isAdmin?: boolean }>(['user-info']);
+      if (cachedUserInfo?.isAdmin) {
+        try {
+          const healthRes = await authFetch('/api/v1/signals/admin/health');
+          if (healthRes.ok) {
+            const healthData = await healthRes.json();
+            if (healthData.success) {
+              setSignalHealth(healthData.data);
+            }
+          }
+        } catch {}
       }
 
       try {
@@ -968,6 +992,179 @@ export default function DashboardPage() {
             {/* Quick Actions (full width) */}
             <IntelligenceQuickActions />
           </>
+        )}
+
+        {/* Admin-only: Signal Generator Stats */}
+        {isAdmin && signalStats && (
+          <div className="rounded-xl bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/[0.06]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/[0.06]">
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                  <Activity className="w-4 h-4 text-indigo-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    Signal Generators
+                  </h3>
+                  <p className="text-[10px] text-gray-500 dark:text-white/40 uppercase tracking-wider">
+                    Admin Only
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/admin"
+                className="text-xs font-medium text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                Admin Panel &rarr;
+              </Link>
+            </div>
+
+            {/* Generator Status Rows */}
+            <div className="space-y-2 px-5 pt-4">
+              {/* Signal Generator (4h) */}
+              <div className="flex items-center justify-between rounded-lg px-4 py-3 bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06]">
+                <div className="flex items-center gap-3">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${
+                    signalHealth?.generator?.active ? 'bg-green-500 animate-pulse' :
+                    signalHealth?.generator?.status === 'never_run' ? 'bg-gray-400' : 'bg-red-500'
+                  }`} />
+                  <TrendingUp className="w-4 h-4 text-indigo-500 shrink-0" />
+                  <div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">Signal Generator</span>
+                    <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                      signalHealth?.generator?.active
+                        ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                    }`}>
+                      {signalHealth?.generator?.active ? 'ACTIVE' : signalHealth?.generator?.status === 'never_run' ? 'NOT STARTED' : 'INACTIVE'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-right">
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      {signalHealth?.metrics?.generator?.signalsGenerated ?? 0}
+                    </p>
+                    <p className="text-[10px] text-gray-400 dark:text-white/30">signals</p>
+                  </div>
+                  {signalHealth?.generator?.lastRun && (
+                    <p className="text-[10px] text-gray-400 dark:text-white/30">
+                      {new Date(signalHealth.generator.lastRun).toLocaleTimeString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* AutoEdge (15m) */}
+              <div className="flex items-center justify-between rounded-lg px-4 py-3 bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06]">
+                <div className="flex items-center gap-3">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${
+                    signalHealth?.autoedge?.active ? 'bg-green-500 animate-pulse' :
+                    signalHealth?.autoedge?.status === 'never_run' ? 'bg-gray-400' : 'bg-red-500'
+                  }`} />
+                  <Zap className="w-4 h-4 text-[#00F5A0] shrink-0" />
+                  <div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">AutoEdge v2</span>
+                    <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                      signalHealth?.autoedge?.active
+                        ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                    }`}>
+                      {signalHealth?.autoedge?.active ? 'ACTIVE' : signalHealth?.autoedge?.status === 'never_run' ? 'NOT STARTED' : 'INACTIVE'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-right">
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      {signalHealth?.metrics?.autoedge?.signalsGenerated ?? 0}
+                    </p>
+                    <p className="text-[10px] text-gray-400 dark:text-white/30">signals</p>
+                  </div>
+                  {signalHealth?.autoedge?.lastRun && (
+                    <p className="text-[10px] text-gray-400 dark:text-white/30">
+                      {new Date(signalHealth.autoedge.lastRun).toLocaleTimeString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Summary Stats Row */}
+            <div className="grid grid-cols-3 divide-x divide-gray-100 dark:divide-white/[0.06] px-5 py-3">
+              <div className="text-center">
+                <p className="text-[10px] text-gray-500 dark:text-white/35 mb-1">Total Signals</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  {signalStats.totalSignals}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-gray-500 dark:text-white/35 mb-1">Win Rate</p>
+                <p
+                  className="text-lg font-bold"
+                  style={{
+                    color: signalStats.winRate >= 60 ? '#00F5A0' : signalStats.winRate >= 40 ? '#FFB800' : '#FF4757',
+                    fontFamily: "'JetBrains Mono', monospace",
+                  }}
+                >
+                  {signalStats.winRate.toFixed(1)}%
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-gray-500 dark:text-white/35 mb-1">Active</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  {signalStats.activeSignals}
+                </p>
+              </div>
+            </div>
+
+            {/* Recent Signals Row */}
+            {signalStats.recentSignals.length > 0 && (
+              <div className="px-5 pb-5">
+                <p className="text-[10px] font-medium text-gray-500 dark:text-white/40 uppercase tracking-wider mb-3">
+                  Recent Signals
+                </p>
+                <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+                  {signalStats.recentSignals.map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex-shrink-0 rounded-lg px-4 py-3 bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06] min-w-[180px]"
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-1">
+                        <span className="text-sm font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          {s.symbol}
+                        </span>
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                          s.direction === 'long'
+                            ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10'
+                            : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10'
+                        }`}>
+                          {s.direction.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-gray-400 dark:text-white/30">
+                          {new Date(s.publishedAt).toLocaleDateString()}
+                        </span>
+                        {s.pnlPercent != null && (
+                          <span
+                            className="text-xs font-bold"
+                            style={{
+                              color: s.pnlPercent >= 0 ? '#00F5A0' : '#FF4757',
+                              fontFamily: "'JetBrains Mono', monospace",
+                            }}
+                          >
+                            {s.pnlPercent >= 0 ? '+' : ''}{s.pnlPercent.toFixed(2)}%
+                          </span>
+                        )}
+                        {s.pnlPercent == null && s.outcome && (
+                          <span className="text-[10px] text-gray-400 capitalize">{s.outcome}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Tour trigger */}
