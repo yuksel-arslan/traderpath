@@ -67,7 +67,10 @@ class ForecastBandService {
     },
     enhanceWithAI: boolean = false,
   ): Promise<ForecastBandResult> {
-    const cacheKey = `${CACHE_PREFIX}:${symbol}:${assetClass}`;
+    // Cache key must include direction and ATR bucket to prevent cross-timeframe collisions
+    // ATR is bucketed (rounded to 3 sig figs) to allow minor price fluctuations to hit cache
+    const atrBucket = engineData.atr > 0 ? Math.round(engineData.atr * 1000) / 1000 : 0;
+    const cacheKey = `${CACHE_PREFIX}:${symbol}:${assetClass}:${engineData.direction}:${atrBucket}`;
     const cached = await this.getFromCache<ForecastBandResult>(cacheKey);
     if (cached) return cached;
 
@@ -228,7 +231,15 @@ Respond in JSON:
   "long": { "drivers": ["driver1", "driver2"], "invalidations": ["inv1"] }
 }`;
 
-    const response = await callGeminiWithRetry(prompt, { type: 'default', maxOutputTokens: 300 });
+    const response = await callGeminiWithRetry(
+      {
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 300 },
+      },
+      3,
+      'forecast_band_drivers',
+      'default',
+    );
 
     try {
       const jsonMatch = response.text.match(/\{[\s\S]*\}/);

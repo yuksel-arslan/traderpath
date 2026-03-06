@@ -4,7 +4,6 @@
  */
 
 export * from './indicators.service';
-export * from './analysis-orchestrator.service';
 export * from './tokenomics.service';
 export * from './orderbook.service';
 export * from './news.service';

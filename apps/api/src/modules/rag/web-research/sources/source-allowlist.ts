@@ -10,6 +10,7 @@
  */
 
 import { TrustedSource, SourceTier } from '../../types';
+import type { AssetClass } from '../../../analysis/types/asset-metrics.types';
 
 // ============================================================================
 // TIER SCORING

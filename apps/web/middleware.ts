@@ -21,12 +21,10 @@ const protectedPaths = [
   '/ai-expert',
   '/concierge',
   '/scheduled',
-  '/signals',
   '/methodology',
   '/top-coins',
   '/notifications',
   '/terminal',
-  '/trades',
 ];
 
 // Routes that should redirect to dashboard if already authenticated
@@ -97,11 +95,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Redirect to terminal if accessing login/register while authenticated
+  // Redirect to dashboard if accessing login/register while authenticated
   // (but not for public auth pages like forgot-password, verify-email, etc.)
   if (isAuthPage && !isPublicAuthPage && isLoggedIn) {
-    const terminalUrl = new URL('/terminal', request.url);
-    return NextResponse.redirect(terminalUrl);
+    const dashboardUrl = new URL('/dashboard', request.url);
+    return NextResponse.redirect(dashboardUrl);
   }
 
   return NextResponse.next();

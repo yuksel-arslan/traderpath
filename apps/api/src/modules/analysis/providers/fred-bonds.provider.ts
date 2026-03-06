@@ -83,14 +83,12 @@ const YAHOO_INTERVALS: Record<string, string> = {
   '1h': '60m',
   '4h': '60m',
   '1d': '1d',
-  '1w': '1wk',
 };
 
 const YAHOO_RANGES: Record<string, string> = {
   '1h': '1mo',
   '4h': '6mo',
   '1d': '1y',
-  '1w': '5y',
 };
 
 // Cache TTLs
@@ -113,7 +111,7 @@ export class FREDBondsProvider extends MarketDataProvider {
     hasNews: true,
     hasFutures: false,
     hasRealtime: false,
-    supportedTimeframes: ['1h', '4h', '1d', '1w'],
+    supportedTimeframes: ['1h', '4h', '1d'],
     maxCandleLimit: 250,
   };
 
@@ -356,7 +354,7 @@ export class FREDBondsProvider extends MarketDataProvider {
     }
   }
 
-  async fetchFundamentals(symbol: string): Promise<BondFundamentals> {
+  override async fetchFundamentals(symbol: string): Promise<BondFundamentals> {
     const resolved = this.resolveSymbol(symbol);
 
     if (this.isTreasuryYield(resolved.normalized)) {
@@ -399,14 +397,25 @@ export class FREDBondsProvider extends MarketDataProvider {
    * Fetch Bond ETF fundamentals
    */
   private async fetchBondETFFundamentals(symbol: string): Promise<BondFundamentals> {
-    const marketData = await this.fetchBondETFMarketData(symbol);
+    // Fetch ETF yield from Yahoo Finance quoteSummary
+    let yieldRate = 0;
+    try {
+      const url = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=summaryDetail`;
+      const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      const data = await response.json();
+      const summaryDetail = data.quoteSummary?.result?.[0]?.summaryDetail || {};
+      yieldRate =
+        summaryDetail.yield?.raw ||
+        summaryDetail.trailingAnnualDividendYield?.raw ||
+        0;
+    } catch {
+      // Ignore Yahoo Finance errors, yield stays 0
+    }
 
-    // ETF-specific yield data would need additional API
-    // For now, return basic fundamentals
     return {
       symbol,
       assetClass: 'bonds',
-      yield: 0, // Would need ETF-specific yield data
+      yield: yieldRate,
       lastUpdated: new Date(),
     };
   }

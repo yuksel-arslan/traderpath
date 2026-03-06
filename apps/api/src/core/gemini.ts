@@ -5,6 +5,7 @@
 
 import { config } from './config';
 import { redis } from './cache';
+import { logger } from './logger';
 // @ts-ignore - SDK types may not be fully compatible
 import { GoogleGenAI } from '@google/genai';
 
@@ -88,6 +89,12 @@ export interface GeminiRequestOptions {
   safetySettings?: Array<{ category: string; threshold: string }>;
 }
 
+// Content type for multi-turn conversations
+interface GeminiContent {
+  role: string;
+  parts: Array<{ text: string }>;
+}
+
 export interface GeminiResponse {
   candidates?: Array<{
     content?: {
@@ -140,23 +147,47 @@ export function extractRetryDelay(error: unknown): number {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function convertResponse(response: any): GeminiResponse {
-  // New SDK provides .text getter directly
-  if (response.text) {
+  // Try to get text from SDK response (may throw if safety-blocked)
+  let textValue: string | undefined;
+  try {
+    textValue = response.text;
+  } catch {
+    // .text getter can throw if response was blocked by safety filters
+    textValue = undefined;
+  }
+
+  if (textValue) {
     return {
       candidates: [{
         content: {
-          parts: [{ text: response.text }],
+          parts: [{ text: textValue }],
         },
       }],
       usageMetadata: response.usageMetadata ? {
         promptTokenCount: response.usageMetadata.promptTokenCount,
         candidatesTokenCount: response.usageMetadata.candidatesTokenCount,
       } : undefined,
-      text: response.text,
+      text: textValue,
     };
   }
 
-  // Fallback to legacy format
+  // Fallback: extract from candidates array
+  const candidateText = response.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (candidateText) {
+    return {
+      candidates: [{
+        content: {
+          parts: [{ text: candidateText }],
+        },
+      }],
+      usageMetadata: response.usageMetadata ? {
+        promptTokenCount: response.usageMetadata.promptTokenCount,
+        candidatesTokenCount: response.usageMetadata.candidatesTokenCount,
+      } : undefined,
+    };
+  }
+
+  // No text found - return empty response structure
   return {
     candidates: response.candidates?.map((candidate: { content?: { parts?: Array<{ text?: string }> } }) => ({
       content: {
@@ -212,15 +243,27 @@ export async function callGeminiWithRetry(
     attempt++;
 
     try {
-      // Build the prompt from contents
-      const prompt = options.contents
-        .map(content => content.parts.map(part => part.text).join('\n'))
-        .join('\n\n');
+      // Build contents for the SDK - preserve conversation structure when roles exist
+      const hasRoles = options.contents.some(c => c.role && c.role !== 'user');
+      let contents: string | Array<{ role: string; parts: Array<{ text: string }> }>;
+
+      if (hasRoles) {
+        // Multi-turn conversation: pass structured content with roles
+        contents = options.contents.map(c => ({
+          role: c.role === 'model' || c.role === 'assistant' ? 'model' : 'user',
+          parts: c.parts.map(p => ({ text: p.text })),
+        }));
+      } else {
+        // Single prompt: flatten to string
+        contents = options.contents
+          .map(content => content.parts.map(part => part.text).join('\n'))
+          .join('\n\n');
+      }
 
       // Call the SDK
       const response = await getGenAI().models.generateContent({
         model: modelName,
-        contents: prompt,
+        contents,
         config: {
           temperature: options.generationConfig.temperature,
           topP: options.generationConfig.topP,
@@ -316,13 +359,24 @@ export async function callGemini(options: GeminiRequestOptions): Promise<GeminiR
     throw new Error('GEMINI_API_KEY is not configured.');
   }
 
-  const prompt = options.contents
-    .map(content => content.parts.map(part => part.text).join('\n'))
-    .join('\n\n');
+  // Preserve conversation structure when roles exist
+  const hasRoles = options.contents.some(c => c.role && c.role !== 'user');
+  let contents: string | Array<{ role: string; parts: Array<{ text: string }> }>;
+
+  if (hasRoles) {
+    contents = options.contents.map(c => ({
+      role: c.role === 'model' || c.role === 'assistant' ? 'model' : 'user',
+      parts: c.parts.map(p => ({ text: p.text })),
+    }));
+  } else {
+    contents = options.contents
+      .map(content => content.parts.map(part => part.text).join('\n'))
+      .join('\n\n');
+  }
 
   const response = await getGenAI().models.generateContent({
     model: DEFAULT_GEMINI_MODEL,
-    contents: prompt,
+    contents,
     config: {
       temperature: options.generationConfig.temperature,
       topP: options.generationConfig.topP,

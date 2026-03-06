@@ -5,8 +5,6 @@
 
 import { prisma } from '../../core/database';
 import { emailService } from '../email/email.service';
-import { generateCandlestickSVG, svgToBase64DataUrl } from './svg-chart-generator';
-import { fetchCandles } from '../analysis/providers/multi-asset-data-provider';
 
 // Known non-crypto symbols
 const KNOWN_NON_CRYPTO = new Set([
@@ -56,9 +54,8 @@ export async function sendBeforeAfterReport(data: OutcomeData): Promise<void> {
 
     if (!analysis || !analysis.user?.email) return;
 
-    const step1 = analysis.step1Result as Record<string, unknown> | null;
     const step5 = analysis.step5Result as Record<string, unknown> | null;
-    if (!step1 || !step5) return;
+    if (!step5) return;
 
     // Extract trade plan
     const direction = ((step5.direction as string) || 'long').toLowerCase();
@@ -74,59 +71,6 @@ export async function sendBeforeAfterReport(data: OutcomeData): Promise<void> {
     const tp1 = Number(tpData?.[0]?.price) || 0;
     const tp2 = Number(tpData?.[1]?.price) || 0;
 
-    const levels = [
-      entry > 0 ? { price: entry, color: '#facc15', label: 'Entry' } : null,
-      stopLoss > 0 ? { price: stopLoss, color: '#ef4444', label: 'SL' } : null,
-      tp1 > 0 ? { price: tp1, color: '#22c55e', label: 'TP1' } : null,
-      tp2 > 0 ? { price: tp2, color: '#4ade80', label: 'TP2' } : null,
-    ].filter(Boolean) as Array<{ price: number; color: string; label: string }>;
-
-    // === BEFORE CHART ===
-    // chartCandles saved at analysis time (last 50 candles)
-    const beforeCandles = (step1.chartCandles as Array<{
-      timestamp: number; open: number; high: number; low: number; close: number; volume: number;
-    }>) || [];
-
-    const beforeSvg = generateCandlestickSVG(beforeCandles, {
-      title: 'BEFORE - Analysis Time',
-      subtitle: new Date(analysis.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-      levels,
-      marker: {
-        timestamp: analysis.createdAt.getTime(),
-        label: 'Analysis',
-        color: '#818cf8',
-      },
-    });
-
-    // === AFTER CHART ===
-    // Fetch fresh candles from analysis creation until now
-    let afterCandles: Array<{ timestamp: number; open: number; high: number; low: number; close: number; volume: number }> = [];
-    try {
-      const raw = await fetchCandles(analysis.symbol, analysis.interval || '4h', 100);
-      afterCandles = raw.slice(-50);
-    } catch (err) {
-      console.error(`[BeforeAfterReport] Failed to fetch after candles for ${analysis.symbol}:`, err);
-    }
-
-    const outcomeLabel = data.outcome.includes('tp') ? 'TP HIT' : 'SL HIT';
-    const outcomeColor = data.outcome.includes('tp') ? '#22c55e' : '#ef4444';
-
-    const afterLevels = [
-      ...levels,
-      { price: data.outcomePrice, color: outcomeColor, label: outcomeLabel, dashArray: '2,2' },
-    ];
-
-    const afterSvg = generateCandlestickSVG(afterCandles, {
-      title: `AFTER - ${outcomeLabel}`,
-      subtitle: data.outcomeAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-      levels: afterLevels,
-      marker: {
-        timestamp: data.outcomeAt.getTime(),
-        label: outcomeLabel,
-        color: outcomeColor,
-      },
-    });
-
     // Calculate P/L
     const isTP = data.outcome.includes('tp');
     let pnlPercent = 0;
@@ -136,16 +80,13 @@ export async function sendBeforeAfterReport(data: OutcomeData): Promise<void> {
         : ((entry - data.outcomePrice) / entry) * 100;
     }
 
-    const beforeBase64 = svgToBase64DataUrl(beforeSvg);
-    const afterBase64 = svgToBase64DataUrl(afterSvg);
-
     // Calculate trade duration
     const durationMs = data.outcomeAt.getTime() - analysis.createdAt.getTime();
     const durationHrs = Math.floor(durationMs / (1000 * 60 * 60));
     const durationMins = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
     const durationStr = durationHrs > 0 ? `${durationHrs}h ${durationMins}m` : `${durationMins}m`;
 
-    // Send email
+    // Send email (charts removed — users view them on the platform)
     await emailService.sendBeforeAfterReport(analysis.user.email, {
       userName: analysis.user.name || 'Trader',
       symbol: analysis.symbol,
@@ -159,8 +100,6 @@ export async function sendBeforeAfterReport(data: OutcomeData): Promise<void> {
       outcomePrice: data.outcomePrice,
       pnlPercent,
       duration: durationStr,
-      beforeChartBase64: beforeBase64,
-      afterChartBase64: afterBase64,
       analysisId: data.analysisId,
       analysisDate: analysis.createdAt,
       outcomeDate: data.outcomeAt,

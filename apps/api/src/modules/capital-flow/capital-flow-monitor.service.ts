@@ -181,7 +181,7 @@ export async function checkTradeFlowHealth(
 
   // Cache result
   try {
-    await redis.set(cacheKey, JSON.stringify(status), 'EX', FLOW_MONITOR_CACHE_TTL);
+    await redis.setex(cacheKey, FLOW_MONITOR_CACHE_TTL, JSON.stringify(status));
   } catch { /* ignore cache errors */ }
 
   return status;
@@ -604,7 +604,7 @@ export async function runFlowHealthCheck(
     // Store alerts in Redis for API consumption
     try {
       const alertsKey = 'flow_monitor:alerts:latest';
-      await redis.set(alertsKey, JSON.stringify(allAlerts), 'EX', 600); // 10 min TTL
+      await redis.setex(alertsKey, 600, JSON.stringify(allAlerts)); // 10 min TTL
     } catch { /* ignore cache errors */ }
   }
 

@@ -61,6 +61,7 @@ class RAGOrchestrator {
       bbWidth?: number;
       trendStrength?: number;
       volume24hRatio?: number;
+      volume24h?: number;
       macdHistogram?: number;
       // Existing engine trade plan (optional, null if WAIT/AVOID)
       tradePlan?: {
@@ -169,7 +170,7 @@ class RAGOrchestrator {
       assetClass,
       currentPrice: engineOutput.currentPrice,
       atr: engineOutput.atr,
-      volume24h: 0, // TODO: pass from engine
+      volume24h: engineOutput.volume24h ?? 0,
       marketRegime: '',
       capitalFlowPhase: capitalFlowContext?.phase || null,
       capitalFlowBias: capitalFlowContext?.bias || null,

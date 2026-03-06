@@ -27,6 +27,21 @@ const SERIES = {
 
 const FRED_BASE_URL = 'https://api.stlouisfed.org/fred/series/observations';
 
+// Track whether FRED is returning live data or fallback
+let _fredLiveFetches = 0;
+let _fredFallbackFetches = 0;
+
+/** Returns true if the most recent FRED fetch cycle used live data */
+export function isFredLive(): boolean {
+  return _fredLiveFetches > 0 && _fredFallbackFetches === 0;
+}
+
+/** Reset fetch counters (call at the start of each summary generation) */
+export function resetFredCounters(): void {
+  _fredLiveFetches = 0;
+  _fredFallbackFetches = 0;
+}
+
 function getFredApiKey(): string {
   return process.env['FRED_API_KEY'] || '';
 }
@@ -41,7 +56,8 @@ async function fetchFredSeries(
   const apiKey = getFredApiKey();
 
   if (!apiKey) {
-    console.warn('[FRED] No API key configured, using fallback data');
+    console.warn('[FRED] No API key configured, using fallback data for', seriesId);
+    _fredFallbackFetches++;
     return getFallbackData(seriesId);
   }
 
@@ -65,14 +81,23 @@ async function fetchFredSeries(
 
     const data: FredResponse = await response.json();
 
-    return data.observations
+    const observations = data.observations
       .filter(obs => obs.value !== '.')
       .map(obs => ({
         date: obs.date,
         value: parseFloat(obs.value),
       }));
+
+    if (observations.length > 0) {
+      _fredLiveFetches++;
+    } else {
+      _fredFallbackFetches++;
+    }
+
+    return observations;
   } catch (error) {
     console.error(`[FRED] Error fetching ${seriesId}:`, error);
+    _fredFallbackFetches++;
     return getFallbackData(seriesId);
   }
 }

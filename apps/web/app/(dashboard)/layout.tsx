@@ -7,7 +7,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard,
-  TrendingUp,
   Gift,
   Bell,
   Settings,
@@ -17,14 +16,9 @@ import {
   User,
   ChevronDown,
   Server,
-  Brain,
-  Calendar,
   Bot,
-  Activity,
   FileText,
   Inbox,
-  ShieldAlert,
-  Sparkles,
   Monitor,
   BarChart3,
   FlaskConical,
@@ -43,10 +37,11 @@ const PriceTicker = dynamic(
 
 // Primary navigation - Top-Down Methodology Flow (L1→L7)
 const directNav = [
+  { name: 'Concierge', href: '/concierge', icon: Bot },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Analyzer', href: '/analyze', icon: BarChart3 },
   { name: 'Terminal', href: '/terminal', icon: Monitor },
-  { name: 'Analyze', href: '/analyze', icon: BarChart3 },
-  { name: 'Signals', href: '/signals', icon: Activity },
-  { name: 'Trades', href: '/trades', icon: TrendingUp },
+  { name: 'Reports', href: '/reports', icon: FileText },
 ];
 
 // Dropdown navigation groups
@@ -55,12 +50,9 @@ const dropdownNav = [
     name: 'More',
     icon: Settings,
     items: [
-      { name: 'Concierge', href: '/concierge', icon: Bot },
-      { name: 'Reports', href: '/reports', icon: FileText },
-      { name: 'Backtest', href: '/methodology', icon: FlaskConical },
-      { name: 'Smart Alerts', href: '/alerts/smart', icon: ShieldAlert },
-      { name: 'Scheduled', href: '/scheduled', icon: Calendar },
+      { name: 'Price Alerts', href: '/alerts', icon: Bell },
       { name: 'Notifications', href: '/notifications', icon: Inbox },
+      { name: 'Methodology', href: '/methodology', icon: FlaskConical },
     ],
   },
 ];
@@ -296,8 +288,8 @@ export default function DashboardLayout({
       <PriceTicker />
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg supports-[backdrop-filter]:bg-card/60 border-b border-border/50">
-        <div className="w-full px-1 sm:px-3 lg:px-4">
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60 border-b border-border/50">
+        <div className="w-full pl-0 pr-1 sm:pr-3 lg:pr-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <TraderPathLogo size="sm" showText={true} showTagline={false} href="/terminal" className="flex sm:hidden" />
@@ -647,11 +639,13 @@ export default function DashboardLayout({
 
       {/* Page content */}
       <main className="min-h-[calc(100vh-4rem)]">
-        {children}
+        <div key={pathname} className="animate-in fade-in slide-in-from-bottom-3 duration-200 ease-out">
+          {children}
+        </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-card/50 py-4">
+      <footer className="border-t border-border bg-background py-4">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} TraderPath. All rights reserved.

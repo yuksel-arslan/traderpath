@@ -12,39 +12,30 @@ import {
   Mic,
   MicOff,
   Send,
-  Sparkles,
   TrendingUp,
-  TrendingDown,
   Target,
-  Zap,
   ArrowRight,
   ExternalLink,
   RefreshCw,
   Globe,
   Activity,
-  BarChart3,
-  Layers,
-  ArrowUpRight,
-  ArrowDownRight,
   Clock,
-  AlertTriangle,
-  CheckCircle2,
   Crown,
-  DollarSign,
-  PieChart,
+  ChevronRight,
+  Compass,
+  Zap,
+  BookOpen,
+  Brain,
+  LineChart,
+  Eye,
+  ShieldAlert,
 } from 'lucide-react';
 import { authFetch } from '@/lib/api';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import dynamic from 'next/dynamic';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 import { UpgradeCard } from '@/components/modals/UpgradePrompt';
-
-// Lazy load TradePlanChart
-const TradePlanChart = dynamic(
-  () => import('@/components/analysis/TradePlanChart').then(mod => ({ default: mod.TradePlanChart })),
-  { ssr: false, loading: () => <div className="h-[300px] bg-neutral-200 dark:bg-neutral-800/50 rounded-xl animate-pulse" /> }
-);
+import { StyledMessage } from '@/components/concierge';
 
 // Types
 interface ChatMessage {
@@ -59,13 +50,6 @@ interface ChatMessage {
     direction?: string;
     scanComplete?: boolean;
     chartData?: Array<{ time: number; open: number; high: number; low: number; close: number }>;
-    tradePlan?: {
-      entry?: number;
-      averageEntry?: number;
-      stopLoss?: number | { price: number };
-      takeProfits?: Array<number | { price: number; percentage?: number; riskReward?: number }>;
-      direction?: string;
-    };
   };
 }
 
@@ -91,116 +75,6 @@ interface CapitalFlowData {
   };
 }
 
-// Layer indicator component
-function LayerBreadcrumb({ activeLayer = 0 }: { activeLayer?: number }) {
-  const layers = [
-    { num: 1, label: 'Global', icon: Globe },
-    { num: 2, label: 'Market', icon: BarChart3 },
-    { num: 3, label: 'Sector', icon: PieChart },
-    { num: 4, label: 'Asset', icon: Target },
-  ];
-
-  return (
-    <div className="flex items-center gap-1 text-xs">
-      {layers.map((layer, idx) => (
-        <div key={layer.num} className="flex items-center">
-          <div className={cn(
-            "flex items-center gap-1 px-2 py-1 rounded-lg transition-all",
-            activeLayer >= layer.num
-              ? "bg-teal-100 dark:bg-teal-500/20 text-teal-700 dark:text-teal-400"
-              : "text-neutral-400 dark:text-neutral-500"
-          )}>
-            <layer.icon className="w-3 h-3" />
-            <span className="font-medium">L{layer.num}</span>
-          </div>
-          {idx < layers.length - 1 && (
-            <ArrowRight className="w-3 h-3 text-neutral-300 dark:text-neutral-600 mx-0.5" />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// Flow Direction Indicator
-function FlowIndicator({ flow, label }: { flow: number; label: string }) {
-  const safeFlow = typeof flow === 'number' && !isNaN(flow) ? flow : 0;
-  const isPositive = safeFlow >= 0;
-  return (
-    <div className="flex items-center gap-2">
-      <div className={cn(
-        "flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold",
-        isPositive
-          ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-          : "bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400"
-      )}>
-        {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-        {isPositive ? '+' : ''}{safeFlow.toFixed(1)}%
-      </div>
-      <span className="text-xs text-neutral-400 dark:text-neutral-500">{label}</span>
-    </div>
-  );
-}
-
-// Phase Badge
-function PhaseBadge({ phase }: { phase: string }) {
-  const config: Record<string, { bg: string; text: string; label: string }> = {
-    early: { bg: 'bg-emerald-100 dark:bg-emerald-500/20', text: 'text-emerald-700 dark:text-emerald-400', label: 'EARLY' },
-    mid: { bg: 'bg-amber-100 dark:bg-amber-500/20', text: 'text-amber-700 dark:text-amber-400', label: 'MID' },
-    late: { bg: 'bg-orange-100 dark:bg-orange-500/20', text: 'text-orange-700 dark:text-orange-400', label: 'LATE' },
-    exit: { bg: 'bg-red-100 dark:bg-red-500/20', text: 'text-red-700 dark:text-red-400', label: 'EXIT' },
-  };
-  const c = config[phase] || config.mid;
-  return (
-    <span className={cn("px-2 py-0.5 rounded text-xs font-bold", c.bg, c.text)}>
-      {c.label}
-    </span>
-  );
-}
-
-// Market Flow Card
-function MarketFlowCard({
-  market,
-  flow7d,
-  phase,
-  isRecommended,
-  onClick
-}: {
-  market: string;
-  flow7d: number;
-  phase: string;
-  isRecommended: boolean;
-  onClick: () => void;
-}) {
-  const marketIcons: Record<string, string> = {
-    crypto: '₿',
-    stocks: '📈',
-    bonds: '📊',
-    metals: '🥇',
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "relative flex flex-col items-center p-3 rounded-xl border transition-all hover:scale-[1.02]",
-        isRecommended
-          ? "bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-500/10 dark:to-emerald-500/10 border-teal-300 dark:border-teal-500/30 shadow-lg shadow-teal-500/10"
-          : "bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-white/20"
-      )}
-    >
-      {isRecommended && (
-        <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 flex items-center justify-center">
-          <CheckCircle2 className="w-3 h-3 text-white" />
-        </div>
-      )}
-      <span className="text-2xl mb-1">{marketIcons[market] || '📊'}</span>
-      <span className="text-xs font-bold text-neutral-900 dark:text-white uppercase">{market}</span>
-      <FlowIndicator flow={flow7d} label="7d" />
-      <PhaseBadge phase={phase} />
-    </button>
-  );
-}
 
 // Verdict Badge
 function VerdictBadge({ verdict, score }: { verdict: string; score?: number }) {
@@ -246,13 +120,13 @@ function QuickCommand({
       onClick={onClick}
       className={cn(
         "group relative flex items-center gap-2 px-3 py-2 rounded-xl",
-        "bg-gradient-to-r backdrop-blur-sm border border-neutral-200 dark:border-neutral-800 shadow-sm",
+        "bg-gradient-to-r backdrop-blur-sm border border-border shadow-sm",
         "hover:scale-[1.02] hover:shadow-lg transition-all duration-200",
         gradient
       )}
     >
-      <Icon className="w-4 h-4 text-neutral-700 dark:text-white/80" />
-      <span className="text-sm font-semibold text-neutral-900 dark:text-white/90">{label}</span>
+      <Icon className="w-4 h-4 text-foreground/80" />
+      <span className="text-sm font-semibold text-foreground/90">{label}</span>
       {badge && (
         <span className="px-1.5 py-0.5 text-[10px] font-bold bg-amber-500 text-white rounded">
           {badge}
@@ -262,15 +136,55 @@ function QuickCommand({
   );
 }
 
+// AI Expert profiles for quick access
+const AI_EXPERTS = [
+  {
+    id: 'nexus',
+    name: 'NEXUS',
+    role: 'Risk & Position',
+    icon: Target,
+    color: 'text-amber-500',
+    bg: 'bg-amber-500/10 hover:bg-amber-500/20',
+    border: 'border-amber-500/20',
+  },
+  {
+    id: 'aria',
+    name: 'ARIA',
+    role: 'Technical Analysis',
+    icon: LineChart,
+    color: 'text-blue-500',
+    bg: 'bg-blue-500/10 hover:bg-blue-500/20',
+    border: 'border-blue-500/20',
+  },
+  {
+    id: 'oracle',
+    name: 'ORACLE',
+    role: 'Whale Tracking',
+    icon: Eye,
+    color: 'text-purple-500',
+    bg: 'bg-purple-500/10 hover:bg-purple-500/20',
+    border: 'border-purple-500/20',
+  },
+  {
+    id: 'sentinel',
+    name: 'SENTINEL',
+    role: 'Security & Traps',
+    icon: ShieldAlert,
+    color: 'text-red-500',
+    bg: 'bg-red-500/10 hover:bg-red-500/20',
+    border: 'border-red-500/20',
+  },
+] as const;
+
 export default function ConciergePage() {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
   const [capitalFlow, setCapitalFlow] = useState<CapitalFlowData | null>(null);
-  const [flowLoading, setFlowLoading] = useState(true);
   const [scanInProgress, setScanInProgress] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -286,7 +200,6 @@ export default function ConciergePage() {
   useEffect(() => {
     const fetchCapitalFlow = async () => {
       try {
-        setFlowLoading(true);
         const res = await authFetch('/api/capital-flow/summary');
         if (res.ok) {
           const data = await res.json();
@@ -296,8 +209,6 @@ export default function ConciergePage() {
         }
       } catch (error) {
         console.error('Failed to fetch capital flow:', error);
-      } finally {
-        setFlowLoading(false);
       }
     };
 
@@ -325,17 +236,24 @@ export default function ConciergePage() {
   // Initialize speech recognition
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const SpeechRecognition = (window as unknown as Record<string, any>).SpeechRecognition || (window as unknown as Record<string, any>).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
+      const SpeechRecognitionClass = (window as unknown as Record<string, any>).SpeechRecognition || (window as unknown as Record<string, any>).webkitSpeechRecognition;
+      if (SpeechRecognitionClass) {
+        setSpeechSupported(true);
+        const recognition = new SpeechRecognitionClass();
         recognition.continuous = false;
-        recognition.interimResults = false;
+        recognition.interimResults = true;
         recognition.lang = navigator.language?.startsWith('tr') ? 'tr-TR' : 'en-US';
 
-        recognition.onresult = (event: { results: { [key: number]: { [key: number]: { transcript: string } } } }) => {
-          const text = event.results[0][0].transcript;
-          setInput(text);
-          setIsListening(false);
+        recognition.onresult = (event: { results: { length: number; [key: number]: { length: number; [key: number]: { transcript: string } } } }) => {
+          let transcript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            if (event.results[i]?.length > 0 && event.results[i][0]?.transcript) {
+              transcript += event.results[i][0].transcript;
+            }
+          }
+          if (transcript) {
+            setInput(transcript);
+          }
         };
 
         recognition.onerror = () => {
@@ -349,6 +267,12 @@ export default function ConciergePage() {
         recognitionRef.current = recognition;
       }
     }
+
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch { /* noop */ }
+      }
+    };
   }, []);
 
   // Auto-scroll
@@ -442,10 +366,11 @@ export default function ConciergePage() {
     setIsLoading(true);
 
     try {
+      const browserLang = typeof navigator !== 'undefined' ? navigator.language?.split('-')[0] || 'en' : 'en';
       const res = await authFetch('/api/concierge/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: messageText }),
+        body: JSON.stringify({ message: messageText, language: browserLang }),
       });
 
       const data = await res.json();
@@ -461,7 +386,6 @@ export default function ConciergePage() {
           analysisId: data.analysisId,
           direction: data.direction,
           chartData: data.chartData,
-          tradePlan: data.tradePlan,
         } : undefined,
       };
 
@@ -489,12 +413,18 @@ export default function ConciergePage() {
 
   // Toggle listening
   const toggleListening = () => {
+    if (!recognitionRef.current) return;
     if (isListening) {
-      recognitionRef.current?.stop();
+      recognitionRef.current.stop();
       setIsListening(false);
-    } else if (recognitionRef.current) {
-      recognitionRef.current.start();
-      setIsListening(true);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch {
+        // Already started or browser error
+        setIsListening(false);
+      }
     }
   };
 
@@ -548,39 +478,43 @@ export default function ConciergePage() {
     return commands;
   };
 
-  // Get bias icon and color
-  const getBiasDisplay = (bias: string) => {
-    switch (bias) {
-      case 'risk_on':
-        return { icon: TrendingUp, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-500/20', label: 'Risk On' };
-      case 'risk_off':
-        return { icon: TrendingDown, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-500/20', label: 'Risk Off' };
-      default:
-        return { icon: Activity, color: 'text-neutral-500 dark:text-neutral-400', bg: 'bg-neutral-100 dark:bg-neutral-500/20', label: 'Neutral' };
+  // Navigate to AI Expert with analysis context
+  const goToExpert = useCallback((expertId: string, analysisId?: string, contextSummary?: string) => {
+    if (contextSummary) {
+      sessionStorage.setItem('aiExpertContext', contextSummary);
     }
-  };
+    if (analysisId) {
+      sessionStorage.setItem('aiExpertAnalysisId', analysisId);
+    }
+    router.push(`/ai-expert/${expertId}${analysisId ? '?fromAnalysis=true' : ''}`);
+  }, [router]);
 
-  const biasDisplay = capitalFlow?.globalLiquidity?.bias ? getBiasDisplay(capitalFlow.globalLiquidity.bias) : null;
+  // Build a context summary from the last assistant message for expert handoff
+  const getLastAnalysisContext = useCallback(() => {
+    const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant' && m.data?.verdict);
+    if (!lastAssistant) return '';
+    return lastAssistant.content;
+  }, [messages]);
 
   // Show upgrade prompt if user doesn't have access
   if (!featureLoading && !hasConciergeAccess) {
     return (
-      <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white overflow-hidden">
-        <div className="max-w-xl mx-auto px-4 py-12">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 mb-4 shadow-xl">
-              <Bot className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-neutral-900 dark:text-white mb-2">
-              AI Concierge
-            </h1>
-            <p className="text-neutral-500 dark:text-neutral-400">
-              Your Capital Flow aware trading assistant
-            </p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 py-8 sm:py-12">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 mb-4 shadow-xl">
+            <Bot className="w-8 h-8 text-white" />
           </div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">
+            AI Concierge
+          </h1>
+          <p className="text-muted-foreground">
+            Your Capital Flow aware trading assistant
+          </p>
+        </div>
 
-          {/* Upgrade Card */}
+        {/* Upgrade Card */}
+        <div className="w-full max-w-xl">
           <UpgradeCard
             feature="ai_features"
             currentTier={currentTier}
@@ -592,132 +526,219 @@ export default function ConciergePage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white overflow-hidden">
-      <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 flex flex-col h-full">
+    <div className="h-[calc(100dvh-3.5rem)] flex flex-col text-foreground overflow-hidden">
+      <div className="max-w-[1800px] mx-auto w-full px-3 sm:px-6 lg:px-10 flex flex-col flex-1 min-h-0">
         {/* Header */}
-        <div className="shrink-0 pt-4 pb-3">
-          <div className="flex items-center justify-between">
+        <div className="shrink-0 pt-3 sm:pt-4 pb-2 sm:pb-3">
+          <header className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 bg-[#14B8A6] rounded-full" />
                 <div className="w-2 h-2 bg-[#EF5A6F] rounded-full" />
               </div>
-              <span className="text-sm font-sans font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
+              <span className="text-sm font-bold tracking-tight bg-gradient-to-r from-[#14B8A6] to-[#EF5A6F] bg-clip-text text-transparent">
                 CONCIERGE
               </span>
-              <span className="text-[10px] font-sans text-neutral-400 dark:text-neutral-500">
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider hidden sm:inline">
                 AI-powered · Capital Flow
               </span>
+              {credits !== null && (
+                <span className="text-[11px] text-muted-foreground">
+                  <span className="text-foreground font-semibold">{credits.toLocaleString()}</span> credits
+                </span>
+              )}
             </div>
-            {credits !== null && (
-              <span className="text-[11px] font-sans text-neutral-400">
-                <span className="text-neutral-900 dark:text-white font-semibold">{credits.toLocaleString()}</span> credits
-              </span>
-            )}
-          </div>
+          </header>
 
-          {/* Capital Flow Summary Bar */}
-          {!flowLoading && capitalFlow && Array.isArray(capitalFlow.markets) && capitalFlow.markets.length > 0 && capitalFlow.recommendation && (
-            <div className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
-              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                {/* Global Liquidity Status */}
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <div className={cn("p-2 rounded-lg", biasDisplay?.bg)}>
-                    {biasDisplay && <biasDisplay.icon className={cn("w-5 h-5", biasDisplay.color)} />}
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500">Global Liquidity</p>
-                    <p className={cn("font-bold", biasDisplay?.color)}>{biasDisplay?.label}</p>
-                  </div>
-                </div>
-
-                <div className="hidden lg:block w-px h-10 bg-neutral-200 dark:bg-neutral-800" />
-
-                {/* Market Flows */}
-                <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {capitalFlow.markets.filter(m => m && m.market).map((market) => (
-                    <MarketFlowCard
-                      key={market.market}
-                      market={market.market}
-                      flow7d={market.flow7d ?? 0}
-                      phase={market.phase || 'mid'}
-                      isRecommended={capitalFlow.recommendation?.primaryMarket === market.market}
-                      onClick={() => sendMessage(`Analyze ${market.market} market`)}
-                    />
-                  ))}
-                </div>
-
-                <div className="hidden lg:block w-px h-10 bg-neutral-200 dark:bg-neutral-800" />
-
-                {/* Recommendation */}
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <div className={cn(
-                    "p-2 rounded-lg",
-                    capitalFlow.recommendation?.action === 'analyze'
-                      ? "bg-emerald-100 dark:bg-emerald-500/20"
-                      : capitalFlow.recommendation?.action === 'wait'
-                      ? "bg-amber-100 dark:bg-amber-500/20"
-                      : "bg-red-100 dark:bg-red-500/20"
-                  )}>
-                    {capitalFlow.recommendation?.action === 'analyze' ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    ) : capitalFlow.recommendation?.action === 'wait' ? (
-                      <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                    ) : (
-                      <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-neutral-400 dark:text-neutral-500">Recommendation</p>
-                    <p className="font-bold text-neutral-900 dark:text-white capitalize">
-                      {capitalFlow.recommendation?.action || 'wait'} {String(capitalFlow.recommendation?.primaryMarket || 'market').toUpperCase()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {flowLoading && (
-            <div className="p-4 rounded-xl bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 animate-pulse">
-              <div className="h-16 bg-neutral-200 dark:bg-neutral-700 rounded-xl" />
-            </div>
-          )}
         </div>
 
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Chat Area */}
-          <div className="lg:col-span-3">
-            <div className="rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-              {/* Messages */}
-              <div className="h-[450px] overflow-y-auto p-4 space-y-3">
-                {/* Welcome State */}
+        {/* Main Content — flex-1 fills remaining space */}
+        <div className="flex-1 min-h-0 flex flex-col pb-3 sm:pb-4">
+          {/* Chat Area — full width */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 min-h-0 flex flex-col rounded-xl bg-card border border-border overflow-hidden">
+              {/* Messages — flex-1 fills available space */}
+              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
+                {/* Welcome State — 10 Smart Questions */}
                 {messages.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-full text-center">
-                    <Bot className="w-8 h-8 text-neutral-300 dark:text-neutral-600 mb-3" />
+                  <div className="flex flex-col h-full">
+                    {/* Header */}
+                    <div className="text-center pt-4 sm:pt-8 pb-4 sm:pb-6">
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl">
+                        <Bot className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
+                      </div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1.5">
+                        AI Concierge
+                      </h2>
+                      <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto">
+                        Your capital flow-aware trading assistant. Ask anything about markets, analysis, and opportunities.
+                      </p>
 
-                    <h2 className="text-sm font-sans font-semibold text-neutral-900 dark:text-white mb-1">
-                      Follow the Money Flow
-                    </h2>
-                    <p className="text-[10px] text-neutral-400 max-w-sm mb-1">
-                      Capital Flow → AI Recommendation → Analysis → Trade Plan
-                    </p>
-                    <p className="text-xs text-neutral-500 max-w-md mb-4">
-                      {capitalFlow?.recommendation?.reasoning || 'Start with capital flow to discover where money is moving, then drill down to trade plans.'}
-                    </p>
+                      {/* Feature badges */}
+                      <div className="flex items-center justify-center gap-2 sm:gap-3 mt-4 flex-wrap">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-teal-500/10 rounded-full text-teal-600 dark:text-teal-400 text-xs">
+                          <Globe className="w-3.5 h-3.5" />
+                          Capital Flow Intel
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-emerald-500/10 rounded-full text-emerald-600 dark:text-emerald-400 text-xs">
+                          <Zap className="w-3.5 h-3.5" />
+                          7-Step Analysis
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-amber-500/10 rounded-full text-amber-600 dark:text-amber-400 text-xs">
+                          <Compass className="w-3.5 h-3.5" />
+                          Opportunity Radar
+                        </div>
+                      </div>
+                    </div>
 
-                    {/* Pipeline Quick Commands */}
-                    <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-                      {getSmartCommands().map((cmd, i) => (
-                        <QuickCommand
-                          key={i}
-                          icon={cmd.icon}
-                          label={cmd.label}
-                          onClick={() => sendMessage(cmd.command)}
-                          gradient={cmd.gradient}
-                        />
-                      ))}
+                    {/* 10 Smart Questions */}
+                    <div className="flex-1 px-1 sm:px-2 pb-4">
+                      <div className="max-w-2xl mx-auto">
+                        <div className="flex items-center justify-between mb-3 sm:mb-4">
+                          <p className="text-xs sm:text-sm font-medium text-muted-foreground">10 Smart Questions:</p>
+                          <span className="text-[10px] sm:text-xs text-muted-foreground bg-muted px-2 py-0.5 sm:py-1 rounded-full">
+                            Click to ask
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {[
+                            {
+                              question: 'Where is capital flowing and which market should I focus on?',
+                              category: 'intelligence' as const,
+                            },
+                            {
+                              question: 'What should I trade right now based on capital flow data?',
+                              category: 'intelligence' as const,
+                            },
+                            {
+                              question: 'Analyze BTC on the 4-hour timeframe',
+                              category: 'analysis' as const,
+                            },
+                            {
+                              question: 'Run a quick ETH analysis for day trading',
+                              category: 'analysis' as const,
+                            },
+                            {
+                              question: 'Give me the top 5 highest probability coins right now',
+                              category: 'discovery' as const,
+                            },
+                            {
+                              question: 'Which sectors are showing the strongest momentum?',
+                              category: 'discovery' as const,
+                            },
+                            {
+                              question: 'Is it safe to trade today? Any high-impact economic events?',
+                              category: 'risk' as const,
+                            },
+                            {
+                              question: 'Show my recent analysis results and overall win rate',
+                              category: 'monitoring' as const,
+                            },
+                            {
+                              question: 'Set a price alert for BTC when it drops to $90,000',
+                              category: 'monitoring' as const,
+                            },
+                            {
+                              question: 'How does the 7-step analysis engine work?',
+                              category: 'education' as const,
+                            },
+                          ].map((item, i) => {
+                            const categoryStyles = {
+                              intelligence: { color: 'text-teal-500', bg: 'bg-teal-500/15', hoverBorder: 'hover:border-teal-500/40' },
+                              analysis: { color: 'text-emerald-500', bg: 'bg-emerald-500/15', hoverBorder: 'hover:border-emerald-500/40' },
+                              discovery: { color: 'text-amber-500', bg: 'bg-amber-500/15', hoverBorder: 'hover:border-amber-500/40' },
+                              risk: { color: 'text-orange-500', bg: 'bg-orange-500/15', hoverBorder: 'hover:border-orange-500/40' },
+                              monitoring: { color: 'text-cyan-500', bg: 'bg-cyan-500/15', hoverBorder: 'hover:border-cyan-500/40' },
+                              education: { color: 'text-violet-500', bg: 'bg-violet-500/15', hoverBorder: 'hover:border-violet-500/40' },
+                            };
+                            const style = categoryStyles[item.category];
+                            return (
+                              <button
+                                key={i}
+                                onClick={() => sendMessage(item.question)}
+                                className={cn(
+                                  "flex items-start gap-2.5 sm:gap-3 text-left px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl transition-all text-xs sm:text-sm",
+                                  "bg-card border border-border hover:shadow-lg hover:scale-[1.02]",
+                                  style.hoverBorder
+                                )}
+                              >
+                                <span className={cn(
+                                  "w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-bold flex-shrink-0",
+                                  style.bg,
+                                  style.color
+                                )}>
+                                  {i + 1}
+                                </span>
+                                <span className="flex-1 text-foreground leading-snug">{item.question}</span>
+                                <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Category Legend */}
+                        <div className="mt-4 sm:mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 sm:gap-x-4 sm:gap-y-2">
+                          {[
+                            { label: 'Intelligence', color: 'bg-teal-500', count: 2 },
+                            { label: 'Analysis', color: 'bg-emerald-500', count: 2 },
+                            { label: 'Discovery', color: 'bg-amber-500', count: 2 },
+                            { label: 'Risk', color: 'bg-orange-500', count: 1 },
+                            { label: 'Monitoring', color: 'bg-cyan-500', count: 2 },
+                            { label: 'Education', color: 'bg-violet-500', count: 1 },
+                          ].map((cat) => (
+                            <div key={cat.label} className="flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground">
+                              <div className={cn("w-2 h-2 rounded-full", cat.color)} />
+                              {cat.label}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Pro tip */}
+                        <div className="mt-4 sm:mt-5 p-3 sm:p-4 bg-gradient-to-r from-teal-500/10 to-emerald-500/10 rounded-xl border border-teal-500/20">
+                          <div className="flex items-start gap-2 text-xs sm:text-sm">
+                            <BookOpen className="w-4 h-4 text-teal-500 flex-shrink-0 mt-0.5" />
+                            <span className="text-muted-foreground">
+                              You can also type naturally — <span className="text-teal-600 dark:text-teal-400 font-medium">&quot;Should I buy SOL?&quot;</span>, <span className="text-teal-600 dark:text-teal-400 font-medium">&quot;Para nereye akiyor?&quot;</span>, or use the microphone.
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* AI Experts Quick Access */}
+                        <div className="mt-4 sm:mt-5 p-3 sm:p-4 rounded-xl border border-border bg-card">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <Brain className="w-4 h-4 text-purple-500" />
+                              <span className="text-xs sm:text-sm font-semibold text-foreground">Need Deep Analysis?</span>
+                            </div>
+                            <Link
+                              href="/ai-expert"
+                              className="text-[10px] sm:text-xs text-purple-500 hover:text-purple-600 dark:hover:text-purple-400 font-medium flex items-center gap-0.5"
+                            >
+                              View all
+                              <ChevronRight className="w-3 h-3" />
+                            </Link>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {AI_EXPERTS.map((expert) => (
+                              <button
+                                key={expert.id}
+                                onClick={() => goToExpert(expert.id)}
+                                className={cn(
+                                  "flex flex-col items-center gap-1.5 p-2.5 sm:p-3 rounded-xl transition-all border",
+                                  expert.bg, expert.border,
+                                  "hover:scale-[1.03] hover:shadow-md"
+                                )}
+                              >
+                                <expert.icon className={cn("w-5 h-5 sm:w-6 sm:h-6", expert.color)} />
+                                <span className={cn("text-xs font-bold", expert.color)}>{expert.name}</span>
+                                <span className="text-[9px] sm:text-[10px] text-muted-foreground leading-tight text-center">{expert.role}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -732,10 +753,10 @@ export default function ConciergePage() {
                     )}
                   >
                     <div className={cn(
-                      "max-w-[85%] rounded-xl px-4 py-3",
+                      "max-w-[92%] sm:max-w-[85%] rounded-xl px-3 py-2.5 sm:px-4 sm:py-3",
                       msg.role === 'user'
                         ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white"
-                        : "bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800"
+                        : "bg-muted border border-border"
                     )}>
                       {msg.role === 'assistant' && (
                         <div className="flex items-center gap-2 mb-2">
@@ -743,11 +764,11 @@ export default function ConciergePage() {
                           <span className="text-xs font-semibold text-teal-600 dark:text-teal-400">AI Concierge</span>
                         </div>
                       )}
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-neutral-700 dark:text-neutral-200">{msg.content}</p>
+                      <StyledMessage content={msg.content} />
 
                       {/* Verdict Card */}
                       {msg.data?.verdict && (
-                        <div className="mt-4 p-4 rounded-xl bg-white dark:bg-black/20 border border-neutral-200 dark:border-neutral-800">
+                        <div className="mt-4 p-4 rounded-xl bg-card border border-border">
                           <div className="flex items-center justify-between mb-3">
                             <VerdictBadge verdict={msg.data.verdict} score={msg.data.score} />
                             {msg.data.direction && typeof msg.data.direction === 'string' && (
@@ -763,73 +784,41 @@ export default function ConciergePage() {
                           </div>
 
                           {msg.data.analysisId && (
-                            <Link
-                              href={`/analyze/details/${msg.data.analysisId}`}
-                              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-teal-100 hover:bg-teal-200 dark:bg-teal-500/10 dark:hover:bg-teal-500/20 text-teal-700 dark:text-teal-400 font-semibold transition-colors border border-teal-200 dark:border-teal-500/20"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                              View Full Analysis
-                            </Link>
+                            <div className="space-y-2">
+                              <Link
+                                href={`/analyze/details/${msg.data.analysisId}`}
+                                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-teal-100 hover:bg-teal-200 dark:bg-teal-500/10 dark:hover:bg-teal-500/20 text-teal-700 dark:text-teal-400 font-semibold transition-colors border border-teal-200 dark:border-teal-500/20"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                                View Full Analysis
+                              </Link>
+
+                              {/* Discuss with Expert */}
+                              <div className="pt-1">
+                                <p className="text-[10px] sm:text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                                  <Brain className="w-3 h-3" />
+                                  Discuss this analysis with an expert:
+                                </p>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                  {AI_EXPERTS.map((expert) => (
+                                    <button
+                                      key={expert.id}
+                                      onClick={() => goToExpert(expert.id, msg.data?.analysisId, msg.content)}
+                                      className={cn(
+                                        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all border",
+                                        expert.bg, expert.border, expert.color
+                                      )}
+                                    >
+                                      <expert.icon className="w-3 h-3" />
+                                      <span className="truncate">{expert.name}</span>
+                                      <span className="text-[9px] text-muted-foreground hidden sm:inline">· {expert.role}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
                           )}
                         </div>
-                      )}
-
-                      {/* Chart */}
-                      {msg.data?.tradePlan && (
-                        (() => {
-                          try {
-                            // Handle both simple and full tradePlan structures
-                            const tp = msg.data.tradePlan;
-                            if (!tp) return null;
-
-                            // Get entry price - handle both averageEntry and entry
-                            const entryPrice = Number(tp.averageEntry || tp.entry) || 0;
-
-                            // Get stop loss price - handle both object and number
-                            const slPrice = typeof tp.stopLoss === 'object' && tp.stopLoss
-                              ? Number((tp.stopLoss as { price?: number }).price) || 0
-                              : Number(tp.stopLoss) || 0;
-
-                            // Get take profits - handle both object array and number array
-                            const tpArr = Array.isArray(tp.takeProfits)
-                              ? tp.takeProfits.map((item, i) => {
-                                  const price = typeof item === 'object' && item
-                                    ? Number((item as { price?: number }).price) || 0
-                                    : Number(item) || 0;
-                                  const percentage = typeof item === 'object' && item
-                                    ? Number((item as { percentage?: number }).percentage) || 0
-                                    : 0;
-                                  const riskReward = typeof item === 'object' && item
-                                    ? Number((item as { riskReward?: number }).riskReward) || (i + 1)
-                                    : (i + 1);
-                                  return { price, percentage, riskReward };
-                                }).filter(t => t.price > 0)
-                              : [];
-
-                            // Get direction
-                            const dir = ((msg.data?.direction || tp.direction || 'long') as string).toLowerCase() as 'long' | 'short';
-
-                            // Only render if we have valid entry and stopLoss prices
-                            if (entryPrice <= 0 || slPrice <= 0) return null;
-
-                            return (
-                              <div className="mt-4 rounded-xl overflow-hidden bg-neutral-50 dark:bg-neutral-900/50">
-                                <TradePlanChart
-                                  symbol="Analysis"
-                                  direction={dir}
-                                  entries={[{ price: entryPrice, percentage: 100 }]}
-                                  stopLoss={{ price: slPrice, percentage: 0 }}
-                                  takeProfits={tpArr.length > 0 ? tpArr : [{ price: entryPrice * 1.05, percentage: 100, riskReward: 1 }]}
-                                  currentPrice={entryPrice}
-                                  analysisTime={msg.timestamp}
-                                />
-                              </div>
-                            );
-                          } catch (error) {
-                            console.error('Error rendering TradePlanChart:', error);
-                            return null;
-                          }
-                        })()
                       )}
 
                       {/* Scan Complete Button */}
@@ -852,14 +841,20 @@ export default function ConciergePage() {
                 {/* Loading */}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex gap-1">
-                          <div className="w-2 h-2 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-2 h-2 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-2 h-2 rounded-full bg-teal-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="bg-gradient-to-r from-teal-500/5 to-emerald-500/5 dark:from-teal-500/10 dark:to-emerald-500/10 border border-teal-500/20 rounded-xl px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <div className="w-8 h-8 rounded-full border-2 border-teal-500/30 border-t-teal-500 animate-spin" />
+                          <Bot className="w-4 h-4 text-teal-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                         </div>
-                        <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Analyzing flows...</span>
+                        <div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-white/70">Processing...</span>
+                          <div className="flex gap-1 mt-1">
+                            <div className="w-12 h-1 rounded-full bg-teal-500 animate-pulse" />
+                            <div className="w-8 h-1 rounded-full bg-teal-500/50 animate-pulse" style={{ animationDelay: '200ms' }} />
+                            <div className="w-4 h-1 rounded-full bg-teal-500/30 animate-pulse" style={{ animationDelay: '400ms' }} />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -883,46 +878,57 @@ export default function ConciergePage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input Area */}
-              <div className="p-3 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/30">
+              {/* Input Area — shrink-0 so it stays at bottom */}
+              <div className="shrink-0 p-2 sm:p-3 border-t border-border bg-muted/50">
+                {/* Quick suggestions — scrollable on mobile */}
                 {messages.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
+                  <div className="flex gap-2 mb-2 overflow-x-auto scrollbar-hide pb-1">
                     {getSmartCommands().slice(0, 3).map((cmd, i) => (
                       <button
                         key={i}
                         onClick={() => sendMessage(cmd.command)}
-                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-neutral-950 hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800 transition-colors"
+                        className="px-2.5 py-1 sm:px-3 sm:py-1.5 text-[11px] sm:text-xs font-medium rounded-lg bg-card hover:bg-accent text-muted-foreground border border-border transition-colors whitespace-nowrap shrink-0"
                       >
                         {cmd.label}
                       </button>
                     ))}
+                    {/* Talk to Expert shortcut */}
+                    <button
+                      onClick={() => router.push('/ai-expert')}
+                      className="flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 text-[11px] sm:text-xs font-medium rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 transition-colors whitespace-nowrap shrink-0"
+                    >
+                      <Brain className="w-3 h-3" />
+                      Talk to Expert
+                    </button>
                   </div>
                 )}
 
                 <form
                   onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
-                  className="flex items-center gap-3"
+                  className="flex items-center gap-2 sm:gap-3"
                 >
-                  <button
-                    type="button"
-                    onClick={toggleListening}
-                    className={cn(
-                      "p-3 rounded-xl transition-all border",
-                      isListening
-                        ? "bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse border-red-400"
-                        : "bg-white dark:bg-neutral-950 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-white/10 border-neutral-200 dark:border-neutral-800"
-                    )}
-                  >
-                    {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                  </button>
+                  {speechSupported && (
+                    <button
+                      type="button"
+                      onClick={toggleListening}
+                      className={cn(
+                        "p-2.5 sm:p-3 rounded-xl transition-all border shrink-0",
+                        isListening
+                          ? "bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse border-red-400"
+                          : "bg-card text-muted-foreground hover:bg-accent border-border"
+                      )}
+                    >
+                      {isListening ? <MicOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Mic className="w-4 h-4 sm:w-5 sm:h-5" />}
+                    </button>
+                  )}
 
                   <input
                     ref={inputRef}
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Capital flow, recommendations, or analyze an asset..."
-                    className="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-colors"
+                    placeholder={isListening ? '🎤 Speak now...' : 'Ask anything...'}
+                    className="flex-1 min-w-0 px-3 py-2.5 sm:px-4 sm:py-3 rounded-xl bg-card border border-border text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-colors"
                     disabled={isLoading}
                   />
 
@@ -930,88 +936,16 @@ export default function ConciergePage() {
                     type="submit"
                     disabled={!input.trim() || isLoading}
                     className={cn(
-                      "p-3 rounded-xl transition-all",
+                      "p-2.5 sm:p-3 rounded-xl transition-all shrink-0",
                       input.trim() && !isLoading
                         ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-lg shadow-teal-500/30 hover:shadow-xl"
-                        : "bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed"
+                        : "bg-gray-200 dark:bg-white/[0.05] text-gray-400 cursor-not-allowed"
                     )}
                   >
-                    <Send className="w-5 h-5" />
+                    <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                 </form>
               </div>
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-4">
-            {/* Capital Flow Link */}
-            <Link
-              href="/analyze"
-              className="block p-4 rounded-xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-500/10 dark:to-emerald-500/10 border border-teal-200 dark:border-teal-500/20 hover:border-teal-300 dark:hover:border-teal-500/30 transition-all group"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center shadow-lg">
-                  <Layers className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="font-bold text-neutral-900 dark:text-white">Capital Flow Radar</p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">See full 4-layer analysis</p>
-                </div>
-              </div>
-              <div className="flex items-center text-teal-600 dark:text-teal-400 text-sm font-medium group-hover:translate-x-1 transition-transform">
-                Open Radar <ArrowRight className="w-4 h-4 ml-1" />
-              </div>
-            </Link>
-
-            {/* Flow Philosophy */}
-            <div className="p-4 rounded-xl bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
-              <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-3 flex items-center gap-2">
-                <Globe className="w-4 h-4 text-teal-500" />
-                Follow The Money
-              </h3>
-              <div className="space-y-2 text-xs text-neutral-500 dark:text-neutral-400">
-                <p><span className="font-semibold text-teal-600 dark:text-teal-400">L1:</span> Global Liquidity (Fed, DXY, VIX)</p>
-                <p><span className="font-semibold text-teal-600 dark:text-teal-400">L2:</span> Market Flows (Crypto, Stocks...)</p>
-                <p><span className="font-semibold text-teal-600 dark:text-teal-400">L3:</span> Sector Drill-Down</p>
-                <p><span className="font-semibold text-teal-600 dark:text-teal-400">L4:</span> Asset Analysis</p>
-              </div>
-            </div>
-
-            {/* Phase Legend */}
-            <div className="p-4 rounded-xl bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
-              <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-3">Market Phases</h3>
-              <div className="space-y-2">
-                {[
-                  { phase: 'early', label: 'EARLY', desc: 'Best entry', color: 'text-emerald-600 dark:text-emerald-400' },
-                  { phase: 'mid', label: 'MID', desc: 'Caution', color: 'text-amber-600 dark:text-amber-400' },
-                  { phase: 'late', label: 'LATE', desc: 'No entry', color: 'text-orange-600 dark:text-orange-400' },
-                  { phase: 'exit', label: 'EXIT', desc: 'Avoid', color: 'text-red-600 dark:text-red-400' },
-                ].map((item) => (
-                  <div key={item.phase} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <PhaseBadge phase={item.phase} />
-                      <span className="text-xs text-neutral-500 dark:text-neutral-400">{item.desc}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Analysis Cost */}
-            <div className="p-4 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-500/10 dark:to-orange-500/10 border border-amber-200 dark:border-amber-500/20">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
-                  <Zap className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Analysis Cost</p>
-                  <p className="text-xl font-bold text-neutral-900 dark:text-white">25 credits</p>
-                </div>
-              </div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                Flow questions and insights are free!
-              </p>
             </div>
           </div>
         </div>

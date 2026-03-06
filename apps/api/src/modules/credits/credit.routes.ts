@@ -6,6 +6,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { creditService } from './credit.service';
 import { authenticate } from '../../core/auth/middleware';
+import { logger } from '../../core/logger';
 
 // User type from JWT
 interface JwtUser {
@@ -39,7 +40,7 @@ export default async function creditRoutes(app: FastifyInstance) {
         data: balance,
       });
     } catch (error) {
-      console.error('GET /api/credits/balance error:', error);
+      logger.error('GET /api/credits/balance error:', error);
       return reply.status(500).send({ success: false, error: 'Failed to fetch balance' });
     }
   });
@@ -57,46 +58,25 @@ export default async function creditRoutes(app: FastifyInstance) {
         data: { packages },
       });
     } catch (error) {
-      console.error('GET /api/credits/packages error:', error);
+      logger.error('GET /api/credits/packages error:', error);
       return reply.status(500).send({ success: false, error: 'Failed to fetch packages' });
     }
   });
 
   /**
    * POST /api/credits/purchase
-   * Purchase a credit package
+   * Deprecated: credit purchases are processed via Lemon Squeezy webhooks.
+   * Clients should use the /api/payments/checkout endpoint to initiate payment.
    */
-  const purchaseSchema = z.object({
-    packageId: z.string().uuid(),
-    paymentMethod: z.enum(['stripe', 'crypto']),
-  });
-
-  app.post('/purchase', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const userId = getUser(request).id;
-      const body = purchaseSchema.parse(request.body);
-
-      // TODO: Process payment with Stripe/Crypto
-      // For now, simulate successful payment
-      const paymentId = `pay_${Date.now()}`;
-
-      const result = await creditService.purchasePackage(
-        userId,
-        body.packageId,
-        paymentId
-      );
-
-      return reply.send({
-        success: true,
-        data: result,
-      });
-    } catch (error: any) {
-      if (error?.name === 'ZodError') {
-        return reply.status(400).send({ success: false, error: 'Invalid purchase parameters' });
-      }
-      console.error('POST /api/credits/purchase error:', error);
-      return reply.status(500).send({ success: false, error: 'Failed to process purchase' });
-    }
+  app.post('/purchase', async (_request: FastifyRequest, reply: FastifyReply) => {
+    return reply.status(410).send({
+      success: false,
+      error: {
+        code: 'DEPRECATED_ENDPOINT',
+        message:
+          'Direct credit purchases are not supported. Use POST /api/payments/checkout to start a Lemon Squeezy checkout session.',
+      },
+    });
   });
 
   /**
@@ -126,7 +106,7 @@ export default async function creditRoutes(app: FastifyInstance) {
         data: history,
       });
     } catch (error) {
-      console.error('GET /api/credits/history error:', error);
+      logger.error('GET /api/credits/history error:', error);
       return reply.status(500).send({ success: false, error: 'Failed to fetch credit history' });
     }
   });
@@ -137,14 +117,15 @@ export default async function creditRoutes(app: FastifyInstance) {
    */
   app.get('/costs', async (_request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const { CREDIT_COSTS } = await import('@traderpath/types');
+      const { getCreditCosts } = await import('../costs/credit-costs.service');
+      const costs = await getCreditCosts();
 
       return reply.send({
         success: true,
-        data: { costs: CREDIT_COSTS },
+        data: { costs },
       });
     } catch (error) {
-      console.error('GET /api/credits/costs error:', error);
+      logger.error('GET /api/credits/costs error:', error);
       return reply.status(500).send({ success: false, error: 'Failed to fetch credit costs' });
     }
   });
@@ -192,7 +173,7 @@ export default async function creditRoutes(app: FastifyInstance) {
       if (error?.name === 'ZodError') {
         return reply.status(400).send({ success: false, error: 'Invalid deduction parameters' });
       }
-      console.error('POST /api/credits/deduct error:', error);
+      logger.error('POST /api/credits/deduct error:', error);
       return reply.status(500).send({ success: false, error: 'Failed to deduct credits' });
     }
   });

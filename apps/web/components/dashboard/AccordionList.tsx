@@ -21,7 +21,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { getCoinIcon, FALLBACK_COIN_ICON } from '../../lib/coin-icons';
+import { CoinIcon } from '../common/CoinIcon';
 
 // Lazy load PnL chart
 const PnLChart = dynamic(
@@ -342,12 +342,7 @@ function ActiveTradeCard({ trade, counterFlow }: { trade: RecentAnalysis; counte
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <img
-            src={getCoinIcon(trade.symbol)}
-            alt={trade.symbol}
-            className="w-5 h-5 rounded-full"
-            onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_COIN_ICON; }}
-          />
+          <CoinIcon symbol={trade.symbol.replace(/USDT$/i, '')} size={20} />
           <span className="font-bold text-white text-sm tracking-tight">{trade.symbol}</span>
         </div>
         <span className={cn('px-1.5 py-0.5 rounded-lg text-[10px] font-bold', vc.bg)}>{vc.text}</span>
@@ -847,7 +842,7 @@ export function AccordionList(props: AccordionListProps) {
                 {signalStats.recentSignals.length > 0 && signalStats.recentSignals.slice(0, 3).map(signal => (
                   <Link
                     key={signal.id}
-                    href={`/signals/${signal.id}`}
+                    href={`/notifications`}
                     className="flex items-center justify-between py-2.5 hover:bg-white/[0.03] transition-colors rounded-lg px-2 -mx-2 min-h-[48px]"
                   >
                     <div className="flex items-center gap-2">
@@ -875,7 +870,7 @@ export function AccordionList(props: AccordionListProps) {
                 ))}
 
                 <div className="mt-2">
-                  <Link href="/signals" className="text-xs text-gray-400 hover:text-[#4dd0e1] transition flex items-center gap-1 min-h-[48px] items-center">
+                  <Link href="/notifications" className="text-xs text-gray-400 hover:text-[#4dd0e1] transition flex items-center gap-1 min-h-[48px] items-center">
                     View All Signals <ArrowRight className="w-3 h-3" />
                   </Link>
                 </div>

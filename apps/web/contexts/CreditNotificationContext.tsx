@@ -34,7 +34,7 @@ const SERVICE_NAMES: Record<string, string> = {
   analysis_purchase: 'Analysis',
   ai_expert_question: 'AI Expert Question',
   pdf_download: 'PDF Download',
-  email_send: 'Email Report',
+  // email_send: removed - email report sending discontinued
   alert_create: 'Price Alert',
   scheduled_analysis: 'Scheduled Analysis',
   contract_security: 'Contract Security Check',

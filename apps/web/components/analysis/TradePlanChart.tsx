@@ -78,6 +78,28 @@ function formatPrice(price: number): string {
   });
 }
 
+interface ForecastBand {
+  horizon: 'short' | 'medium' | 'long';
+  p10: number;
+  p50: number;
+  p90: number;
+}
+
+interface FibonacciLevel {
+  level: number;
+  price: number;
+  type: string; // 'retracement' | 'extension'
+}
+
+interface ElliottWaveData {
+  currentWave?: string;
+  waveType?: string;
+  direction?: string;
+  confidence?: number;
+  projectedTarget?: number;
+  waves?: Array<{ wave: string; startPrice: number; endPrice: number }>;
+}
+
 interface TradePlanChartProps {
   symbol: string;
   direction: 'long' | 'short';
@@ -87,17 +109,35 @@ interface TradePlanChartProps {
   currentPrice: number;
   support?: number[];
   resistance?: number[];
+  forecastBands?: ForecastBand[]; // AI forecast bands to overlay on chart
+  fibonacciLevels?: FibonacciLevel[]; // Fibonacci retracement & extension levels
+  elliottWave?: ElliottWaveData; // Elliott Wave analysis data
   onChartReady?: () => void; // Callback when chart is fully rendered with data
   chartId?: string; // Optional custom ID for the chart container (default: 'trade-plan-chart')
   tradeType?: 'scalping' | 'dayTrade' | 'swing'; // Trade type to determine chart interval
+  interval?: string; // Actual analysis interval (e.g., '15m', '4h') - takes priority over tradeType
   analysisTime?: string | Date; // When the analysis was created (for marker placement)
   // Trade plan validity status
   tradePlanStatus?: 'valid' | 'wait_for_entry' | 'trade_missed';
   tradePlanMessage?: string;
 }
 
-// Get Binance interval based on trade type
-function getChartInterval(tradeType?: string): { interval: string; label: string } {
+const INTERVAL_LABELS: Record<string, string> = {
+  '5m': '5 Min',
+  '15m': '15 Min',
+  '30m': '30 Min',
+  '1h': '1 Hour',
+  '2h': '2 Hour',
+  '4h': '4 Hour',
+  '1d': '1 Day',
+  '1W': '1 Week',
+};
+
+// Get chart interval - use explicit interval if provided, otherwise fall back to trade type
+function getChartInterval(tradeType?: string, interval?: string): { interval: string; label: string } {
+  if (interval && INTERVAL_LABELS[interval]) {
+    return { interval, label: INTERVAL_LABELS[interval] };
+  }
   switch (tradeType) {
     case 'scalping':
       return { interval: '5m', label: '5 Min' };
@@ -127,14 +167,18 @@ export function TradePlanChart({
   currentPrice,
   support = [],
   resistance = [],
+  forecastBands = [],
+  fibonacciLevels = [],
+  elliottWave,
   onChartReady,
   chartId = 'trade-plan-chart',
   tradeType = 'dayTrade',
+  interval: explicitInterval,
   analysisTime,
   tradePlanStatus = 'valid',
   tradePlanMessage,
 }: TradePlanChartProps) {
-  const { interval: chartInterval, label: intervalLabel } = getChartInterval(tradeType);
+  const { interval: chartInterval, label: intervalLabel } = getChartInterval(tradeType, explicitInterval);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
@@ -143,7 +187,7 @@ export function TradePlanChart({
   const analysisMarkerTimeRef = useRef<Time | null>(null); // Time of candle closest to analysis creation
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [livePrice, setLivePrice] = useState<number | null>(null); // Live price from latest candle
+  const [livePrice, setLivePrice] = useState<number | null>(null); // Price at analysis time (or latest if no analysisTime)
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -273,7 +317,7 @@ export function TradePlanChart({
       }
     };
 
-    // Current price line - use live price from latest candle if available
+    // Price line — shows the price at analysis time (historical) or current price (live)
     const displayPrice = livePrice || currentPrice;
     if (displayPrice > 0) {
       addPriceLine({
@@ -282,7 +326,7 @@ export function TradePlanChart({
         lineWidth: 2,
         lineStyle: LineStyle.Solid,
         axisLabelVisible: true,
-        title: 'Current',
+        title: analysisTime ? 'Price@Analysis' : 'Current',
       });
     }
 
@@ -384,7 +428,74 @@ export function TradePlanChart({
       });
     });
 
-  }, [loading, entries, stopLoss, takeProfits, currentPrice, livePrice, support, resistance]);
+    // Forecast Band overlay — only short-term band, subtle dashed lines
+    const shortBand = forecastBands.find(b => b.horizon === 'short');
+    if (shortBand) {
+      if (shortBand.p90 > 0) {
+        addPriceLine({
+          price: shortBand.p90,
+          color: 'rgba(34, 197, 94, 0.35)',
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: 'P90',
+        });
+      }
+      if (shortBand.p50 > 0) {
+        addPriceLine({
+          price: shortBand.p50,
+          color: 'rgba(99, 102, 241, 0.35)',
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: 'P50',
+        });
+      }
+      if (shortBand.p10 > 0) {
+        addPriceLine({
+          price: shortBand.p10,
+          color: 'rgba(239, 68, 68, 0.35)',
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: 'P10',
+        });
+      }
+    }
+
+    // Fibonacci levels (teal/gold)
+    const fibColors: Record<string, string> = {
+      retracement: 'rgba(0, 212, 255, 0.45)', // Teal for retracement levels
+      extension: 'rgba(255, 184, 0, 0.45)',    // Gold for extension levels
+    };
+    fibonacciLevels.slice(0, 7).forEach((fib) => {
+      if (fib.price > 0) {
+        const pctLabel = (fib.level * 100).toFixed(1);
+        const color = fibColors[fib.type] || fibColors.retracement;
+        addPriceLine({
+          price: fib.price,
+          color,
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: `Fib ${pctLabel}%`,
+        });
+      }
+    });
+
+    // Elliott Wave: projected target line
+    if (elliottWave?.projectedTarget && elliottWave.projectedTarget > 0) {
+      addPriceLine({
+        price: elliottWave.projectedTarget,
+        color: 'rgba(168, 85, 247, 0.6)', // Purple for wave target
+        lineWidth: 1,
+        lineStyle: LineStyle.SparseDotted,
+        axisLabelVisible: true,
+        title: `EW Target (${elliottWave.currentWave || '?'})`,
+      });
+    }
+
+  }, [loading, entries, stopLoss, takeProfits, currentPrice, livePrice, support, resistance, forecastBands, fibonacciLevels, elliottWave, analysisTime]);
 
   const fetchKlineData = async (
     sym: string,
@@ -399,8 +510,12 @@ export function TradePlanChart({
       // Use TraderPath API which supports multiple asset classes (crypto, stocks, metals, bonds)
       // This routes to Binance for crypto and Yahoo Finance for stocks/metals/bonds
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io';
+      // For historical analyses, fetch candles up to the analysis time (not latest)
+      const endTimeParam = analysisTime
+        ? `&endTime=${new Date(analysisTime).getTime()}`
+        : '';
       const response = await fetch(
-        `${apiBaseUrl}/api/analysis/chart/candles?symbol=${encodeURIComponent(sym)}&interval=${interval}&limit=100`
+        `${apiBaseUrl}/api/analysis/chart/candles?symbol=${encodeURIComponent(sym)}&interval=${interval}&limit=100${endTimeParam}`
       );
 
       if (!response.ok) {
@@ -434,7 +549,7 @@ export function TradePlanChart({
           const analysisTimestamp = new Date(analysisTime).getTime() / 1000;
 
           // Find the candle with time closest to (but not after) analysis time
-          let closestCandle = candleData[0];
+          let closestCandle = candleData[candleData.length - 1]; // Default to last candle
           for (const candle of candleData) {
             const candleTime = candle.time as number;
             if (candleTime <= analysisTimestamp) {
@@ -444,16 +559,14 @@ export function TradePlanChart({
             }
           }
           analysisMarkerTimeRef.current = closestCandle.time;
+          // Use the analysis-time candle's close as the reference price
+          setLivePrice(closestCandle.close);
         } else {
           // No analysis time provided - use last candle (for new/live analysis)
-          analysisMarkerTimeRef.current = candleData[candleData.length - 1].time;
+          const lastCandle = candleData[candleData.length - 1];
+          analysisMarkerTimeRef.current = lastCandle.time;
+          setLivePrice(lastCandle.close);
         }
-      }
-
-      // Update live price from last candle's close
-      if (candleData.length > 0) {
-        const lastCandle = candleData[candleData.length - 1];
-        setLivePrice(lastCandle.close);
       }
 
       // Guard chart operations with try-catch in case of disposal
@@ -614,22 +727,54 @@ export function TradePlanChart({
             <div className="w-4 h-0.5 bg-purple-400/50" style={{ borderStyle: 'dotted' }}></div>
             <span>Resistance</span>
           </div>
+          {fibonacciLevels.length > 0 && (
+            <>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-0.5 bg-cyan-400/50"></div>
+                <span>Fib Retracement</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-0.5 bg-amber-400/50"></div>
+                <span>Fib Extension</span>
+              </div>
+            </>
+          )}
+          {elliottWave?.projectedTarget && (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-0.5 bg-purple-500/60"></div>
+              <span>Elliott Wave Target</span>
+            </div>
+          )}
         </div>
+
+        {/* Elliott Wave Badge */}
+        {elliottWave?.currentWave && elliottWave.confidence && elliottWave.confidence > 20 && (
+          <div className="mt-2 flex items-center gap-2 text-xs">
+            <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 font-medium">
+              Elliott Wave {elliottWave.currentWave}
+            </span>
+            <span className="text-muted-foreground">
+              {elliottWave.waveType === 'impulse' ? 'Impulse' : 'Corrective'} •{' '}
+              {elliottWave.direction === 'bullish' ? '↑ Bullish' : elliottWave.direction === 'bearish' ? '↓ Bearish' : 'Neutral'} •{' '}
+              {elliottWave.confidence}% confidence
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Price Levels Summary */}
-      <div className="p-4 border-t grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="p-4 border-t grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         {/* Average Entry - Highlighted */}
         <div className="space-y-1">
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Entry Point</div>
-          <div className="flex justify-between text-sm">
-            <span className="text-yellow-400 font-bold">▶ AVG</span>
-            <span className="font-sans font-bold text-yellow-400">${formatPrice(avgEntry)}</span>
+          <div className="flex justify-between text-sm gap-2">
+            <span className="text-yellow-400 font-bold shrink-0">▶ AVG</span>
+            <span className="font-sans font-bold text-yellow-400 truncate">${formatPrice(avgEntry)}</span>
           </div>
           {entries?.filter(e => e != null).map((entry, i) => (
-            <div key={i} className="flex justify-between text-xs text-muted-foreground">
-              <span className="text-cyan-500">E{i + 1}</span>
-              <span className="font-sans">${formatPrice(entry.price ?? 0)}</span>
+            <div key={i} className="flex justify-between text-xs text-muted-foreground gap-2">
+              <span className="text-cyan-500 shrink-0">E{i + 1}</span>
+              <span className="font-sans truncate">${formatPrice(entry.price ?? 0)}</span>
             </div>
           ))}
         </div>
@@ -637,22 +782,22 @@ export function TradePlanChart({
         {/* Stop Loss */}
         <div className="space-y-1">
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Stop Loss</div>
-          <div className="flex justify-between text-sm">
-            <span className="text-red-500">SL</span>
-            <span className="font-sans">${formatPrice(slPrice)}</span>
+          <div className="flex justify-between text-sm gap-2">
+            <span className="text-red-500 shrink-0">SL</span>
+            <span className="font-sans truncate">${formatPrice(slPrice)}</span>
           </div>
           <div className="text-xs text-red-400">-{(stopLoss?.percentage ?? 0).toFixed(1)}% risk</div>
         </div>
 
         {/* Take Profits */}
-        <div className="space-y-1 md:col-span-2">
+        <div className="space-y-1 col-span-1 sm:col-span-2">
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Take Profit Targets</div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {takeProfits?.filter(tp => tp != null).map((tp, i) => (
               <div key={i} className="text-sm">
-                <div className="flex justify-between">
-                  <span className="text-green-500">TP{i + 1}</span>
-                  <span className="font-sans">${formatPrice(tp.price ?? 0)}</span>
+                <div className="flex justify-between gap-1">
+                  <span className="text-green-500 shrink-0">TP{i + 1}</span>
+                  <span className="font-sans truncate">${formatPrice(tp.price ?? 0)}</span>
                 </div>
                 <div className="text-xs text-green-400">{(tp.riskReward ?? 0).toFixed(1)}R</div>
               </div>

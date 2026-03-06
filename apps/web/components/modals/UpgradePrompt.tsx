@@ -25,7 +25,6 @@ export type UpgradeFeature =
   | 'rewards'
   | 'scheduled_reports'
   | 'pdf_reports'
-  | 'email_reports'
   | 'daily_limit';
 
 interface UpgradePromptProps {
@@ -93,12 +92,11 @@ const FEATURE_INFO: Record<UpgradeFeature, {
   },
   reports_export: {
     title: 'Reports & Export',
-    description: 'Export your analyses as PDF reports or send via email.',
+    description: 'Export your analyses as PDF reports.',
     icon: Star,
     requiredTier: 'starter',
     benefits: [
       'PDF report downloads',
-      'Email report delivery',
       'Screenshot export',
     ],
   },
@@ -144,17 +142,6 @@ const FEATURE_INFO: Record<UpgradeFeature, {
       'Executive Summary format',
       'Full detailed reports',
       'Share with your team',
-    ],
-  },
-  email_reports: {
-    title: 'Email Reports',
-    description: 'Send analysis reports directly to your email.',
-    icon: Zap,
-    requiredTier: 'starter',
-    benefits: [
-      'Instant delivery',
-      'Professional formatting',
-      'Trade plan included',
     ],
   },
   daily_limit: {

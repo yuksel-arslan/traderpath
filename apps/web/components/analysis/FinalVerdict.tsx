@@ -109,6 +109,14 @@ interface TimingData {
   entryZones?: Array<{ priceLow?: number; priceHigh?: number; probability?: number }>;
   conditions?: Array<{ name?: string; met?: boolean }>;
   aiInsight?: string;
+  fibonacci?: {
+    nearGoldenZone?: boolean;
+    retracementPct?: number;
+    goldenZone?: { upper: number; lower: number } | null;
+    nearestFibSupport?: number | null;
+    nearestFibResistance?: number | null;
+    levels?: Array<{ level: number; price: number; type: string }>;
+  };
 }
 
 interface TrapCheckData {
@@ -137,9 +145,11 @@ interface FinalVerdictProps {
   data?: FinalVerdictData;
   symbol: string;
   allResults?: AllResultsData;
+  interval?: string;
+  analysisTime?: string | Date;
 }
 
-export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
+export function FinalVerdict({ data, symbol, allResults, interval, analysisTime }: FinalVerdictProps) {
   const router = useRouter();
 
   if (!data) {
@@ -508,6 +518,15 @@ export function FinalVerdict({ data, symbol, allResults }: FinalVerdictProps) {
           currentPrice={tradePlan.currentPrice || tradePlan.averageEntry || tradePlan.entries![0].price}
           support={tradePlan.support}
           resistance={tradePlan.resistance}
+          fibonacciLevels={(timing as Record<string, unknown>)?.fibonacci
+            ? ((timing as Record<string, unknown>).fibonacci as Record<string, unknown>)?.levels as { level: number; price: number; type: string }[] ?? []
+            : []}
+          elliottWave={(assetScanner as Record<string, unknown>)?.elliottWave as {
+            currentWave?: string; waveType?: string; direction?: string;
+            confidence?: number; projectedTarget?: number;
+          } | undefined}
+          interval={interval}
+          analysisTime={analysisTime}
           chartId="trade-plan-chart-visible"
         />
       )}

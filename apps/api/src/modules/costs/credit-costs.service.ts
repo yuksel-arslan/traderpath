@@ -64,46 +64,56 @@ let cachedCosts: CachedCosts | null = null;
 /**
  * Map database fields to CREDIT_COSTS keys
  */
-function mapDbToCosts(dbSettings: any): typeof DEFAULT_CREDIT_COSTS {
+// Helper to safely extract a number from a Prisma record field
+function numOrDefault(value: unknown, fallback: number): number {
+  if (typeof value === 'number') return value;
+  if (value != null) {
+    const n = Number(value);
+    if (!isNaN(n)) return n;
+  }
+  return fallback;
+}
+
+function mapDbToCosts(dbSettings: Record<string, unknown>): typeof DEFAULT_CREDIT_COSTS {
   return {
     // Analysis Steps (Classic 7-Step)
-    STEP_MARKET_PULSE: dbSettings.creditCostMarketPulse ?? DEFAULT_CREDIT_COSTS.STEP_MARKET_PULSE,
-    STEP_ASSET_SCANNER: dbSettings.creditCostAssetScanner ?? DEFAULT_CREDIT_COSTS.STEP_ASSET_SCANNER,
-    STEP_SAFETY_CHECK: dbSettings.creditCostSafetyCheck ?? DEFAULT_CREDIT_COSTS.STEP_SAFETY_CHECK,
-    STEP_TIMING: dbSettings.creditCostTiming ?? DEFAULT_CREDIT_COSTS.STEP_TIMING,
-    STEP_TRADE_PLAN: dbSettings.creditCostTradePlan ?? DEFAULT_CREDIT_COSTS.STEP_TRADE_PLAN,
-    STEP_TRAP_CHECK: dbSettings.creditCostTrapCheck ?? DEFAULT_CREDIT_COSTS.STEP_TRAP_CHECK,
-    STEP_FINAL_VERDICT: dbSettings.creditCostFinalVerdict ?? DEFAULT_CREDIT_COSTS.STEP_FINAL_VERDICT,
+    STEP_MARKET_PULSE: numOrDefault(dbSettings.creditCostMarketPulse, DEFAULT_CREDIT_COSTS.STEP_MARKET_PULSE),
+    STEP_ASSET_SCANNER: numOrDefault(dbSettings.creditCostAssetScanner, DEFAULT_CREDIT_COSTS.STEP_ASSET_SCANNER),
+    STEP_SAFETY_CHECK: numOrDefault(dbSettings.creditCostSafetyCheck, DEFAULT_CREDIT_COSTS.STEP_SAFETY_CHECK),
+    STEP_TIMING: numOrDefault(dbSettings.creditCostTiming, DEFAULT_CREDIT_COSTS.STEP_TIMING),
+    STEP_TRADE_PLAN: numOrDefault(dbSettings.creditCostTradePlan, DEFAULT_CREDIT_COSTS.STEP_TRADE_PLAN),
+    STEP_TRAP_CHECK: numOrDefault(dbSettings.creditCostTrapCheck, DEFAULT_CREDIT_COSTS.STEP_TRAP_CHECK),
+    STEP_FINAL_VERDICT: numOrDefault(dbSettings.creditCostFinalVerdict, DEFAULT_CREDIT_COSTS.STEP_FINAL_VERDICT),
 
     // Bundles
-    BUNDLE_FULL_ANALYSIS: dbSettings.creditCostFullAnalysis ?? DEFAULT_CREDIT_COSTS.BUNDLE_FULL_ANALYSIS,
-    BUNDLE_MLIS_PRO_ANALYSIS: dbSettings.creditCostMlisProAnalysis ?? DEFAULT_CREDIT_COSTS.BUNDLE_MLIS_PRO_ANALYSIS,
-    BUNDLE_QUICK_CHECK: dbSettings.creditCostQuickCheck ?? DEFAULT_CREDIT_COSTS.BUNDLE_QUICK_CHECK,
-    BUNDLE_SMART_ENTRY: dbSettings.creditCostSmartEntry ?? DEFAULT_CREDIT_COSTS.BUNDLE_SMART_ENTRY,
+    BUNDLE_FULL_ANALYSIS: numOrDefault(dbSettings.creditCostFullAnalysis, DEFAULT_CREDIT_COSTS.BUNDLE_FULL_ANALYSIS),
+    BUNDLE_MLIS_PRO_ANALYSIS: numOrDefault(dbSettings.creditCostMlisProAnalysis, DEFAULT_CREDIT_COSTS.BUNDLE_MLIS_PRO_ANALYSIS),
+    BUNDLE_QUICK_CHECK: numOrDefault(dbSettings.creditCostQuickCheck, DEFAULT_CREDIT_COSTS.BUNDLE_QUICK_CHECK),
+    BUNDLE_SMART_ENTRY: numOrDefault(dbSettings.creditCostSmartEntry, DEFAULT_CREDIT_COSTS.BUNDLE_SMART_ENTRY),
 
     // MLIS Pro Layers (5-Layer Neural Network)
-    MLIS_LAYER_TECHNICAL: dbSettings.creditCostMlisTechnicalLayer ?? DEFAULT_CREDIT_COSTS.MLIS_LAYER_TECHNICAL,
-    MLIS_LAYER_MOMENTUM: dbSettings.creditCostMlisMomentumLayer ?? DEFAULT_CREDIT_COSTS.MLIS_LAYER_MOMENTUM,
-    MLIS_LAYER_VOLATILITY: dbSettings.creditCostMlisVolatilityLayer ?? DEFAULT_CREDIT_COSTS.MLIS_LAYER_VOLATILITY,
-    MLIS_LAYER_VOLUME: dbSettings.creditCostMlisVolumeLayer ?? DEFAULT_CREDIT_COSTS.MLIS_LAYER_VOLUME,
-    MLIS_LAYER_VERDICT: dbSettings.creditCostMlisVerdictLayer ?? DEFAULT_CREDIT_COSTS.MLIS_LAYER_VERDICT,
+    MLIS_LAYER_TECHNICAL: numOrDefault(dbSettings.creditCostMlisTechnicalLayer, DEFAULT_CREDIT_COSTS.MLIS_LAYER_TECHNICAL),
+    MLIS_LAYER_MOMENTUM: numOrDefault(dbSettings.creditCostMlisMomentumLayer, DEFAULT_CREDIT_COSTS.MLIS_LAYER_MOMENTUM),
+    MLIS_LAYER_VOLATILITY: numOrDefault(dbSettings.creditCostMlisVolatilityLayer, DEFAULT_CREDIT_COSTS.MLIS_LAYER_VOLATILITY),
+    MLIS_LAYER_VOLUME: numOrDefault(dbSettings.creditCostMlisVolumeLayer, DEFAULT_CREDIT_COSTS.MLIS_LAYER_VOLUME),
+    MLIS_LAYER_VERDICT: numOrDefault(dbSettings.creditCostMlisVerdictLayer, DEFAULT_CREDIT_COSTS.MLIS_LAYER_VERDICT),
 
     // Capital Flow
-    CAPITAL_FLOW_L3_L4: dbSettings.creditCostCapitalFlowL3L4 ?? DEFAULT_CREDIT_COSTS.CAPITAL_FLOW_L3_L4,
+    CAPITAL_FLOW_L3_L4: numOrDefault(dbSettings.creditCostCapitalFlowL3L4, DEFAULT_CREDIT_COSTS.CAPITAL_FLOW_L3_L4),
 
     // Features
-    AI_EXPERT_QUESTION: dbSettings.creditCostAiExpert ?? DEFAULT_CREDIT_COSTS.AI_EXPERT_QUESTION,
-    AI_CONCIERGE_MESSAGE: dbSettings.creditCostAiConcierge ?? DEFAULT_CREDIT_COSTS.AI_CONCIERGE_MESSAGE,
-    PDF_REPORT: dbSettings.creditCostPdfReport ?? DEFAULT_CREDIT_COSTS.PDF_REPORT,
-    REPORT_TRANSLATION: dbSettings.creditCostTranslation ?? DEFAULT_CREDIT_COSTS.REPORT_TRANSLATION,
-    EMAIL_SEND: dbSettings.creditCostEmailSend ?? DEFAULT_CREDIT_COSTS.EMAIL_SEND,
-    ADD_TO_REPORT: dbSettings.creditCostAddToReport ?? DEFAULT_CREDIT_COSTS.ADD_TO_REPORT,
-    PRICE_ALERT: dbSettings.creditCostPriceAlert ?? DEFAULT_CREDIT_COSTS.PRICE_ALERT,
-    WATCHLIST_SLOT: dbSettings.creditCostWatchlistSlot ?? DEFAULT_CREDIT_COSTS.WATCHLIST_SLOT,
+    AI_EXPERT_QUESTION: numOrDefault(dbSettings.creditCostAiExpert, DEFAULT_CREDIT_COSTS.AI_EXPERT_QUESTION),
+    AI_CONCIERGE_MESSAGE: numOrDefault(dbSettings.creditCostAiConcierge, DEFAULT_CREDIT_COSTS.AI_CONCIERGE_MESSAGE),
+    PDF_REPORT: numOrDefault(dbSettings.creditCostPdfReport, DEFAULT_CREDIT_COSTS.PDF_REPORT),
+    REPORT_TRANSLATION: numOrDefault(dbSettings.creditCostTranslation, DEFAULT_CREDIT_COSTS.REPORT_TRANSLATION),
+    EMAIL_SEND: numOrDefault(dbSettings.creditCostEmailSend, DEFAULT_CREDIT_COSTS.EMAIL_SEND),
+    ADD_TO_REPORT: numOrDefault(dbSettings.creditCostAddToReport, DEFAULT_CREDIT_COSTS.ADD_TO_REPORT),
+    PRICE_ALERT: numOrDefault(dbSettings.creditCostPriceAlert, DEFAULT_CREDIT_COSTS.PRICE_ALERT),
+    WATCHLIST_SLOT: numOrDefault(dbSettings.creditCostWatchlistSlot, DEFAULT_CREDIT_COSTS.WATCHLIST_SLOT),
     AUTO_REFRESH_HOUR: DEFAULT_CREDIT_COSTS.AUTO_REFRESH_HOUR, // Not in DB yet
 
     // Credit Economy (Marketplace)
-    ANALYSIS_PURCHASE: dbSettings.creditCostAnalysisPurchase ?? DEFAULT_CREDIT_COSTS.ANALYSIS_PURCHASE,
+    ANALYSIS_PURCHASE: numOrDefault(dbSettings.creditCostAnalysisPurchase, DEFAULT_CREDIT_COSTS.ANALYSIS_PURCHASE),
   };
 }
 

@@ -4,7 +4,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io';
+const _rawApiUrl = (process.env.NEXT_PUBLIC_API_URL || 'https://api.traderpath.io').replace(/\/+$/, '');
+const API_URL =
+  process.env.NODE_ENV === 'production' && _rawApiUrl.includes('localhost')
+    ? 'https://api.traderpath.io'
+    : _rawApiUrl;
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -103,8 +107,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=no_token', baseUrl));
     }
 
-    // Create response with redirect to terminal
-    const response = NextResponse.redirect(new URL('/terminal', baseUrl));
+    // Create response with redirect to dashboard
+    const response = NextResponse.redirect(new URL('/dashboard', baseUrl));
 
     // Set cookies
     response.cookies.set('auth-token', accessToken, {

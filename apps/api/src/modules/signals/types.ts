@@ -8,12 +8,14 @@ export interface SignalData {
   assetClass: 'crypto' | 'stocks' | 'metals' | 'bonds';
   market: string;
   direction: 'long' | 'short';
+  interval?: string; // Timeframe: 5m, 15m, 30m, 1h, 4h, 1d, 1W
 
   // Trade Plan
   entryPrice: number;
   stopLoss: number;
   takeProfit1: number;
   takeProfit2: number;
+  takeProfit3?: number;
   riskRewardRatio: number;
 
   // Analysis Results
@@ -23,6 +25,7 @@ export interface SignalData {
   mlisRecommendation?: 'STRONG_BUY' | 'BUY' | 'HOLD' | 'SELL' | 'STRONG_SELL';
   mlisConfidence?: number;
   overallConfidence: number;
+  winRateEstimate?: number;
 
   // Capital Flow Context
   capitalFlowPhase: 'early' | 'mid' | 'late' | 'exit';
@@ -93,9 +96,11 @@ export interface TelegramSignalMessage {
   disableWebPagePreview?: boolean;
 }
 
+export type SignalOutcomeValue = 'tp1_hit' | 'tp2_hit' | 'sl_hit' | 'expired';
+
 export interface SignalOutcome {
   signalId: string;
-  outcome: 'tp1_hit' | 'tp2_hit' | 'sl_hit' | 'expired';
+  outcome: SignalOutcomeValue;
   outcomePrice: number;
   pnlPercent: number;
 }

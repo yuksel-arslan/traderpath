@@ -6,6 +6,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { authenticate } from '../../core/auth/middleware';
+import { prisma } from '../../core/database';
 import { subscriptionService } from './subscription.service';
 import { stripeService } from '../payments/stripe.service';
 import { isAdminEmail } from '../../config/admin';
@@ -198,7 +199,7 @@ export default async function subscriptionRoutes(app: FastifyInstance) {
       const body = checkoutSchema.parse(request.body);
 
       // Get user email
-      const user = await app.prisma.user.findUnique({
+      const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { email: true },
       });
@@ -389,10 +390,10 @@ export default async function subscriptionRoutes(app: FastifyInstance) {
           case 'customer.subscription.updated': {
             const subscription = event.data.object;
 
-            // Check if this is a signal subscription or credit subscription
-            const isSignalSubscription = subscription.metadata?.subscriptionType === 'signal';
+            // Check subscription type from metadata
+            const subType = subscription.metadata?.subscriptionType;
 
-            if (isSignalSubscription) {
+            if (subType === 'signal') {
               const { signalSubscriptionService } = await import('../signals');
               await signalSubscriptionService.handleSignalSubscriptionWebhook(
                 subscription,
@@ -401,6 +402,16 @@ export default async function subscriptionRoutes(app: FastifyInstance) {
               app.log.info(
                 { subscriptionId: subscription.id },
                 `Signal subscription ${event.type.split('.').pop()}`
+              );
+            } else if (subType === 'weekly_plan') {
+              const { weeklyPlanService } = await import('../weekly-plans/weekly-plan.service');
+              await weeklyPlanService.handleWebhook(
+                subscription,
+                subscription.customer as string
+              );
+              app.log.info(
+                { subscriptionId: subscription.id },
+                `Weekly plan ${event.type.split('.').pop()}`
               );
             } else {
               await subscriptionService.handleSubscriptionWebhook(
@@ -418,16 +429,23 @@ export default async function subscriptionRoutes(app: FastifyInstance) {
           case 'customer.subscription.deleted': {
             const subscription = event.data.object;
 
-            // Check if this is a signal subscription or credit subscription
-            const isSignalSubscription = subscription.metadata?.subscriptionType === 'signal';
+            // Check subscription type from metadata
+            const subType = subscription.metadata?.subscriptionType;
 
-            if (isSignalSubscription) {
+            if (subType === 'signal') {
               const { signalSubscriptionService } = await import('../signals');
               await signalSubscriptionService.handleSignalSubscriptionDeleted(
                 subscription,
                 subscription.customer as string
               );
               app.log.info({ subscriptionId: subscription.id }, 'Signal subscription deleted');
+            } else if (subType === 'weekly_plan') {
+              const { weeklyPlanService } = await import('../weekly-plans/weekly-plan.service');
+              await weeklyPlanService.handleDeleted(
+                subscription,
+                subscription.customer as string
+              );
+              app.log.info({ subscriptionId: subscription.id }, 'Weekly plan deleted');
             } else {
               await subscriptionService.handleSubscriptionDeleted(
                 subscription,
@@ -454,17 +472,40 @@ export default async function subscriptionRoutes(app: FastifyInstance) {
                 invoice.subscription as string
               );
               if (subscription) {
-                await subscriptionService.handleSubscriptionWebhook(
-                  subscription,
-                  invoice.customer as string
-                );
+                const subType = subscription.metadata?.subscriptionType;
 
-                // Notify user of successful payment
-                const userId = subscription.metadata.userId;
-                const tier = subscription.metadata.tier || 'unknown';
-                if (userId) {
-                  const { paymentNotificationService } = await import('../notifications/payment-notification.service');
-                  await paymentNotificationService.notifySubscriptionSuccess(userId, tier);
+                if (subType === 'weekly_plan') {
+                  // Handle weekly plan renewal - reset quota
+                  const { weeklyPlanService } = await import('../weekly-plans/weekly-plan.service');
+                  await weeklyPlanService.handleWebhook(
+                    subscription,
+                    invoice.customer as string
+                  );
+                  const planType = subscription.metadata.planType;
+                  const userId = subscription.metadata.userId;
+                  if (userId && planType) {
+                    await weeklyPlanService.handleRenewal(
+                      userId,
+                      planType as 'REPORT_WEEKLY' | 'ANALYSIS_WEEKLY'
+                    );
+                  }
+                  app.log.info(
+                    { subscriptionId: subscription.id, planType },
+                    'Weekly plan renewed - quota reset'
+                  );
+                } else {
+                  await subscriptionService.handleSubscriptionWebhook(
+                    subscription,
+                    invoice.customer as string
+                  );
+
+                  // Notify user of successful payment
+                  const userId = subscription.metadata.userId;
+                  const tier = subscription.metadata.tier || 'unknown';
+                  if (userId) {
+                    const { paymentNotificationService } = await import('../notifications/payment-notification.service');
+                    await paymentNotificationService.notifySubscriptionSuccess(userId, tier);
+                  }
                 }
               }
             }

@@ -21,10 +21,10 @@ const MARKET_OPTIONS: { id: MarketType; label: string; icon: string }[] = [
 const BIST_SUB_SECTORS: { id: BistSubSector; label: string }[] = [
   { id: 'bist100', label: 'BIST 100' },
   { id: 'bist30', label: 'BIST 30' },
-  { id: 'banka', label: 'BANKA' },
-  { id: 'sanayi', label: 'SANAYİ' },
-  { id: 'teknoloji', label: 'TEKNOLOJİ' },
-  { id: 'hizmet', label: 'HİZMET' },
+  { id: 'banka', label: 'Banking' },
+  { id: 'sanayi', label: 'Industrial' },
+  { id: 'teknoloji', label: 'Technology' },
+  { id: 'hizmet', label: 'Services' },
 ];
 
 const STORAGE_KEY = 'dashboard_market_filter';

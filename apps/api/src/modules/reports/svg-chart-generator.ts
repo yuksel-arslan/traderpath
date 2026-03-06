@@ -25,6 +25,20 @@ interface ChartMarker {
   color: string;
 }
 
+interface FibonacciLevel {
+  level: number;
+  price: number;
+  type: string; // 'retracement' | 'extension'
+}
+
+interface ElliottWaveData {
+  currentWave?: string;
+  waveType?: string;
+  direction?: string;
+  confidence?: number;
+  projectedTarget?: number;
+}
+
 interface SVGChartOptions {
   width?: number;
   height?: number;
@@ -33,6 +47,8 @@ interface SVGChartOptions {
   levels?: ChartLevel[];
   marker?: ChartMarker;
   backgroundColor?: string;
+  fibonacciLevels?: FibonacciLevel[];
+  elliottWave?: ElliottWaveData;
 }
 
 export function generateCandlestickSVG(
@@ -47,6 +63,8 @@ export function generateCandlestickSVG(
     levels = [],
     marker,
     backgroundColor = '#1e293b',
+    fibonacciLevels = [],
+    elliottWave,
   } = options;
 
   if (!candles || candles.length === 0) {
@@ -63,6 +81,8 @@ export function generateCandlestickSVG(
   // Price range
   const allPrices = candles.flatMap(c => [c.high, c.low]);
   levels.forEach(l => allPrices.push(l.price));
+  fibonacciLevels.forEach(f => allPrices.push(f.price));
+  if (elliottWave?.projectedTarget) allPrices.push(elliottWave.projectedTarget);
   const minPrice = Math.min(...allPrices);
   const maxPrice = Math.max(...allPrices);
   const priceRange = maxPrice - minPrice || 1;
@@ -144,6 +164,34 @@ export function generateCandlestickSVG(
     }
   });
 
+  // Fibonacci levels (retracement = teal, extension = gold)
+  fibonacciLevels.slice(0, 7).forEach(fib => {
+    const y = toY(fib.price);
+    if (y >= padding.top && y <= padding.top + chartH) {
+      const color = fib.type === 'extension' ? '#FFB800' : '#00D4FF';
+      const pctLabel = `Fib ${(fib.level * 100).toFixed(1)}%`;
+      svg += `<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="${color}" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>`;
+      svg += `<text x="${width - padding.right - 5}" y="${y - 3}" fill="${color}" font-size="8" text-anchor="end" font-family="sans-serif">${pctLabel} $${fmtPrice(fib.price)}</text>`;
+    }
+  });
+
+  // Elliott Wave projected target
+  if (elliottWave?.projectedTarget) {
+    const y = toY(elliottWave.projectedTarget);
+    if (y >= padding.top && y <= padding.top + chartH) {
+      const ewLabel = `EW Target${elliottWave.currentWave ? ` (${elliottWave.currentWave})` : ''}`;
+      svg += `<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="#A855F7" stroke-width="1" stroke-dasharray="2,3" opacity="0.7"/>`;
+      svg += `<text x="${padding.left + 5}" y="${y + 11}" fill="#A855F7" font-size="8" font-family="sans-serif">${ewLabel} $${fmtPrice(elliottWave.projectedTarget)}</text>`;
+    }
+  }
+
+  // Elliott Wave badge (bottom-left corner)
+  if (elliottWave?.currentWave) {
+    const badgeY = height - 12;
+    const waveInfo = `EW: ${elliottWave.currentWave}${elliottWave.waveType ? ` (${elliottWave.waveType})` : ''} ${elliottWave.direction || ''} ${elliottWave.confidence ? elliottWave.confidence + '%' : ''}`;
+    svg += `<text x="${padding.left + 5}" y="${badgeY}" fill="#A855F7" font-size="8" opacity="0.8" font-family="sans-serif">${waveInfo}</text>`;
+  }
+
   svg += '</svg>';
   return svg;
 }
@@ -153,3 +201,4 @@ export function svgToBase64DataUrl(svg: string): string {
   const base64 = Buffer.from(svg).toString('base64');
   return `data:image/svg+xml;base64,${base64}`;
 }
+

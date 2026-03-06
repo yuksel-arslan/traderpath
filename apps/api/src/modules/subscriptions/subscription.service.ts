@@ -5,6 +5,7 @@
 
 import { prisma } from '../../core/database';
 import { cache, cacheKeys } from '../../core/cache';
+import { logger } from '../../core/logger';
 import { stripeService } from '../payments/stripe.service';
 import {
   SubscriptionTier,
@@ -65,9 +66,9 @@ export const subscriptionService = {
   async getUserSubscription(userId: string): Promise<UserSubscription> {
     // Check cache first
     const cacheKey = `subscription:${userId}`;
-    const cached = await cache.get(cacheKey);
+    const cached = await cache.get<string>(cacheKey);
     if (cached) {
-      return JSON.parse(cached);
+      return JSON.parse(typeof cached === 'string' ? cached : JSON.stringify(cached));
     }
 
     // Get from database
@@ -87,7 +88,7 @@ export const subscriptionService = {
         stripeSubscriptionId: null,
       };
 
-      await cache.set(cacheKey, JSON.stringify(result), 'EX', SUBSCRIPTION_CACHE_TTL);
+      await cache.set(cacheKey, JSON.stringify(result), SUBSCRIPTION_CACHE_TTL);
       return result;
     }
 
@@ -104,7 +105,7 @@ export const subscriptionService = {
       stripeSubscriptionId: subscription.stripeSubscriptionId,
     };
 
-    await cache.set(cacheKey, JSON.stringify(result), 'EX', SUBSCRIPTION_CACHE_TTL);
+    await cache.set(cacheKey, JSON.stringify(result), SUBSCRIPTION_CACHE_TTL);
     return result;
   },
 
@@ -309,7 +310,7 @@ export const subscriptionService = {
         await this.allocateDailyCredits(sub.userId, sub.tier);
         processed++;
       } catch (error) {
-        console.error(`Failed to allocate credits for user ${sub.userId}:`, error);
+        logger.error({ userId: sub.userId, error }, 'Failed to allocate daily credits for subscriber');
       }
     }
 
@@ -329,12 +330,11 @@ export const subscriptionService = {
     try {
       await stripeService.cancelSubscription(subscription.stripeSubscriptionId);
 
-      // Update local record
+      // Update local record — keep ACTIVE, Stripe webhook will update status at period end
       await prisma.subscription.update({
         where: { userId },
         data: {
           cancelAtPeriodEnd: true,
-          status: 'CANCELED',
         },
       });
 

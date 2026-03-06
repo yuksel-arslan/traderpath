@@ -1,24 +1,19 @@
 'use client';
 
 // ===========================================
-// TAILORED ANALYSIS PAGE
-// User picks any asset (no AI-recommendation gate), selects timeframe, runs analysis.
+// TAILORED ANALYSIS PAGE — Redesigned
+// User picks any asset, selects timeframe, runs analysis.
+// Cleaned up: removed duplicate panels (MarketContext, TrendingAssets, Configure card).
+// Uses shared hooks for data fetching and handlers.
 // ===========================================
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Search,
-  Target,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   Zap,
-  Loader2,
-  Shield,
-  RefreshCw,
   X,
   Coins,
   BarChart3,
@@ -26,29 +21,29 @@ import {
   Gem,
   Building2,
   Activity,
-  Sparkles,
-  ArrowLeft,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
-import { authFetch, getAuthToken, getApiUrl } from '../../../../lib/api';
-import Link from 'next/link';
+import { authFetch } from '../../../../lib/api';
 import type { Timeframe } from '../../../../components/analysis/TradeTypeSelector';
+import {
+  type TopCoinData,
+  normalizeVerdictUpper,
+} from '../../../../lib/analysis-types';
+import { useRecentAnalyses, useDailyPass, useAnalysisHandlers } from '../../../../lib/hooks/useAnalysisData';
+
+import { MarketPulseBar } from '../../../../components/analyze/tailored/MarketPulseBar';
+import { TrendingStrip } from '../../../../components/analyze/tailored/TrendingStrip';
+import { AssetCard } from '../../../../components/analyze/tailored/AssetCard';
+import { AssetConfigPanel } from '../../../../components/analyze/tailored/AssetConfigPanel';
+import { RecentAnalysesMobile } from '../../../../components/analyze/RecentAnalysesMobile';
 
 // Lazy load
-const CoinIcon = dynamic(
-  () => import('../../../../components/common/CoinIcon').then(mod => ({ default: mod.CoinIcon })),
-  { ssr: false, loading: () => <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse" /> }
-);
-
 const AnalysisDialog = dynamic(
   () => import('../../../../components/analysis/AnalysisDialog').then(mod => ({ default: mod.AnalysisDialog })),
   { ssr: false }
 );
 
-import { RecentAnalysesMobile } from '../../../../components/analyze/RecentAnalysesMobile';
-
 // Types
-type TradeType = 'scalping' | 'dayTrade' | 'swing';
 type AssetCategory = 'all' | 'crypto' | 'stocks' | 'metals' | 'bonds' | 'bist';
 
 interface AssetItem {
@@ -57,27 +52,7 @@ interface AssetItem {
   category: AssetCategory;
 }
 
-interface RecentAnalysis {
-  id: string;
-  symbol: string;
-  verdict: 'go' | 'conditional_go' | 'wait' | 'avoid';
-  score: number | null;
-  direction: string | null;
-  tradeType?: TradeType;
-  method?: string;
-  createdAt: string;
-  outcome?: 'correct' | 'incorrect' | 'pending' | null;
-  entryPrice?: number;
-  currentPrice?: number;
-  unrealizedPnL?: number;
-  stopLoss?: number;
-  takeProfit1?: number;
-  tpProgress?: number;
-  hasTradePlan?: boolean;
-  expiresAt?: string;
-}
-
-// Built-in asset catalog organized by category
+// Built-in asset catalog
 const ASSET_CATALOG: AssetItem[] = [
   // Crypto - Top 30
   { symbol: 'BTC', name: 'Bitcoin', category: 'crypto' },
@@ -150,18 +125,18 @@ const CATEGORY_CONFIG: { key: AssetCategory; label: string; icon: typeof Coins }
   { key: 'bist', label: 'BIST', icon: Building2 },
 ];
 
-const TIMEFRAMES: { value: Timeframe; label: string; type: string }[] = [
-  { value: '15m', label: '15m', type: 'Scalp' },
-  { value: '1h', label: '1H', type: 'Day' },
-  { value: '4h', label: '4H', type: 'Day' },
-  { value: '1d', label: '1D', type: 'Swing' },
-];
+const CATEGORY_ICONS: Record<string, typeof Coins> = {
+  crypto: Coins,
+  stocks: BarChart3,
+  bonds: Landmark,
+  metals: Gem,
+  bist: Building2,
+};
 
 export default function TailoredAnalysisPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Search + filter state
+  // Search + filter
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<AssetCategory>('all');
   const [selectedAsset, setSelectedAsset] = useState<AssetItem | null>(null);
@@ -170,98 +145,91 @@ export default function TailoredAnalysisPage() {
   // Analysis dialog
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
 
-  // Daily pass
-  const [dailyPassStatus, setDailyPassStatus] = useState<{
-    hasPass: boolean;
-    canUse: boolean;
-    usageCount: number;
-    maxUsage: number;
-  } | null>(null);
-  const [purchasingPass, setPurchasingPass] = useState(false);
-
-  // Recent analyses
-  const [analyses, setAnalyses] = useState<RecentAnalysis[]>([]);
-  const [analysesLoading, setAnalysesLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<{ id: string; action: string } | null>(null);
-
-  // Custom symbol input (for symbols not in catalog)
-  const [customSymbol, setCustomSymbol] = useState('');
+  // Market context
+  const [cfData, setCfData] = useState<Record<string, unknown> | null>(null);
+  const [topCoins, setTopCoins] = useState<TopCoinData[]>([]);
 
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Fetch daily pass status
-  const fetchDailyPassStatus = useCallback(async () => {
-    try {
-      const res = await authFetch('/api/passes/check/ASSET_ANALYSIS');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setDailyPassStatus({
-            hasPass: data.data.hasPass,
-            canUse: data.data.canUse,
-            usageCount: data.data.pass?.usageCount ?? 0,
-            maxUsage: data.data.pass?.maxUsage ?? 10,
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch daily pass status:', error);
-    }
-  }, []);
+  // ── Shared hooks ──────────────────────────
+  const { analyses, setAnalyses, loading: analysesLoading, refresh: refreshAnalyses } = useRecentAnalyses();
+  const { status: dailyPassStatus, purchasing: purchasingPass, setPurchasing: setPurchasingPass, refresh: refreshPass } = useDailyPass();
+  const { handleDelete, handleEmail } = useAnalysisHandlers(analyses, setAnalyses);
 
-  // Fetch recent analyses
-  const fetchAnalyses = useCallback(async () => {
-    try {
-      const token = await getAuthToken();
-      if (!token) { setAnalyses([]); setAnalysesLoading(false); return; }
-      const response = await fetch(getApiUrl('/api/analysis/live-prices'), {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const responseText = await response.text();
-        if (responseText && responseText.trim() !== '') {
-          const result = JSON.parse(responseText);
-          const liveAnalyses = result.data?.analyses || [];
-          const mapped = liveAnalyses.map((a: Record<string, any>) => {
-            const rawVerdict = (a.verdict || '').toLowerCase().replace(/[^a-z_]/g, '');
-            let verdict: 'go' | 'conditional_go' | 'wait' | 'avoid' = 'wait';
-            if (rawVerdict === 'go') verdict = 'go';
-            else if (rawVerdict === 'conditional_go' || rawVerdict === 'conditionalgo' || rawVerdict === 'cond') verdict = 'conditional_go';
-            else if (rawVerdict === 'avoid' || rawVerdict === 'no_go' || rawVerdict === 'nogo') verdict = 'avoid';
-            let tradeType: TradeType | undefined;
-            if (a.interval === '5m' || a.interval === '15m') tradeType = 'scalping';
-            else if (a.interval === '1h' || a.interval === '4h') tradeType = 'dayTrade';
-            else if (a.interval === '1d' || a.interval === '1D') tradeType = 'swing';
-            let outcome: 'correct' | 'incorrect' | 'pending' | null = null;
-            if (a.outcome === 'tp1_hit' || a.outcome === 'tp2_hit' || a.outcome === 'tp3_hit') outcome = 'correct';
-            else if (a.outcome === 'sl_hit') outcome = 'incorrect';
-            else if (a.hasTradePlan) outcome = 'pending';
-            return {
-              id: a.id, symbol: a.symbol, verdict, score: a.totalScore ?? null,
-              direction: a.direction, tradeType, method: a.method || 'classic',
-              createdAt: new Date(a.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-              outcome, entryPrice: a.entryPrice, currentPrice: a.currentPrice, unrealizedPnL: a.unrealizedPnL,
-              stopLoss: a.stopLoss, takeProfit1: a.takeProfit1, tpProgress: a.tpProgress, hasTradePlan: a.hasTradePlan, expiresAt: a.expiresAt,
-            };
-          });
-          setAnalyses(mapped);
-        }
+  // ── Coin lookup ───────────────────────────
+  const coinLookup = useMemo(() => {
+    const map = new Map<string, TopCoinData>();
+    for (const coin of topCoins) {
+      map.set(coin.symbol.toUpperCase(), coin);
+    }
+    return map;
+  }, [topCoins]);
+
+  // ── Market pulse from CF data ─────────────
+  const marketPulse = useMemo(() => {
+    if (!cfData) return null;
+    const bias = String((cfData as Record<string, unknown>).liquidityBias ?? 'neutral').toLowerCase();
+    const regime = bias === 'risk_on' ? 'RISK_ON' : bias === 'risk_off' ? 'RISK_OFF' : 'NEUTRAL';
+    const confidence = Number((cfData as Record<string, unknown>).confidence ?? 50);
+
+    const markets = (cfData as Record<string, unknown>).markets as Array<Record<string, unknown>> | undefined;
+    let topFlow: { sector: string; amount: string } | null = null;
+    if (Array.isArray(markets) && markets.length > 0) {
+      const sorted = [...markets].sort((a, b) => Number(b.flow7d ?? 0) - Number(a.flow7d ?? 0));
+      const top = sorted[0];
+      if (top) {
+        const flow7d = Number(top.flow7d ?? 0);
+        topFlow = {
+          sector: String(top.market ?? ''),
+          amount: `${flow7d > 0 ? '+' : ''}${flow7d.toFixed(1)}%`,
+        };
       }
-    } catch (err) {
-      console.error('Failed to fetch analyses:', err);
-    } finally {
-      setAnalysesLoading(false);
+    }
+
+    return { regime, confidence, topFlow };
+  }, [cfData]);
+
+  // ── Trending assets from top-coins ────────
+  const trendingAssets = useMemo(() => {
+    return topCoins
+      .filter(c => Number(c.totalScore ?? c.reliabilityScore ?? c.score ?? 0) > 0)
+      .slice(0, 10)
+      .map(c => ({
+        symbol: c.symbol,
+        name: c.name || c.symbol,
+        price: Number(c.currentPrice ?? c.price ?? 0),
+        change24h: Number(c.change24h ?? c.priceChange24h ?? 0),
+        score: Number(c.totalScore ?? c.reliabilityScore ?? c.score ?? 0),
+        verdict: normalizeVerdictUpper(String(c.verdict ?? 'WAIT')),
+      }));
+  }, [topCoins]);
+
+  // ── Fetch market context ──────────────────
+  const fetchMarketContext = useCallback(async () => {
+    try {
+      const [cfRes, coinsRes] = await Promise.all([
+        authFetch('/api/capital-flow/summary'),
+        authFetch('/api/analysis/top-coins?limit=10&sortBy=reliabilityScore'),
+      ]);
+      if (cfRes.ok) {
+        const cfJson = await cfRes.json();
+        setCfData(cfJson?.data ?? cfJson ?? null);
+      }
+      if (coinsRes.ok) {
+        const coinsJson = await coinsRes.json();
+        const coins = coinsJson?.data?.coins ?? coinsJson?.data ?? coinsJson?.coins ?? [];
+        setTopCoins(Array.isArray(coins) ? coins : []);
+      }
+    } catch {
+      // Silent fail
     }
   }, []);
 
   useEffect(() => {
-    fetchDailyPassStatus();
-    fetchAnalyses();
-    const interval = setInterval(fetchAnalyses, 30000);
-    return () => clearInterval(interval);
-  }, [fetchDailyPassStatus, fetchAnalyses]);
+    fetchMarketContext();
+  }, [fetchMarketContext]);
 
-  // Read URL params (e.g., from Capital Flow navigation)
+  // ── URL params (e.g., from Capital Flow navigation) ──
   useEffect(() => {
     const symbol = searchParams.get('symbol');
     if (symbol) {
@@ -269,22 +237,49 @@ export default function TailoredAnalysisPage() {
       if (found) {
         setSelectedAsset(found);
       } else {
-        setCustomSymbol(symbol.toUpperCase());
         setSelectedAsset({ symbol: symbol.toUpperCase(), name: symbol.toUpperCase(), category: 'crypto' });
       }
     }
   }, [searchParams]);
 
-  // Filter assets
-  const filteredAssets = ASSET_CATALOG.filter(asset => {
-    const matchesCategory = activeCategory === 'all' || asset.category === activeCategory;
-    const matchesSearch = searchQuery === '' ||
-      (asset.symbol || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
-      (asset.name || '').toLowerCase().includes((searchQuery || '').toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  // ── Filter assets ─────────────────────────
+  const filteredAssets = useMemo(() => {
+    return ASSET_CATALOG.filter(asset => {
+      const matchesCategory = activeCategory === 'all' || asset.category === activeCategory;
+      const matchesSearch = searchQuery === '' ||
+        (asset.symbol || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+        (asset.name || '').toLowerCase().includes((searchQuery || '').toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [activeCategory, searchQuery]);
 
-  // Purchase Daily Pass
+  // ── Custom symbol detection ───────────────
+  const customSearchSymbol = useMemo(() => {
+    if (searchQuery.length < 2) return null;
+    const q = searchQuery.trim().toUpperCase();
+    const inCatalog = ASSET_CATALOG.some(a => a.symbol.toUpperCase() === q);
+    if (inCatalog) return null;
+    return q;
+  }, [searchQuery]);
+
+  // ── Select asset ──────────────────────────
+  const handleSelectSymbol = useCallback((symbol: string) => {
+    const found = ASSET_CATALOG.find(a => a.symbol.toUpperCase() === symbol.toUpperCase());
+    if (found) {
+      setSelectedAsset(found);
+    } else {
+      setSelectedAsset({ symbol: symbol.toUpperCase(), name: symbol.toUpperCase(), category: 'crypto' });
+    }
+    setSearchQuery('');
+  }, []);
+
+  const handleSelectCustom = useCallback(() => {
+    if (!customSearchSymbol) return;
+    setSelectedAsset({ symbol: customSearchSymbol, name: customSearchSymbol, category: 'crypto' });
+    setSearchQuery('');
+  }, [customSearchSymbol]);
+
+  // ── Purchase Daily Pass ───────────────────
   const purchaseDailyPass = async () => {
     setPurchasingPass(true);
     try {
@@ -296,26 +291,26 @@ export default function TailoredAnalysisPage() {
       const data = await res.json();
       if (data.success) {
         toast.success('Daily Analysis Pass purchased!');
-        await fetchDailyPassStatus();
+        await refreshPass();
       } else {
         toast.error(data.error?.message || 'Failed to purchase pass.');
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to purchase pass.');
     } finally {
       setPurchasingPass(false);
     }
   };
 
-  // Run analysis
+  // ── Run analysis ──────────────────────────
   const runAnalysis = async () => {
     if (!selectedAsset) {
       toast.error('Please select an asset first');
       return;
     }
     if (!dailyPassStatus?.hasPass || !dailyPassStatus?.canUse) {
-      const confirm = window.confirm('You need a Daily Analysis Pass.\n\n100 Credits = 10 Analyses Today\n\nPurchase now?');
-      if (confirm) {
+      const confirmed = window.confirm('You need a Daily Analysis Pass.\n\n100 Credits = 10 Analyses Today\n\nPurchase now?');
+      if (confirmed) {
         await purchaseDailyPass();
         const res = await authFetch('/api/passes/check/ASSET_ANALYSIS');
         const data = await res.json();
@@ -328,261 +323,156 @@ export default function TailoredAnalysisPage() {
     setShowAnalysisDialog(true);
   };
 
-  // Handle custom symbol submission
-  const handleCustomSymbol = () => {
-    const sym = customSymbol.trim().toUpperCase();
-    if (sym.length < 2) {
-      toast.error('Enter a valid symbol (e.g., BTC, AAPL, GLD)');
-      return;
-    }
-    setSelectedAsset({ symbol: sym, name: sym, category: 'crypto' });
-    setCustomSymbol('');
-  };
+  // ── Enrichment data for selected asset ────
+  const selectedCoinData = selectedAsset ? coinLookup.get(selectedAsset.symbol.toUpperCase()) : undefined;
 
-  // Delete analysis
-  const handleDelete = async (e: React.MouseEvent, analysisId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!confirm('Delete this analysis?')) return;
-    setActionLoading({ id: analysisId, action: 'delete' });
-    try {
-      const response = await authFetch(`/api/analysis/${analysisId}`, { method: 'DELETE' });
-      if (response.ok) setAnalyses(analyses.filter(a => a.id !== analysisId));
-    } catch (error) {
-      console.error('Failed to delete:', error);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleEmail = (e: React.MouseEvent, analysis: RecentAnalysis) => {
-    e.preventDefault();
-    e.stopPropagation();
-    router.push(`/analyze/details/${analysis.id}?email=true`);
-  };
-
-  const getCategoryIcon = (cat: string) => {
-    const icons: Record<string, typeof Coins> = { crypto: Coins, stocks: BarChart3, bonds: Landmark, metals: Gem, bist: Building2 };
-    return icons[cat] || Activity;
-  };
+  const getCategoryIcon = (cat: string) => CATEGORY_ICONS[cat] || Activity;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#041020]">
+    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-6 space-y-4">
 
-      {/* Header */}
-      <div className="border-b border-slate-200 dark:border-white/5 bg-white dark:bg-[#071023]">
-        <div className="max-w-5xl mx-auto px-4 py-4 sm:py-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Link
-              href="/analyze"
-              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4 text-slate-500" />
-            </Link>
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Target className="w-5 h-5 text-violet-500" />
-                Tailored Analysis
-              </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Pick any asset, choose your timeframe, run analysis on your terms.</p>
-            </div>
-          </div>
+      {/* Market Pulse Bar */}
+      {marketPulse && (
+        <MarketPulseBar
+          regime={marketPulse.regime}
+          regimeConfidence={marketPulse.confidence}
+          topFlow={marketPulse.topFlow}
+          fearGreed={null}
+        />
+      )}
 
-          {/* Search + Category Filter */}
-          <div className="space-y-3">
-            {/* Search input */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                ref={searchRef}
-                type="text"
-                placeholder="Search assets... (BTC, AAPL, GLD, THYAO)"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <X className="w-4 h-4 text-slate-400 hover:text-slate-600" />
-                </button>
-              )}
-            </div>
+      {/* Search + Category Filter */}
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/30" />
+          <input
+            ref={searchRef}
+            type="text"
+            placeholder="Search assets... (BTC, AAPL, GLD, THYAO)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && customSearchSymbol) handleSelectCustom();
+            }}
+            className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.03] text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-[#00D4FF]/30 focus:border-[#00D4FF]/50"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2">
+              <X className="w-4 h-4 text-slate-400 dark:text-white/30 hover:text-slate-600 dark:hover:text-white/60" />
+            </button>
+          )}
+        </div>
 
-            {/* Category tabs */}
-            <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-              {CATEGORY_CONFIG.map(cat => {
-                const CatIcon = cat.icon;
-                return (
-                  <button
-                    key={cat.key}
-                    onClick={() => setActiveCategory(cat.key)}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all',
-                      activeCategory === cat.key
-                        ? 'bg-violet-500 text-white shadow-md'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                    )}
-                  >
-                    <CatIcon className="w-3.5 h-3.5" />
-                    {cat.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+          {CATEGORY_CONFIG.map(cat => {
+            const CatIcon = cat.icon;
+            const isCatActive = activeCategory === cat.key;
+            return (
+              <button
+                key={cat.key}
+                onClick={() => setActiveCategory(cat.key)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all',
+                  isCatActive
+                    ? 'text-white'
+                    : 'bg-slate-100 dark:bg-white/[0.04] text-slate-500 dark:text-white/40 hover:bg-slate-200 dark:hover:bg-white/[0.08]'
+                )}
+                style={isCatActive ? { background: 'linear-gradient(135deg, #00F5A0, #00D4FF)' } : undefined}
+              >
+                <CatIcon className="w-3.5 h-3.5" />
+                {cat.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6">
+      {/* Selected Asset Config Panel — replaces the old left-panel Configure + right-panel AssetConfig duplication */}
+      {selectedAsset && (
+        <AssetConfigPanel
+          symbol={selectedAsset.symbol}
+          name={selectedAsset.name}
+          price={selectedCoinData ? Number(selectedCoinData.currentPrice ?? selectedCoinData.price ?? 0) : undefined}
+          change24h={selectedCoinData ? Number(selectedCoinData.change24h ?? selectedCoinData.priceChange24h ?? 0) : undefined}
+          score={selectedCoinData ? Number(selectedCoinData.totalScore ?? selectedCoinData.reliabilityScore ?? selectedCoinData.score ?? 0) : undefined}
+          verdict={selectedCoinData ? String(selectedCoinData.verdict ?? '') : undefined}
+          timeframe={timeframe}
+          onTimeframeChange={setTimeframe}
+          onRun={runAnalysis}
+          onClose={() => setSelectedAsset(null)}
+          dailyPassStatus={dailyPassStatus}
+          purchasingPass={purchasingPass}
+          onPurchasePass={purchaseDailyPass}
+        />
+      )}
 
-        {/* Selected Asset + Config Panel */}
-        {selectedAsset && (
-          <div className="mb-6 p-4 rounded-2xl border-2 border-violet-200 dark:border-violet-500/20 bg-gradient-to-br from-white via-violet-50/30 to-white dark:from-[#071023] dark:via-violet-900/10 dark:to-[#071023]">
-            <div className="flex items-center justify-between mb-3">
+      {/* Trending Strip — only when no asset selected */}
+      {!selectedAsset && trendingAssets.length > 0 && (
+        <TrendingStrip assets={trendingAssets} onSelect={handleSelectSymbol} />
+      )}
+
+      {/* Asset Grid — only when no asset selected */}
+      {!selectedAsset && (
+        <div>
+          {customSearchSymbol && (
+            <button
+              onClick={handleSelectCustom}
+              className="w-full mb-4 p-3 rounded-xl text-left transition-all hover:scale-[1.01] border border-dashed border-[#00D4FF]/30 bg-[#00D4FF]/[0.03]"
+            >
               <div className="flex items-center gap-3">
-                <CoinIcon symbol={selectedAsset.symbol} size={40} />
+                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#00D4FF]/10">
+                  <Zap className="w-4 h-4 text-[#00D4FF]" />
+                </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{selectedAsset.symbol}</h3>
-                  <p className="text-xs text-slate-500">{selectedAsset.name}</p>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white block">
+                    Analyze &quot;{customSearchSymbol}&quot;
+                  </span>
+                  <span className="text-[10px] text-slate-500 dark:text-white/40">
+                    Custom symbol — press Enter or click to select
+                  </span>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedAsset(null)}
-                className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-              >
-                Change
-              </button>
-            </div>
-
-            {/* Timeframe */}
-            <div className="mb-4">
-              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5 block">Timeframe</label>
-              <div className="flex gap-2">
-                {TIMEFRAMES.map((tf) => (
-                  <button
-                    key={tf.value}
-                    onClick={() => setTimeframe(tf.value)}
-                    className={cn(
-                      "flex-1 py-2 rounded-lg text-sm font-medium transition-all",
-                      timeframe === tf.value
-                        ? "bg-violet-500 text-white shadow-md"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
-                    )}
-                  >
-                    {tf.label}
-                    <span className="block text-[9px] opacity-60">{tf.type}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Daily Pass Status */}
-            {dailyPassStatus && (
-              <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-100 dark:bg-slate-800 mb-4">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Daily Pass:</span>
-                {dailyPassStatus.hasPass ? (
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">Active</span>
-                    <span className="text-xs text-slate-600 dark:text-slate-400">{dailyPassStatus.maxUsage - dailyPassStatus.usageCount}/{dailyPassStatus.maxUsage} left</span>
-                  </div>
-                ) : (
-                  <button
-                    onClick={purchaseDailyPass}
-                    disabled={purchasingPass}
-                    className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-semibold hover:shadow-lg transition-all disabled:opacity-50"
-                  >
-                    {purchasingPass ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Buy Pass - 100 Credits'}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Note: No capital flow gate */}
-            <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 mb-4">
-              <Shield className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-              <p className="text-[11px] text-amber-700 dark:text-amber-400">
-                Tailored analysis skips Capital Flow alignment. For best results, use Automated Analysis which follows the top-down Capital Flow approach.
-              </p>
-            </div>
-
-            {/* Run Analysis */}
-            <button
-              onClick={runAnalysis}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-bold rounded-xl hover:from-violet-600 hover:to-purple-700 hover:shadow-lg hover:shadow-violet-500/25 transition-all"
-            >
-              <Zap className="w-5 h-5" />
-              Run Analysis on {selectedAsset.symbol}
             </button>
-          </div>
-        )}
+          )}
 
-        {/* Asset Grid */}
-        {!selectedAsset && (
-          <div className="mb-6">
-            {/* Custom Symbol Input */}
-            <div className="mb-4 p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 bg-white dark:bg-[#071023]">
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Can&apos;t find your asset? Enter symbol directly:</p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="e.g. BTC, AAPL, GLD"
-                  value={customSymbol}
-                  onChange={(e) => setCustomSymbol(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => e.key === 'Enter' && handleCustomSymbol()}
-                  className="flex-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+            {filteredAssets.map(asset => {
+              const CatIcon = getCategoryIcon(asset.category);
+              const coinData = coinLookup.get(asset.symbol.toUpperCase());
+              return (
+                <AssetCard
+                  key={asset.symbol}
+                  symbol={asset.symbol}
+                  name={asset.name}
+                  category={asset.category}
+                  categoryIcon={<CatIcon className="w-3 h-3 text-gray-400 dark:text-white/30" />}
+                  price={coinData ? Number(coinData.currentPrice ?? coinData.price ?? 0) : undefined}
+                  change24h={coinData ? Number(coinData.change24h ?? coinData.priceChange24h ?? 0) : undefined}
+                  score={coinData ? Number(coinData.totalScore ?? coinData.reliabilityScore ?? coinData.score ?? 0) : undefined}
+                  onClick={handleSelectSymbol}
                 />
-                <button
-                  onClick={handleCustomSymbol}
-                  className="px-4 py-2 rounded-lg bg-violet-500 text-white text-sm font-medium hover:bg-violet-600 transition"
-                >
-                  Select
-                </button>
-              </div>
-            </div>
-
-            {/* Asset Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-              {filteredAssets.map(asset => {
-                const CatIcon = getCategoryIcon(asset.category);
-                return (
-                  <button
-                    key={asset.symbol}
-                    onClick={() => setSelectedAsset(asset)}
-                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#071023] hover:border-violet-300 dark:hover:border-violet-500/50 hover:shadow-md transition-all text-left group"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <CoinIcon symbol={asset.symbol} size={24} />
-                      <span className="text-sm font-bold text-slate-900 dark:text-white">{asset.symbol}</span>
-                    </div>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{asset.name}</p>
-                    <div className="flex items-center gap-1 mt-1.5">
-                      <CatIcon className="w-3 h-3 text-slate-400" />
-                      <span className="text-[9px] text-slate-400 capitalize">{asset.category}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {filteredAssets.length === 0 && (
-              <div className="text-center py-12">
-                <Search className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
-                <p className="text-sm text-slate-500 dark:text-slate-400">No assets match your search.</p>
-                <p className="text-xs text-slate-400 mt-1">Try a different search term or use the custom symbol input above.</p>
-              </div>
-            )}
+              );
+            })}
           </div>
-        )}
 
-        {/* Recent Analyses */}
-        <RecentAnalysesMobile
-          analyses={analyses}
-          loading={analysesLoading}
-          onRefresh={fetchAnalyses}
-          onDelete={handleDelete}
-          onEmail={handleEmail}
-        />
-      </div>
+          {filteredAssets.length === 0 && !customSearchSymbol && (
+            <div className="text-center py-12">
+              <Search className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-white/10" />
+              <p className="text-sm text-slate-500 dark:text-white/40">No assets match your search.</p>
+              <p className="text-xs text-slate-400 dark:text-white/30 mt-1">Try a different search term or type a custom symbol and press Enter.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Recent Analyses */}
+      <RecentAnalysesMobile
+        analyses={analyses}
+        loading={analysesLoading}
+        onRefresh={refreshAnalyses}
+        onDelete={handleDelete}
+        onEmail={handleEmail}
+      />
 
       {/* Analysis Dialog */}
       {showAnalysisDialog && selectedAsset && (
@@ -593,13 +483,13 @@ export default function TailoredAnalysisPage() {
           timeframe={timeframe}
           onClose={() => {
             setShowAnalysisDialog(false);
-            fetchDailyPassStatus();
-            fetchAnalyses();
+            refreshPass();
+            refreshAnalyses();
           }}
           onComplete={() => {
             setShowAnalysisDialog(false);
-            fetchDailyPassStatus();
-            fetchAnalyses();
+            refreshPass();
+            refreshAnalyses();
           }}
         />
       )}

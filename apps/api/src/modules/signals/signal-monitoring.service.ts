@@ -59,9 +59,9 @@ export const signalMonitoring = {
     const key = 'signal-monitoring:generator';
 
     // Get existing metrics
-    const existing = await cache.get(key);
+    const existing = await cache.get<SignalGeneratorMetrics>(key);
     const metrics: SignalGeneratorMetrics = existing
-      ? JSON.parse(existing)
+      ? existing
       : {
           lastRunAt: new Date(),
           lastStatus: 'success',
@@ -118,8 +118,7 @@ export const signalMonitoring = {
    */
   async getGeneratorMetrics(): Promise<SignalGeneratorMetrics | null> {
     const key = 'signal-monitoring:generator';
-    const data = await cache.get(key);
-    return data ? JSON.parse(data) : null;
+    return await cache.get<SignalGeneratorMetrics>(key);
   },
 
   /**
@@ -147,6 +146,87 @@ export const signalMonitoring = {
   },
 
   // ===========================================
+  // AUTOEDGE GENERATOR MONITORING
+  // ===========================================
+
+  /**
+   * Record AutoEdge generator job execution
+   */
+  async recordAutoEdgeRun(result: {
+    success: boolean;
+    duration: number;
+    signalsGenerated?: number;
+    signalsPublished?: number;
+    symbolsScanned?: number;
+    averageConfidence?: number;
+    error?: Error;
+  }): Promise<void> {
+    const key = 'signal-monitoring:autoedge';
+
+    const existing = await cache.get<SignalGeneratorMetrics & { symbolsScanned: number }>(key);
+    const metrics = existing
+      ? existing
+      : {
+          lastRunAt: new Date(),
+          lastStatus: 'success' as const,
+          lastDuration: 0,
+          consecutiveFailures: 0,
+          totalRuns: 0,
+          totalFailures: 0,
+          signalsGenerated: 0,
+          signalsPublished: 0,
+          averageConfidence: 0,
+          symbolsScanned: 0,
+        };
+
+    metrics.lastRunAt = new Date();
+    metrics.lastStatus = result.success ? 'success' : 'failure';
+    metrics.lastDuration = result.duration;
+    metrics.totalRuns += 1;
+
+    if (result.success) {
+      metrics.consecutiveFailures = 0;
+      metrics.signalsGenerated = result.signalsGenerated || 0;
+      metrics.signalsPublished = result.signalsPublished || 0;
+      metrics.averageConfidence = result.averageConfidence || 0;
+      metrics.symbolsScanned = result.symbolsScanned || 0;
+    } else {
+      metrics.consecutiveFailures += 1;
+      metrics.totalFailures += 1;
+      metrics.errorMessage = result.error?.message || 'Unknown error';
+
+      if (result.error) {
+        try {
+          await collectError({
+            message: result.error.message || 'AutoEdge generator error',
+            stack: result.error.stack,
+            code: 'AUTOEDGE_GENERATOR_ERROR',
+          });
+        } catch { /* don't crash on monitoring failure */ }
+      }
+
+      if (metrics.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+        console.error('[SignalMonitoring] CRITICAL: AutoEdge consecutive failures', {
+          consecutiveFailures: metrics.consecutiveFailures,
+          lastError: metrics.errorMessage,
+        });
+      }
+    }
+
+    try {
+      await cache.set(key, JSON.stringify(metrics), CACHE_TTL);
+    } catch { /* don't crash on cache failure */ }
+  },
+
+  /**
+   * Get AutoEdge generator metrics
+   */
+  async getAutoEdgeMetrics(): Promise<(SignalGeneratorMetrics & { symbolsScanned: number }) | null> {
+    const key = 'signal-monitoring:autoedge';
+    return await cache.get<SignalGeneratorMetrics & { symbolsScanned: number }>(key);
+  },
+
+  // ===========================================
   // OUTCOME TRACKER MONITORING
   // ===========================================
 
@@ -164,9 +244,9 @@ export const signalMonitoring = {
     const key = 'signal-monitoring:tracker';
 
     // Get existing metrics
-    const existing = await cache.get(key);
+    const existing = await cache.get<OutcomeTrackerMetrics>(key);
     const metrics: OutcomeTrackerMetrics = existing
-      ? JSON.parse(existing)
+      ? existing
       : {
           lastRunAt: new Date(),
           lastStatus: 'success',
@@ -228,8 +308,7 @@ export const signalMonitoring = {
    */
   async getTrackerMetrics(): Promise<OutcomeTrackerMetrics | null> {
     const key = 'signal-monitoring:tracker';
-    const data = await cache.get(key);
-    return data ? JSON.parse(data) : null;
+    return await cache.get<OutcomeTrackerMetrics>(key);
   },
 
   /**
@@ -294,6 +373,15 @@ export const signalMonitoring = {
       status: string;
       lastRun?: Date;
       consecutiveFailures: number;
+      schedule: string;
+      active: boolean;
+    };
+    autoedge: {
+      status: string;
+      lastRun?: Date;
+      consecutiveFailures: number;
+      schedule: string;
+      active: boolean;
     };
     tracker: {
       status: string;
@@ -302,29 +390,46 @@ export const signalMonitoring = {
     };
   }> {
     const generatorMetrics = await this.getGeneratorMetrics();
+    const autoedgeMetrics = await this.getAutoEdgeMetrics();
     const trackerMetrics = await this.getTrackerMetrics();
 
     const now = Date.now();
-    const STALE_THRESHOLD = 2 * 60 * 60 * 1000; // 2 hours
+    const GENERATOR_STALE = 5 * 60 * 60 * 1000; // 5 hours (runs every 4h)
+    const AUTOEDGE_STALE = 20 * 60 * 1000; // 20 minutes (runs every 15m)
+    const TRACKER_STALE = 30 * 60 * 1000; // 30 minutes
 
-    // Check generator health
-    const generatorHealthy =
-      generatorMetrics &&
+    // Check generator health — considered active if ran within expected window
+    const generatorLastRun = generatorMetrics ? now - new Date(generatorMetrics.lastRunAt).getTime() : Infinity;
+    const generatorHealthy = generatorMetrics &&
       generatorMetrics.consecutiveFailures === 0 &&
-      now - new Date(generatorMetrics.lastRunAt).getTime() < STALE_THRESHOLD;
+      generatorLastRun < GENERATOR_STALE;
+
+    // Check AutoEdge health
+    const autoedgeLastRun = autoedgeMetrics ? now - new Date(autoedgeMetrics.lastRunAt).getTime() : Infinity;
+    const autoedgeHealthy = autoedgeMetrics &&
+      autoedgeMetrics.consecutiveFailures === 0 &&
+      autoedgeLastRun < AUTOEDGE_STALE;
 
     // Check tracker health
-    const trackerHealthy =
-      trackerMetrics &&
+    const trackerHealthy = trackerMetrics &&
       trackerMetrics.consecutiveFailures === 0 &&
-      now - new Date(trackerMetrics.lastRunAt).getTime() < 30 * 60 * 1000; // 30 minutes
+      (now - new Date(trackerMetrics.lastRunAt).getTime()) < TRACKER_STALE;
 
     return {
-      healthy: generatorHealthy && trackerHealthy,
+      healthy: (generatorHealthy || false) && (autoedgeHealthy || false) && (trackerHealthy || false),
       generator: {
-        status: generatorHealthy ? 'healthy' : 'unhealthy',
+        status: generatorHealthy ? 'healthy' : generatorMetrics ? 'unhealthy' : 'never_run',
         lastRun: generatorMetrics?.lastRunAt,
         consecutiveFailures: generatorMetrics?.consecutiveFailures || 0,
+        schedule: '15 2,6,10,14,18,22 * * *', // Every 4h at :15
+        active: generatorLastRun < GENERATOR_STALE,
+      },
+      autoedge: {
+        status: autoedgeHealthy ? 'healthy' : autoedgeMetrics ? 'unhealthy' : 'never_run',
+        lastRun: autoedgeMetrics?.lastRunAt,
+        consecutiveFailures: autoedgeMetrics?.consecutiveFailures || 0,
+        schedule: '*/15 * * * *', // Every 15 minutes
+        active: autoedgeLastRun < AUTOEDGE_STALE,
       },
       tracker: {
         status: trackerHealthy ? 'healthy' : 'unhealthy',

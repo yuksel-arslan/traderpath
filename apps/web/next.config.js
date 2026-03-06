@@ -73,7 +73,7 @@ const withPWA = require('next-pwa')({
     },
     {
       // Cache coin icons
-      urlPattern: /^https:\/\/(?:assets\.coingecko\.com|raw\.githubusercontent\.com|www\.cryptocompare\.com)\/.*/i,
+      urlPattern: /^https:\/\/(?:coin-images\.coingecko\.com|assets\.coingecko\.com|cdn\.jsdelivr\.net|assets\.coincap\.io|cryptofonts\.com|raw\.githubusercontent\.com|www\.cryptocompare\.com)\/.*/i,
       handler: 'CacheFirst',
       options: {
         cacheName: 'coin-icons',
@@ -96,8 +96,15 @@ const nextConfig = {
   productionBrowserSourceMaps: true,
 
   // Environment variables exposed to the browser
+  // IMPORTANT: Production fallback must be the real API URL, not localhost.
+  // next.config.js `env` values are inlined at build time via DefinePlugin,
+  // so any fallback here overrides fallbacks in API route files (e.g. route.ts).
+  // NOTE: Trailing slashes are stripped to prevent double-slash URL issues.
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
+    NEXT_PUBLIC_API_URL: (process.env.NEXT_PUBLIC_API_URL
+      || (process.env.NODE_ENV === 'production'
+        ? 'https://api.traderpath.io'
+        : 'http://localhost:4000')).replace(/\/+$/, ''),
   },
 
   // Experimental features for faster navigation
@@ -213,6 +220,14 @@ const nextConfig = {
         source: '/api/scheduled/:path*',
         destination: 'http://127.0.0.1:4000/api/scheduled/:path*',
       },
+      {
+        source: '/api/v1/:path*',
+        destination: 'http://127.0.0.1:4000/api/v1/:path*',
+      },
+      {
+        source: '/api/weekly-plans/:path*',
+        destination: 'http://127.0.0.1:4000/api/weekly-plans/:path*',
+      },
     ];
   },
 
@@ -237,14 +252,29 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'coin-images.coingecko.com',
+      },
+      {
+        protocol: 'https',
         hostname: 'www.cryptocompare.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'assets.coincap.io',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cryptofonts.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.jsdelivr.net',
       },
     ],
   },
 
-  // Webpack configuration for @react-pdf/renderer
+  // Webpack configuration for client-side compatibility
   webpack: (config, { isServer }) => {
-    // Fix for @react-pdf/renderer in Next.js
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -252,19 +282,14 @@ const nextConfig = {
         stream: false,
         zlib: false,
       };
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        canvas: false,
+      };
     }
-
-    // Handle canvas module (used by react-pdf)
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      canvas: false,
-    };
 
     return config;
   },
-
-  // Transpile @react-pdf packages
-  transpilePackages: ['@react-pdf/renderer', '@react-pdf/layout', '@react-pdf/pdfkit'],
 };
 
 module.exports = withPWA(nextConfig);

@@ -8,10 +8,11 @@ import { prisma } from '../../core/database';
 import { authenticate } from '../../core/auth/middleware';
 import { calculateExpiredOutcomes, getRealAccuracy, calculateReportOutcome } from './outcome.service';
 import { notificationService } from '../notifications/notification.service';
-import { emailService } from '../email/email.service';
 import { creditService } from '../credits/credit.service';
 import { logger } from '../../core/logger';
 import { detectAssetClass } from '../analysis/providers/symbol-resolver';
+import { snapshotService, type SnapshotType } from './snapshot.service';
+import { reportDistributionService } from './report-distribution.service';
 
 // Helper: format symbol pair (crypto gets /USDT, non-crypto doesn't)
 function formatSymbolPair(symbol: string): string {
@@ -23,11 +24,8 @@ function formatSymbolPair(symbol: string): string {
 }
 
 // Constants for free usage limits per analysis
-const FREE_PDF_DOWNLOADS_PER_ANALYSIS = 2;
-const FREE_EMAILS_PER_ANALYSIS = 2;
-const PDF_DOWNLOAD_CREDIT_COST = 5;
-const EMAIL_SEND_CREDIT_COST = 5;
-const HTML_EMAIL_CREDIT_COST = 5;
+const FREE_SNAPSHOT_DOWNLOADS_PER_ANALYSIS = 2;
+const SNAPSHOT_DOWNLOAD_CREDIT_COST = 5;
 
 // Admin emails - their reports are public and visible to all users
 const ADMIN_EMAILS = ['contact@yukselarslan.com'];
@@ -43,43 +41,6 @@ interface SaveReportBody {
   entryPrice?: number; // Price at time of analysis
   tradeType?: string; // 'scalping', 'dayTrade', 'swing'
   aiExpertComment?: string; // AI-generated analysis comment
-}
-
-interface SendEmailBody {
-  symbol: string;
-  verdict: string;
-  score: number;
-  direction: string;
-  generatedAt: string;
-  pdfBase64: string;
-  fileName: string;
-  analysisId?: string; // For tracking free email usage
-}
-
-interface SendHtmlEmailBody {
-  reportId: string;
-  chartImage?: string; // Base64 encoded chart image
-  reportData: {
-    symbol: string;
-    generatedAt: string;
-    analysisId?: string;
-    interval?: string; // e.g., '15m', '1h', '4h', '1d'
-    marketPulse?: Record<string, unknown>;
-    assetScan?: Record<string, unknown>;
-    safetyCheck?: Record<string, unknown>;
-    timing?: Record<string, unknown>;
-    tradePlan?: Record<string, unknown>;
-    trapCheck?: Record<string, unknown>;
-    verdict?: Record<string, unknown>;
-    aiExpertComment?: string;
-    aiExpertScore?: number; // AI Expert panel score (0-100)
-  };
-}
-
-interface SendScreenshotEmailBody {
-  analysisId: string;
-  symbol: string;
-  screenshotBase64: string; // Base64 encoded PNG/JPG image (with or without data:image prefix)
 }
 
 // Extract entry price from report data - comprehensive search
@@ -243,6 +204,26 @@ export async function reportRoutes(fastify: FastifyInstance) {
           }
         }
 
+        // Auto-distribute snapshot report to user's channels (async, non-blocking)
+        reportDistributionService.distributeToUser(
+          report.id,
+          userId,
+          reportData,
+          'executive'
+        ).catch(err => {
+          fastify.log.error(err, 'Failed to auto-distribute report snapshots');
+        });
+
+        // Auto-distribute to Intelligence Reports subscribers if GO/CONDITIONAL_GO
+        if (shouldCreateAlerts) {
+          reportDistributionService.distributeToSubscribers(
+            reportData,
+            'executive'
+          ).catch(err => {
+            fastify.log.error(err, 'Failed to distribute to subscribers');
+          });
+        }
+
         return reply.code(201).send({
           success: true,
           data: {
@@ -312,11 +293,6 @@ export async function reportRoutes(fastify: FastifyInstance) {
             analysisId: true,
             aiExpertComment: true,
             isPublic: true,
-            analysis: {
-              select: {
-                method: true,
-              },
-            },
           },
           orderBy: { generatedAt: 'desc' },
           take: Math.min(parseInt(limit), 50),
@@ -347,11 +323,6 @@ export async function reportRoutes(fastify: FastifyInstance) {
             analysisId: true,
             aiExpertComment: true,
             isPublic: true,
-            analysis: {
-              select: {
-                method: true,
-              },
-            },
           },
           orderBy: { generatedAt: 'desc' },
           take: 10, // Limit sample reports
@@ -615,7 +586,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
   );
 
   // ===========================================
-  // POST /api/reports/:id/track-download - Track PDF download with free usage limits
+  // POST /api/reports/:id/track-download - Track snapshot download with free usage limits
   // ===========================================
   fastify.post<{ Params: { id: string } }>(
     '/api/reports/:id/track-download',
@@ -655,7 +626,7 @@ export async function reportRoutes(fastify: FastifyInstance) {
           });
 
           if (analysis) {
-            freeDownloadsRemaining = FREE_PDF_DOWNLOADS_PER_ANALYSIS - analysis.pdfDownloadsUsed;
+            freeDownloadsRemaining = FREE_SNAPSHOT_DOWNLOADS_PER_ANALYSIS - analysis.pdfDownloadsUsed;
             isFreeDownload = freeDownloadsRemaining > 0;
           }
         }
@@ -664,8 +635,8 @@ export async function reportRoutes(fastify: FastifyInstance) {
         if (!isFreeDownload) {
           const chargeResult = await creditService.charge(
             userId,
-            PDF_DOWNLOAD_CREDIT_COST,
-            'pdf_download',
+            SNAPSHOT_DOWNLOAD_CREDIT_COST,
+            'snapshot_download',
             { reportId: id, analysisId: report.analysisId }
           );
 
@@ -673,8 +644,8 @@ export async function reportRoutes(fastify: FastifyInstance) {
             return reply.code(402).send({
               error: {
                 code: 'INSUFFICIENT_CREDITS',
-                message: `PDF download requires ${PDF_DOWNLOAD_CREDIT_COST} credits (free downloads exhausted for this analysis).`,
-                required: PDF_DOWNLOAD_CREDIT_COST,
+                message: `Snapshot download requires ${SNAPSHOT_DOWNLOAD_CREDIT_COST} credits (free downloads exhausted for this analysis).`,
+                required: SNAPSHOT_DOWNLOAD_CREDIT_COST,
               },
             });
           }
@@ -701,8 +672,8 @@ export async function reportRoutes(fastify: FastifyInstance) {
             wasFree: isFreeDownload,
             freeDownloads: analysis ? {
               used: analysis.pdfDownloadsUsed + 1,
-              total: FREE_PDF_DOWNLOADS_PER_ANALYSIS,
-              remaining: Math.max(0, FREE_PDF_DOWNLOADS_PER_ANALYSIS - analysis.pdfDownloadsUsed - 1),
+              total: FREE_SNAPSHOT_DOWNLOADS_PER_ANALYSIS,
+              remaining: Math.max(0, FREE_SNAPSHOT_DOWNLOADS_PER_ANALYSIS - analysis.pdfDownloadsUsed - 1),
             } : null,
           },
         });
@@ -1258,54 +1229,97 @@ export async function reportRoutes(fastify: FastifyInstance) {
       }
     }
   );
+  // ===========================================
+  // Temporary Media Store (for WhatsApp image delivery via Twilio)
+  // ===========================================
+  const tempMediaStore = new Map<string, { data: Buffer; contentType: string; expiresAt: number }>();
+
+  // Cleanup expired entries every 2 minutes
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of tempMediaStore) {
+      if (now > value.expiresAt) {
+        tempMediaStore.delete(key);
+      }
+    }
+  }, 2 * 60 * 1000);
+
+  // GET /api/reports/temp-media/:token - Serve temporary media (public, no auth)
+  fastify.get<{ Params: { token: string } }>(
+    '/api/reports/temp-media/:token',
+    async (request: FastifyRequest<{ Params: { token: string } }>, reply: FastifyReply) => {
+      const { token } = request.params;
+      const media = tempMediaStore.get(token);
+
+      if (!media || Date.now() > media.expiresAt) {
+        tempMediaStore.delete(token);
+        return reply.code(404).send({ error: 'Media not found or expired' });
+      }
+
+      reply.header('Content-Type', media.contentType);
+      reply.header('Cache-Control', 'no-store');
+      return reply.send(media.data);
+    }
+  );
 
   // ===========================================
-  // POST /api/reports/send-email - Send PDF report via email
+  // POST /api/reports/whatsapp-screenshot - Send report screenshot via WhatsApp
   // ===========================================
-  fastify.post<{ Body: SendEmailBody }>(
-    '/api/reports/send-email',
-    { preHandler: authenticate },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+  interface SendWhatsAppScreenshotBody {
+    analysisId?: string;
+    symbol: string;
+    interval?: string;
+    screenshot: string; // Base64 encoded image
+    score: number;
+    direction: string;
+    phoneNumber: string; // Recipient WhatsApp number (e.g., +905xxxxxxxxx)
+  }
+
+  const WHATSAPP_SEND_CREDIT_COST = 5;
+
+  fastify.post<{ Body: SendWhatsAppScreenshotBody }>(
+    '/api/reports/whatsapp-screenshot',
+    { preHandler: [authenticate], config: { rawBody: true }, bodyLimit: 20 * 1024 * 1024 },
+    async (
+      request: FastifyRequest<{ Body: SendWhatsAppScreenshotBody }>,
+      reply: FastifyReply
+    ) => {
       try {
-        const userId = getUser(request)?.id;
-        if (!userId) {
-          return reply.code(401).send({
-            error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
-          });
-        }
+        const userId = (request.user as JwtUser).id;
+        const { analysisId, symbol, interval, screenshot, score, direction, phoneNumber } = request.body;
 
-        const { symbol, verdict, score, direction, generatedAt, pdfBase64, fileName, analysisId } = request.body as SendEmailBody;
-
-        // Validate required fields
-        if (!symbol || !pdfBase64 || !fileName) {
+        if (!symbol || !screenshot || !phoneNumber) {
           return reply.code(400).send({
-            error: { code: 'INVALID_INPUT', message: 'Missing required fields: symbol, pdfBase64, fileName' },
+            error: { code: 'MISSING_FIELDS', message: 'Missing required fields (symbol, screenshot, phoneNumber)' },
           });
         }
 
-        // Check free email usage if analysisId is provided
-        let isFreeEmail = false;
-        let analysis = null;
-        let freeEmailsRemaining = 0;
-
-        if (analysisId) {
-          analysis = await prisma.analysis.findFirst({
-            where: { id: analysisId, userId },
-            select: { id: true, emailsSentUsed: true },
+        // Validate phone number format
+        const cleanPhone = phoneNumber.replace(/\s/g, '');
+        if (!/^\+\d{10,15}$/.test(cleanPhone)) {
+          return reply.code(400).send({
+            error: { code: 'INVALID_PHONE', message: 'Phone number must start with + followed by 10-15 digits (e.g., +905551234567)' },
           });
-
-          if (analysis) {
-            freeEmailsRemaining = FREE_EMAILS_PER_ANALYSIS - analysis.emailsSentUsed;
-            isFreeEmail = freeEmailsRemaining > 0;
-          }
         }
 
-        // Charge credits if not free
-        if (!isFreeEmail) {
+        // Get user info
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { name: true, email: true, isAdmin: true },
+        });
+
+        if (!user) {
+          return reply.code(400).send({
+            error: { code: 'USER_NOT_FOUND', message: 'User not found' },
+          });
+        }
+
+        // Charge credits for WhatsApp send (admin bypasses)
+        if (!user.isAdmin) {
           const chargeResult = await creditService.charge(
             userId,
-            EMAIL_SEND_CREDIT_COST,
-            'email_send_report',
+            WHATSAPP_SEND_CREDIT_COST,
+            'whatsapp_send_report',
             { symbol, analysisId }
           );
 
@@ -1313,99 +1327,127 @@ export async function reportRoutes(fastify: FastifyInstance) {
             return reply.code(402).send({
               error: {
                 code: 'INSUFFICIENT_CREDITS',
-                message: `Sending email requires ${EMAIL_SEND_CREDIT_COST} credits (free emails exhausted for this analysis).`,
-                required: EMAIL_SEND_CREDIT_COST,
+                message: `Requires ${WHATSAPP_SEND_CREDIT_COST} credits. You have ${chargeResult.newBalance} credits.`,
+                required: WHATSAPP_SEND_CREDIT_COST,
+                currentBalance: chargeResult.newBalance,
               },
             });
           }
         }
 
-        // Update email counter if tied to analysis
-        if (analysis) {
-          await prisma.analysis.update({
-            where: { id: analysisId },
-            data: { emailsSentUsed: { increment: 1 } },
+        // Check Twilio credentials
+        const twilioSid = process.env['TWILIO_ACCOUNT_SID'];
+        const twilioToken = process.env['TWILIO_AUTH_TOKEN'];
+        const twilioPhone = process.env['TWILIO_PHONE_NUMBER'];
+
+        if (!twilioSid || !twilioToken || !twilioPhone) {
+          return reply.code(503).send({
+            error: { code: 'WHATSAPP_NOT_CONFIGURED', message: 'WhatsApp sending is not configured. Please contact support.' },
           });
         }
 
-        // Get user's email
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { email: true, name: true },
+        // Store screenshot in temp media store
+        const crypto = await import('crypto');
+        const token = crypto.randomBytes(32).toString('hex');
+
+        // Strip data URL prefix if present
+        const base64Data = screenshot.replace(/^data:image\/\w+;base64,/, '');
+        const imageBuffer = Buffer.from(base64Data, 'base64');
+        const contentType = screenshot.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+
+        tempMediaStore.set(token, {
+          data: imageBuffer,
+          contentType,
+          expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
         });
 
-        if (!user?.email) {
-          return reply.code(400).send({
-            error: { code: 'NO_EMAIL', message: 'User email not found' },
-          });
-        }
+        const apiUrl = process.env['API_URL'] || 'https://api.traderpath.io';
+        const mediaUrl = `${apiUrl}/api/reports/temp-media/${token}`;
 
-        // Send the PDF report via email
-        const result = await emailService.sendPdfReport(user.email, {
-          userName: user.name || 'Trader',
-          symbol,
-          verdict: verdict || 'N/A',
-          score: score || 0,
-          direction: direction || 'long',
-          generatedAt: generatedAt || new Date().toLocaleString('tr-TR'),
-          pdfBase64,
-          fileName,
-          analysisId,
+        // Format WhatsApp message
+        const directionText = direction?.toLowerCase() === 'long' ? 'LONG' : direction?.toLowerCase() === 'short' ? 'SHORT' : 'NEUTRAL';
+        const directionEmoji = direction?.toLowerCase() === 'long' ? '🟢' : direction?.toLowerCase() === 'short' ? '🔴' : '⚪';
+        const scoreNum = typeof score === 'number' ? score : 0;
+        const scoreDisplay = scoreNum > 10 ? scoreNum.toFixed(0) : (scoreNum * 10).toFixed(0);
+
+        const appUrl = process.env['APP_URL'] || 'https://traderpath.io';
+        const waText = [
+          `${directionEmoji} *TraderPath Analysis Report*`,
+          ``,
+          `*${formatSymbolPair(symbol)}* | ${directionText}`,
+          `Score: *${scoreDisplay}/100*`,
+          interval ? `Timeframe: ${interval}` : '',
+          ``,
+          `✅ 7-Step Analysis`,
+          `✅ Trade Plan (Entry, SL, TP)`,
+          `✅ AI Expert Commentary`,
+          ``,
+          analysisId ? `📊 View Interactive: ${appUrl}/analyze/details/${analysisId}` : '',
+          ``,
+          `_TraderPath - Professional Trading Analysis_`,
+          `_This is not financial advice._`,
+        ].filter(Boolean).join('\n');
+
+        // Send via Twilio WhatsApp API
+        const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`;
+        const auth = Buffer.from(`${twilioSid}:${twilioToken}`).toString('base64');
+
+        const response = await fetch(twilioUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${auth}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            To: `whatsapp:${cleanPhone}`,
+            From: `whatsapp:${twilioPhone}`,
+            Body: waText,
+            MediaUrl: mediaUrl,
+          }),
         });
 
-        if (!result.success) {
-          // Refund credits if email failed and credits were charged
-          if (!isFreeEmail) {
+        if (!response.ok) {
+          const errorBody = await response.text();
+          fastify.log.error({ status: response.status, body: errorBody }, 'Twilio WhatsApp send failed');
+
+          // Refund credits if charged
+          if (!user.isAdmin) {
             try {
-              await creditService.add(userId, EMAIL_SEND_CREDIT_COST, 'BONUS', 'email_send_error_refund', { isRefund: true, symbol, analysisId });
-              fastify.log.info({ userId, credits: EMAIL_SEND_CREDIT_COST }, 'Refunded credits after email failure');
-            } catch (refundErr) {
-              fastify.log.error(refundErr, 'Failed to refund credits after email failure');
-            }
+              await creditService.add(userId, WHATSAPP_SEND_CREDIT_COST, 'BONUS', 'whatsapp_send_error_refund', { isRefund: true, symbol, analysisId });
+            } catch { /* best effort refund */ }
           }
-          // Decrement email counter if it was incremented
-          if (analysis) {
-            try {
-              await prisma.analysis.update({
-                where: { id: analysisId },
-                data: { emailsSentUsed: { decrement: 1 } },
-              });
-            } catch { /* ignore */ }
-          }
-          fastify.log.error({ error: result.error }, 'Failed to send PDF email');
+
           return reply.code(500).send({
-            error: { code: 'EMAIL_FAILED', message: 'Failed to send email', details: result.error },
+            error: { code: 'WHATSAPP_FAILED', message: 'Failed to send WhatsApp message', details: errorBody },
           });
         }
+
+        // Clean up media after a short delay (Twilio needs time to fetch)
+        setTimeout(() => {
+          tempMediaStore.delete(token);
+        }, 3 * 60 * 1000); // 3 minutes
+
+        fastify.log.info({ userId, phone: cleanPhone, symbol, analysisId }, 'WhatsApp report screenshot sent');
 
         return reply.send({
           success: true,
-          message: 'Report sent successfully to ' + user.email,
-          data: {
-            email: user.email,
-            wasFree: isFreeEmail,
-            freeEmails: analysis ? {
-              used: analysis.emailsSentUsed + 1,
-              total: FREE_EMAILS_PER_ANALYSIS,
-              remaining: Math.max(0, FREE_EMAILS_PER_ANALYSIS - analysis.emailsSentUsed - 1),
-            } : null,
-          },
+          message: `Report sent via WhatsApp to ${cleanPhone}`,
         });
       } catch (error) {
-        fastify.log.error(error);
+        fastify.log.error({ error, userId: (request.user as JwtUser)?.id }, 'WhatsApp screenshot endpoint error');
+        const msg = error instanceof Error ? error.message : 'Failed to send WhatsApp message';
         return reply.code(500).send({
-          error: { code: 'SERVER_ERROR', message: 'Failed to send report email' },
+          error: { code: 'SERVER_ERROR', message: msg },
         });
       }
     }
   );
 
   // ===========================================
-  // POST /api/reports/send-html-email - Send HTML report via email (5 credits)
+  // POST /api/reports/:id/snapshots - Generate snapshot PNGs for a report
   // ===========================================
-
-  fastify.post<{ Body: SendHtmlEmailBody }>(
-    '/api/reports/send-html-email',
+  fastify.post<{ Params: { id: string }; Body: { type?: SnapshotType } }>(
+    '/api/reports/:id/snapshots',
     { preHandler: authenticate },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -1416,383 +1458,68 @@ export async function reportRoutes(fastify: FastifyInstance) {
           });
         }
 
-        const { reportId, reportData, chartImage } = request.body as SendHtmlEmailBody;
+        const { id } = request.params as { id: string };
+        const { type = 'executive' } = (request.body as { type?: SnapshotType }) || {};
 
-        if (!reportId || !reportData) {
-          return reply.code(400).send({
-            error: { code: 'INVALID_INPUT', message: 'Missing required fields: reportId, reportData' },
-          });
-        }
-
-        // Get user's email and credits
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { email: true, name: true },
+        // Get report
+        const report = await prisma.report.findFirst({
+          where: { id, userId },
         });
 
-        if (!user?.email) {
-          return reply.code(400).send({
-            error: { code: 'NO_EMAIL', message: 'User email not found' },
+        if (!report) {
+          return reply.code(404).send({
+            error: { code: 'NOT_FOUND', message: 'Report not found' },
           });
         }
 
-        // Check user credits
-        const creditBalance = await prisma.creditBalance.findUnique({
-          where: { userId },
-          select: { balance: true },
-        });
-
-        const currentBalance = creditBalance?.balance || 0;
-        if (currentBalance < HTML_EMAIL_CREDIT_COST) {
-          return reply.code(402).send({
-            error: {
-              code: 'INSUFFICIENT_CREDITS',
-              message: `Not enough credits. Required: ${HTML_EMAIL_CREDIT_COST}, Available: ${currentBalance}`,
-            },
+        // Check if Puppeteer is available
+        const available = await snapshotService.isAvailable();
+        if (!available) {
+          return reply.code(503).send({
+            error: { code: 'SERVICE_UNAVAILABLE', message: 'Snapshot generation is not available on this server' },
           });
         }
 
-        // Fetch AI Expert comment from Report if not provided and analysisId exists
-        if (!reportData.aiExpertComment && reportData.analysisId) {
-          const report = await prisma.report.findFirst({
-            where: { analysisId: reportData.analysisId },
-            select: { aiExpertComment: true },
-          });
-          if (report?.aiExpertComment) {
-            reportData.aiExpertComment = report.aiExpertComment;
-          }
-        }
+        const reportData = report.reportData as Record<string, unknown>;
+        const snapshots = await snapshotService.generateSnapshots(reportData, type);
 
-        // Generate HTML email content
-        const htmlContent = generateReportHtmlEmail(reportData, user.name || 'Trader', chartImage);
-
-        // Send the email
-        const result = await emailService.sendEmail({
-          to: user.email,
-          subject: `${formatSymbolPair(reportData.symbol)} Analysis Report - TraderPath`,
-          html: htmlContent,
-          text: `Your ${formatSymbolPair(reportData.symbol)} analysis report from TraderPath. View this email in HTML format for best experience.`,
-        });
-
-        if (!result.success) {
-          fastify.log.error({ error: result.error }, 'Failed to send HTML email');
+        if (snapshots.length === 0) {
           return reply.code(500).send({
-            error: { code: 'EMAIL_FAILED', message: 'Failed to send email', details: result.error },
+            error: { code: 'GENERATION_FAILED', message: 'Failed to generate snapshots' },
           });
         }
 
-        // Deduct credits after successful send
-        await prisma.creditBalance.update({
-          where: { userId },
-          data: {
-            balance: { decrement: HTML_EMAIL_CREDIT_COST },
-            lifetimeSpent: { increment: HTML_EMAIL_CREDIT_COST },
-          },
-        });
-
-        fastify.log.info({ userId, email: user.email, credits: HTML_EMAIL_CREDIT_COST }, 'HTML report email sent');
+        // Return snapshots as base64 array
+        const snapshotData = snapshots.map(s => ({
+          id: s.id,
+          title: s.title,
+          base64: s.buffer.toString('base64'),
+          mimeType: 'image/png',
+        }));
 
         return reply.send({
           success: true,
-          message: 'Report sent successfully to ' + user.email,
           data: {
-            email: user.email,
-            creditsUsed: HTML_EMAIL_CREDIT_COST,
+            type,
+            symbol: report.symbol,
+            count: snapshotData.length,
+            snapshots: snapshotData,
           },
         });
       } catch (error) {
         fastify.log.error(error);
         return reply.code(500).send({
-          error: { code: 'SERVER_ERROR', message: 'Failed to send report email' },
+          error: { code: 'SERVER_ERROR', message: 'Failed to generate snapshots' },
         });
       }
     }
   );
 
   // ===========================================
-  // Send analysis screenshot via email
+  // GET /api/reports/:id/snapshot/:pageId - Download a single snapshot PNG
   // ===========================================
-  interface SendScreenshotEmailBody {
-    analysisId: string;
-    symbol: string;
-    interval: string;
-    screenshot: string; // Base64 data URL
-    score: number;
-    direction: string;
-  }
-
-  fastify.post<{ Body: SendScreenshotEmailBody }>(
-    '/api/reports/email-screenshot',
-    { preHandler: [authenticate] },
-    async (
-      request: FastifyRequest<{ Body: SendScreenshotEmailBody }>,
-      reply: FastifyReply
-    ) => {
-      try {
-        const userId = (request.user as JwtUser).id;
-        const { analysisId, symbol, interval, screenshot, score, direction } = request.body;
-
-        if (!symbol || !screenshot) {
-          return reply.code(400).send({
-            error: { code: 'MISSING_FIELDS', message: 'Missing required fields (symbol, screenshot)' },
-          });
-        }
-
-        // Get user info
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { name: true, email: true, isAdmin: true },
-        });
-
-        if (!user || !user.email) {
-          return reply.code(400).send({
-            error: { code: 'NO_EMAIL', message: 'User email not found' },
-          });
-        }
-
-        // Check free email limit for this analysis (admin bypasses)
-        // Only check if analysisId is provided
-        if (!user.isAdmin && analysisId) {
-          const analysis = await prisma.analysis.findUnique({
-            where: { id: analysisId },
-            select: { emailsSentUsed: true },
-          });
-
-          if (analysis && (analysis.emailsSentUsed || 0) >= FREE_EMAILS_PER_ANALYSIS) {
-            // Check credit balance
-            const creditBalance = await prisma.creditBalance.findUnique({
-              where: { userId },
-            });
-
-            if (!creditBalance || creditBalance.balance < EMAIL_SEND_CREDIT_COST) {
-              return reply.code(402).send({
-                error: {
-                  code: 'INSUFFICIENT_CREDITS',
-                  message: `Requires ${EMAIL_SEND_CREDIT_COST} credits. You have ${creditBalance?.balance || 0} credits.`,
-                },
-              });
-            }
-
-            // Deduct credits
-            await prisma.creditBalance.update({
-              where: { userId },
-              data: {
-                balance: { decrement: EMAIL_SEND_CREDIT_COST },
-                lifetimeSpent: { increment: EMAIL_SEND_CREDIT_COST },
-              },
-            });
-          }
-
-          // Increment email count for this analysis (if it exists)
-          if (analysisId) {
-            try {
-              await prisma.analysis.update({
-                where: { id: analysisId },
-                data: { emailsSentUsed: { increment: 1 } },
-              });
-            } catch {
-              // Analysis might not exist, continue anyway
-            }
-          }
-        }
-
-        // Send email with screenshot
-        const result = await emailService.sendAnalysisScreenshot(user.email, user.name || 'Trader', {
-          symbol,
-          interval,
-          score,
-          direction,
-          screenshotBase64: screenshot,
-          generatedAt: new Date().toLocaleString('en-US', {
-            dateStyle: 'medium',
-            timeStyle: 'short',
-          }),
-          analysisId,
-        });
-
-        if (!result.success) {
-          // Refund credits if they were charged (non-admin, exhausted free emails)
-          if (!user.isAdmin && analysisId) {
-            try {
-              const analysis = await prisma.analysis.findUnique({ where: { id: analysisId }, select: { emailsSentUsed: true } });
-              if (analysis && (analysis.emailsSentUsed || 0) > FREE_EMAILS_PER_ANALYSIS) {
-                await creditService.add(userId, EMAIL_SEND_CREDIT_COST, 'BONUS', 'email_send_error_refund', { isRefund: true, symbol, analysisId });
-                await prisma.analysis.update({ where: { id: analysisId }, data: { emailsSentUsed: { decrement: 1 } } });
-              }
-            } catch { /* best effort refund */ }
-          }
-          return reply.code(500).send({
-            error: { code: 'EMAIL_FAILED', message: 'Failed to send email', details: result.error },
-          });
-        }
-
-        fastify.log.info({ userId, email: user.email, symbol, analysisId }, 'Screenshot email sent');
-
-        return reply.send({
-          success: true,
-          message: `Analysis screenshot sent to ${user.email}`,
-        });
-      } catch (error) {
-        fastify.log.error(error);
-        return reply.code(500).send({
-          error: { code: 'SERVER_ERROR', message: 'Failed to send screenshot email' },
-        });
-      }
-    }
-  );
-
-  // ===========================================
-  // POST /api/reports/email-pdf-report - Send analysis PDF via email
-  // ===========================================
-  interface SendPdfEmailBody {
-    analysisId: string;
-    symbol: string;
-    interval: string;
-    pdfBase64: string; // Base64 PDF content (without data URL prefix)
-    score: number;
-    direction: string;
-    verdict: string;
-  }
-
-  fastify.post<{ Body: SendPdfEmailBody }>(
-    '/api/reports/email-pdf-report',
-    { preHandler: [authenticate] },
-    async (
-      request: FastifyRequest<{ Body: SendPdfEmailBody }>,
-      reply: FastifyReply
-    ) => {
-      try {
-        const userId = (request.user as JwtUser).id;
-        const { analysisId, symbol, interval, pdfBase64, score, direction, verdict } = request.body;
-
-        if (!symbol || !pdfBase64) {
-          return reply.code(400).send({
-            error: { code: 'MISSING_FIELDS', message: 'Missing required fields (symbol, pdfBase64)' },
-          });
-        }
-
-        // Get user info
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { name: true, email: true, isAdmin: true },
-        });
-
-        if (!user || !user.email) {
-          return reply.code(400).send({
-            error: { code: 'NO_EMAIL', message: 'User email not found' },
-          });
-        }
-
-        // Check free email limit for this analysis (admin bypasses)
-        if (!user.isAdmin && analysisId) {
-          const analysis = await prisma.analysis.findUnique({
-            where: { id: analysisId },
-            select: { emailsSentUsed: true },
-          });
-
-          if (analysis && (analysis.emailsSentUsed || 0) >= FREE_EMAILS_PER_ANALYSIS) {
-            // Check credit balance
-            const creditBalance = await prisma.creditBalance.findUnique({
-              where: { userId },
-            });
-
-            if (!creditBalance || creditBalance.balance < EMAIL_SEND_CREDIT_COST) {
-              return reply.code(402).send({
-                error: {
-                  code: 'INSUFFICIENT_CREDITS',
-                  message: `Requires ${EMAIL_SEND_CREDIT_COST} credits. You have ${creditBalance?.balance || 0} credits.`,
-                },
-              });
-            }
-
-            // Deduct credits
-            await prisma.creditBalance.update({
-              where: { userId },
-              data: {
-                balance: { decrement: EMAIL_SEND_CREDIT_COST },
-                lifetimeSpent: { increment: EMAIL_SEND_CREDIT_COST },
-              },
-            });
-          }
-
-          // Increment email count for this analysis
-          if (analysisId) {
-            try {
-              await prisma.analysis.update({
-                where: { id: analysisId },
-                data: { emailsSentUsed: { increment: 1 } },
-              });
-            } catch {
-              // Analysis might not exist, continue anyway
-            }
-          }
-        }
-
-        // Format data for email
-        const isLong = direction?.toLowerCase() === 'long';
-        const directionText = isLong ? 'LONG' : 'SHORT';
-        const scorePercent = Math.round(score * 10);
-        const verdictText = verdict || 'WAIT';
-        const date = new Date().toISOString().split('T')[0];
-        const fileName = `TraderPath_${symbol}_${date}.pdf`;
-
-        // Send email with PDF attachment
-        const result = await emailService.sendPdfReport(user.email, {
-          userName: user.name || 'Trader',
-          symbol,
-          direction: directionText,
-          verdict: verdictText,
-          score: scorePercent,
-          fileName,
-          pdfBase64,
-          generatedAt: new Date().toLocaleString('en-US', {
-            dateStyle: 'medium',
-            timeStyle: 'short',
-          }),
-          analysisId,
-        });
-
-        if (!result.success) {
-          // Refund credits if they were charged
-          if (!user.isAdmin && analysisId) {
-            try {
-              const analysis = await prisma.analysis.findUnique({ where: { id: analysisId }, select: { emailsSentUsed: true } });
-              if (analysis && (analysis.emailsSentUsed || 0) > FREE_EMAILS_PER_ANALYSIS) {
-                await creditService.add(userId, EMAIL_SEND_CREDIT_COST, 'BONUS', 'email_send_error_refund', { isRefund: true, symbol, analysisId });
-                await prisma.analysis.update({ where: { id: analysisId }, data: { emailsSentUsed: { decrement: 1 } } });
-              }
-            } catch { /* best effort refund */ }
-          }
-          return reply.code(500).send({
-            error: { code: 'EMAIL_FAILED', message: 'Failed to send email', details: result.error },
-          });
-        }
-
-        fastify.log.info({ userId, email: user.email, symbol, analysisId }, 'PDF report email sent');
-
-        return reply.send({
-          success: true,
-          message: `Analysis PDF sent to ${user.email}`,
-        });
-      } catch (error) {
-        fastify.log.error(error);
-        return reply.code(500).send({
-          error: { code: 'SERVER_ERROR', message: 'Failed to send PDF email' },
-        });
-      }
-    }
-  );
-
-  // ===========================================
-  // POST /api/reports/send-capital-flow-email - Send Capital Flow report via email
-  // ===========================================
-  interface SendCapitalFlowEmailBody {
-    htmlContent: string;
-    subject: string;
-  }
-
-  fastify.post<{ Body: SendCapitalFlowEmailBody }>(
-    '/api/reports/send-capital-flow-email',
+  fastify.get<{ Params: { id: string; pageId: string }; Querystring: { type?: SnapshotType } }>(
+    '/api/reports/:id/snapshot/:pageId',
     { preHandler: authenticate },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -1803,57 +1530,93 @@ export async function reportRoutes(fastify: FastifyInstance) {
           });
         }
 
-        const { htmlContent, subject } = request.body as SendCapitalFlowEmailBody;
+        const { id, pageId } = request.params as { id: string; pageId: string };
+        const { type = 'executive' } = (request.query as { type?: SnapshotType }) || {};
 
-        if (!htmlContent || !subject) {
-          return reply.code(400).send({
-            error: { code: 'INVALID_INPUT', message: 'Missing required fields: htmlContent, subject' },
-          });
-        }
-
-        // Get user's email
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { email: true, name: true, isAdmin: true },
+        const report = await prisma.report.findFirst({
+          where: { id, userId },
         });
 
-        if (!user?.email) {
-          return reply.code(400).send({
-            error: { code: 'NO_EMAIL', message: 'User email not found' },
+        if (!report) {
+          return reply.code(404).send({
+            error: { code: 'NOT_FOUND', message: 'Report not found' },
           });
         }
 
-        // Capital Flow email is free for all users (part of Daily Pass system)
-        // No credit deduction required
+        const reportData = report.reportData as Record<string, unknown>;
+        const snapshots = await snapshotService.generateSnapshots(reportData, type);
+        const target = snapshots.find(s => s.id === pageId);
 
-        // Send the email
-        const result = await emailService.sendEmail({
-          to: user.email,
-          subject: subject,
-          html: htmlContent,
-          text: 'Your Capital Flow analysis report from TraderPath. View this email in HTML format for best experience.',
+        if (!target) {
+          return reply.code(404).send({
+            error: { code: 'NOT_FOUND', message: `Snapshot page '${pageId}' not found` },
+          });
+        }
+
+        return reply
+          .header('Content-Type', 'image/png')
+          .header('Content-Disposition', `attachment; filename="TraderPath_${report.symbol}_${pageId}.png"`)
+          .send(target.buffer);
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          error: { code: 'SERVER_ERROR', message: 'Failed to generate snapshot' },
+        });
+      }
+    }
+  );
+
+  // ===========================================
+  // POST /api/reports/:id/distribute - Send report snapshots via Telegram/Discord
+  // ===========================================
+  fastify.post<{ Params: { id: string }; Body: { type?: SnapshotType } }>(
+    '/api/reports/:id/distribute',
+    { preHandler: authenticate },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const userId = getUser(request)?.id;
+        if (!userId) {
+          return reply.code(401).send({
+            error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+          });
+        }
+
+        const { id } = request.params as { id: string };
+        const { type = 'executive' } = (request.body as { type?: SnapshotType }) || {};
+
+        const report = await prisma.report.findFirst({
+          where: { id, userId },
         });
 
-        if (!result.success) {
-          fastify.log.error({ error: result.error }, 'Failed to send Capital Flow email');
-          return reply.code(500).send({
-            error: { code: 'EMAIL_FAILED', message: 'Failed to send email', details: result.error },
+        if (!report) {
+          return reply.code(404).send({
+            error: { code: 'NOT_FOUND', message: 'Report not found' },
           });
         }
 
-        fastify.log.info({ userId, email: user.email }, 'Capital Flow email sent');
+        const reportData = report.reportData as Record<string, unknown>;
+
+        // Distribute to user's configured channels
+        const distResult = await reportDistributionService.distributeToUser(
+          id,
+          userId,
+          reportData,
+          type
+        );
 
         return reply.send({
           success: true,
-          message: 'Capital Flow report sent successfully to ' + user.email,
           data: {
-            email: user.email,
+            snapshotsGenerated: distResult.snapshotsGenerated,
+            telegramSent: distResult.telegramSent,
+            discordSent: distResult.discordSent,
+            errors: distResult.errors.length > 0 ? distResult.errors : undefined,
           },
         });
       } catch (error) {
         fastify.log.error(error);
         return reply.code(500).send({
-          error: { code: 'SERVER_ERROR', message: 'Failed to send Capital Flow email' },
+          error: { code: 'SERVER_ERROR', message: 'Failed to distribute report' },
         });
       }
     }
@@ -1882,380 +1645,3 @@ function getCoinIconDataUrl(symbol: string): string {
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 }
 
-// Generate SVG trade plan chart for email
-function generateTradePlanChartSvg(
-  direction: string,
-  entryPrice: number | undefined,
-  stopLoss: number | undefined,
-  takeProfits: Array<{ price: number }> | undefined,
-  currentPrice: number | undefined
-): string {
-  if (!entryPrice || !stopLoss) return '';
-
-  const isLong = direction === 'long';
-  const tp1 = takeProfits?.[0]?.price;
-  const tp2 = takeProfits?.[1]?.price;
-  const tp3 = takeProfits?.[2]?.price;
-
-  // Calculate price range
-  const prices = [entryPrice, stopLoss, tp1, tp2, tp3, currentPrice].filter(Boolean) as number[];
-  const minPrice = Math.min(...prices) * 0.995;
-  const maxPrice = Math.max(...prices) * 1.005;
-  const priceRange = maxPrice - minPrice;
-
-  const width = 540;
-  const height = 200;
-  const padding = 40;
-  const chartWidth = width - padding * 2;
-  const chartHeight = height - padding * 2;
-
-  // Convert price to Y coordinate
-  const priceToY = (price: number) => {
-    const ratio = (price - minPrice) / priceRange;
-    return height - padding - ratio * chartHeight;
-  };
-
-  // Format price for display
-  const formatPrice = (price: number) => {
-    if (price >= 1000) return price.toFixed(0);
-    if (price >= 1) return price.toFixed(2);
-    if (price >= 0.01) return price.toFixed(4);
-    return price.toFixed(6);
-  };
-
-  const entryY = priceToY(entryPrice);
-  const slY = priceToY(stopLoss);
-  const tp1Y = tp1 ? priceToY(tp1) : null;
-  const tp2Y = tp2 ? priceToY(tp2) : null;
-  const tp3Y = tp3 ? priceToY(tp3) : null;
-  const currentY = currentPrice ? priceToY(currentPrice) : null;
-
-  let svg = `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="bgGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:#1a1a2e"/>
-          <stop offset="100%" style="stop-color:#0f172a"/>
-        </linearGradient>
-      </defs>
-      <rect width="${width}" height="${height}" fill="url(#bgGradient)" rx="8"/>
-
-      <!-- Price range area -->
-      <rect x="${padding}" y="${padding}" width="${chartWidth}" height="${chartHeight}" fill="#334155" rx="4" opacity="0.5"/>
-
-      <!-- Entry line (cyan) -->
-      <line x1="${padding}" y1="${entryY}" x2="${width - padding}" y2="${entryY}" stroke="#22d3ee" stroke-width="2" stroke-dasharray="5,5"/>
-      <text x="${padding + 5}" y="${entryY - 5}" fill="#22d3ee" font-size="11" font-family="Arial">Entry: $${formatPrice(entryPrice)}</text>
-
-      <!-- Stop Loss line (red) -->
-      <line x1="${padding}" y1="${slY}" x2="${width - padding}" y2="${slY}" stroke="#ef4444" stroke-width="2"/>
-      <text x="${padding + 5}" y="${slY + 15}" fill="#ef4444" font-size="11" font-family="Arial">SL: $${formatPrice(stopLoss)}</text>`;
-
-  // Take Profit lines (green)
-  if (tp1Y !== null && tp1) {
-    svg += `
-      <line x1="${padding}" y1="${tp1Y}" x2="${width - padding}" y2="${tp1Y}" stroke="#10b981" stroke-width="2"/>
-      <text x="${width - padding - 80}" y="${tp1Y - 5}" fill="#10b981" font-size="11" font-family="Arial">TP1: $${formatPrice(tp1)}</text>`;
-  }
-  if (tp2Y !== null && tp2) {
-    svg += `
-      <line x1="${padding}" y1="${tp2Y}" x2="${width - padding}" y2="${tp2Y}" stroke="#10b981" stroke-width="2" stroke-dasharray="3,3"/>
-      <text x="${width - padding - 80}" y="${tp2Y - 5}" fill="#10b981" font-size="10" font-family="Arial">TP2: $${formatPrice(tp2)}</text>`;
-  }
-  if (tp3Y !== null && tp3) {
-    svg += `
-      <line x1="${padding}" y1="${tp3Y}" x2="${width - padding}" y2="${tp3Y}" stroke="#10b981" stroke-width="2" stroke-dasharray="2,4"/>
-      <text x="${width - padding - 80}" y="${tp3Y - 5}" fill="#10b981" font-size="10" font-family="Arial">TP3: $${formatPrice(tp3)}</text>`;
-  }
-
-  // Current price marker
-  if (currentY !== null && currentPrice) {
-    svg += `
-      <circle cx="${width / 2}" cy="${currentY}" r="6" fill="#f59e0b"/>
-      <text x="${width / 2 + 10}" y="${currentY + 4}" fill="#f59e0b" font-size="11" font-family="Arial">Current: $${formatPrice(currentPrice)}</text>`;
-  }
-
-  // Direction arrow
-  const arrowY = padding + 15;
-  if (isLong) {
-    svg += `
-      <polygon points="${width - padding - 30},${arrowY + 10} ${width - padding - 20},${arrowY} ${width - padding - 10},${arrowY + 10}" fill="#10b981"/>
-      <text x="${width - padding - 55}" y="${arrowY + 12}" fill="#10b981" font-size="12" font-family="Arial" font-weight="bold">LONG</text>`;
-  } else {
-    svg += `
-      <polygon points="${width - padding - 30},${arrowY} ${width - padding - 20},${arrowY + 10} ${width - padding - 10},${arrowY}" fill="#ef4444"/>
-      <text x="${width - padding - 55}" y="${arrowY + 12}" fill="#ef4444" font-size="12" font-family="Arial" font-weight="bold">SHORT</text>`;
-  }
-
-  svg += '</svg>';
-  return svg;
-}
-
-// Convert AI Expert score from /10 to /100 format in comment text
-function convertScoreTo100Scale(text: string): string {
-  // Match patterns like "7.4/10" or "(7.4/10)" and convert to "74/100"
-  return text.replace(/\((\d+(?:\.\d+)?)\s*\/\s*10\)/g, (_, score) => {
-    const scaledScore = Math.round(parseFloat(score) * 10);
-    return `(${scaledScore}/100)`;
-  }).replace(/(\d+(?:\.\d+)?)\s*\/\s*10(?!\d)/g, (_, score) => {
-    const scaledScore = Math.round(parseFloat(score) * 10);
-    return `${scaledScore}/100`;
-  });
-}
-
-// Generate HTML email content for report
-function generateReportHtmlEmail(
-  data: SendHtmlEmailBody['reportData'],
-  userName: string,
-  chartImage?: string
-): string {
-  const symbol = data.symbol || 'N/A';
-  const generatedAt = data.generatedAt || new Date().toLocaleString('tr-TR');
-  const interval = data.interval || '4h'; // Timeframe: 15m, 1h, 4h, 1d
-  const verdict = data.verdict as Record<string, unknown> | undefined;
-  const tradePlan = data.tradePlan as Record<string, unknown> | undefined;
-  const assetScan = data.assetScan as Record<string, unknown> | undefined;
-  const marketPulse = data.marketPulse as Record<string, unknown> | undefined;
-  const safetyCheck = data.safetyCheck as Record<string, unknown> | undefined;
-  const timing = data.timing as Record<string, unknown> | undefined;
-
-  const direction = (tradePlan?.direction as string) || 'long';
-  const isLong = direction === 'long';
-  const score = ((verdict?.overallScore as number) || 0) * 10;
-  const action = (verdict?.action as string) || 'N/A';
-
-  // AI Expert score (0-100 scale) - passed as aiExpertScore or calculated from data
-  const aiExpertScore = data.aiExpertScore as number | undefined;
-
-  const formatPrice = (price: number | undefined): string => {
-    if (!price) return '$0';
-    if (price >= 1000) return `$${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
-    if (price >= 1) return `$${price.toFixed(2)}`;
-    if (price >= 0.01) return `$${price.toFixed(4)}`;
-    return `$${price.toFixed(6)}`;
-  };
-
-  const entryPrice = tradePlan?.averageEntry as number | undefined;
-  const stopLoss = (tradePlan?.stopLoss as Record<string, unknown>)?.price as number | undefined;
-  const takeProfits = tradePlan?.takeProfits as Array<{ price: number }> | undefined;
-  const currentPrice = assetScan?.currentPrice as number | undefined;
-  const priceChange24h = assetScan?.priceChange24h as number | undefined;
-  const rsi = (assetScan?.indicators as Record<string, unknown>)?.rsi as number | undefined;
-  const fearGreedIndex = marketPulse?.fearGreedIndex as number | undefined;
-  const fearGreedLabel = marketPulse?.fearGreedLabel as string | undefined;
-  const btcDominance = marketPulse?.btcDominance as number | undefined;
-  const riskLevel = safetyCheck?.riskLevel as string | undefined;
-  const tradeNow = timing?.tradeNow as boolean | undefined;
-
-  // Generate SVG chart if no chartImage provided
-  // Convert to base64 data URL because email clients don't support inline SVG
-  let svgChartDataUrl = '';
-  if (!chartImage) {
-    const svgString = generateTradePlanChartSvg(
-      direction,
-      entryPrice,
-      stopLoss,
-      takeProfits,
-      currentPrice
-    );
-    if (svgString) {
-      // Encode SVG as base64 data URL for email compatibility
-      const svgBase64 = Buffer.from(svgString).toString('base64');
-      svgChartDataUrl = `data:image/svg+xml;base64,${svgBase64}`;
-    }
-  }
-
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${formatSymbolPair(symbol)} Analysis Report</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #0f172a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #0f172a; padding: 20px 0;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #1e293b; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
-
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 24px; text-align: center;">
-              <h1 style="margin: 0; font-size: 24px; font-weight: bold;">
-                <span style="color: #10b981;">Trader</span><span style="color: #ef4444;">Path</span>
-              </h1>
-              <p style="margin: 5px 0 0; color: #64748b; font-size: 12px;">
-                AI-Powered Trading Analysis
-              </p>
-            </td>
-          </tr>
-
-          <!-- Symbol Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, ${isLong ? '#10b981' : '#ef4444'} 0%, ${isLong ? '#059669' : '#dc2626'} 100%); padding: 20px; text-align: center;">
-              <h2 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: bold;">
-                ${formatSymbolPair(symbol)} Analysis
-              </h2>
-              <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 13px;">
-                <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-weight: 600;">${interval.toUpperCase()}</span>
-                &nbsp;|&nbsp;
-                ${generatedAt}
-              </p>
-            </td>
-          </tr>
-
-          <!-- Score & Direction -->
-          <tr>
-            <td style="padding: 25px;">
-              <table width="100%" cellspacing="0" cellpadding="0">
-                <tr>
-                  <td align="center">
-                    <div style="display: inline-block; background-color: ${isLong ? '#10b981' : '#ef4444'}20; border-radius: 50px; padding: 15px 30px;">
-                      <span style="font-size: 36px; font-weight: bold; color: ${isLong ? '#10b981' : '#ef4444'};">
-                        ${score}/100
-                      </span>
-                      <span style="display: block; color: ${isLong ? '#10b981' : '#ef4444'}; font-size: 16px; font-weight: 600; margin-top: 5px;">
-                        ${isLong ? 'LONG' : 'SHORT'} - ${action}
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Trade Plan Chart -->
-          ${chartImage || svgChartDataUrl ? `
-          <tr>
-            <td style="padding: 0 30px 20px;">
-              <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
-                Trade Plan Chart
-              </h2>
-              <div style="background-color: #1a1a2e; border-radius: 8px; padding: 10px; text-align: center;">
-                <img src="${chartImage || svgChartDataUrl}" alt="Trade Plan Chart" style="max-width: 100%; width: 540px; height: auto; border-radius: 8px;"/>
-              </div>
-            </td>
-          </tr>
-          ` : ''}
-
-          <!-- Trade Plan -->
-          <tr>
-            <td style="padding: 0 30px 20px;">
-              <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
-                Trade Plan
-              </h2>
-              <table width="100%" cellspacing="0" cellpadding="8" style="background-color: #334155; border-radius: 8px; table-layout: fixed;">
-                <tr>
-                  <td width="20%" style="color: #94a3b8; font-size: 10px; text-transform: uppercase; text-align: center;">Entry</td>
-                  <td width="20%" style="color: #94a3b8; font-size: 10px; text-transform: uppercase; text-align: center;">Stop Loss</td>
-                  <td width="20%" style="color: #94a3b8; font-size: 10px; text-transform: uppercase; text-align: center;">TP1</td>
-                  <td width="20%" style="color: #94a3b8; font-size: 10px; text-transform: uppercase; text-align: center;">TP2</td>
-                  <td width="20%" style="color: #94a3b8; font-size: 10px; text-transform: uppercase; text-align: center;">TP3</td>
-                </tr>
-                <tr>
-                  <td width="20%" style="color: #22d3ee; font-size: 12px; font-weight: 600; text-align: center; word-break: break-all;">${formatPrice(entryPrice)}</td>
-                  <td width="20%" style="color: #ef4444; font-size: 12px; font-weight: 600; text-align: center; word-break: break-all;">${formatPrice(stopLoss)}</td>
-                  <td width="20%" style="color: #10b981; font-size: 12px; font-weight: 600; text-align: center; word-break: break-all;">${formatPrice(takeProfits?.[0]?.price)}</td>
-                  <td width="20%" style="color: #10b981; font-size: 12px; font-weight: 600; text-align: center; word-break: break-all;">${formatPrice(takeProfits?.[1]?.price)}</td>
-                  <td width="20%" style="color: #10b981; font-size: 12px; font-weight: 600; text-align: center; word-break: break-all;">${formatPrice(takeProfits?.[2]?.price)}</td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Analysis Summary -->
-          <tr>
-            <td style="padding: 0 30px 20px;">
-              <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
-                Analysis Summary
-              </h2>
-              <table width="100%" cellspacing="10" cellpadding="0">
-                <tr>
-                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
-                    <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Current Price</span>
-                    <div style="color: #ffffff; font-size: 16px; font-weight: 600; margin-top: 4px;">
-                      ${formatPrice(currentPrice)}
-                      <span style="color: ${(priceChange24h || 0) >= 0 ? '#10b981' : '#ef4444'}; font-size: 12px;">
-                        ${(priceChange24h || 0) >= 0 ? '+' : ''}${priceChange24h?.toFixed(2) || '0'}%
-                      </span>
-                    </div>
-                  </td>
-                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
-                    <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">RSI</span>
-                    <div style="color: #ffffff; font-size: 16px; font-weight: 600; margin-top: 4px;">
-                      ${rsi?.toFixed(0) || 'N/A'}
-                      <span style="color: #94a3b8; font-size: 12px;">
-                        ${rsi ? (rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral') : ''}
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
-                    <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Fear & Greed</span>
-                    <div style="color: #ffffff; font-size: 16px; font-weight: 600; margin-top: 4px;">
-                      ${fearGreedIndex || 'N/A'}
-                      <span style="color: #94a3b8; font-size: 12px;">${fearGreedLabel || ''}</span>
-                    </div>
-                  </td>
-                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
-                    <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">BTC Dominance</span>
-                    <div style="color: #ffffff; font-size: 16px; font-weight: 600; margin-top: 4px;">
-                      ${btcDominance?.toFixed(1) || 'N/A'}%
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
-                    <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Risk Level</span>
-                    <div style="color: ${riskLevel === 'low' ? '#10b981' : riskLevel === 'high' ? '#ef4444' : '#f59e0b'}; font-size: 16px; font-weight: 600; margin-top: 4px; text-transform: uppercase;">
-                      ${riskLevel || 'N/A'}
-                    </div>
-                  </td>
-                  <td width="50%" style="background-color: #334155; border-radius: 8px; padding: 12px;">
-                    <span style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Timing</span>
-                    <div style="color: ${tradeNow ? '#10b981' : '#f59e0b'}; font-size: 16px; font-weight: 600; margin-top: 4px;">
-                      ${tradeNow ? 'Good Entry' : 'Wait'}
-                    </div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          ${data.aiExpertComment ? `
-          <!-- AI Expert Comment -->
-          <tr>
-            <td style="padding: 0 30px 20px;">
-              <h2 style="color: #ffffff; font-size: 18px; margin: 0 0 15px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
-                AI Expert Review
-              </h2>
-              <div style="background-color: #334155; border-radius: 8px; padding: 15px; border-left: 4px solid #f59e0b;">
-                <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">
-                  ${convertScoreTo100Scale(data.aiExpertComment)}
-                </p>
-              </div>
-            </td>
-          </tr>
-          ` : ''}
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #0f172a; padding: 20px 30px; text-align: center; border-top: 1px solid #334155;">
-              <p style="color: #64748b; font-size: 12px; margin: 0;">
-                This report was sent from <span style="color: #10b981;">Trader</span><span style="color: #ef4444;">Path</span>
-              </p>
-              <p style="color: #475569; font-size: 11px; margin: 10px 0 0;">
-                This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. Past performance does not guarantee future results.
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-}

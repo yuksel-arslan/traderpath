@@ -449,322 +449,424 @@ export const CRYPTO_LOGOS: AssetLogosMap = {
 export const STOCK_LOGOS: AssetLogosMap = {
   // Major Index ETFs
   SPY: {
-    logoUrl: 'https://logo.clearbit.com/ssga.com',
+    logoUrl: '',
     color: '#00529B',
     name: 'SPDR S&P 500 ETF',
   },
   QQQ: {
-    logoUrl: 'https://logo.clearbit.com/invesco.com',
+    logoUrl: '',
     color: '#002D72',
     name: 'Invesco QQQ Trust',
   },
   DIA: {
-    logoUrl: 'https://logo.clearbit.com/ssga.com',
+    logoUrl: '',
     color: '#00529B',
     name: 'SPDR Dow Jones ETF',
   },
   IWM: {
-    logoUrl: 'https://logo.clearbit.com/ishares.com',
+    logoUrl: '',
     color: '#000000',
     name: 'iShares Russell 2000',
   },
   VTI: {
-    logoUrl: 'https://logo.clearbit.com/vanguard.com',
+    logoUrl: '',
     color: '#8B2332',
     name: 'Vanguard Total Stock',
   },
 
   // Sector ETFs
   XLF: {
-    logoUrl: 'https://logo.clearbit.com/ssga.com',
+    logoUrl: '',
     color: '#00529B',
     name: 'Financial Select SPDR',
   },
   XLK: {
-    logoUrl: 'https://logo.clearbit.com/ssga.com',
+    logoUrl: '',
     color: '#00529B',
     name: 'Technology Select SPDR',
   },
   XLE: {
-    logoUrl: 'https://logo.clearbit.com/ssga.com',
+    logoUrl: '',
     color: '#00529B',
     name: 'Energy Select SPDR',
   },
   XLV: {
-    logoUrl: 'https://logo.clearbit.com/ssga.com',
+    logoUrl: '',
     color: '#00529B',
     name: 'Health Care Select SPDR',
   },
   XLI: {
-    logoUrl: 'https://logo.clearbit.com/ssga.com',
+    logoUrl: '',
     color: '#00529B',
     name: 'Industrial Select SPDR',
   },
 
   // Tech Giants
   AAPL: {
-    logoUrl: 'https://logo.clearbit.com/apple.com',
+    logoUrl: '',
     color: '#000000',
     name: 'Apple Inc.',
   },
   MSFT: {
-    logoUrl: 'https://logo.clearbit.com/microsoft.com',
+    logoUrl: '',
     color: '#00A4EF',
     name: 'Microsoft Corporation',
   },
   GOOGL: {
-    logoUrl: 'https://logo.clearbit.com/google.com',
+    logoUrl: '',
     color: '#4285F4',
     name: 'Alphabet Inc.',
   },
   GOOG: {
-    logoUrl: 'https://logo.clearbit.com/google.com',
+    logoUrl: '',
     color: '#4285F4',
     name: 'Alphabet Inc.',
   },
   AMZN: {
-    logoUrl: 'https://logo.clearbit.com/amazon.com',
+    logoUrl: '',
     color: '#FF9900',
     name: 'Amazon.com Inc.',
   },
   META: {
-    logoUrl: 'https://logo.clearbit.com/meta.com',
+    logoUrl: '',
     color: '#0668E1',
     name: 'Meta Platforms Inc.',
   },
   NVDA: {
-    logoUrl: 'https://logo.clearbit.com/nvidia.com',
+    logoUrl: '',
     color: '#76B900',
     name: 'NVIDIA Corporation',
   },
   TSLA: {
-    logoUrl: 'https://logo.clearbit.com/tesla.com',
+    logoUrl: '',
     color: '#E31937',
     name: 'Tesla Inc.',
   },
   AMD: {
-    logoUrl: 'https://logo.clearbit.com/amd.com',
+    logoUrl: '',
     color: '#ED1C24',
     name: 'Advanced Micro Devices',
   },
   INTC: {
-    logoUrl: 'https://logo.clearbit.com/intel.com',
+    logoUrl: '',
     color: '#0071C5',
     name: 'Intel Corporation',
   },
   CRM: {
-    logoUrl: 'https://logo.clearbit.com/salesforce.com',
+    logoUrl: '',
     color: '#00A1E0',
     name: 'Salesforce Inc.',
   },
   ORCL: {
-    logoUrl: 'https://logo.clearbit.com/oracle.com',
+    logoUrl: '',
     color: '#F80000',
     name: 'Oracle Corporation',
   },
   ADBE: {
-    logoUrl: 'https://logo.clearbit.com/adobe.com',
+    logoUrl: '',
     color: '#FF0000',
     name: 'Adobe Inc.',
   },
   NFLX: {
-    logoUrl: 'https://logo.clearbit.com/netflix.com',
+    logoUrl: '',
     color: '#E50914',
     name: 'Netflix Inc.',
   },
 
   // Finance
   JPM: {
-    logoUrl: 'https://logo.clearbit.com/jpmorganchase.com',
+    logoUrl: '',
     color: '#0F3D66',
     name: 'JPMorgan Chase & Co.',
   },
   BAC: {
-    logoUrl: 'https://logo.clearbit.com/bankofamerica.com',
+    logoUrl: '',
     color: '#012169',
     name: 'Bank of America',
   },
   WFC: {
-    logoUrl: 'https://logo.clearbit.com/wellsfargo.com',
+    logoUrl: '',
     color: '#D71E28',
     name: 'Wells Fargo & Co.',
   },
   GS: {
-    logoUrl: 'https://logo.clearbit.com/goldmansachs.com',
+    logoUrl: '',
     color: '#7399C6',
     name: 'Goldman Sachs',
   },
   MS: {
-    logoUrl: 'https://logo.clearbit.com/morganstanley.com',
+    logoUrl: '',
     color: '#002B5C',
     name: 'Morgan Stanley',
   },
   C: {
-    logoUrl: 'https://logo.clearbit.com/citigroup.com',
+    logoUrl: '',
     color: '#003B70',
     name: 'Citigroup Inc.',
   },
   V: {
-    logoUrl: 'https://logo.clearbit.com/visa.com',
+    logoUrl: '',
     color: '#1A1F71',
     name: 'Visa Inc.',
   },
   MA: {
-    logoUrl: 'https://logo.clearbit.com/mastercard.com',
+    logoUrl: '',
     color: '#EB001B',
     name: 'Mastercard Inc.',
   },
   PYPL: {
-    logoUrl: 'https://logo.clearbit.com/paypal.com',
+    logoUrl: '',
     color: '#003087',
     name: 'PayPal Holdings',
   },
 
   // Healthcare
   JNJ: {
-    logoUrl: 'https://logo.clearbit.com/jnj.com',
+    logoUrl: '',
     color: '#D51900',
     name: 'Johnson & Johnson',
   },
   UNH: {
-    logoUrl: 'https://logo.clearbit.com/unitedhealthgroup.com',
+    logoUrl: '',
     color: '#0063A6',
     name: 'UnitedHealth Group',
   },
   PFE: {
-    logoUrl: 'https://logo.clearbit.com/pfizer.com',
+    logoUrl: '',
     color: '#0093D0',
     name: 'Pfizer Inc.',
   },
   ABBV: {
-    logoUrl: 'https://logo.clearbit.com/abbvie.com',
+    logoUrl: '',
     color: '#071D49',
     name: 'AbbVie Inc.',
   },
   MRK: {
-    logoUrl: 'https://logo.clearbit.com/merck.com',
+    logoUrl: '',
     color: '#009DAB',
     name: 'Merck & Co.',
   },
   LLY: {
-    logoUrl: 'https://logo.clearbit.com/lilly.com',
+    logoUrl: '',
     color: '#D52B1E',
     name: 'Eli Lilly and Company',
   },
 
   // Consumer
   WMT: {
-    logoUrl: 'https://logo.clearbit.com/walmart.com',
+    logoUrl: '',
     color: '#0071CE',
     name: 'Walmart Inc.',
   },
   KO: {
-    logoUrl: 'https://logo.clearbit.com/coca-cola.com',
+    logoUrl: '',
     color: '#F40009',
     name: 'The Coca-Cola Company',
   },
   PEP: {
-    logoUrl: 'https://logo.clearbit.com/pepsico.com',
+    logoUrl: '',
     color: '#004B93',
     name: 'PepsiCo Inc.',
   },
   MCD: {
-    logoUrl: 'https://logo.clearbit.com/mcdonalds.com',
+    logoUrl: '',
     color: '#FFC72C',
     name: "McDonald's Corporation",
   },
   NKE: {
-    logoUrl: 'https://logo.clearbit.com/nike.com',
+    logoUrl: '',
     color: '#000000',
     name: 'Nike Inc.',
   },
   DIS: {
-    logoUrl: 'https://logo.clearbit.com/disney.com',
+    logoUrl: '',
     color: '#113CCF',
     name: 'The Walt Disney Company',
   },
 
   // Energy
   XOM: {
-    logoUrl: 'https://logo.clearbit.com/exxonmobil.com',
+    logoUrl: '',
     color: '#ED1C24',
     name: 'Exxon Mobil Corporation',
   },
   CVX: {
-    logoUrl: 'https://logo.clearbit.com/chevron.com',
+    logoUrl: '',
     color: '#0066B2',
     name: 'Chevron Corporation',
   },
   COP: {
-    logoUrl: 'https://logo.clearbit.com/conocophillips.com',
+    logoUrl: '',
     color: '#ED1C24',
     name: 'ConocoPhillips',
   },
 
   // Industrial
   BA: {
-    logoUrl: 'https://logo.clearbit.com/boeing.com',
+    logoUrl: '',
     color: '#0033A0',
     name: 'The Boeing Company',
   },
   CAT: {
-    logoUrl: 'https://logo.clearbit.com/caterpillar.com',
+    logoUrl: '',
     color: '#FFCD11',
     name: 'Caterpillar Inc.',
   },
   GE: {
-    logoUrl: 'https://logo.clearbit.com/ge.com',
+    logoUrl: '',
     color: '#3B73B9',
     name: 'General Electric',
   },
   HON: {
-    logoUrl: 'https://logo.clearbit.com/honeywell.com',
+    logoUrl: '',
     color: '#E10600',
     name: 'Honeywell International',
   },
   UPS: {
-    logoUrl: 'https://logo.clearbit.com/ups.com',
+    logoUrl: '',
     color: '#351C15',
     name: 'United Parcel Service',
   },
 
   // Telecom
   T: {
-    logoUrl: 'https://logo.clearbit.com/att.com',
+    logoUrl: '',
     color: '#00A8E0',
     name: 'AT&T Inc.',
   },
   VZ: {
-    logoUrl: 'https://logo.clearbit.com/verizon.com',
+    logoUrl: '',
     color: '#CD040B',
     name: 'Verizon Communications',
   },
   TMUS: {
-    logoUrl: 'https://logo.clearbit.com/t-mobile.com',
+    logoUrl: '',
     color: '#E20074',
     name: 'T-Mobile US',
   },
 
   // Crypto Related
   COIN: {
-    logoUrl: 'https://logo.clearbit.com/coinbase.com',
+    logoUrl: '',
     color: '#0052FF',
     name: 'Coinbase Global',
   },
   MSTR: {
-    logoUrl: 'https://logo.clearbit.com/microstrategy.com',
+    logoUrl: '',
     color: '#C4373C',
     name: 'MicroStrategy',
   },
   MARA: {
-    logoUrl: 'https://logo.clearbit.com/mara.com',
+    logoUrl: '',
     color: '#000000',
     name: 'Marathon Digital Holdings',
   },
   RIOT: {
-    logoUrl: 'https://logo.clearbit.com/riotplatforms.com',
+    logoUrl: '',
     color: '#0033A0',
     name: 'Riot Platforms',
+  },
+
+  // BIST (Borsa Istanbul)
+  THYAO: {
+    logoUrl: '',
+    color: '#C8102E',
+    name: 'Turkish Airlines',
+  },
+  GARAN: {
+    logoUrl: '',
+    color: '#00854A',
+    name: 'Garanti BBVA',
+  },
+  AKBNK: {
+    logoUrl: '',
+    color: '#E3000B',
+    name: 'Akbank',
+  },
+  SISE: {
+    logoUrl: '',
+    color: '#004E9E',
+    name: 'Sisecam',
+  },
+  EREGL: {
+    logoUrl: '',
+    color: '#003A70',
+    name: 'Eregli Demir Celik',
+  },
+  KCHOL: {
+    logoUrl: '',
+    color: '#003DA5',
+    name: 'Koc Holding',
+  },
+  SAHOL: {
+    logoUrl: '',
+    color: '#003C71',
+    name: 'Sabanci Holding',
+  },
+  ISCTR: {
+    logoUrl: '',
+    color: '#0038A8',
+    name: 'Is Bankasi',
+  },
+  YKBNK: {
+    logoUrl: '',
+    color: '#004990',
+    name: 'Yapi Kredi',
+  },
+  HALKB: {
+    logoUrl: '',
+    color: '#004B87',
+    name: 'Halk Bankasi',
+  },
+  VAKBN: {
+    logoUrl: '',
+    color: '#FFD100',
+    name: 'Vakifbank',
+  },
+  TOASO: {
+    logoUrl: '',
+    color: '#1B3C87',
+    name: 'Tofas Oto',
+  },
+  TAVHL: {
+    logoUrl: '',
+    color: '#003B73',
+    name: 'TAV Havalimanlari',
+  },
+  TKFEN: {
+    logoUrl: '',
+    color: '#E31937',
+    name: 'Tekfen Holding',
+  },
+  TUPRS: {
+    logoUrl: '',
+    color: '#E31E24',
+    name: 'Tupras',
+  },
+  BIMAS: {
+    logoUrl: '',
+    color: '#ED1C24',
+    name: 'BIM Magazalar',
+  },
+  ASELS: {
+    logoUrl: '',
+    color: '#003366',
+    name: 'Aselsan',
+  },
+  PGSUS: {
+    logoUrl: '',
+    color: '#FFD700',
+    name: 'Pegasus Airlines',
+  },
+  ENKAI: {
+    logoUrl: '',
+    color: '#003399',
+    name: 'Enka Insaat',
+  },
+  ARCLK: {
+    logoUrl: '',
+    color: '#E2001A',
+    name: 'Arcelik',
   },
 };
 
@@ -786,22 +888,22 @@ export const METAL_LOGOS: AssetLogosMap = {
     name: 'Silver',
   },
   GLD: {
-    logoUrl: 'https://logo.clearbit.com/ssga.com',
+    logoUrl: '',
     color: '#FFD700',
     name: 'SPDR Gold Shares',
   },
   SLV: {
-    logoUrl: 'https://logo.clearbit.com/ishares.com',
+    logoUrl: '',
     color: '#C0C0C0',
     name: 'iShares Silver Trust',
   },
   IAU: {
-    logoUrl: 'https://logo.clearbit.com/ishares.com',
+    logoUrl: '',
     color: '#FFD700',
     name: 'iShares Gold Trust',
   },
   PSLV: {
-    logoUrl: 'https://logo.clearbit.com/sprott.com',
+    logoUrl: '',
     color: '#C0C0C0',
     name: 'Sprott Physical Silver',
   },
@@ -818,29 +920,29 @@ export const METAL_LOGOS: AssetLogosMap = {
     name: 'Palladium',
   },
   PPLT: {
-    logoUrl: 'https://logo.clearbit.com/aberdeenstandard.com',
+    logoUrl: '',
     color: '#E5E4E2',
     name: 'abrdn Platinum ETF',
   },
   PALL: {
-    logoUrl: 'https://logo.clearbit.com/aberdeenstandard.com',
+    logoUrl: '',
     color: '#CED0DD',
     name: 'abrdn Palladium ETF',
   },
 
   // Mining ETFs
   GDX: {
-    logoUrl: 'https://logo.clearbit.com/vaneck.com',
+    logoUrl: '',
     color: '#FFD700',
     name: 'VanEck Gold Miners ETF',
   },
   GDXJ: {
-    logoUrl: 'https://logo.clearbit.com/vaneck.com',
+    logoUrl: '',
     color: '#FFD700',
     name: 'VanEck Junior Gold Miners',
   },
   SIL: {
-    logoUrl: 'https://logo.clearbit.com/globalxetfs.com',
+    logoUrl: '',
     color: '#C0C0C0',
     name: 'Global X Silver Miners ETF',
   },
@@ -854,52 +956,52 @@ export const METAL_LOGOS: AssetLogosMap = {
 export const BOND_LOGOS: AssetLogosMap = {
   // Treasury ETFs
   TLT: {
-    logoUrl: 'https://logo.clearbit.com/ishares.com',
+    logoUrl: '',
     color: '#003087',
     name: 'iShares 20+ Year Treasury',
   },
   IEF: {
-    logoUrl: 'https://logo.clearbit.com/ishares.com',
+    logoUrl: '',
     color: '#003087',
     name: 'iShares 7-10 Year Treasury',
   },
   SHY: {
-    logoUrl: 'https://logo.clearbit.com/ishares.com',
+    logoUrl: '',
     color: '#003087',
     name: 'iShares 1-3 Year Treasury',
   },
   BND: {
-    logoUrl: 'https://logo.clearbit.com/vanguard.com',
+    logoUrl: '',
     color: '#8B2332',
     name: 'Vanguard Total Bond Market',
   },
   AGG: {
-    logoUrl: 'https://logo.clearbit.com/ishares.com',
+    logoUrl: '',
     color: '#003087',
     name: 'iShares Core US Aggregate',
   },
   LQD: {
-    logoUrl: 'https://logo.clearbit.com/ishares.com',
+    logoUrl: '',
     color: '#003087',
     name: 'iShares iBoxx Investment Grade',
   },
   HYG: {
-    logoUrl: 'https://logo.clearbit.com/ishares.com',
+    logoUrl: '',
     color: '#003087',
     name: 'iShares iBoxx High Yield',
   },
   TIP: {
-    logoUrl: 'https://logo.clearbit.com/ishares.com',
+    logoUrl: '',
     color: '#003087',
     name: 'iShares TIPS Bond ETF',
   },
   MUB: {
-    logoUrl: 'https://logo.clearbit.com/ishares.com',
+    logoUrl: '',
     color: '#003087',
     name: 'iShares National Muni Bond',
   },
   EMB: {
-    logoUrl: 'https://logo.clearbit.com/ishares.com',
+    logoUrl: '',
     color: '#003087',
     name: 'iShares J.P. Morgan EM Bond',
   },

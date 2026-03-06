@@ -17,6 +17,9 @@ import {
   getMarketAnalysis
 } from './capital-flow.service';
 import { MarketType, MarketFlow } from './types';
+import { calculateRegimeScore, computeRiskOverlay, candlesToLogReturns } from './scoring';
+import type { RiskOverlayInput } from './scoring';
+import type { LiquidityRegime } from './scoring';
 import { prisma } from '../../core/database';
 import { authenticate } from '../../core/auth/middleware';
 
@@ -465,6 +468,113 @@ export async function capitalFlowRoutes(app: FastifyInstance) {
       return reply.status(500).send({
         success: false,
         error: 'Failed to save capital flow report',
+      });
+    }
+  });
+
+  /**
+   * GET /api/capital-flow/regime-score
+   *
+   * Returns the unified Regime Score across all layers:
+   *   L1 — GLRS  (Global Liquidity Regime Score, 0–100)
+   *   L2 — FVR   (Flow Velocity & Rotation per market)
+   *   L3 — SCI   (Sector Concentration Index)
+   *   Lead-Lag   (Cross-correlation matrix)
+   *
+   * All scores are mathematically derived, backtestable,
+   * and regime-aware.
+   *
+   * Public endpoint — no authentication required.
+   */
+  app.get('/regime-score', async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const [globalLiquidity, markets] = await Promise.all([
+        getGlobalLiquidity(),
+        getAllMarketFlows(),
+      ]);
+
+      const regimeScore = calculateRegimeScore(globalLiquidity, markets);
+
+      return reply.send({
+        success: true,
+        data: regimeScore,
+      });
+    } catch (error) {
+      console.error('[CapitalFlow] Error calculating regime score:', error);
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to calculate regime score',
+      });
+    }
+  });
+
+  /**
+   * POST /api/capital-flow/risk-overlay
+   *
+   * Computes regime-aware risk metrics for a proposed trade:
+   *   - Multi-method VaR (Historical, Cornish-Fisher, GARCH)
+   *   - Regime-conditioned position sizing
+   *   - Drawdown circuit breaker
+   *   - Volatility-scaled risk budget
+   *
+   * Requires authentication.
+   */
+  app.post('/risk-overlay', {
+    preHandler: [authenticate],
+  }, async (request: FastifyRequest<{
+    Body: {
+      entryPrice: number;
+      stopLossPrice: number;
+      direction: 'long' | 'short';
+      closePrices: number[];
+      accountEquity: number;
+      highWaterMark?: number;
+      safetyScore: number;
+      confidence: number;
+      riskLevel: 'low' | 'medium' | 'high' | 'critical';
+      garchVariance1d?: number;
+      garchAnnualizedVol?: number;
+      garchVarianceRatio?: number;
+    };
+  }>, reply: FastifyReply) => {
+    try {
+      const body = request.body;
+
+      // Get current regime from live data
+      const globalLiquidity = await getGlobalLiquidity();
+      const regimeScore = calculateRegimeScore(globalLiquidity, await getAllMarketFlows());
+
+      // Convert close prices to log returns
+      const returns = candlesToLogReturns(body.closePrices || []);
+
+      const overlayInput: RiskOverlayInput = {
+        glrsScore: regimeScore.glrs.score,
+        regime: regimeScore.glrs.regime as LiquidityRegime,
+        returns,
+        garchVariance1d: body.garchVariance1d,
+        garchAnnualizedVol: body.garchAnnualizedVol,
+        garchVarianceRatio: body.garchVarianceRatio,
+        accountEquity: body.accountEquity,
+        highWaterMark: body.highWaterMark ?? body.accountEquity,
+        entryPrice: body.entryPrice,
+        stopLossPrice: body.stopLossPrice,
+        direction: body.direction,
+        safetyScore: body.safetyScore,
+        confidence: body.confidence,
+        riskLevel: body.riskLevel,
+      };
+
+      const result = computeRiskOverlay(overlayInput);
+
+      return reply.send({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error('[CapitalFlow] Error computing risk overlay:', error);
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to compute risk overlay',
       });
     }
   });

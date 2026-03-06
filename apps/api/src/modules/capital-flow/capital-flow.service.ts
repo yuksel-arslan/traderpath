@@ -47,6 +47,8 @@ import {
   getReverseRepo,
   getTreasuryGeneralAccount,
   getNetLiquidity as fetchNetLiquidity,
+  isFredLive,
+  resetFredCounters,
 } from './providers/fred.provider';
 import {
   getAllYahooData,
@@ -59,9 +61,11 @@ import {
   getStocksFlowData,
   getBistFlow,
   getBistFlowData,
+  isYahooLive,
+  resetYahooCounters,
 } from './providers/yahoo.provider';
-import { getAllDefiLlamaData, getCryptoSectors, getDeFiTvl, getStablecoinMarketCap } from './providers/defillama.provider';
-import { getCompleteCryptoFlowData } from './providers/binance.provider';
+import { getAllDefiLlamaData, getCryptoSectors, getDeFiTvl, getStablecoinMarketCap, isDefillamaLive, resetDefillamaCounters } from './providers/defillama.provider';
+import { getCompleteCryptoFlowData, isBinanceLive, resetBinanceCounters } from './providers/binance.provider';
 
 // Cache keys
 const CACHE_KEYS = {
@@ -108,6 +112,7 @@ const CACHE_TTL = {
 export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
   // MINIMAL MODE: Return static fallback data immediately (no external API calls)
   if (process.env['DISABLE_EXTERNAL_APIS'] === 'true') {
+    console.warn('[CapitalFlow] ⚠ MINIMAL MODE active — returning static fallback data. Pipeline will NOT update until DISABLE_EXTERNAL_APIS is removed.');
     return buildFallbackSummary();
   }
 
@@ -115,12 +120,20 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
   try {
     const cached = await redis?.get(CACHE_KEYS.CAPITAL_FLOW);
     if (cached) {
-      return JSON.parse(cached);
+      const parsed = JSON.parse(cached);
+      parsed.dataSource = 'cached';
+      return parsed;
     }
   } catch (cacheError) {
     console.warn('[CapitalFlow] Cache read error:', cacheError);
     // Continue without cache
   }
+
+  // Reset provider counters for this fetch cycle
+  resetFredCounters();
+  resetYahooCounters();
+  resetBinanceCounters();
+  resetDefillamaCounters();
 
   // Fetch all data in parallel with fallback
   const results = await Promise.allSettled([
@@ -128,14 +141,17 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
     getAllMarketFlows(),
   ]);
 
+  // Track whether we're using live or fallback data
+  let usingFallback = false;
+
   // Extract results with fallbacks
   const globalLiquidity: GlobalLiquidity = results[0].status === 'fulfilled'
     ? results[0].value
-    : getFallbackGlobalLiquidity();
+    : (usingFallback = true, getFallbackGlobalLiquidity());
 
   const markets: MarketFlow[] = results[1].status === 'fulfilled'
     ? results[1].value
-    : getFallbackMarketFlows();
+    : (usingFallback = true, getFallbackMarketFlows());
 
   // Log any failures for debugging
   if (results[0].status === 'rejected') {
@@ -204,6 +220,17 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
     // Continue without insights
   }
 
+  // Collect per-provider data source status
+  const dataSources = {
+    fred: isFredLive() ? 'live' as const : 'fallback' as const,
+    yahoo: isYahooLive() ? 'live' as const : 'fallback' as const,
+    binance: isBinanceLive() ? 'live' as const : 'fallback' as const,
+    defillama: isDefillamaLive() ? 'live' as const : 'fallback' as const,
+  };
+
+  const allLive = dataSources.fred === 'live' && dataSources.yahoo === 'live'
+    && dataSources.binance === 'live' && dataSources.defillama === 'live';
+
   const summary: CapitalFlowSummary = {
     timestamp: new Date(),
     globalLiquidity,
@@ -216,7 +243,24 @@ export async function getCapitalFlowSummary(): Promise<CapitalFlowSummary> {
     activeRotation,
     insights,
     cacheExpiry: new Date(Date.now() + CACHE_TTL.SUMMARY * 1000),
+    dataSource: usingFallback ? 'fallback' : (allLive ? 'live' : 'fallback'),
+    dataSources,
   };
+
+  // Log per-provider status for debugging
+  const fallbackProviders = Object.entries(dataSources)
+    .filter(([, status]) => status === 'fallback')
+    .map(([name]) => name);
+
+  if (fallbackProviders.length > 0) {
+    console.warn(`[CapitalFlow] ⚠ Fallback data for: ${fallbackProviders.join(', ')} — check API keys and network`);
+  } else {
+    console.info('[CapitalFlow] ✓ All providers returning LIVE data');
+  }
+
+  if (usingFallback) {
+    console.warn('[CapitalFlow] ⚠ Summary built with FALLBACK data — external APIs may be down or keys missing');
+  }
 
   // Cache the result
   try {
@@ -1043,14 +1087,17 @@ function getFallbackGlobalLiquidity(): GlobalLiquidity {
  */
 function getFallbackMarketFlows(): MarketFlow[] {
   const now = new Date();
+  // Deterministic history: use a simple sine wave to avoid Math.random() noise
   const generateHistory = (baseValue: number) => {
     const history: FlowDataPoint[] = [];
     for (let i = 29; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
+      // Deterministic variation: sine wave based on day index
+      const variation = Math.sin(i * 0.5) * 0.5;
       history.push({
         date: date.toISOString().split('T')[0],
-        value: baseValue + (Math.random() - 0.5) * 2,
+        value: parseFloat((baseValue + variation).toFixed(2)),
       });
     }
     return history;
@@ -1231,7 +1278,9 @@ function buildFallbackSummary(): CapitalFlowSummary {
     liquidityBias: 'neutral',
     markets,
     recommendation: getFallbackRecommendation(),
+    activeRotation: null,
     cacheExpiry: new Date(Date.now() + 60_000), // 1 min TTL in fallback mode
+    dataSource: 'fallback',
   };
 }
 
@@ -1241,14 +1290,13 @@ function buildFallbackSummary(): CapitalFlowSummary {
 function getFallbackRecommendation(): FlowRecommendation {
   return {
     action: 'wait',
-    direction: 'neutral',
+    direction: 'BUY',
     primaryMarket: 'crypto',
     confidence: 50,
     reason: 'Data temporarily unavailable. Please refresh.',
     phase: 'mid',
     sectors: [],
     suggestedAssets: [],
-    riskLevel: 'medium',
   };
 }
 
@@ -1294,10 +1342,6 @@ function determineLiquidityBias(liquidity: GlobalLiquidity): LiquidityBias {
   else if (liquidity.vix.level === 'neutral') riskOnScore += 0.5;
   else if (liquidity.vix.level === 'fear') riskOffScore += 1;
   else if (liquidity.vix.level === 'extreme_fear') riskOffScore += 2;
-
-  // VIX term structure (backwardation = stress signal)
-  if (liquidity.vix.termStructure === 'backwardation') riskOffScore += 1.5;
-  else if (liquidity.vix.termStructure === 'contango') riskOnScore += 0.5;
 
   // Yield Curve
   if (liquidity.yieldCurve.inverted) riskOffScore += 1;
@@ -2414,7 +2458,7 @@ Layer 1 - Global Liquidity:
 - Treasury General Account (TGA): ${liquidity.treasuryGeneralAccount.value.toFixed(2)}T USD (${liquidity.treasuryGeneralAccount.trend}, 30d: ${liquidity.treasuryGeneralAccount.change30d > 0 ? '+' : ''}${liquidity.treasuryGeneralAccount.change30d.toFixed(1)}%)
 - M2 Money Supply: ${liquidity.m2MoneySupply.value.toFixed(2)}T USD (YoY: ${liquidity.m2MoneySupply.yoyGrowth.toFixed(1)}%)
 - DXY (Dollar): ${liquidity.dxy.value.toFixed(2)} (${liquidity.dxy.trend}, 7d: ${liquidity.dxy.change7d > 0 ? '+' : ''}${liquidity.dxy.change7d.toFixed(2)}%)
-- VIX: ${liquidity.vix.value.toFixed(2)} (${liquidity.vix.level})${liquidity.vix.termStructure ? ` | Term Structure: ${liquidity.vix.termStructure}${liquidity.vix.termSpread != null ? ` (spread: ${liquidity.vix.termSpread > 0 ? '+' : ''}${liquidity.vix.termSpread.toFixed(2)})` : ''}` : ''}
+- VIX: ${liquidity.vix.value.toFixed(2)} (${liquidity.vix.level})
 - Yield Curve: ${liquidity.yieldCurve.inverted ? 'INVERTED' : 'Normal'} (10Y-2Y: ${liquidity.yieldCurve.spread10y2y.toFixed(3)}%)
 - Overall Bias: ${bias.toUpperCase()}
 
@@ -2506,7 +2550,7 @@ Respond in this exact JSON format (no markdown, just pure JSON):
 }
 
 /**
- * RAG Layer 1 Fallback - Net Liquidity yorumu
+ * RAG Layer 1 Fallback - Net Liquidity commentary
  */
 function generateFallbackRagLayer1(liquidity: GlobalLiquidity, bias: LiquidityBias): string {
   const netLiq = liquidity.netLiquidity.value.toFixed(2);
@@ -2515,19 +2559,19 @@ function generateFallbackRagLayer1(liquidity: GlobalLiquidity, bias: LiquidityBi
   const tgaTrend = liquidity.treasuryGeneralAccount.trend;
 
   if (trend === 'expanding' && rrpTrend === 'draining') {
-    return `Net Liquidity ${netLiq}T USD artıyor, RRP boşalması piyasalara likidite ekliyor. Risk varlıkları için olumlu ortam.`;
+    return `Net Liquidity rising at ${netLiq}T USD, RRP drainage injecting liquidity into markets. Favorable environment for risk assets.`;
   } else if (trend === 'contracting') {
-    return `Net Liquidity ${netLiq}T USD daralıyor. ${tgaTrend === 'building' ? 'TGA birikiyor, likidite çekiliyor.' : 'Dikkatli olunmalı.'}`;
+    return `Net Liquidity contracting at ${netLiq}T USD. ${tgaTrend === 'building' ? 'TGA accumulating, draining liquidity.' : 'Caution advised.'}`;
   }
-  return `Net Liquidity ${netLiq}T USD seviyesinde, ${bias === 'risk_on' ? 'risk iştahı yüksek' : bias === 'risk_off' ? 'güvenli limanlara yöneliş var' : 'kararsız bir ortam mevcut'}.`;
+  return `Net Liquidity at ${netLiq}T USD, ${bias === 'risk_on' ? 'risk appetite is elevated' : bias === 'risk_off' ? 'capital rotating to safe havens' : 'mixed signals, no clear directional bias'}.`;
 }
 
 /**
- * RAG Layer 2 Fallback - Market rotasyonu yorumu
+ * RAG Layer 2 Fallback - Market rotation commentary
  */
 function generateFallbackRagLayer2(bestMarket: MarketFlow | undefined, worstMarket: MarketFlow | undefined): string {
   if (!bestMarket || !worstMarket) {
-    return 'Market akış verileri analiz ediliyor.';
+    return 'Analyzing market flow data.';
   }
 
   const best = bestMarket.market.toUpperCase();
@@ -2536,27 +2580,27 @@ function generateFallbackRagLayer2(bestMarket: MarketFlow | undefined, worstMark
   const worst = worstMarket.market.toUpperCase();
   const worstFlow = worstMarket.flow7d.toFixed(1);
 
-  return `${best} +${bestFlow}% ile lider, ${bestPhase} fazında. ${worst} (${worstFlow}%) en zayıf performans, rotasyon sinyali olabilir.`;
+  return `${best} leading at +${bestFlow}%, in ${bestPhase} phase. ${worst} (${worstFlow}%) weakest performer, possible rotation signal.`;
 }
 
 /**
- * RAG Layer 3 Fallback - Sektör fırsatı yorumu
+ * RAG Layer 3 Fallback - Sector opportunity commentary
  */
 function generateFallbackRagLayer3(cryptoMarket: MarketFlow | undefined): string {
   const topSector = cryptoMarket?.sectors?.[0];
   if (!topSector) {
-    return 'Sektör verileri yükleniyor.';
+    return 'Loading sector data.';
   }
 
   const sectorName = topSector.name;
   const sectorFlow = topSector.flow7d.toFixed(1);
   const topAssets = topSector.topAssets?.slice(0, 3).join(', ') || '';
 
-  return `${sectorName} sektörü ${sectorFlow > '0' ? '+' : ''}${sectorFlow}% ile öne çıkıyor.${topAssets ? ` Dikkat: ${topAssets}.` : ''}`;
+  return `${sectorName} sector leading at ${sectorFlow > '0' ? '+' : ''}${sectorFlow}%.${topAssets ? ` Notable: ${topAssets}.` : ''}`;
 }
 
 /**
- * RAG Layer 4 Fallback - Aksiyon önerisi yorumu
+ * RAG Layer 4 Fallback - Action recommendation commentary
  */
 function generateFallbackRagLayer4(recommendation: FlowRecommendation): string {
   const market = recommendation.primaryMarket.toUpperCase();
@@ -2565,11 +2609,11 @@ function generateFallbackRagLayer4(recommendation: FlowRecommendation): string {
   const phase = recommendation.phase?.toUpperCase() || 'N/A';
 
   if (action === 'ANALYZE') {
-    return `%${confidence} güvenle ${market}'te fırsat arayın. ${phase} fazı giriş için uygun.`;
+    return `Look for opportunities in ${market} with ${confidence}% confidence. ${phase} phase is favorable for entry.`;
   } else if (action === 'WAIT') {
-    return `${market}'te bekle. Faz ${phase}, daha iyi giriş noktası için sabır gerekiyor.`;
+    return `Wait on ${market}. Phase ${phase}, patience needed for a better entry point.`;
   }
-  return `${market}'te yeni pozisyon açmayın. Risk/ödül oranı olumsuz.`;
+  return `Avoid opening new positions in ${market}. Risk/reward ratio is unfavorable.`;
 }
 
 /**

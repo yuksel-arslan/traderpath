@@ -15,8 +15,13 @@ import {
   Eye,
   Loader2,
   Inbox,
-  Settings,
   ExternalLink,
+  Globe,
+  TrendingUp,
+  BarChart3,
+  ChevronRight,
+  Info,
+  AlertCircle,
 } from 'lucide-react';
 import { authFetch } from '../../../lib/api';
 import { cn } from '../../../lib/utils';
@@ -60,12 +65,24 @@ interface UnreadCounts {
 
 const FILTER_OPTIONS: { label: string; value: NotificationType | 'ALL'; icon: typeof Bell; color: string }[] = [
   { label: 'All', value: 'ALL', icon: Bell, color: 'text-foreground' },
-  { label: 'Briefing', value: 'BRIEFING', icon: Sunrise, color: 'text-amber-500' },
   { label: 'Alerts', value: 'ALERT', icon: AlertTriangle, color: 'text-red-500' },
-  { label: 'Signals', value: 'SIGNAL', icon: Zap, color: 'text-teal-500' },
   { label: 'Rewards', value: 'REWARD', icon: Gift, color: 'text-purple-500' },
   { label: 'System', value: 'SYSTEM', icon: Megaphone, color: 'text-blue-500' },
 ];
+
+// Smart Alert layer config (for ALERT type notifications)
+const LAYER_CONFIG: Record<string, { label: string; icon: typeof Globe; color: string; bg: string }> = {
+  L1: { label: 'Global Liquidity', icon: Globe, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+  L2: { label: 'Market Flow', icon: TrendingUp, color: 'text-teal-500', bg: 'bg-teal-500/10' },
+  L3: { label: 'Sector Activity', icon: BarChart3, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+  L4: { label: 'Asset Level', icon: Zap, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+};
+
+const SEVERITY_CONFIG: Record<string, { color: string; bg: string; icon: typeof Info }> = {
+  INFO: { color: 'text-muted-foreground', bg: 'bg-muted/50', icon: Info },
+  WARNING: { color: 'text-[#5EEDC3]', bg: 'bg-[#5EEDC3]/10', icon: AlertTriangle },
+  CRITICAL: { color: 'text-[#FF6B6B]', bg: 'bg-[#FF6B6B]/10', icon: AlertCircle },
+};
 
 function getTypeConfig(type: NotificationType) {
   switch (type) {
@@ -196,7 +213,6 @@ export default function NotificationsPage() {
     const meta = n.metadata as Record<string, string>;
     if (meta?.link) return meta.link;
     if (meta?.analysisId) return `/analyze/details/${meta.analysisId}`;
-    if (meta?.signalId) return `/signals`;
     return null;
   };
 
@@ -287,7 +303,7 @@ export default function NotificationsPage() {
           </aside>
 
           {/* Main Content */}
-          <main className="flex-1 min-w-0">
+          <section className="flex-1 min-w-0">
             {isLoading ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -320,6 +336,19 @@ export default function NotificationsPage() {
                     const config = getTypeConfig(n.type);
                     const Icon = config.icon;
                     const viewLink = getViewLink(n);
+                    const meta = n.metadata as Record<string, any>;
+
+                    // Smart Alert metadata
+                    const alertLayer = meta?.layer as string | undefined;
+                    const alertSeverity = meta?.severity as string | undefined;
+                    const alertAction = meta?.action as string | undefined;
+                    const alertMarket = meta?.market as string | undefined;
+                    const layerCfg = alertLayer ? LAYER_CONFIG[alertLayer] : null;
+                    const sevCfg = alertSeverity ? SEVERITY_CONFIG[alertSeverity] : null;
+
+                    // Signal metadata
+                    const signalDirection = meta?.direction as string | undefined;
+                    const signalConfidence = meta?.confidence as number | undefined;
 
                     return (
                       <div
@@ -330,16 +359,23 @@ export default function NotificationsPage() {
                         )}
                       >
                         <div className="flex gap-3">
-                          {/* Icon */}
-                          <div className={cn('shrink-0 w-9 h-9 rounded-full flex items-center justify-center', config.bg)}>
-                            <Icon className={cn('w-4 h-4', config.color)} />
+                          {/* Icon - use layer icon for ALERT type */}
+                          <div className={cn(
+                            'shrink-0 w-9 h-9 rounded-full flex items-center justify-center',
+                            layerCfg ? layerCfg.bg : config.bg
+                          )}>
+                            {layerCfg ? (
+                              <layerCfg.icon className={cn('w-4 h-4', layerCfg.color)} />
+                            ) : (
+                              <Icon className={cn('w-4 h-4', config.color)} />
+                            )}
                           </div>
 
                           {/* Content */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <span
                                     className={cn(
                                       'text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded',
@@ -349,17 +385,64 @@ export default function NotificationsPage() {
                                   >
                                     {n.type}
                                   </span>
+
+                                  {/* ALERT: Layer + Severity badges */}
+                                  {n.type === 'ALERT' && alertLayer && layerCfg && (
+                                    <span className={cn('text-[10px] font-mono font-bold px-1.5 py-0.5 rounded', layerCfg.bg, layerCfg.color)}>
+                                      {alertLayer}
+                                    </span>
+                                  )}
+                                  {n.type === 'ALERT' && alertSeverity && sevCfg && (
+                                    <span className={cn('inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded', sevCfg.bg, sevCfg.color)}>
+                                      <sevCfg.icon className="w-3 h-3" />
+                                      {alertSeverity}
+                                    </span>
+                                  )}
+                                  {n.type === 'ALERT' && alertMarket && (
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                      {alertMarket.charAt(0).toUpperCase() + alertMarket.slice(1)}
+                                    </span>
+                                  )}
+
+                                  {/* SIGNAL: Direction + Confidence badges */}
+                                  {n.type === 'SIGNAL' && signalDirection && (
+                                    <span className={cn(
+                                      'text-[10px] font-bold px-1.5 py-0.5 rounded',
+                                      signalDirection === 'long' ? 'bg-[#00F5A0]/10 text-[#00F5A0]' : 'bg-[#FF4757]/10 text-[#FF4757]'
+                                    )}>
+                                      {signalDirection.toUpperCase()}
+                                    </span>
+                                  )}
+                                  {n.type === 'SIGNAL' && signalConfidence && (
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                      {signalConfidence}%
+                                    </span>
+                                  )}
+
                                   <span className={cn('text-sm font-semibold', n.read ? 'text-muted-foreground' : 'text-foreground')}>
                                     {n.title}
                                   </span>
                                 </div>
                                 <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+
+                                {/* ALERT: Action suggestion */}
+                                {n.type === 'ALERT' && alertAction && (
+                                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-[#5EEDC3]">
+                                    <ChevronRight className="w-3 h-3" />
+                                    <span>{alertAction}</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
                             {/* Bottom row */}
                             <div className="flex items-center justify-between mt-2">
-                              <span className="text-xs text-muted-foreground">{formatTimeAgo(n.createdAt)}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">{formatTimeAgo(n.createdAt)}</span>
+                                {n.type === 'ALERT' && layerCfg && (
+                                  <span className="text-[10px] text-muted-foreground">{layerCfg.label}</span>
+                                )}
+                              </div>
 
                               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 {!n.read && (
@@ -430,7 +513,7 @@ export default function NotificationsPage() {
                 )}
               </>
             )}
-          </main>
+          </section>
         </div>
         </main>
       </div>

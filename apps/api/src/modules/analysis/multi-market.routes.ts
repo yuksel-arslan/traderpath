@@ -22,6 +22,7 @@ import {
   AssetClass,
 } from './providers';
 import { IndicatorsService, OHLCV as IndicatorOHLCV } from './services/indicators.service';
+import { isValidTimeframe, VALID_TIMEFRAMES } from './config/timeframe.enum';
 
 // Create indicators service instance
 const indicatorsService = new IndicatorsService();
@@ -54,7 +55,7 @@ function calculateAllIndicators(candles: IndicatorOHLCV[]): ProcessedIndicators 
   const ema20Result = indicatorsService.calculateEMA(candles, 20);
   const ema50Result = indicatorsService.calculateEMA(candles, 50);
   const atrResult = indicatorsService.calculateATR(candles, 14);
-  const bbResult = indicatorsService.calculateBollingerBands(candles);
+  const bbResult = indicatorsService.calculateBollinger(candles);
   const obvResult = indicatorsService.calculateOBV(candles);
 
   // Determine trend direction from EMA alignment
@@ -172,6 +173,7 @@ export async function multiMarketRoutes(app: FastifyInstance) {
         stocks: getSupportedSymbols('stocks'),
         bonds: getSupportedSymbols('bonds'),
         metals: getSupportedSymbols('metals'),
+        bist: getSupportedSymbols('bist'),
       };
 
       return reply.send({
@@ -232,6 +234,13 @@ export async function multiMarketRoutes(app: FastifyInstance) {
       try {
         const { symbol } = request.params;
         const { interval = '1d', limit = '100' } = request.query;
+
+        if (!isValidTimeframe(interval)) {
+          return reply.status(400).send({
+            success: false,
+            error: `Invalid interval '${interval}'. Accepted: ${VALID_TIMEFRAMES.join(', ')}`,
+          });
+        }
 
         const { candles, resolved } = await fetchCandles(symbol, interval, parseInt(limit, 10));
 
@@ -333,6 +342,13 @@ export async function multiMarketRoutes(app: FastifyInstance) {
         const { symbol } = request.params;
         const { interval = '1d', limit = '200' } = request.query;
 
+        if (!isValidTimeframe(interval)) {
+          return reply.status(400).send({
+            success: false,
+            error: `Invalid interval '${interval}'. Accepted: ${VALID_TIMEFRAMES.join(', ')}`,
+          });
+        }
+
         // Fetch candles
         const { candles, resolved } = await fetchCandles(symbol, interval, parseInt(limit, 10));
 
@@ -390,6 +406,13 @@ export async function multiMarketRoutes(app: FastifyInstance) {
         const { symbol } = request.params;
         const { interval = '4h', limit = '200' } = request.query;
         const resolved = resolve(symbol);
+
+        if (!isValidTimeframe(interval)) {
+          return reply.status(400).send({
+            success: false,
+            error: `Invalid interval '${interval}'. Accepted: ${VALID_TIMEFRAMES.join(', ')}`,
+          });
+        }
 
         // Check if symbol is supported
         if (!isSymbolSupported(symbol)) {

@@ -363,22 +363,28 @@ export default async function authRoutes(app: FastifyInstance) {
       let updatedCredits = user.creditBalance?.balance || 0;
 
       if (!user.firstLoginBonusReceived) {
-        isFirstLogin = true;
-        // Award first login bonus
-        const bonusResult = await creditService.add(
-          user.id,
-          FIRST_LOGIN_BONUS,
-          'BONUS',
-          'first_login_bonus',
-          { message: 'Welcome bonus for first login' }
-        );
-        updatedCredits = bonusResult.newBalance;
+        try {
+          isFirstLogin = true;
+          // Award first login bonus
+          const bonusResult = await creditService.add(
+            user.id,
+            FIRST_LOGIN_BONUS,
+            'BONUS',
+            'first_login_bonus',
+            { message: 'Welcome bonus for first login' }
+          );
+          updatedCredits = bonusResult.newBalance;
 
-        // Mark first login bonus as received
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { firstLoginBonusReceived: true },
-        });
+          // Mark first login bonus as received
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { firstLoginBonusReceived: true },
+          });
+        } catch (bonusError) {
+          // Don't block login if bonus award fails
+          console.error('[Login] First login bonus failed (login will continue):', bonusError);
+          isFirstLogin = false;
+        }
       }
 
       // Generate JWT token
@@ -422,16 +428,32 @@ export default async function authRoutes(app: FastifyInstance) {
       // Log detailed error info for diagnosis
       const errorCode = error?.code || 'UNKNOWN';
       const errorMeta = error?.meta ? JSON.stringify(error.meta) : 'none';
-      console.error(`Login error [${errorCode}]:`, error?.message || error, `meta: ${errorMeta}`);
+      const errorMsg = error?.message || String(error);
+      console.error(`Login error [${errorCode}]:`, errorMsg, `meta: ${errorMeta}`);
+
+      // Build a descriptive message so the frontend proxy can relay the real cause
+      let userMessage = 'An error occurred during login';
+      if (errorCode === 'P2022') {
+        userMessage = `Database column missing: ${error?.meta?.column || 'unknown'}. Run ensure_all_user_columns.sql migration.`;
+      } else if (errorCode === 'P2021') {
+        userMessage = `Database table missing: ${error?.meta?.table || 'unknown'}. Run migrations.`;
+      } else if (errorCode === 'P2024' || errorMsg.includes('timed out')) {
+        userMessage = 'Database query timed out. The database may be sleeping or overloaded.';
+      } else if (errorCode === 'P1001' || errorMsg.includes('Can\'t reach database')) {
+        userMessage = 'Cannot connect to database. Check DATABASE_URL and database status.';
+      } else if (errorCode === 'P1002') {
+        userMessage = 'Database connection timed out. The database may be sleeping.';
+      } else if (errorMsg.includes('timeout') || errorMsg.includes('exceeded')) {
+        userMessage = `Query timeout: ${errorMsg.slice(0, 200)}`;
+      } else {
+        userMessage = `Login failed [${errorCode}]: ${errorMsg.slice(0, 200)}`;
+      }
+
       return reply.status(500).send({
         success: false,
         error: {
           code: 'SERVER_ERROR',
-          message: errorCode === 'P2022'
-            ? `Database schema mismatch: column ${error?.meta?.column || 'unknown'} not found. Please run migrations.`
-            : errorCode === 'P2021'
-            ? `Database schema mismatch: table not found. Please run migrations.`
-            : 'An error occurred during login',
+          message: userMessage,
         },
       });
     }
@@ -581,22 +603,28 @@ export default async function authRoutes(app: FastifyInstance) {
       let updatedCredits = user.creditBalance?.balance || 0;
 
       if (!user.firstLoginBonusReceived) {
-        isFirstLogin = true;
-        // Award first login bonus
-        const bonusResult = await creditService.add(
-          user.id,
-          FIRST_LOGIN_BONUS,
-          'BONUS',
-          'first_login_bonus',
-          { message: 'Welcome bonus for first login' }
-        );
-        updatedCredits = bonusResult.newBalance;
+        try {
+          isFirstLogin = true;
+          // Award first login bonus
+          const bonusResult = await creditService.add(
+            user.id,
+            FIRST_LOGIN_BONUS,
+            'BONUS',
+            'first_login_bonus',
+            { message: 'Welcome bonus for first login' }
+          );
+          updatedCredits = bonusResult.newBalance;
 
-        // Mark first login bonus as received
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { firstLoginBonusReceived: true },
-        });
+          // Mark first login bonus as received
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { firstLoginBonusReceived: true },
+          });
+        } catch (bonusError) {
+          // Don't block login if bonus award fails
+          console.error('[Login] First login bonus failed (login will continue):', bonusError);
+          isFirstLogin = false;
+        }
       }
 
       // Generate JWT token
@@ -823,22 +851,28 @@ export default async function authRoutes(app: FastifyInstance) {
       let updatedCredits = user.creditBalance?.balance || 0;
 
       if (!user.firstLoginBonusReceived) {
-        isFirstLogin = true;
-        // Award first login bonus
-        const bonusResult = await creditService.add(
-          user.id,
-          FIRST_LOGIN_BONUS,
-          'BONUS',
-          'first_login_bonus',
-          { message: 'Welcome bonus for first login' }
-        );
-        updatedCredits = bonusResult.newBalance;
+        try {
+          isFirstLogin = true;
+          // Award first login bonus
+          const bonusResult = await creditService.add(
+            user.id,
+            FIRST_LOGIN_BONUS,
+            'BONUS',
+            'first_login_bonus',
+            { message: 'Welcome bonus for first login' }
+          );
+          updatedCredits = bonusResult.newBalance;
 
-        // Mark first login bonus as received
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { firstLoginBonusReceived: true },
-        });
+          // Mark first login bonus as received
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { firstLoginBonusReceived: true },
+          });
+        } catch (bonusError) {
+          // Don't block login if bonus award fails
+          console.error('[Login] First login bonus failed (login will continue):', bonusError);
+          isFirstLogin = false;
+        }
       }
 
       // Generate JWT token

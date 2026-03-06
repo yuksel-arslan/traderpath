@@ -136,8 +136,6 @@ const BINANCE_INTERVAL_MAP: Record<string, string> = {
   '2h': '2h',
   '4h': '4h',
   '1d': '1d',
-  '1D': '1d',
-  '1w': '1w',
   '1W': '1w',
 };
 
@@ -160,11 +158,14 @@ async function fetchBinanceCandles(symbol: string, interval: string, limit: numb
   }
   const binanceSymbol = `${normalizedSymbol}USDT`;
 
-  const cacheKey = `binance:candles:${binanceSymbol}:${binanceInterval}:${limit}`;
+  const cacheKey = `binance:candles:${binanceSymbol}:${binanceInterval}:${limit}:${endTime || 'latest'}`;
   const cached = getCached<OHLCV[]>(cacheKey);
   if (cached) return cached;
 
-  const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${binanceInterval}&limit=${limit}`;
+  let url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${binanceInterval}&limit=${limit}`;
+  if (endTime) {
+    url += `&endTime=${endTime}`;
+  }
   const response = await fetchWithRetry(url);
   const data = await response.json();
 
@@ -256,11 +257,9 @@ const YAHOO_INTERVAL_MAP: Record<string, string> = {
   '15m': '15m',
   '30m': '30m',
   '1h': '60m',
-  '2h': '60m', // Yahoo doesn't have 2h, use 1h
+  '2h': '60m', // Yahoo doesn't have 2h directly, we'll aggregate
   '4h': '60m', // Yahoo doesn't have 4h directly, we'll aggregate
   '1d': '1d',
-  '1D': '1d',
-  '1w': '1wk',
   '1W': '1wk',
 };
 
@@ -272,8 +271,6 @@ const YAHOO_RANGE_MAP: Record<string, string> = {
   '2h': '3mo',
   '4h': '6mo',
   '1d': '1y',
-  '1D': '1y',
-  '1w': '5y',
   '1W': '5y',
 };
 
@@ -304,7 +301,8 @@ async function fetchYahooCandles(symbol: string, interval: string, limit: number
     candles = await tryFetchYahooData(yahooSymbol, '1d', '2y');
 
     if (candles.length < MIN_CANDLES_REQUIRED) {
-      throw new Error(`Insufficient data for ${symbol}. Yahoo Finance returned only ${candles.length} candles. Try using 1D timeframe for better results.`);
+      console.warn(`[Yahoo] Insufficient data for ${symbol}: only ${candles.length} candles after daily fallback. Returning available data.`);
+      return candles;
     }
 
     // Note: We're returning daily data even though user requested intraday
@@ -312,17 +310,18 @@ async function fetchYahooCandles(symbol: string, interval: string, limit: number
     console.log(`[Yahoo] Using daily data fallback for ${yahooSymbol}: ${candles.length} candles`);
   }
 
-  // For 4h or 2h interval, aggregate from 1h candles if we have intraday data
+  // For 4h interval, aggregate from 1h candles if we have intraday data
   let finalCandles = candles;
-  if ((originalInterval === '4h' || originalInterval === '2h') && yahooInterval === '60m' && candles.length >= MIN_CANDLES_REQUIRED) {
-    const factor = originalInterval === '4h' ? 4 : 2;
+  if (originalInterval === '4h' && yahooInterval === '60m' && candles.length >= MIN_CANDLES_REQUIRED) {
+    const factor = 4;
     finalCandles = aggregateCandles(candles, factor);
     console.log(`[Yahoo] Aggregated ${candles.length} 1h candles to ${finalCandles.length} ${originalInterval} candles for ${yahooSymbol}`);
   }
 
-  // Final validation
+  // Final validation - return whatever we have instead of throwing
   if (finalCandles.length < 10) {
-    throw new Error(`Unable to fetch sufficient data for ${symbol}. Only ${finalCandles.length} candles available. Please try a different timeframe (1D recommended for ETFs).`);
+    console.warn(`[Yahoo] Low candle count for ${symbol}: ${finalCandles.length} candles. Analysis may be less accurate.`);
+    return finalCandles;
   }
 
   setCache(cacheKey, finalCandles, CACHE_TTL.CANDLES);
@@ -401,16 +400,46 @@ async function fetchYahooTicker(symbol: string): Promise<MarketData> {
 
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=2d`;
 
-  const response = await fetchWithRetry(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    },
-  });
-
-  const data = await response.json();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let data: any;
+  try {
+    const response = await fetchWithRetry(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    });
+    data = await response.json();
+  } catch (fetchError) {
+    const errMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+    console.warn(`[Yahoo] Ticker fetch failed for ${symbol}: ${errMsg}. Returning zero-price fallback.`);
+    const assetClass = detectAssetClass(symbol);
+    return {
+      symbol: symbol.toUpperCase(),
+      assetClass,
+      price: 0,
+      change24h: 0,
+      changePercent24h: 0,
+      high24h: 0,
+      low24h: 0,
+      volume24h: 0,
+      lastUpdated: new Date(),
+    } as MarketData;
+  }
 
   if (!data.chart?.result?.[0]) {
-    throw new Error(`No data returned from Yahoo Finance for ${symbol}`);
+    console.warn(`[Yahoo] No ticker data returned for ${symbol}, returning zero-price fallback`);
+    const assetClass = detectAssetClass(symbol);
+    return {
+      symbol: symbol.toUpperCase(),
+      assetClass,
+      price: 0,
+      change24h: 0,
+      changePercent24h: 0,
+      high24h: 0,
+      low24h: 0,
+      volume24h: 0,
+      lastUpdated: new Date(),
+    } as MarketData;
   }
 
   const result = data.chart.result[0];
@@ -490,11 +519,12 @@ function cryptoToYahooSymbol(symbol: string): string {
 export async function fetchCandles(
   symbol: string,
   interval: string,
-  limit: number = 500
+  limit: number = 500,
+  endTime?: number
 ): Promise<CandleData[]> {
   const assetClass = detectAssetClass(symbol);
 
-  console.log(`[MultiAssetProvider] Fetching candles for ${symbol} (${assetClass}) - interval: ${interval}`);
+  console.log(`[MultiAssetProvider] Fetching candles for ${symbol} (${assetClass}) - interval: ${interval}${endTime ? ` endTime: ${new Date(endTime).toISOString()}` : ''}`);
 
   try {
     if (assetClass === 'crypto') {
@@ -504,19 +534,31 @@ export async function fetchCandles(
         return await fetchYahooCandles(yahooSymbol, interval, limit);
       }
       try {
-        return await fetchBinanceCandles(symbol, interval, limit);
+        return await fetchBinanceCandles(symbol, interval, limit, endTime);
       } catch (binanceError) {
         // Binance failed (HTTP 451 geo-block, rate limit, etc.) — fallback to Yahoo Finance
         const errMsg = binanceError instanceof Error ? binanceError.message : String(binanceError);
         console.warn(`[MultiAssetProvider] Binance failed for ${symbol}: ${errMsg}. Falling back to Yahoo Finance.`);
         const yahooSymbol = cryptoToYahooSymbol(symbol);
-        return await fetchYahooCandles(yahooSymbol, interval, limit);
+        const candles = await fetchYahooCandles(yahooSymbol, interval, limit);
+        // For Yahoo fallback, filter by endTime manually if specified
+        if (endTime && candles.length > 0) {
+          const filtered = candles.filter(c => c.timestamp <= endTime);
+          return filtered.slice(-limit);
+        }
+        return candles;
       }
     } else {
       // stocks, bonds, metals, bist - use Yahoo Finance
       // BIST symbols use .IS suffix (e.g., THYAO.IS, GARAN.IS)
       const resolved = resolveSymbol(symbol);
-      return await fetchYahooCandles(resolved.normalized, interval, limit);
+      const candles = await fetchYahooCandles(resolved.normalized, interval, limit);
+      // For Yahoo, filter by endTime manually if specified
+      if (endTime && candles.length > 0) {
+        const filtered = candles.filter(c => c.timestamp <= endTime);
+        return filtered.slice(-limit);
+      }
+      return candles;
     }
   } catch (error) {
     console.error(`[MultiAssetProvider] Error fetching candles for ${symbol}:`, error);
@@ -600,8 +642,19 @@ export async function fetchTicker(symbol: string): Promise<TickerData> {
       };
     }
   } catch (error) {
-    console.error(`[MultiAssetProvider] Error fetching ticker for ${symbol}:`, error);
-    throw error;
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[MultiAssetProvider] Error fetching ticker for ${symbol}: ${errMsg}. Returning zero-price fallback.`);
+    const assetClass = detectAssetClass(symbol);
+    return {
+      symbol: symbol.toUpperCase(),
+      assetClass,
+      price: 0,
+      change24h: 0,
+      changePercent24h: 0,
+      high24h: 0,
+      low24h: 0,
+      volume24h: 0,
+    };
   }
 }
 

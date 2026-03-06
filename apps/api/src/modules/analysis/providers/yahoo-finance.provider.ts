@@ -75,10 +75,8 @@ const YAHOO_INTERVALS: Record<string, string> = {
   '15m': '15m',
   '30m': '30m',
   '1h': '60m',
-  '2h': '60m', // Yahoo doesn't have 2h, use 1h
-  '4h': '60m', // Yahoo doesn't have 4h directly
+  '4h': '60m', // Yahoo doesn't have 4h directly, we'll aggregate
   '1d': '1d',
-  '1w': '1wk',
 };
 
 // Yahoo Finance range mapping (for chart API)
@@ -87,10 +85,8 @@ const YAHOO_RANGES: Record<string, string> = {
   '15m': '5d',
   '30m': '1mo',
   '1h': '1mo',
-  '2h': '3mo',
   '4h': '6mo',
   '1d': '1y',
-  '1w': '5y',
 };
 
 /**
@@ -106,7 +102,7 @@ export class YahooFinanceStockProvider extends MarketDataProvider {
     hasNews: true,
     hasFutures: false,
     hasRealtime: false, // Yahoo has 15-min delay for free
-    supportedTimeframes: ['5m', '15m', '30m', '1h', '4h', '1d', '1w'],
+    supportedTimeframes: ['5m', '15m', '30m', '1h', '4h', '1d'],
     maxCandleLimit: 500,
   };
 
@@ -224,7 +220,7 @@ export class YahooFinanceStockProvider extends MarketDataProvider {
     }
   }
 
-  async fetchFundamentals(symbol: string): Promise<StockFundamentals> {
+  override async fetchFundamentals(symbol: string): Promise<StockFundamentals> {
     const resolved = this.resolveSymbol(symbol);
     const cacheKey = `yahoo:fundamentals:${resolved.normalized}`;
 
@@ -303,7 +299,7 @@ export class YahooFinanceMetalsProvider extends MarketDataProvider {
     hasNews: true,
     hasFutures: false,
     hasRealtime: false,
-    supportedTimeframes: ['5m', '15m', '30m', '1h', '4h', '1d', '1w'],
+    supportedTimeframes: ['5m', '15m', '30m', '1h', '4h', '1d'],
     maxCandleLimit: 500,
   };
 
@@ -440,7 +436,7 @@ export class YahooFinanceMetalsProvider extends MarketDataProvider {
     }
   }
 
-  async fetchFundamentals(symbol: string): Promise<MetalsFundamentals> {
+  override async fetchFundamentals(symbol: string): Promise<MetalsFundamentals> {
     const resolved = this.resolveSymbol(symbol);
     const marketData = await this.fetchMarketData(symbol);
 

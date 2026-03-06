@@ -4,7 +4,6 @@
 // TraderPath Professional Analysis Report
 // ===========================================
 
-import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
 // ===========================================
@@ -18,6 +17,7 @@ export interface AnalysisReportData {
   tradeType?: 'scalping' | 'dayTrade' | 'swing';
   method?: 'classic' | 'mlis_pro'; // Analysis method: Classic 7-Step or MLIS Pro
   chartImage?: string;
+  assetLogoUrl?: string; // Asset's own logo (e.g. BTC, ETH icon) as data URI or URL
 
   marketPulse: {
     btcDominance: number;
@@ -105,6 +105,14 @@ export interface AnalysisReportData {
     optimalEntry?: number;
     waitFor?: { event: string; estimatedTime: string };
     gate?: { canProceed: boolean; reason: string; confidence: number; urgency?: string };
+    fibonacci?: {
+      nearGoldenZone: boolean;
+      retracementPct: number;
+      goldenZone?: { upper: number; lower: number } | null;
+      nearestFibSupport?: number | null;
+      nearestFibResistance?: number | null;
+      levels?: Array<{ level: number; price: number; type: string }>;
+    };
   };
 
   tradePlan: {
@@ -113,7 +121,7 @@ export interface AnalysisReportData {
     entries?: Array<{ price: number; percentage: number; source?: string; type?: string }>;
     averageEntry: number;
     stopLoss: { price: number; percentage?: number; reason?: string; safetyAdjusted?: boolean };
-    takeProfits: Array<{ price: number; percentage?: number; reason?: string; source?: string }>;
+    takeProfits: Array<{ price: number; percentage?: number; reason?: string; source?: string; riskReward?: number }>;
     riskReward: number;
     winRateEstimate?: number;
     positionSizePercent?: number;
@@ -329,6 +337,36 @@ function getVerdictAction(v: { action?: string; verdict?: string } | undefined):
   return v?.action || v?.verdict || '';
 }
 
+/**
+ * Verdict-aware pulse dot for page headers.
+ * GO/CONDITIONAL_GO → green, WAIT → amber, AVOID → red.
+ * Rendered as a solid dot with a glow halo (frozen pulse frame).
+ */
+function verdictPulseDot(verdict: string | undefined): string {
+  const v = (typeof verdict === 'string' ? verdict : '').toLowerCase().replace(/-/g, '_');
+  let color: string;
+  let glowColor: string;
+  if (v === 'go') {
+    color = '#4ade80';
+    glowColor = 'rgba(74, 222, 128, 0.35)';
+  } else if (v.includes('conditional')) {
+    color = '#fbbf24';
+    glowColor = 'rgba(251, 191, 36, 0.35)';
+  } else if (v === 'avoid' || v === 'no_go' || v === 'stop') {
+    color = '#f87171';
+    glowColor = 'rgba(248, 113, 113, 0.35)';
+  } else {
+    // WAIT or unknown
+    color = '#fbbf24';
+    glowColor = 'rgba(251, 191, 36, 0.25)';
+  }
+
+  return `<span style="display:inline-block;position:relative;width:10px;height:10px;vertical-align:middle;margin-right:6px;">` +
+    `<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;background:${glowColor};"></span>` +
+    `<span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;border-radius:50%;background:${color};box-shadow:0 0 6px ${color}, 0 0 10px ${glowColor};"></span>` +
+    `</span>`;
+}
+
 function formatIndicatorValue(value: number | string | null | undefined): string {
   if (value === null || value === undefined) return '-';
   if (typeof value === 'string') return value;
@@ -353,7 +391,7 @@ function renderIndicatorTable(indicators: Record<string, IndicatorDetailItem | u
 
   return `
     <div class="section" style="margin-bottom: 6px;">
-      <div style="font-size: 7px; font-weight: 600; margin-bottom: 3px; color: #333;">${title} (${items.length} indicators analyzed)</div>
+      <div style="font-size: 7px; font-weight: 600; margin-bottom: 3px; color: #d1d5db;">${title} (${items.length} indicators analyzed)</div>
       <table class="table indicator-table">
         <tr><th style="width: 22%;">Indicator</th><th style="width: 13%;">Value</th><th style="width: 13%;">Signal</th><th style="width: 52%;">Interpretation</th></tr>
         ${sortedItems.slice(0, maxItems).map(ind => `
@@ -365,7 +403,7 @@ function renderIndicatorTable(indicators: Record<string, IndicatorDetailItem | u
           </tr>
         `).join('')}
         ${items.length > maxItems ? `
-        <tr style="background: #f0f9ff;">
+        <tr style="background: #1a1a2e;">
           <td colspan="4" style="text-align: center; font-size: 6px; color: #0369a1; font-style: italic;">
             + ${items.length - maxItems} more ${(typeof title === 'string' ? title.toLowerCase() : 'items')} analyzed...
           </td>
@@ -397,72 +435,83 @@ const logoSvg = `<svg width="32" height="32" viewBox="0 0 200 200" fill="none" x
 
 const styles = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 9px; color: #1a1a1a; background: #fff; line-height: 1.35; }
-  .page { width: 595px; height: 842px; padding: 20px 24px; position: relative; }
-  .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid #1a1a1a; margin-bottom: 12px; }
+  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 9px; color: #e5e7eb; background: #0A0A0A; line-height: 1.35; }
+  .page { width: 595px; height: 842px; padding: 20px 24px; position: relative; background: #0A0A0A; overflow: hidden; }
+  .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid #374151; margin-bottom: 12px; }
   .brand { display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .logo { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
   .brand-name { font-size: 14px; font-weight: 700; letter-spacing: -0.5px; }
-  .brand-trade { color: #dc2626; }
-  .brand-path { color: #16a34a; }
+  .brand-trade { color: #f87171; }
+  .brand-path { color: #14B8A6; }
   .header-center { text-align: center; }
-  .report-title { font-size: 11px; font-weight: 600; color: #1a1a1a; text-transform: uppercase; letter-spacing: 1px; }
-  .report-subtitle { font-size: 8px; color: #666; margin-top: 2px; }
-  .header-right { text-align: right; }
-  .symbol { font-size: 14px; font-weight: 700; }
+  .report-title { font-size: 11px; font-weight: 600; color: #f1f5f9; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; }
+  .report-subtitle { font-size: 8px; color: #9ca3af; margin-top: 2px; }
+  .header-right { text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+  .asset-logo { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
+  .symbol { font-size: 14px; font-weight: 700; color: #f1f5f9; }
   .direction-tag { display: inline-block; font-size: 10px; font-weight: 700; margin-left: 6px; }
-  .tag-long { color: #16a34a; }
-  .tag-short { color: #dc2626; }
+  .tag-long { color: #4ade80; }
+  .tag-short { color: #f87171; }
   .score-box { margin-top: 4px; }
-  .score-value { font-size: 16px; font-weight: 700; }
-  .score-label { font-size: 7px; color: #666; }
-  .section { margin-bottom: 10px; }
-  .section-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; border-bottom: 1px solid #e0e0e0; padding-bottom: 3px; }
-  .step-num { font-size: 8px; font-weight: 600; color: #666; }
-  .section-title { font-size: 10px; font-weight: 600; color: #1a1a1a; }
-  .step-box { border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; background: #fafafa; }
-  .step-box-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid #eee; }
-  .step-box-num { font-size: 9px; font-weight: 700; color: #666; }
-  .step-box-title { font-size: 10px; font-weight: 600; color: #1a1a1a; }
+  .score-value { font-size: 16px; font-weight: 700; color: #f1f5f9; }
+  .score-label { font-size: 7px; color: #9ca3af; }
+  .section { margin-bottom: 10px; overflow: hidden; }
+  .section-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; border-bottom: 1px solid #374151; padding-bottom: 3px; }
+  .step-num { font-size: 8px; font-weight: 600; color: #9ca3af; }
+  .section-title { font-size: 10px; font-weight: 600; color: #f1f5f9; }
+  .step-box { border: 1px solid #374151; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; background: #111111; }
+  .step-box-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid #374151; }
+  .step-box-num { font-size: 9px; font-weight: 700; color: #9ca3af; }
+  .step-box-title { font-size: 10px; font-weight: 600; color: #f1f5f9; }
   .step-box-gate { margin-left: auto; font-size: 7px; font-weight: 600; }
   .row { display: flex; gap: 6px; margin-bottom: 5px; }
   .col { flex: 1; }
   .col-2 { flex: 2; }
-  .metric { background: #fafafa; border: 1px solid #eee; border-radius: 3px; padding: 5px 7px; }
+  .metric { background: #1a1a1a; border: 1px solid #374151; border-radius: 3px; padding: 5px 7px; }
   .metric-sm { padding: 3px 5px; }
-  .metric-label { font-size: 6px; color: #666; text-transform: uppercase; letter-spacing: 0.3px; }
-  .metric-value { font-size: 10px; font-weight: 600; color: #1a1a1a; margin-top: 1px; }
+  .metric-label { font-size: 6px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.3px; }
+  .metric-value { font-size: 10px; font-weight: 600; color: #f1f5f9; margin-top: 1px; }
   .metric-value-lg { font-size: 12px; }
   .metric-value-xl { font-size: 18px; }
-  .metric-note { font-size: 6px; color: #888; margin-top: 1px; }
-  .text-green { color: #16a34a; }
-  .text-red { color: #dc2626; }
-  .text-amber { color: #d97706; }
-  .text-muted { color: #666; }
+  .metric-note { font-size: 6px; color: #6b7280; margin-top: 1px; }
+  .text-green { color: #4ade80; }
+  .text-red { color: #f87171; }
+  .text-amber { color: #fbbf24; }
+  .text-muted { color: #9ca3af; }
   .list { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; }
-  .list-item { display: flex; align-items: center; gap: 5px; padding: 2px 0; font-size: 7px; }
+  .list-item { display: flex; align-items: center; gap: 5px; padding: 2px 0; font-size: 7px; color: #d1d5db; }
   .list-icon { width: 10px; text-align: center; font-weight: 600; }
-  .list-icon-y { color: #16a34a; }
-  .list-icon-n { color: #dc2626; }
+  .list-icon-y { color: #4ade80; }
+  .list-icon-n { color: #f87171; }
   .table { width: 100%; border-collapse: collapse; }
-  .table th { text-align: left; font-size: 6px; font-weight: 600; color: #666; text-transform: uppercase; padding: 3px 5px; border-bottom: 1px solid #ddd; background: #f9fafb; }
-  .table td { font-size: 7px; padding: 3px 5px; border-bottom: 1px solid #f0f0f0; }
+  .table th { text-align: left; font-size: 6px; font-weight: 600; color: #9ca3af; text-transform: uppercase; padding: 3px 5px; border-bottom: 1px solid #374151; background: #1a1a1a; }
+  .table td { font-size: 7px; padding: 3px 5px; border-bottom: 1px solid #1f2937; color: #d1d5db; }
   .table tr:last-child td { border-bottom: none; }
   .indicator-table th { font-size: 5px; padding: 2px 3px; }
   .indicator-table td { font-size: 6px; padding: 2px 3px; }
-  .verdict-box { border: 2px solid #1a1a1a; border-radius: 6px; padding: 15px; margin-bottom: 12px; text-align: center; }
+  .verdict-box { border: 2px solid #374151; border-radius: 6px; padding: 15px; margin-bottom: 12px; text-align: center; background: #111111; }
   .verdict-action { font-size: 28px; font-weight: 700; }
-  .verdict-subtitle { font-size: 9px; color: #666; margin-top: 6px; line-height: 1.5; }
-  .chart-container { border: 1px solid #ddd; border-radius: 6px; background: #fff; padding: 8px; margin: 10px 0; }
+  .verdict-subtitle { font-size: 9px; color: #9ca3af; margin-top: 6px; line-height: 1.5; }
+  .chart-container { border: 1px solid #374151; border-radius: 6px; background: #111111; padding: 8px; margin: 10px 0; }
   .chart-container img { width: 100%; height: auto; display: block; }
-  .summary-box { background: #f8f9fa; border-left: 3px solid #1a1a1a; padding: 8px 10px; margin-top: 8px; }
-  .summary-text { font-size: 8px; color: #333; line-height: 1.5; }
-  .step-summary { font-size: 7px; color: #333; background: #f0f9f0; border-left: 2px solid #16a34a; padding: 6px 8px; margin-top: 8px; line-height: 1.5; }
-  .step-summary-title { font-size: 7px; font-weight: 600; color: #16a34a; margin-bottom: 3px; }
-  .step-box-expanded { border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; background: #fafafa; min-height: 200px; }
-  .footer { position: absolute; bottom: 8px; left: 24px; right: 24px; font-size: 6px; color: #999; border-top: 1px solid #eee; padding-top: 4px; }
+  .summary-box { background: #111111; border-left: 2px solid #374151; padding: 8px 10px; margin-top: 8px; }
+  .summary-text { font-size: 8px; color: #d1d5db; line-height: 1.5; }
+  .step-summary { font-size: 7px; color: #d1d5db; background: #111111; border-left: 2px solid #374151; padding: 6px 8px; margin-top: 8px; line-height: 1.5; }
+  .step-summary-title { font-size: 7px; font-weight: 600; color: #e5e7eb; margin-bottom: 3px; }
+  .step-box-expanded { border: 1px solid #374151; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background: #111111; min-height: 180px; overflow: hidden; }
+  .footer { position: absolute; bottom: 8px; left: 24px; right: 24px; font-size: 6px; color: #6b7280; border-top: 1px solid #374151; padding-top: 4px; }
   .footer-row { display: flex; justify-content: space-between; align-items: center; }
-  .footer-disclaimer { font-size: 5px; color: #b91c1c; margin-top: 2px; line-height: 1.3; }
+  .footer-disclaimer { font-size: 5px; color: #f87171; margin-top: 2px; line-height: 1.3; }
+  .step-box { page-break-inside: avoid; break-inside: avoid; }
+  .step-box-expanded { page-break-inside: avoid; break-inside: avoid; }
+  .row { page-break-inside: avoid; break-inside: avoid; }
+  .table { page-break-inside: avoid; break-inside: avoid; }
+  .section { page-break-inside: avoid; break-inside: avoid; }
+  .metric-value { word-break: break-word; overflow-wrap: break-word; }
+  .summary-text { word-break: break-word; overflow-wrap: break-word; }
+  .step-summary { word-break: break-word; overflow-wrap: break-word; max-height: 80px; overflow: hidden; }
+  .summary-box { overflow: hidden; max-height: 100px; }
+  td, th { word-break: break-word; overflow-wrap: break-word; max-width: 200px; }
 `;
 
 const DISCLAIMER_TEXT = 'IMPORTANT DISCLAIMER: This analysis is for informational and educational purposes only and does not constitute financial, investment, or trading advice. All investments carry risk, including the potential loss of principal. Past performance does not guarantee future results. Conduct your own research and consult with a licensed financial advisor before making any investment decisions. TraderPath is not responsible for any losses resulting from the use of this report.';
@@ -545,7 +594,7 @@ function generateTradePlanSvgChart(
     return candles.map((candle, i) => {
       const x = startX + (i * totalCandleWidth);
       const isGreen = candle.close >= candle.open;
-      const color = isGreen ? '#22c55e' : '#ef4444';
+      const color = isGreen ? '#16a34a' : '#dc2626';
       const bodyTop = priceToY(Math.max(candle.open, candle.close));
       const bodyBottom = priceToY(Math.min(candle.open, candle.close));
       const bodyHeight = Math.max(1, bodyBottom - bodyTop);
@@ -567,8 +616,8 @@ function generateTradePlanSvgChart(
   for (let i = 0; i <= 4; i++) {
     const price = minPrice + (priceRange * i) / 4;
     const y = priceToY(price);
-    priceLabels.push(`<text x="${chartLeft - 5}" y="${y + 3}" fill="#9ca3af" font-size="8" text-anchor="end">${formatPrice(price)}</text>`);
-    priceLabels.push(`<line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#374151" stroke-width="0.5" stroke-dasharray="3,3"/>`);
+    priceLabels.push(`<text x="${chartLeft - 5}" y="${y + 3}" fill="#666" font-size="8" text-anchor="end">${formatPrice(price)}</text>`);
+    priceLabels.push(`<line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#e0e0e0" stroke-width="0.5" stroke-dasharray="3,3"/>`);
   }
 
   // Generate level lines and labels
@@ -578,8 +627,8 @@ function generateTradePlanSvgChart(
   if (sl > 0) {
     const y = priceToY(sl);
     levelLines.push(`
-      <line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,3"/>
-      <rect x="${chartRight - 85}" y="${y - 9}" width="82" height="16" fill="#ef4444" rx="2"/>
+      <line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#dc2626" stroke-width="2" stroke-dasharray="5,3"/>
+      <rect x="${chartRight - 85}" y="${y - 9}" width="82" height="16" fill="#dc2626" rx="2"/>
       <text x="${chartRight - 80}" y="${y + 3}" fill="#fff" font-size="7" font-weight="600">STOP ${formatPrice(sl)}</text>
     `);
   }
@@ -588,14 +637,14 @@ function generateTradePlanSvgChart(
   if (entry > 0) {
     const y = priceToY(entry);
     levelLines.push(`
-      <line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#fbbf24" stroke-width="2"/>
-      <rect x="${chartLeft + 5}" y="${y - 9}" width="82" height="16" fill="#fbbf24" rx="2"/>
-      <text x="${chartLeft + 10}" y="${y + 3}" fill="#000" font-size="7" font-weight="600">ENTRY ${formatPrice(entry)}</text>
+      <line x1="${chartLeft}" y1="${y}" x2="${chartRight}" y2="${y}" stroke="#d97706" stroke-width="2"/>
+      <rect x="${chartLeft + 5}" y="${y - 9}" width="82" height="16" fill="#d97706" rx="2"/>
+      <text x="${chartLeft + 10}" y="${y + 3}" fill="#fff" font-size="7" font-weight="600">ENTRY ${formatPrice(entry)}</text>
     `);
   }
 
   // Take Profit lines (only TP1 and TP2)
-  const tpColors = ['#3b82f6', '#8b5cf6'];
+  const tpColors = ['#16a34a', '#15803d'];
   const tpPrices = [tp1, tp2];
   tpPrices.forEach((price, i) => {
     if (price > 0) {
@@ -616,8 +665,8 @@ function generateTradePlanSvgChart(
     <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#16162a;stop-opacity:1" />
+          <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#fafafa;stop-opacity:1" />
         </linearGradient>
         <linearGradient id="profitZone" x1="0%" y1="100%" x2="0%" y2="0%">
           <stop offset="0%" style="stop-color:#22c55e;stop-opacity:0.05" />
@@ -633,12 +682,12 @@ function generateTradePlanSvgChart(
       <rect width="${width}" height="${height}" fill="url(#bgGrad)" rx="8"/>
 
       <!-- Title -->
-      <text x="${width / 2}" y="22" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">
-        ${as?.symbol || 'Trade'} - ${isLong ? '📈 LONG' : '📉 SHORT'} Trade Plan ${hasCandles ? `(${candles.length} candles)` : ''}
+      <text x="${width / 2}" y="22" fill="#1a1a1a" font-size="11" font-weight="600" text-anchor="middle">
+        ${as?.symbol || 'Trade'} - ${isLong ? 'LONG' : 'SHORT'} Trade Plan ${hasCandles ? `(${candles.length} candles)` : ''}
       </text>
 
       <!-- Chart area border -->
-      <rect x="${chartLeft}" y="${chartTop}" width="${chartWidth}" height="${chartHeight}" fill="none" stroke="#374151" stroke-width="1" rx="4"/>
+      <rect x="${chartLeft}" y="${chartTop}" width="${chartWidth}" height="${chartHeight}" fill="none" stroke="#e0e0e0" stroke-width="1" rx="4"/>
 
       <!-- Profit/Loss zones (behind candles) -->
       ${entry > 0 && sl > 0 && tp1 > 0 ? `
@@ -656,30 +705,30 @@ function generateTradePlanSvgChart(
       ${levelLines.join('')}
 
       <!-- Legend -->
-      <rect x="${chartLeft}" y="${chartBottom + 8}" width="${chartWidth}" height="35" fill="#1e293b" rx="4"/>
-      <circle cx="${chartLeft + 15}" cy="${chartBottom + 20}" r="4" fill="#fbbf24"/>
-      <text x="${chartLeft + 25}" y="${chartBottom + 23}" fill="#9ca3af" font-size="7">Entry</text>
-      <circle cx="${chartLeft + 70}" cy="${chartBottom + 20}" r="4" fill="#ef4444"/>
-      <text x="${chartLeft + 80}" y="${chartBottom + 23}" fill="#9ca3af" font-size="7">Stop Loss</text>
-      <circle cx="${chartLeft + 140}" cy="${chartBottom + 20}" r="4" fill="#3b82f6"/>
-      <text x="${chartLeft + 150}" y="${chartBottom + 23}" fill="#9ca3af" font-size="7">Targets</text>
+      <rect x="${chartLeft}" y="${chartBottom + 8}" width="${chartWidth}" height="35" fill="#f9fafb" stroke="#e0e0e0" stroke-width="0.5" rx="4"/>
+      <circle cx="${chartLeft + 15}" cy="${chartBottom + 20}" r="4" fill="#d97706"/>
+      <text x="${chartLeft + 25}" y="${chartBottom + 23}" fill="#666" font-size="7">Entry</text>
+      <circle cx="${chartLeft + 70}" cy="${chartBottom + 20}" r="4" fill="#dc2626"/>
+      <text x="${chartLeft + 80}" y="${chartBottom + 23}" fill="#666" font-size="7">Stop Loss</text>
+      <circle cx="${chartLeft + 140}" cy="${chartBottom + 20}" r="4" fill="#16a34a"/>
+      <text x="${chartLeft + 150}" y="${chartBottom + 23}" fill="#666" font-size="7">Targets</text>
 
       <!-- R:R and Win Rate -->
       ${rrRatio > 0 ? `
-        <text x="${chartRight - 100}" y="${chartBottom + 23}" fill="#fbbf24" font-size="8" font-weight="600">R:R ${rrRatio.toFixed(1)}:1</text>
+        <text x="${chartRight - 100}" y="${chartBottom + 23}" fill="#1a1a1a" font-size="8" font-weight="600">R:R ${rrRatio.toFixed(1)}:1</text>
       ` : ''}
       ${winRate > 0 ? `
-        <text x="${chartRight - 40}" y="${chartBottom + 23}" fill="#22c55e" font-size="8" font-weight="600">${winRate.toFixed(0)}%</text>
+        <text x="${chartRight - 40}" y="${chartBottom + 23}" fill="#16a34a" font-size="8" font-weight="600">${winRate.toFixed(0)}%</text>
       ` : ''}
 
       <!-- Candle legend -->
       ${hasCandles ? `
-        <rect x="${chartLeft + 15}" y="${chartBottom + 30}" width="8" height="8" fill="#22c55e" rx="1"/>
-        <text x="${chartLeft + 28}" y="${chartBottom + 37}" fill="#9ca3af" font-size="6">Bullish</text>
-        <rect x="${chartLeft + 70}" y="${chartBottom + 30}" width="8" height="8" fill="#ef4444" rx="1"/>
-        <text x="${chartLeft + 83}" y="${chartBottom + 37}" fill="#9ca3af" font-size="6">Bearish</text>
+        <rect x="${chartLeft + 15}" y="${chartBottom + 30}" width="8" height="8" fill="#16a34a" rx="1"/>
+        <text x="${chartLeft + 28}" y="${chartBottom + 37}" fill="#666" font-size="6">Bullish</text>
+        <rect x="${chartLeft + 70}" y="${chartBottom + 30}" width="8" height="8" fill="#dc2626" rx="1"/>
+        <text x="${chartLeft + 83}" y="${chartBottom + 37}" fill="#666" font-size="6">Bearish</text>
       ` : `
-        <text x="${chartLeft + 15}" y="${chartBottom + 37}" fill="#6b7280" font-size="6" font-style="italic">No candlestick data available</text>
+        <text x="${chartLeft + 15}" y="${chartBottom + 37}" fill="#999" font-size="6" font-style="italic">No candlestick data available</text>
       `}
     </svg>
   `;
@@ -759,54 +808,54 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
       </div>
 
       <!-- Report Title -->
-      <div style="font-size: 16px; font-weight: 700; color: #1a1a1a; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">Asset Analysis Report</div>
+      <div style="font-size: 16px; font-weight: 700; color: #f1f5f9; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">Asset Analysis Report</div>
 
       <!-- Method Badge -->
-      <div style="display: inline-block; padding: 4px 12px; background: ${methodColor}; color: #fff; border-radius: 4px; font-size: 10px; font-weight: 600; margin-bottom: 10px;">
+      <div style="display: inline-block; padding: 3px 10px; border: 1px solid #374151; border-radius: 4px; font-size: 10px; font-weight: 600; color: #d1d5db; margin-bottom: 10px;">
         ${methodDisplay}
       </div>
 
       <!-- Report Date -->
-      <div style="font-size: 10px; color: #666; margin-top: 5px;">
+      <div style="font-size: 10px; color: #9ca3af; margin-top: 5px;">
         <span style="font-weight: 600;">Report Date:</span> ${reportDate}
       </div>
-      <div style="font-size: 9px; color: #888; margin-top: 2px;">${tradeTypes[data.tradeType || ''] || 'Analysis'}</div>
+      <div style="font-size: 9px; color: #6b7280; margin-top: 2px;">${tradeTypes[data.tradeType || ''] || 'Analysis'}</div>
 
-      <!-- Symbol and Direction -->
-      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+      <!-- Symbol and Direction with Asset Logo -->
+      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: center; gap: 10px;">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" width="36" height="36" style="border-radius: 50%; object-fit: cover;" />` : ''}
         <span class="symbol" style="font-size: 22px; font-weight: 800;">${data.symbol}/USDT</span>
-        <span class="direction-tag ${hasDirection ? (isLong ? 'tag-long' : 'tag-short') : ''}" style="font-size: 14px; margin-left: 12px; padding: 3px 10px; border-radius: 4px; ${!hasDirection ? 'background: #fef3c7; color: #d97706;' : hasDirection ? (isLong ? 'background: #dcfce7; color: #16a34a;' : 'background: #fee2e2; color: #dc2626;') : ''}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'WAIT'}</span>
+        <span class="direction-tag ${hasDirection ? (isLong ? 'tag-long' : 'tag-short') : ''}" style="font-size: 14px; margin-left: 2px; padding: 3px 10px; border-radius: 4px; border: 1px solid #374151; ${!hasDirection ? 'color: #d97706;' : isLong ? 'color: #16a34a;' : 'color: #dc2626;'}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'WAIT'}</span>
       </div>
     </div>
 
     <!-- Verdict & Direction Box -->
-    <div class="step-box" style="background: ${hasDirection ? (isLong ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fef2f2, #fee2e2)') : 'linear-gradient(135deg, #fef3c7, #fde68a)'}; border: 1px solid ${hasDirection ? (isLong ? '#16a34a' : '#dc2626') : '#d97706'}; padding: 10px 15px;">
+    <div class="step-box" style="background: #111111; border: 1px solid #374151; padding: 10px 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <div style="font-size: 8px; color: #666; margin-bottom: 2px;">VERDICT</div>
+          <div style="font-size: 8px; color: #9ca3af; margin-bottom: 2px;">VERDICT</div>
           <div style="font-size: 16px; font-weight: 700; ${isConditional ? 'color: #d97706' : hasDirection ? (isLong ? 'color: #16a34a' : 'color: #dc2626') : 'color: #d97706'}">${formatAction(verdictAction)}</div>
         </div>
         <div>
-          <div style="font-size: 8px; color: #666; margin-bottom: 2px;">DIRECTION</div>
+          <div style="font-size: 8px; color: #9ca3af; margin-bottom: 2px;">DIRECTION</div>
           <div style="font-size: 16px; font-weight: 700; ${hasDirection ? (isLong ? 'color: #16a34a' : 'color: #dc2626') : 'color: #d97706'}">${hasDirection ? (isLong ? 'LONG' : 'SHORT') : 'NEUTRAL'}</div>
         </div>
         <div style="text-align: center;">
-          <div style="font-size: 8px; color: #666; margin-bottom: 2px;">CONFIDENCE</div>
-          <div style="font-size: 20px; font-weight: 800; color: #1a1a1a;">${score}</div>
+          <div style="font-size: 8px; color: #9ca3af; margin-bottom: 2px;">CONFIDENCE</div>
+          <div style="font-size: 20px; font-weight: 800; color: #f1f5f9;">${score}</div>
         </div>
         <div style="text-align: right;">
-          <div style="font-size: 8px; color: #666; margin-bottom: 2px;">RISK:REWARD</div>
-          <div style="font-size: 18px; font-weight: 700; color: #1a1a1a;">${formatRiskReward(tp?.riskReward)}</div>
+          <div style="font-size: 8px; color: #9ca3af; margin-bottom: 2px;">RISK:REWARD</div>
+          <div style="font-size: 18px; font-weight: 700; color: #f1f5f9;">${formatRiskReward(tp?.riskReward)}</div>
         </div>
       </div>
     </div>
 
     ${isConditional ? `
     <!-- CONDITIONAL GO Explanation Box -->
-    <div style="margin-top: 8px; margin-bottom: 8px; padding: 10px 12px; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1px solid #d97706; border-radius: 6px;">
+    <div style="margin-top: 8px; margin-bottom: 8px; padding: 10px 12px; background: #111111; border: 1px solid #374151; border-left: 3px solid #d97706; border-radius: 4px;">
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-        <span style="font-size: 14px;">⚠️</span>
-        <span style="font-size: 10px; font-weight: 700; color: #92400e;">CONDITIONAL ENTRY - CONDITIONS REQUIRED</span>
+        <span style="font-size: 10px; font-weight: 700; color: #d97706;">CONDITIONAL ENTRY - CONDITIONS REQUIRED</span>
       </div>
       <div style="font-size: 8px; color: #78350f; line-height: 1.5;">
         <strong>This trade requires specific conditions to be met before entry:</strong>
@@ -884,8 +933,8 @@ function generatePageExecutiveSummary(data: AnalysisReportData, totalPages: numb
     </div>
 
     <!-- Note about full report -->
-    <div style="margin-top: 15px; padding: 10px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; text-align: center;">
-      <div style="font-size: 9px; color: #0369a1; font-weight: 600;">📊 Full detailed analysis available in the following pages</div>
+    <div style="margin-top: 15px; padding: 10px; background: #111111; border: 1px solid #374151; border-radius: 4px; text-align: center;">
+      <div style="font-size: 9px; color: #9ca3af; font-weight: 600;">Full detailed analysis available in the following pages</div>
     </div>
 
     ${generateFooter(data, 1, totalPages)}
@@ -923,10 +972,11 @@ function generatePageTradePlan(data: AnalysisReportData, totalPages: number): st
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Trade Plan</div>
-        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Trade Plan</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" class="asset-logo" />` : ''}
         <span class="symbol">${data.symbol}/USDT</span>
         <span class="direction-tag ${isLong ? 'tag-long' : 'tag-short'}">${isLong ? 'LONG' : 'SHORT'}</span>
       </div>
@@ -935,35 +985,39 @@ function generatePageTradePlan(data: AnalysisReportData, totalPages: number): st
     <!-- Trade Levels Table -->
     <table class="table" style="margin-bottom: 10px;">
       <tr><th style="width: 25%;">Level</th><th style="width: 25%;">Price</th><th style="width: 20%;">Change</th><th style="width: 30%;">Note</th></tr>
-      <tr style="background: #f0fdf4;">
+      <tr>
         <td style="font-weight: 600;">Entry</td>
         <td style="font-weight: 700; font-size: 9px;">${formatPrice(tp?.averageEntry)}</td>
         <td>-</td>
         <td style="font-size: 6px;">${tp?.entries?.length ? `${tp.entries.length} entry zones` : 'Single entry'}</td>
       </tr>
-      <tr style="background: #fef2f2;">
+      <tr>
         <td style="font-weight: 600;">Stop Loss</td>
         <td style="font-weight: 700; font-size: 9px;" class="text-red">${formatPrice(tp?.stopLoss?.price)}</td>
         <td class="text-red">${tp?.stopLoss?.percentage ? `-${tp.stopLoss.percentage.toFixed(2)}%` : ''}</td>
         <td style="font-size: 6px;">${tp?.stopLoss?.reason?.slice(0, 30) || ''}</td>
       </tr>
-      ${(tp?.takeProfits || []).slice(0, 3).map((t, i) => `
+      ${(tp?.takeProfits || []).slice(0, 3).map((t: { price: number; percentage?: number; reason?: string; riskReward?: number }, i: number) => {
+        const tpRR = t.riskReward || (tp?.stopLoss?.price && tp?.averageEntry
+          ? parseFloat((Math.abs(t.price - tp.averageEntry) / Math.abs(tp.averageEntry - tp.stopLoss.price)).toFixed(1))
+          : 0);
+        return `
         <tr>
           <td style="font-weight: 600;">Target ${i + 1}</td>
           <td style="font-weight: 700; font-size: 9px;" class="text-green">${formatPrice(t.price)}</td>
-          <td class="text-green">${t.percentage ? `+${t.percentage.toFixed(1)}%` : ''}</td>
-          <td style="font-size: 6px;">${t.reason?.slice(0, 30) || ''}</td>
+          <td class="text-green">${tpRR > 0 ? `${tpRR.toFixed(1)}R` : ''}</td>
+          <td style="font-size: 6px;">${(t.reason || '').slice(0, 30)}</td>
         </tr>
-      `).join('')}
+      `}).join('')}
     </table>
 
-    <!-- Full Page Chart with Dark Background -->
+    <!-- Full Page Chart -->
     ${data.chartImage ? `
-    <div class="chart-container" style="height: 480px; display: flex; align-items: center; justify-content: center; background: #1a1a2e; border-radius: 8px;">
-      <img src="${data.chartImage}" style="max-height: 100%; width: auto; max-width: 100%; border-radius: 6px;" alt="Trade Plan Chart" />
+    <div class="chart-container" style="height: 480px; display: flex; align-items: center; justify-content: center; border: 1px solid #374151; border-radius: 6px;">
+      <img src="${data.chartImage}" style="max-height: 100%; width: auto; max-width: 100%; border-radius: 4px;" alt="Trade Plan Chart" />
     </div>
     ` : `
-    <div class="chart-container" style="height: 480px; background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 8px; padding: 15px;">
+    <div class="chart-container" style="height: 480px; border: 1px solid #374151; border-radius: 6px; padding: 15px;">
       ${generateTradePlanSvgChart(tp, as, as?.chartCandles)}
     </div>
     `}
@@ -1018,10 +1072,11 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Tokenomics Analysis</div>
-        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Tokenomics Analysis</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" class="asset-logo" />` : ''}
         <span class="symbol">${data.symbol}/USDT</span>
       </div>
     </div>
@@ -1031,15 +1086,15 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
     <div class="verdict-box" style="padding: 12px; margin-bottom: 15px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <div style="font-size: 10px; color: #666; margin-bottom: 3px;">Tokenomics Score</div>
+          <div style="font-size: 10px; color: #9ca3af; margin-bottom: 3px;">Tokenomics Score</div>
           <div style="font-size: 32px; font-weight: 700; ${tk.assessment.overallScore >= 70 ? 'color: #16a34a' : tk.assessment.overallScore < 40 ? 'color: #dc2626' : 'color: #d97706'}">${tk.assessment.overallScore}/100</div>
         </div>
         <div style="text-align: right;">
-          <div style="font-size: 10px; color: #666; margin-bottom: 3px;">Risk Level</div>
+          <div style="font-size: 10px; color: #9ca3af; margin-bottom: 3px;">Risk Level</div>
           <div style="font-size: 18px; font-weight: 700; ${tk.assessment.riskLevel === 'low' ? 'color: #16a34a' : tk.assessment.riskLevel === 'high' ? 'color: #dc2626' : 'color: #d97706'}">${formatDirection(tk.assessment.riskLevel)}</div>
         </div>
       </div>
-      <div style="margin-top: 10px; font-size: 8px; color: #444; border-top: 1px solid #eee; padding-top: 8px;">${tk.assessment.recommendation}</div>
+      <div style="margin-top: 10px; font-size: 8px; color: #d1d5db; border-top: 1px solid #eee; padding-top: 8px;">${tk.assessment.recommendation}</div>
     </div>
 
     <!-- Supply Information -->
@@ -1122,25 +1177,24 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
 
     <!-- AI Tokenomics Insight -->
     ${data.verdict?.tokenomicsInsight ? `
-    <div class="step-summary" style="margin-top: 15px; background: #f0f9f0; border-left: 3px solid #16a34a; padding: 10px 12px;">
+    <div class="step-summary" style="margin-top: 15px; background: #0d1f0d; border-left: 3px solid #16a34a; padding: 10px 12px;">
       <div style="font-size: 9px; font-weight: 600; color: #16a34a; margin-bottom: 5px;">AI Tokenomics Analysis</div>
-      <div style="font-size: 8px; color: #333; line-height: 1.5;">${data.verdict.tokenomicsInsight}</div>
+      <div style="font-size: 8px; color: #d1d5db; line-height: 1.5;">${data.verdict.tokenomicsInsight}</div>
     </div>
     ` : ''}
     ` : `
     <!-- No Tokenomics Data - Enhanced Display -->
     <div style="padding: 20px;">
-      <div class="verdict-box" style="padding: 20px; margin-bottom: 20px; background: linear-gradient(135deg, #fef3c7, #fde68a); border-color: #d97706;">
-        <div style="font-size: 36px; margin-bottom: 10px;">⚠️</div>
-        <div style="font-size: 16px; font-weight: 700; color: #92400e; margin-bottom: 5px;">Tokenomics Data Unavailable</div>
-        <div style="font-size: 10px; color: #78350f;">Data could not be retrieved from CoinGecko API</div>
+      <div class="verdict-box" style="padding: 20px; margin-bottom: 20px; background: #111111; border-color: #e0e0e0;">
+        <div style="font-size: 16px; font-weight: 700; color: #9ca3af; margin-bottom: 5px;">Tokenomics Data Unavailable</div>
+        <div style="font-size: 10px; color: #999;">Data could not be retrieved from CoinGecko API</div>
       </div>
 
       <div class="step-box" style="margin-bottom: 15px;">
         <div class="step-box-header">
           <span class="step-box-title">Why This Happens</span>
         </div>
-        <div style="font-size: 8px; line-height: 1.6; color: #444;">
+        <div style="font-size: 8px; line-height: 1.6; color: #d1d5db;">
           <p style="margin-bottom: 8px;"><strong>1. New or Low-Cap Token:</strong> The token may be too new or have insufficient market data in CoinGecko's database.</p>
           <p style="margin-bottom: 8px;"><strong>2. API Rate Limits:</strong> CoinGecko API has rate limits that may temporarily restrict data access.</p>
           <p style="margin-bottom: 8px;"><strong>3. Symbol Mismatch:</strong> The trading symbol may not directly map to CoinGecko's identifier.</p>
@@ -1151,18 +1205,18 @@ function generatePageTokenomics(data: AnalysisReportData, totalPages: number): s
         <div class="step-box-header">
           <span class="step-box-title">What You Should Do</span>
         </div>
-        <div style="font-size: 8px; line-height: 1.6; color: #444;">
+        <div style="font-size: 8px; line-height: 1.6; color: #d1d5db;">
           <p style="margin-bottom: 8px;">✓ <strong>Manual Research:</strong> Visit <a href="https://www.coingecko.com" style="color: #0369a1;">CoinGecko</a> or <a href="https://coinmarketcap.com" style="color: #0369a1;">CoinMarketCap</a> directly to verify tokenomics.</p>
           <p style="margin-bottom: 8px;">✓ <strong>Check Token Contract:</strong> Review the token's smart contract for supply information.</p>
           <p style="margin-bottom: 8px;">✓ <strong>Assess Liquidity Risk:</strong> Without tokenomics data, be extra cautious about position sizing.</p>
         </div>
       </div>
 
-      <div class="step-box" style="background: #fef2f2; border-color: #fca5a5;">
-        <div class="step-box-header" style="border-color: #fca5a5;">
-          <span class="step-box-title" style="color: #dc2626;">⚠️ Risk Warning</span>
+      <div class="step-box" style="background: #111111; border: 1px solid #374151; border-left: 3px solid #dc2626;">
+        <div class="step-box-header" style="border-color: #e0e0e0;">
+          <span class="step-box-title" style="color: #dc2626;">Risk Warning</span>
         </div>
-        <div style="font-size: 8px; line-height: 1.6; color: #b91c1c;">
+        <div style="font-size: 8px; line-height: 1.6; color: #9ca3af;">
           Trading without tokenomics data increases risk. Unknown supply dynamics, whale concentration, and dilution risks could significantly impact your trade. Proceed with caution and use smaller position sizes.
         </div>
       </div>
@@ -1222,10 +1276,11 @@ function generatePageSteps12(data: AnalysisReportData, totalPages: number): stri
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Analysis Steps 1-2</div>
-        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Analysis Steps 1-2</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" class="asset-logo" />` : ''}
         <span class="symbol">${data.symbol}/USDT</span>
       </div>
     </div>
@@ -1258,7 +1313,7 @@ function generatePageSteps12(data: AnalysisReportData, totalPages: number): stri
         </div>
       </div>
       ${trendIndicators.length > 0 ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Trend Indicators (SMA, EMA, ADX, Ichimoku)</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #9ca3af; border-top: 1px dashed #374151; padding-top: 6px;">Trend Indicators (SMA, EMA, ADX, Ichimoku)</div>
       <div class="row" style="margin-top: 4px;">
         ${trendIndicators.map(i => `
           <div class="col metric metric-sm">
@@ -1306,7 +1361,7 @@ function generatePageSteps12(data: AnalysisReportData, totalPages: number): stri
       </div>
       ` : ''}
       ${tk ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Tokenomics</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #9ca3af; border-top: 1px dashed #374151; padding-top: 6px;">Tokenomics</div>
       <div class="row" style="margin-top: 4px;">
         <div class="col metric metric-sm">
           <div class="metric-label">Market Cap</div>
@@ -1327,7 +1382,7 @@ function generatePageSteps12(data: AnalysisReportData, totalPages: number): stri
       </div>
       ` : ''}
       ${volumeIndicators.length > 0 ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Volume Indicators (VWAP, OBV, CMF, AD)</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #9ca3af; border-top: 1px dashed #374151; padding-top: 6px;">Volume Indicators (VWAP, OBV, CMF, AD)</div>
       <div class="row" style="margin-top: 4px;">
         ${volumeIndicators.map(i => `
           <div class="col metric metric-sm">
@@ -1387,10 +1442,11 @@ function generatePageSteps34(data: AnalysisReportData, totalPages: number): stri
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Analysis Steps 3-4</div>
-        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Analysis Steps 3-4</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" class="asset-logo" />` : ''}
         <span class="symbol">${data.symbol}/USDT</span>
       </div>
     </div>
@@ -1426,7 +1482,7 @@ function generatePageSteps34(data: AnalysisReportData, totalPages: number): stri
       </div>
       ` : ''}
       ${advancedIndicators.length > 0 ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Advanced Indicators</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #9ca3af; border-top: 1px dashed #374151; padding-top: 6px;">Advanced Indicators</div>
       <div class="row" style="margin-top: 4px;">
         ${advancedIndicators.map(i => `
           <div class="col metric metric-sm">
@@ -1460,7 +1516,7 @@ function generatePageSteps34(data: AnalysisReportData, totalPages: number): stri
       </div>
       ${tm.conditions && tm.conditions.length > 0 ? `
       <div style="margin-top: 6px;">
-        <div style="font-size: 7px; color: #666; margin-bottom: 4px;">Entry Conditions (${tm.conditions.filter(c => c.met).length}/${tm.conditions.length} met):</div>
+        <div style="font-size: 7px; color: #9ca3af; margin-bottom: 4px;">Entry Conditions (${tm.conditions.filter(c => c.met).length}/${tm.conditions.length} met):</div>
         <div class="list">
           ${tm.conditions.map(c => `
             <div class="list-item">
@@ -1483,7 +1539,7 @@ function generatePageSteps34(data: AnalysisReportData, totalPages: number): stri
       </div>
       ` : ''}
       ${momentumIndicators.length > 0 ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Momentum Indicators</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #9ca3af; border-top: 1px dashed #374151; padding-top: 6px;">Momentum Indicators</div>
       <div class="row" style="margin-top: 4px;">
         ${momentumIndicators.map(i => `
           <div class="col metric metric-sm">
@@ -1548,10 +1604,11 @@ function generatePageSteps56(data: AnalysisReportData, totalPages: number): stri
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Analysis Steps 5-6</div>
-        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Analysis Steps 5-6</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" class="asset-logo" />` : ''}
         <span class="symbol">${data.symbol}/USDT</span>
       </div>
     </div>
@@ -1605,7 +1662,7 @@ function generatePageSteps56(data: AnalysisReportData, totalPages: number): stri
         `).join('')}
       </table>
       ${volatilityIndicators.length > 0 ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Volatility Indicators (ATR, PSAR, KELTNER, BB)</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #9ca3af; border-top: 1px dashed #374151; padding-top: 6px;">Volatility Indicators (ATR, PSAR, KELTNER, BB)</div>
       <div class="row" style="margin-top: 4px;">
         ${volatilityIndicators.map(i => `
           <div class="col metric metric-sm">
@@ -1646,18 +1703,18 @@ function generatePageSteps56(data: AnalysisReportData, totalPages: number): stri
         </div>
       </div>
       ${divergences.length > 0 ? `
-      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #666; border-top: 1px dashed #ddd; padding-top: 6px;">Detected Divergences</div>
+      <div style="margin-top: 8px; font-size: 7px; font-weight: 600; color: #9ca3af; border-top: 1px dashed #374151; padding-top: 6px;">Detected Divergences</div>
       <div style="margin-top: 4px; font-size: 7px;">
         ${divergences.slice(0, 3).map(d => `
           <div style="display: flex; align-items: center; margin-bottom: 2px;">
             <span style="width: 60px; font-weight: 500;">${d.indicator}</span>
             <span class="${d.type === 'bullish' ? 'text-green' : d.type === 'bearish' ? 'text-red' : ''}" style="width: 60px;">${d.type}</span>
-            <span style="color: #666;">${d.description?.slice(0, 40) || ''}</span>
+            <span style="color: #9ca3af;">${d.description?.slice(0, 40) || ''}</span>
           </div>
         `).join('')}
       </div>
       ` : ''}
-      ${tc.proTip ? `<div style="margin-top: 6px; font-size: 7px; background: #fef3c7; padding: 6px 8px; border-radius: 3px;"><strong>Pro Tip:</strong> ${tc.proTip}</div>` : ''}
+      ${tc.proTip ? `<div style="margin-top: 6px; font-size: 7px; background: #111111; border: 1px solid #374151; padding: 6px 8px; border-radius: 3px; color: #d1d5db;"><strong>Pro Tip:</strong> ${tc.proTip}</div>` : ''}
       ${tcSummary ? `<div class="step-summary"><div class="step-summary-title">Step Summary</div>${tcSummary}</div>` : ''}
     </div>
     ` : ''}
@@ -1715,16 +1772,17 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
         <div class="brand-name"><span style="color: #14B8A6;">Trader</span><span style="color: #F87171;">Path</span></div>
       </div>
       <div class="header-center">
-        <div class="report-title">Final Verdict</div>
-        <div style="display: inline-block; padding: 2px 6px; background: ${methodColor}; color: #fff; border-radius: 3px; font-size: 7px; font-weight: 600; margin-top: 2px;">${methodDisplay}</div>
+        <div class="report-title">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}Final Verdict</div>
+        <div style="display: inline-block; padding: 2px 6px; border: 1px solid #374151; border-radius: 3px; font-size: 7px; font-weight: 600; color: #d1d5db; margin-top: 2px;">${methodDisplay}</div>
       </div>
       <div class="header-right">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" class="asset-logo" />` : ''}
         <span class="symbol">${data.symbol}/USDT</span>
       </div>
     </div>
 
     <!-- Step 07: Final Verdict -->
-    <div class="step-box" style="background: ${hasDirection ? (isLong ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fef2f2, #fee2e2)') : 'linear-gradient(135deg, #fef3c7, #fde68a)'};">
+    <div class="step-box" style="background: #111111; border: 1px solid #374151;">
       <div class="step-box-header">
         <span class="step-box-num">07</span>
         <span class="step-box-title">Final Verdict</span>
@@ -1732,13 +1790,13 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
       <div style="text-align: center; padding: 10px 0;">
         <div style="font-size: 24px; font-weight: 700; ${isConditional ? 'color: #d97706' : hasDirection ? (isLong ? 'color: #16a34a' : 'color: #dc2626') : 'color: #d97706'}">${formatAction(getVerdictAction(v))}</div>
         <div style="font-size: 28px; font-weight: 800; margin: 8px 0;">${formatPercent(v?.overallScore)}</div>
-        <div style="font-size: 9px; color: #666;">${isConditional ? 'Conditional entry - Specific conditions must be met before entering' : hasDirection ? (isLong ? 'Bullish setup - Long position recommended' : 'Bearish setup - Short position recommended') : 'Market conditions unclear - Wait for better setup'}</div>
+        <div style="font-size: 9px; color: #9ca3af;">${isConditional ? 'Conditional entry - Specific conditions must be met before entering' : hasDirection ? (isLong ? 'Bullish setup - Long position recommended' : 'Bearish setup - Short position recommended') : 'Market conditions unclear - Wait for better setup'}</div>
       </div>
     </div>
 
     ${isConditional ? `
     <!-- CONDITIONAL GO Explanation -->
-    <div style="margin-bottom: 10px; padding: 12px; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px solid #d97706; border-radius: 6px;">
+    <div style="margin-bottom: 10px; padding: 12px; background: #111111; border: 1px solid #374151; border-left: 3px solid #d97706; border-radius: 6px;">
       <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
         <span style="font-size: 18px;">⚠️</span>
         <span style="font-size: 12px; font-weight: 700; color: #92400e;">CONDITIONAL ENTRY REQUIREMENTS</span>
@@ -1758,11 +1816,11 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
           `}
         </div>
         ${data.timing?.waitFor ? `
-        <div style="margin-top: 8px; padding: 6px 10px; background: #fef9c3; border-radius: 4px;">
-          <strong>⏳ Wait for:</strong> ${data.timing.waitFor.event} (Estimated: ${data.timing.waitFor.estimatedTime})
+        <div style="margin-top: 8px; padding: 6px 10px; background: #111111; border: 1px solid #374151; border-radius: 4px; color: #d1d5db;">
+          <strong>Wait for:</strong> ${data.timing.waitFor.event} (Estimated: ${data.timing.waitFor.estimatedTime})
         </div>
         ` : ''}
-        <div style="margin-top: 8px; padding: 6px 10px; background: #fef2f2; border-left: 3px solid #dc2626; font-size: 8px; color: #991b1b;">
+        <div style="margin-top: 8px; padding: 6px 10px; background: #111111; border-left: 3px solid #dc2626; font-size: 8px; color: #9ca3af;">
           <strong>Warning:</strong> Do NOT enter this trade until all conditions above are satisfied. Entering prematurely significantly increases risk.
         </div>
       </div>
@@ -1795,47 +1853,47 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
 
       <!-- Main Stats -->
       <div class="row" style="margin-bottom: 8px;">
-        <div class="col metric metric-sm" style="text-align: center; background: linear-gradient(135deg, #f0fdf4, #dcfce7);">
+        <div class="col metric metric-sm" style="text-align: center; background: #111111; border: 1px solid #374151;">
           <div class="metric-value text-green" style="font-size: 18px;">${ind.summary.bullishIndicators}</div>
           <div class="metric-label">Bullish</div>
         </div>
-        <div class="col metric metric-sm" style="text-align: center; background: linear-gradient(135deg, #fef2f2, #fee2e2);">
+        <div class="col metric metric-sm" style="text-align: center; background: #111111; border: 1px solid #374151;">
           <div class="metric-value text-red" style="font-size: 18px;">${ind.summary.bearishIndicators}</div>
           <div class="metric-label">Bearish</div>
         </div>
-        <div class="col metric metric-sm" style="text-align: center;">
+        <div class="col metric metric-sm" style="text-align: center; background: #111111; border: 1px solid #374151;">
           <div class="metric-value" style="font-size: 18px;">${ind.summary.neutralIndicators}</div>
           <div class="metric-label">Neutral</div>
         </div>
-        <div class="col metric metric-sm" style="text-align: center; background: ${ind.summary.overallSignal === 'bullish' ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : ind.summary.overallSignal === 'bearish' ? 'linear-gradient(135deg, #fef2f2, #fee2e2)' : '#fafafa'};">
+        <div class="col metric metric-sm" style="text-align: center; background: #111111; border: 1px solid #374151;">
           <div class="metric-value ${ind.summary.overallSignal === 'bullish' ? 'text-green' : ind.summary.overallSignal === 'bearish' ? 'text-red' : ''}" style="font-size: 14px;">${formatDirection(ind.summary.overallSignal).toUpperCase()}</div>
           <div class="metric-label">Overall Signal</div>
         </div>
       </div>
 
       <!-- Indicator Categories Breakdown -->
-      <div style="margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
-        <div style="font-size: 7px; font-weight: 600; color: #666; margin-bottom: 6px;">INDICATOR CATEGORIES ANALYZED:</div>
+      <div style="margin-top: 8px; padding: 8px; background: #1a1a1a; border-radius: 4px;">
+        <div style="font-size: 7px; font-weight: 600; color: #9ca3af; margin-bottom: 6px;">INDICATOR CATEGORIES ANALYZED:</div>
         <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; font-size: 7px;">
           <div style="text-align: center;">
-            <div style="font-weight: 600; color: #333;">Trend</div>
-            <div style="color: #666; font-size: 6px;">EMA, SMA, MACD, ADX, Ichimoku, Supertrend, PSAR, Aroon, VWMA</div>
+            <div style="font-weight: 600; color: #d1d5db;">Trend</div>
+            <div style="color: #9ca3af; font-size: 6px;">EMA, SMA, MACD, ADX, Ichimoku, Supertrend, PSAR, Aroon, VWMA</div>
           </div>
           <div style="text-align: center;">
-            <div style="font-weight: 600; color: #333;">Momentum</div>
-            <div style="color: #666; font-size: 6px;">RSI, Stoch, StochRSI, CCI, Williams %R, ROC, MFI, Ultimate, TSI</div>
+            <div style="font-weight: 600; color: #d1d5db;">Momentum</div>
+            <div style="color: #9ca3af; font-size: 6px;">RSI, Stoch, StochRSI, CCI, Williams %R, ROC, MFI, Ultimate, TSI</div>
           </div>
           <div style="text-align: center;">
-            <div style="font-weight: 600; color: #333;">Volatility</div>
-            <div style="color: #666; font-size: 6px;">BB, ATR, Keltner, Donchian, Hist Vol, Squeeze</div>
+            <div style="font-weight: 600; color: #d1d5db;">Volatility</div>
+            <div style="color: #9ca3af; font-size: 6px;">BB, ATR, Keltner, Donchian, Hist Vol, Squeeze</div>
           </div>
           <div style="text-align: center;">
-            <div style="font-weight: 600; color: #333;">Volume</div>
-            <div style="color: #666; font-size: 6px;">OBV, VWAP, A/D, CMF, Force, EOM, PVT, Rel Vol</div>
+            <div style="font-weight: 600; color: #d1d5db;">Volume</div>
+            <div style="color: #9ca3af; font-size: 6px;">OBV, VWAP, A/D, CMF, Force, EOM, PVT, Rel Vol</div>
           </div>
           <div style="text-align: center;">
-            <div style="font-weight: 600; color: #333;">Advanced</div>
-            <div style="color: #666; font-size: 6px;">Order Flow, Whale, Liquidity, Spoofing, Market Impact</div>
+            <div style="font-weight: 600; color: #d1d5db;">Advanced</div>
+            <div style="color: #9ca3af; font-size: 6px;">Order Flow, Whale, Liquidity, Spoofing, Market Impact</div>
           </div>
         </div>
       </div>
@@ -1843,18 +1901,18 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
       <!-- Signal Confidence -->
       <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 7px;">
         <div>
-          <span style="color: #666;">Leading Indicators Signal: </span>
+          <span style="color: #9ca3af;">Leading Indicators Signal: </span>
           <span class="${(ind.summary as unknown as { leadingIndicatorsSignal?: string }).leadingIndicatorsSignal === 'bullish' ? 'text-green' : (ind.summary as unknown as { leadingIndicatorsSignal?: string }).leadingIndicatorsSignal === 'bearish' ? 'text-red' : ''}" style="font-weight: 600;">
             ${formatDirection((ind.summary as unknown as { leadingIndicatorsSignal?: string }).leadingIndicatorsSignal || 'neutral')}
           </span>
         </div>
         <div>
-          <span style="color: #666;">Confidence: </span>
-          <span style="font-weight: 600; color: #333;">${ind.summary.signalConfidence}%</span>
+          <span style="color: #9ca3af;">Confidence: </span>
+          <span style="font-weight: 600; color: #d1d5db;">${ind.summary.signalConfidence}%</span>
         </div>
         <div>
-          <span style="color: #666;">Total Analyzed: </span>
-          <span style="font-weight: 600; color: #333;">${ind.summary.totalIndicatorsUsed}+</span>
+          <span style="color: #9ca3af;">Total Analyzed: </span>
+          <span style="font-weight: 600; color: #d1d5db;">${ind.summary.totalIndicatorsUsed}+</span>
         </div>
       </div>
     </div>
@@ -1862,12 +1920,12 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
 
     <!-- AI Expert Comment -->
     ${data.aiExpertComment ? `
-    <div class="step-box" style="background: linear-gradient(135deg, #f0fdf4, #ecfdf5); border-color: #86efac;">
-      <div class="step-box-header" style="border-color: #86efac;">
+    <div class="step-box" style="background: #111111; border: 1px solid #374151;">
+      <div class="step-box-header" style="border-color: #e0e0e0;">
         <span style="font-size: 8px; font-weight: 700; color: #fff; background: #16a34a; padding: 2px 5px; border-radius: 3px;">AI</span>
-        <span class="step-box-title" style="color: #166534;">Expert Review</span>
+        <span class="step-box-title" style="color: #d1d5db;">Expert Review</span>
       </div>
-      <div style="font-size: 7px; line-height: 1.5; color: #15803d; max-height: 150px; overflow: hidden;">${data.aiExpertComment.slice(0, 800)}${data.aiExpertComment.length > 800 ? '...' : ''}</div>
+      <div style="font-size: 7px; line-height: 1.5; color: #d1d5db; max-height: 150px; overflow: hidden;">${data.aiExpertComment.slice(0, 800)}${data.aiExpertComment.length > 800 ? '...' : ''}</div>
     </div>
     ` : ''}
 
@@ -1883,7 +1941,7 @@ function generatePageVerdict(data: AnalysisReportData, totalPages: number): stri
 }
 
 // ===========================================
-// CHART CAPTURE & PDF GENERATION
+// CHART CAPTURE & SNAPSHOT PNG GENERATION
 // ===========================================
 
 export async function captureChartAsImage(): Promise<string | null> {
@@ -1934,9 +1992,9 @@ export async function captureChartAsImage(): Promise<string | null> {
       console.warn('[Chart Capture] No canvas found inside chart element - chart may not be fully rendered');
     }
 
-    // Capture with dark background for better visibility
+    // Capture with dark background
     const canvas = await html2canvas(element, {
-      backgroundColor: '#1a1a2e',  // Dark background
+      backgroundColor: '#0A0A0A',  // Dark background
       scale: 2,
       logging: false,
       useCORS: true,
@@ -1982,7 +2040,7 @@ async function renderPageToCanvas(html: string): Promise<HTMLCanvasElement> {
   }
 
   const canvas = await html2canvas(page, {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#0A0A0A',
     scale: 2,
     logging: false,
     width: 595,
@@ -1997,9 +2055,32 @@ async function renderPageToCanvas(html: string): Promise<HTMLCanvasElement> {
   return canvas;
 }
 
-interface PdfResult {
-  base64: string;
-  fileName: string;
+interface SnapshotResult {
+  snapshots: { base64: string; fileName: string }[];
+}
+
+// Fetch asset logo and convert to data URI for PDF rendering (avoids CORS)
+async function fetchAssetLogoDataUri(symbol: string): Promise<string | null> {
+  try {
+    const { getLogoUrlAsync } = await import('../../lib/asset-logos-cache');
+    const logoUrl = await getLogoUrlAsync(symbol.replace(/USDT$/i, ''));
+
+    // Already a data URI (SVG fallback) - use directly
+    if (logoUrl.startsWith('data:')) return logoUrl;
+
+    // External URL - convert to data URI
+    const response = await fetch(logoUrl, { mode: 'cors' });
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
 }
 
 // ===========================================
@@ -2021,18 +2102,21 @@ function generatePageRAG(data: AnalysisReportData, totalPages: number): string {
   <div class="page">
     <!-- Header -->
     <div style="text-align:center;padding:12px 0 15px;border-bottom:2px solid #1a1a1a;margin-bottom:12px;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#1a1a1a;">RAG Intelligence Layer</div>
-      <div style="font-size:7px;color:#666;margin-top:3px;">${data.symbol} | Page 8 of ${totalPages}</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f1f5f9;">${verdictPulseDot(data.verdict?.verdict || data.verdict?.action)}RAG Intelligence Layer</div>
+      <div style="font-size:7px;color:#666;margin-top:3px;display:flex;align-items:center;justify-content:center;gap:4px;">
+        ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" style="width:14px;height:14px;border-radius:50%;object-fit:cover;" />` : ''}
+        <span>${data.symbol} | Page 8 of ${totalPages}</span>
+      </div>
     </div>
 
     ${validation ? `
     <!-- Validation Badge -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:6px 10px;border-radius:6px;border:1px solid ${validation.passed ? '#86efac' : '#fca5a5'};background:${validation.passed ? '#f0fdf4' : '#fef2f2'};">
-      <span style="font-size:12px;">${validation.passed ? '✓' : '✗'}</span>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:6px 10px;border-radius:6px;border:1px solid #e0e0e0;background:#111111;">
+      <span style="font-size:12px;color:${validation.passed ? '#16a34a' : '#dc2626'};">${validation.passed ? '✓' : '✗'}</span>
       <span style="font-size:8px;font-weight:600;color:${validation.passed ? '#16a34a' : '#dc2626'};">${validation.passed ? 'Plan Validated' : 'Validation Issues Found'}</span>
-      ${rag.capitalFlowAligned != null ? `<span style="margin-left:auto;font-size:6px;font-weight:600;color:${rag.capitalFlowAligned ? '#16a34a' : '#dc2626'};padding:2px 6px;border-radius:3px;background:${rag.capitalFlowAligned ? '#dcfce7' : '#fee2e2'};">${rag.capitalFlowAligned ? 'Flow Aligned' : 'Counter-Flow'}</span>` : ''}
+      ${rag.capitalFlowAligned != null ? `<span style="margin-left:auto;font-size:6px;font-weight:600;color:${rag.capitalFlowAligned ? '#16a34a' : '#dc2626'};padding:2px 6px;border-radius:3px;border:1px solid #e0e0e0;background:#111111;">${rag.capitalFlowAligned ? 'Flow Aligned' : 'Counter-Flow'}</span>` : ''}
     </div>
-    ${validation.summary ? `<div style="font-size:7px;color:#666;margin-bottom:10px;padding:4px 8px;background:#fafafa;border-radius:4px;">${validation.summary}</div>` : ''}
+    ${validation.summary ? `<div style="font-size:7px;color:#666;margin-bottom:10px;padding:4px 8px;background:#111111;border-radius:4px;">${validation.summary}</div>` : ''}
     ` : ''}
 
     ${bands.length > 0 ? `
@@ -2043,15 +2127,15 @@ function generatePageRAG(data: AnalysisReportData, totalPages: number): string {
         ${bands.map((b: { horizon: string; label: string; p10: number; p50: number; p90: number; bandWidthPercent: number; drivers: string[] }) => {
           const horizonColor = b.horizon === 'short' ? '#16a34a' : b.horizon === 'medium' ? '#2563eb' : '#7c3aed';
           return `
-          <div style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 8px;background:#fafafa;">
+          <div style="border:1px solid #e0e0e0;border-radius:6px;padding:6px 8px;background:#111111;">
             <div style="font-size:7px;font-weight:600;color:${horizonColor};text-transform:uppercase;margin-bottom:4px;">${b.label || b.horizon}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;text-align:center;">
               <div><div style="font-size:5px;color:#999;">P10</div><div style="font-size:8px;font-weight:600;color:#dc2626;">${formatPrice(b.p10)}</div></div>
-              <div style="background:#f0fdf4;border-radius:3px;padding:2px;"><div style="font-size:5px;color:#999;">P50</div><div style="font-size:10px;font-weight:700;color:#1a1a1a;">${formatPrice(b.p50)}</div></div>
+              <div style="background:#1a1a1a;border:1px solid #374151;border-radius:3px;padding:2px;"><div style="font-size:5px;color:#9ca3af;">P50</div><div style="font-size:10px;font-weight:700;color:#f1f5f9;">${formatPrice(b.p50)}</div></div>
               <div><div style="font-size:5px;color:#999;">P90</div><div style="font-size:8px;font-weight:600;color:#16a34a;">${formatPrice(b.p90)}</div></div>
             </div>
             <div style="font-size:6px;color:#888;margin-top:3px;text-align:center;">Band: ${b.bandWidthPercent?.toFixed(1) || '0'}%</div>
-            ${b.drivers?.length ? `<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px;">${b.drivers.slice(0, 3).map((d: string) => `<span style="font-size:5px;padding:1px 4px;background:#e0e7ff;border-radius:2px;color:#3730a3;">${d}</span>`).join('')}</div>` : ''}
+            ${b.drivers?.length ? `<div style="margin-top:3px;display:flex;flex-wrap:wrap;gap:2px;">${b.drivers.slice(0, 3).map((d: string) => `<span style="font-size:5px;padding:1px 4px;background:#1a1a1a;border:1px solid #374151;border-radius:2px;color:#9ca3af;">${d}</span>`).join('')}</div>` : ''}
           </div>`;
         }).join('')}
       </div>
@@ -2078,7 +2162,7 @@ function generatePageRAG(data: AnalysisReportData, totalPages: number): string {
           ${strategies.map((s: { id: string; label: string; direction: string; entry: { price: number; type: string }; stopLoss: { price: number }; takeProfits: Array<{ price: number; label: string }>; riskReward: number; applicability: number; counterFlow?: boolean }) => {
             const isRec = s.id === recommended;
             return `
-            <tr style="${isRec ? 'background:#f0fdf4;font-weight:600;' : ''}">
+            <tr style="${isRec ? 'background:#111111;font-weight:600;' : ''}">
               <td>
                 ${s.label}${isRec ? ' ★' : ''}${s.counterFlow ? ' ⚠️' : ''}
               </td>
@@ -2108,12 +2192,12 @@ function generatePageRAG(data: AnalysisReportData, totalPages: number): string {
         <span style="font-size:6px;padding:1px 5px;border-radius:3px;background:${research.mode === 'deep' ? '#ede9fe' : research.mode === 'news' ? '#dbeafe' : '#f3f4f6'};color:${research.mode === 'deep' ? '#6d28d9' : research.mode === 'news' ? '#1d4ed8' : '#4b5563'};font-weight:600;">${research.mode?.toUpperCase()}</span>
         ${research.sentiment ? `<span style="font-size:6px;margin-left:auto;color:${research.sentiment.label === 'bullish' ? '#16a34a' : research.sentiment.label === 'bearish' ? '#dc2626' : '#d97706'};font-weight:600;">${research.sentiment.label?.toUpperCase()} (${research.sentiment.score}/100)</span>` : ''}
       </div>
-      ${research.summary ? `<div style="font-size:7px;color:#374151;line-height:1.5;margin-bottom:6px;padding:6px 8px;background:#f9fafb;border-radius:4px;">${research.summary}</div>` : ''}
+      ${research.summary ? `<div style="font-size:7px;color:#374151;line-height:1.5;margin-bottom:6px;padding:6px 8px;background:#1a1a1a;border-radius:4px;">${research.summary}</div>` : ''}
       ${research.citations?.length ? `
       <div style="font-size:6px;color:#666;font-weight:600;margin-bottom:3px;">Sources (${research.citations.length})</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
         ${research.citations.slice(0, 6).map((c: { source: string; title: string; sentiment?: string; reliability: number }, i: number) => `
-        <div style="font-size:6px;padding:3px 5px;background:#fafafa;border:1px solid #eee;border-radius:3px;">
+        <div style="font-size:6px;padding:3px 5px;background:#111111;border:1px solid #eee;border-radius:3px;">
           <span style="font-weight:600;">[${i + 1}] ${c.source}</span>
           <span style="color:${c.sentiment === 'bullish' ? '#16a34a' : c.sentiment === 'bearish' ? '#dc2626' : '#666'}; margin-left:3px;">${c.sentiment || ''}</span>
           <div style="color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.title || ''}</div>
@@ -2179,13 +2263,13 @@ function generateSinglePageReport(data: AnalysisReportData): string {
 
   // Helper for Capital Flow layer boxes
   const getLayerBox = (num: number, title: string, content: string, badge?: string, badgeColor?: string) => `
-    <div style="flex: 1; min-width: 240px; border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px 8px; background: #fafafa;">
+    <div style="flex: 1; min-width: 220px; max-width: 260px; border: 1px solid #374151; border-radius: 4px; padding: 6px 8px; background: #111111; overflow: hidden;">
       <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
-        <span style="font-size: 7px; font-weight: 700; color: #666;">L${num}</span>
-        <span style="font-size: 8px; font-weight: 600; color: #1a1a1a;">${title}</span>
+        <span style="font-size: 7px; font-weight: 700; color: #9ca3af;">L${num}</span>
+        <span style="font-size: 8px; font-weight: 600; color: #f1f5f9;">${title}</span>
         ${badge ? `<span style="margin-left: auto; font-size: 6px; font-weight: 600; padding: 1px 4px; border-radius: 2px; background: ${badgeColor || '#666'}; color: white;">${badge}</span>` : ''}
       </div>
-      <div style="font-size: 7px; color: #444; line-height: 1.4;">${content}</div>
+      <div style="font-size: 7px; color: #d1d5db; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word;">${content}</div>
     </div>
   `;
 
@@ -2214,28 +2298,28 @@ function generateSinglePageReport(data: AnalysisReportData): string {
     <head>
       <style>
         ${styles}
-        .single-page { padding: 12px 24px; max-width: 560px; margin: 0 auto; }
-        .section-box { border: 1px solid #ddd; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; background: #fff; }
+        .single-page { padding: 12px 24px; max-width: 560px; margin: 0 auto; overflow: hidden; }
+        .section-box { border: 1px solid #ddd; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; background: #111111; overflow: hidden; }
         .section-title-bar { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e0e0e0; }
         .section-num { font-size: 8px; font-weight: 700; color: #fff; background: #1a1a1a; padding: 2px 6px; border-radius: 3px; }
-        .section-name { font-size: 10px; font-weight: 600; color: #1a1a1a; }
+        .section-name { font-size: 10px; font-weight: 600; color: #f1f5f9; }
         .layer-grid { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-        .two-col { display: flex; gap: 8px; justify-content: center; }
-        .two-col > div { flex: 1; max-width: 260px; }
-        .step-mini { border: 1px solid #e5e5e5; border-radius: 3px; padding: 5px 7px; margin-bottom: 5px; background: #fafafa; }
+        .two-col { display: flex; gap: 8px; justify-content: center; overflow: hidden; }
+        .two-col > div { flex: 1; max-width: 260px; overflow: hidden; }
+        .step-mini { border: 1px solid #e5e5e5; border-radius: 3px; padding: 5px 7px; margin-bottom: 5px; background: #111111; overflow: hidden; }
         .step-mini-header { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
-        .step-mini-num { font-size: 7px; font-weight: 700; color: #666; }
-        .step-mini-title { font-size: 8px; font-weight: 600; color: #1a1a1a; }
+        .step-mini-num { font-size: 7px; font-weight: 700; color: #9ca3af; }
+        .step-mini-title { font-size: 8px; font-weight: 600; color: #f1f5f9; }
         .step-mini-gate { margin-left: auto; font-size: 6px; font-weight: 600; }
-        .step-mini-content { font-size: 7px; color: #444; line-height: 1.35; }
+        .step-mini-content { font-size: 7px; color: #d1d5db; line-height: 1.35; word-wrap: break-word; overflow-wrap: break-word; }
         .step-mini-row { display: flex; gap: 4px; margin-top: 3px; justify-content: center; }
-        .step-mini-metric { background: #fff; border: 1px solid #eee; border-radius: 2px; padding: 2px 5px; flex: 1; text-align: center; }
-        .step-mini-metric-label { font-size: 5px; color: #888; text-transform: uppercase; }
-        .step-mini-metric-value { font-size: 8px; font-weight: 600; color: #1a1a1a; }
-        .trade-decision-box { border: 2px solid #1a1a1a; border-radius: 4px; padding: 8px 12px; text-align: center; background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%); }
+        .step-mini-metric { background: #111111; border: 1px solid #eee; border-radius: 2px; padding: 2px 5px; flex: 1; text-align: center; overflow: hidden; }
+        .step-mini-metric-label { font-size: 5px; color: #6b7280; text-transform: uppercase; }
+        .step-mini-metric-value { font-size: 8px; font-weight: 600; color: #f1f5f9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .trade-decision-box { border: 1px solid #374151; border-radius: 4px; padding: 8px 12px; text-align: center; background: #111111; }
         .trade-decision-action { font-size: 20px; font-weight: 700; }
-        .trade-decision-sub { font-size: 7px; color: #666; margin-top: 2px; }
-        .ml-box { border: 1px solid #8b5cf6; border-radius: 4px; padding: 6px 10px; background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); margin-top: 6px; }
+        .trade-decision-sub { font-size: 7px; color: #9ca3af; margin-top: 2px; }
+        .ml-box { border: 1px solid #374151; border-radius: 4px; padding: 6px 10px; background: #111111; margin-top: 6px; }
         .ml-header { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px; }
         .ml-badge { font-size: 7px; font-weight: 700; color: #fff; background: #8b5cf6; padding: 2px 6px; border-radius: 3px; }
         .ml-title { font-size: 8px; font-weight: 600; color: #6b21a8; }
@@ -2243,15 +2327,15 @@ function generateSinglePageReport(data: AnalysisReportData): string {
         .ml-rec { font-size: 12px; font-weight: 700; color: #6b21a8; }
         .ml-conf { font-size: 8px; color: #7c3aed; }
         .ml-layers { display: flex; gap: 4px; flex: 1; justify-content: center; }
-        .ml-layer { flex: 1; max-width: 60px; background: #fff; border: 1px solid #ddd6fe; border-radius: 2px; padding: 2px 4px; text-align: center; }
+        .ml-layer { flex: 1; max-width: 60px; background: #111111; border: 1px solid #ddd6fe; border-radius: 2px; padding: 2px 4px; text-align: center; }
         .ml-layer-name { font-size: 5px; color: #7c3aed; text-transform: uppercase; }
         .ml-layer-score { font-size: 8px; font-weight: 600; color: #6b21a8; }
-        .trade-plan-box { border: 1px solid #0d9488; border-radius: 4px; padding: 8px 10px; background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); margin-top: 6px; }
+        .trade-plan-box { border: 1px solid #374151; border-radius: 4px; padding: 8px 10px; background: #111111; margin-top: 6px; }
         .tp-header { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 6px; }
         .tp-badge { font-size: 7px; font-weight: 700; color: #fff; background: #0d9488; padding: 2px 6px; border-radius: 3px; }
         .tp-title { font-size: 9px; font-weight: 600; color: #0f766e; }
         .tp-grid { display: flex; gap: 6px; justify-content: center; }
-        .tp-item { flex: 1; max-width: 120px; background: #fff; border: 1px solid #99f6e4; border-radius: 3px; padding: 4px 6px; text-align: center; }
+        .tp-item { flex: 1; max-width: 120px; background: #111111; border: 1px solid #99f6e4; border-radius: 3px; padding: 4px 6px; text-align: center; }
         .tp-item-label { font-size: 6px; color: #0f766e; text-transform: uppercase; }
         .tp-item-value { font-size: 10px; font-weight: 700; color: #0d9488; }
         .tp-item-sub { font-size: 6px; color: #5eead4; }
@@ -2271,8 +2355,10 @@ function generateSinglePageReport(data: AnalysisReportData): string {
             <div class="report-title" style="font-size: 10px;">Asset Analysis Report</div>
             <div class="report-subtitle" style="font-size: 6px;">${data.method === 'mlis_pro' ? 'MLIS Pro' : 'Classic 7-Step'} | ${new Date(data.generatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</div>
           </div>
-          <div class="header-right" style="text-align: center;">
-            <div class="symbol" style="font-size: 12px;">${data.symbol}
+          <div class="header-right" style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px;">
+            <div style="display: flex; align-items: center; gap: 4px;">
+              ${data.assetLogoUrl ? `<img src="${data.assetLogoUrl}" style="width: 18px; height: 18px; border-radius: 50%; object-fit: cover;" />` : ''}
+              <span class="symbol" style="font-size: 12px;">${data.symbol}</span>
               <span class="direction-tag ${isLong ? 'tag-long' : isShort ? 'tag-short' : ''}" style="font-size: 8px;">${directionStr}</span>
             </div>
             <div class="score-box" style="margin-top: 2px;">
@@ -2484,27 +2570,27 @@ function generateSinglePageReport(data: AnalysisReportData): string {
           </div>
 
           <!-- AI RECOMMENDATION (Full Width) -->
-          <div style="border: 1px solid #f59e0b; border-radius: 4px; padding: 6px 10px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); margin-top: 6px;">
+          <div style="border: 1px solid #374151; border-radius: 4px; padding: 6px 10px; background: #111111; margin-top: 6px;">
             <div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 4px;">
               <span style="font-size: 7px; font-weight: 700; color: #fff; background: #f59e0b; padding: 2px 6px; border-radius: 3px;">AI</span>
               <span style="font-size: 8px; font-weight: 600; color: #92400e;">AI Recommendation</span>
             </div>
             <div style="display: flex; gap: 8px; justify-content: center;">
-              <div style="flex: 1; max-width: 90px; background: #fff; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
+              <div style="flex: 1; max-width: 90px; background: #111111; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
                 <div style="font-size: 6px; color: #92400e; text-transform: uppercase;">Direction</div>
                 <div style="font-size: 12px; font-weight: 700; color: ${l4Dir === 'BUY' ? '#16a34a' : l4Dir === 'SELL' ? '#dc2626' : '#666'};">${l4Dir}</div>
               </div>
-              <div style="flex: 1; max-width: 90px; background: #fff; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
+              <div style="flex: 1; max-width: 90px; background: #111111; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
                 <div style="font-size: 6px; color: #92400e; text-transform: uppercase;">Market</div>
                 <div style="font-size: 10px; font-weight: 600; color: #92400e;">${cf.layer4?.market || '-'}</div>
               </div>
-              <div style="flex: 1; max-width: 90px; background: #fff; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
+              <div style="flex: 1; max-width: 90px; background: #111111; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
                 <div style="font-size: 6px; color: #92400e; text-transform: uppercase;">Confidence</div>
                 <div style="font-size: 10px; font-weight: 600; color: #b45309;">${cf.layer4?.confidence || 0}%</div>
               </div>
-              <div style="flex: 2; max-width: 200px; background: #fff; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
+              <div style="flex: 2; max-width: 200px; background: #111111; border: 1px solid #fcd34d; border-radius: 3px; padding: 4px 6px; text-align: center;">
                 <div style="font-size: 6px; color: #92400e; text-transform: uppercase;">Reason</div>
-                <div style="font-size: 7px; color: #78350f;">${cf.layer4?.reason || 'Capital flow analysis based recommendation'}</div>
+                <div style="font-size: 7px; color: #78350f; word-wrap: break-word; overflow-wrap: break-word; overflow: hidden;">${(cf.layer4?.reason || 'Capital flow analysis based recommendation').slice(0, 80)}${(cf.layer4?.reason || '').length > 80 ? '...' : ''}</div>
               </div>
             </div>
           </div>
@@ -2540,10 +2626,10 @@ function generateSinglePageReport(data: AnalysisReportData): string {
           </div>
 
           <!-- TRADE PLAN CHART (Full Width) -->
-          <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px; margin-top: 6px; background: #1a1a2e;">
-            <div style="font-size: 7px; font-weight: 600; color: #fff; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <div style="border: 1px solid #374151; border-radius: 4px; padding: 6px; margin-top: 6px; background: #111111;">
+            <div style="font-size: 7px; font-weight: 600; color: #d1d5db; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 6px;">
               <span>Trade Plan Chart</span>
-              <span style="font-size: 6px; color: #9ca3af;">Entry • TP1-2 • SL</span>
+              <span style="font-size: 6px; color: #999;">Entry • TP1-2 • SL</span>
             </div>
             ${generateTradePlanSvgChart(tp, as, as?.chartCandles)}
           </div>
@@ -2564,7 +2650,7 @@ function generateSinglePageReport(data: AnalysisReportData): string {
   `;
 }
 
-export async function generateAnalysisReport(data: AnalysisReportData, captureChart: boolean = true, singlePage: boolean = false): Promise<PdfResult | void> {
+export async function generateAnalysisReport(data: AnalysisReportData, captureChart: boolean = true, singlePage: boolean = false): Promise<SnapshotResult | void> {
   // Validate required data
   if (!data) {
     throw new Error('Report data is required');
@@ -2579,78 +2665,78 @@ export async function generateAnalysisReport(data: AnalysisReportData, captureCh
       if (chartImage) data.chartImage = chartImage;
     }
 
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
+    // Fetch asset logo for snapshot rendering
+    if (!data.assetLogoUrl) {
+      const logoDataUri = await fetchAssetLogoDataUri(data.symbol);
+      if (logoDataUri) data.assetLogoUrl = logoDataUri;
+    }
 
     const tradeTypes: Record<string, string> = { scalping: 'Scalping', dayTrade: 'DayTrade', swing: 'Swing' };
     const tradeType = data.tradeType ? tradeTypes[data.tradeType] || '' : '';
+    const dateStr = new Date(data.generatedAt || Date.now()).toISOString().split('T')[0];
+    const baseFileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_${dateStr}`;
 
-    // SINGLE PAGE FORMAT - Compact layout with all info on one page
+    const snapshots: { base64: string; fileName: string }[] = [];
+
+    // Helper to render a page canvas and save as PNG snapshot
+    const addSnapshot = async (html: string, suffix: string) => {
+      const canvas = await renderPageToCanvas(html);
+      const base64 = canvas.toDataURL('image/png').split(',')[1];
+      const fileName = `${baseFileName}_${suffix}.png`;
+
+      // Download the snapshot
+      const link = document.createElement('a');
+      link.download = fileName;
+      link.href = `data:image/png;base64,${base64}`;
+      link.click();
+
+      snapshots.push({ base64, fileName });
+    };
+
+    // SINGLE PAGE FORMAT - Executive Summary (1 snapshot)
     if (singlePage) {
-      const canvas = await renderPageToCanvas(generateSinglePageReport(data));
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
-
-      const fileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_Summary_${new Date().toISOString().split('T')[0]}.pdf`;
-      const pdfBase64 = pdf.output('datauristring').split(',')[1];
-      pdf.save(fileName);
-
-      return { base64: pdfBase64, fileName };
+      await addSnapshot(generateSinglePageReport(data), 'Summary');
+      return { snapshots };
     }
 
-    // MULTI-PAGE FORMAT - Detailed report (7 pages + optional RAG page)
-    const hasRAG = !!data.ragEnrichment;
+    // MULTI-PAGE FORMAT - Detailed report (7-8 snapshots)
+    const ragResearch = data.ragEnrichment?.research;
+    const hasRAG = !!data.ragEnrichment && !!(
+      (ragResearch?.summary && ragResearch.summary.length > 0) ||
+      (ragResearch?.citations && ragResearch.citations.length > 0)
+    );
     const totalPages = hasRAG ? 8 : 7;
 
-    // Page 1: Executive Summary
-    const canvas1 = await renderPageToCanvas(generatePageExecutiveSummary(data, totalPages));
-    pdf.addImage(canvas1.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 1: Executive Summary
+    await addSnapshot(generatePageExecutiveSummary(data, totalPages), '1_Summary');
 
-    // Page 2: Trade Plan (Full Chart)
-    pdf.addPage();
-    const canvas2 = await renderPageToCanvas(generatePageTradePlan(data, totalPages));
-    pdf.addImage(canvas2.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 2: Trade Plan (Full Chart)
+    await addSnapshot(generatePageTradePlan(data, totalPages), '2_TradePlan');
 
-    // Page 3: Tokenomics
-    pdf.addPage();
-    const canvas3 = await renderPageToCanvas(generatePageTokenomics(data, totalPages));
-    pdf.addImage(canvas3.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 3: Tokenomics
+    await addSnapshot(generatePageTokenomics(data, totalPages), '3_Tokenomics');
 
-    // Page 4: Steps 1-2 (Market Pulse + Asset Scanner)
-    pdf.addPage();
-    const canvas4 = await renderPageToCanvas(generatePageSteps12(data, totalPages));
-    pdf.addImage(canvas4.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 4: Steps 1-2 (Market Pulse + Asset Scanner)
+    await addSnapshot(generatePageSteps12(data, totalPages), '4_MarketAsset');
 
-    // Page 5: Steps 3-4 (Safety Check + Timing)
-    pdf.addPage();
-    const canvas5 = await renderPageToCanvas(generatePageSteps34(data, totalPages));
-    pdf.addImage(canvas5.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 5: Steps 3-4 (Safety Check + Timing)
+    await addSnapshot(generatePageSteps34(data, totalPages), '5_SafetyTiming');
 
-    // Page 6: Steps 5-6 (Trade Plan Details + Trap Check)
-    pdf.addPage();
-    const canvas6 = await renderPageToCanvas(generatePageSteps56(data, totalPages));
-    pdf.addImage(canvas6.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 6: Steps 5-6 (Trade Plan Details + Trap Check)
+    await addSnapshot(generatePageSteps56(data, totalPages), '6_PlanTrap');
 
-    // Page 7: Final Verdict
-    pdf.addPage();
-    const canvas7 = await renderPageToCanvas(generatePageVerdict(data, totalPages));
-    pdf.addImage(canvas7.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Snapshot 7: Final Verdict
+    await addSnapshot(generatePageVerdict(data, totalPages), '7_Verdict');
 
-    // Page 8: RAG Intelligence Layer (optional - only if RAG enrichment data exists)
+    // Snapshot 8: RAG Intelligence Layer (optional)
     if (hasRAG) {
-      pdf.addPage();
-      const canvas8 = await renderPageToCanvas(generatePageRAG(data, totalPages));
-      pdf.addImage(canvas8.toDataURL('image/png'), 'PNG', 0, 0, pdfWidth, pdfHeight);
+      await addSnapshot(generatePageRAG(data, totalPages), '8_RAG');
     }
 
-    const fileName = `TraderPath_${data.symbol}${tradeType ? `_${tradeType}` : ''}_${new Date().toISOString().split('T')[0]}.pdf`;
-    const pdfBase64 = pdf.output('datauristring').split(',')[1];
-    pdf.save(fileName);
-
-    return { base64: pdfBase64, fileName };
+    return { snapshots };
   } catch (error) {
-    console.error('[PDF] Generation failed:', error);
-    throw new Error(`PDF generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('[Snapshot] Generation failed:', error);
+    throw new Error(`Snapshot generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

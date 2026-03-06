@@ -18,29 +18,24 @@
 export type TradeType = 'scalping' | 'dayTrade' | 'swing';
 
 /**
- * Map timeframe interval to appropriate trade type
- * Used when frontend sends interval instead of tradeType
+ * Map timeframe interval to appropriate trade type.
+ * Only the 6 standardised API timeframes are handled.
  *
  * Mapping:
- * - Scalping (1000 candles): 5m, 15m
- * - Day Trade (500 candles): 30m, 1h, 2h, 4h
- * - Swing Trade (250 candles): 1d, 1W
+ * - Scalping  (1000 candles): 5m, 15m
+ * - Day Trade (500 candles):  30m, 1h, 4h
+ * - Swing     (250 candles):  1d
  */
 export function getTradeTypeFromInterval(interval: string): TradeType {
   switch (interval) {
-    case '1m':
     case '5m':
     case '15m':
       return 'scalping';
     case '30m':
     case '1h':
-    case '2h':
     case '4h':
       return 'dayTrade';
     case '1d':
-    case '1D':
-    case '1w':
-    case '1W':
       return 'swing';
     default:
       return 'dayTrade'; // Default to dayTrade for unknown intervals
@@ -83,6 +78,9 @@ export type AnalysisStep =
   | 'trapCheck'      // Step 6: Trap Detection
   | 'verdict';       // Step 7: Final Decision
 
+// Internal timeframe type for multi-TF analysis configs (secondary/confirmation fetches).
+// API-facing validation uses the Timeframe enum in timeframe.enum.ts (6 values, no 1w).
+// Includes '1m' for scalping primary analysis timeframes.
 export type Timeframe = '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '1d' | '1w';
 
 export type IndicatorCategory = 'trend' | 'momentum' | 'volatility' | 'volume' | 'pattern' | 'advanced';

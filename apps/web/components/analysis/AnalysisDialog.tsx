@@ -21,7 +21,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { getAuthToken, getApiUrl } from '../../lib/api';
+import { getAuthToken, getApiUrl, authFetch } from '../../lib/api';
 import { CREDIT_COSTS } from '@/lib/types';
 import { useCreditNotification } from '../../contexts/CreditNotificationContext';
 import { CoinIcon } from '../common/CoinIcon';
@@ -289,23 +289,22 @@ function MLConfirmationResult({ data }: { data: MLConfirmationData }) {
   );
 }
 
-type Timeframe = '5m' | '15m' | '30m' | '1h' | '2h' | '4h' | '1d' | '1W';
+// 6 standard timeframes — 2h and 1W removed per backend enum standardization
+type Timeframe = '5m' | '15m' | '30m' | '1h' | '4h' | '1d';
 type TradeType = 'scalping' | 'dayTrade' | 'swing';
-type DialogStep = 'analyzing' | 'results';
+type DialogStep = 'analyzing' | 'results' | 'duplicate_warning';
 
 // Timeframe to trade type mapping
 // - Scalping (1000 candles): 5m, 15m
-// - Day Trade (500 candles): 30m, 1h, 2h, 4h
-// - Swing Trade (250 candles): 1d, 1W
+// - Day Trade (500 candles): 30m, 1h, 4h
+// - Swing Trade (250 candles): 1d
 const TIMEFRAME_TO_TRADE_TYPE: Record<Timeframe, TradeType> = {
   '5m': 'scalping',
   '15m': 'scalping',
   '30m': 'dayTrade',
   '1h': 'dayTrade',
-  '2h': 'dayTrade',
   '4h': 'dayTrade',
   '1d': 'swing',
-  '1W': 'swing',
 };
 
 interface CapitalFlowContextPayload {
@@ -328,6 +327,7 @@ interface AnalysisDialogProps {
   coinName: string;
   timeframe: Timeframe;
   onComplete?: () => void;
+  onReportReady?: (analysisId: string) => void;
   capitalFlowContext?: CapitalFlowContextPayload;
 }
 
@@ -370,6 +370,7 @@ export function AnalysisDialog({
   coinName,
   timeframe,
   onComplete,
+  onReportReady,
   capitalFlowContext,
 }: AnalysisDialogProps) {
   // Derive trade type from timeframe
@@ -389,6 +390,13 @@ export function AnalysisDialog({
   const [error, setError] = useState<string | null>(null);
   const [reportSaved, setReportSaved] = useState(false);
   const [savedAnalysisId, setSavedAnalysisId] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<{
+    message: string;
+    existingId: string;
+    minutesAgo: number;
+    score: number;
+  } | null>(null);
+  const forceAnalysisRef = useRef(false);
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const saveAttemptedRef = useRef(false);
   const pdfGeneratedRef = useRef(false);
@@ -408,6 +416,8 @@ export function AnalysisDialog({
       setReportSaved(false);
       setSavedAnalysisId(null);
       setPdfGenerating(false);
+      setDuplicateWarning(null);
+      forceAnalysisRef.current = false;
       saveAttemptedRef.current = false;
       pdfGeneratedRef.current = false;
       analysisStartedRef.current = false;
@@ -465,6 +475,7 @@ export function AnalysisDialog({
         tradePlan: results[6],
         verdict: results[7],
         mlisConfirmation: results[8] || null,
+        ragEnrichment: results[9] || null,
         indicatorDetails: (results[2] as { indicatorDetails?: unknown })?.indicatorDetails || (results[3] as { indicatorDetails?: unknown })?.indicatorDetails,
       };
 
@@ -488,18 +499,19 @@ export function AnalysisDialog({
       });
 
       if (response.ok) {
-        const responseData = await response.json();
+        await response.json();
         setReportSaved(true);
-        if (responseData?.data?.analysisId) {
-          setSavedAnalysisId(responseData.data.analysisId);
-        } else if (reportAnalysisId) {
+        // Only set savedAnalysisId if not already set from /api/analysis/full response
+        // The reports endpoint may return a report ID (not analysis ID), which would
+        // cause the report drawer to fetch a non-existent analysis
+        if (!savedAnalysisId) {
           setSavedAnalysisId(reportAnalysisId);
         }
       }
     } catch (error) {
       console.error('Failed to auto-save report:', error);
     }
-  }, [completedSteps.length, results, symbol, reportSaved, tradeType, timeframe]);
+  }, [completedSteps.length, results, symbol, reportSaved, savedAnalysisId, tradeType, timeframe]);
 
   // Auto-save when 7 steps complete (step 8 ML confirmation doesn't block saving)
   useEffect(() => {
@@ -508,53 +520,27 @@ export function AnalysisDialog({
     }
   }, [completedSteps.length, saveReportToDatabase]);
 
-  // Auto-redirect to analysis details after celebration modal
-  // Wait for celebration modal to display (1.5s delay + 4s display = 5.5s total)
+  // After report saved: wait for celebration animation then auto-open report page
   useEffect(() => {
     if (reportSaved && savedAnalysisId && !pdfGeneratedRef.current) {
       pdfGeneratedRef.current = true;
       setPdfGenerating(true);
 
-      // Wait for celebration modal to finish before redirecting
-      // Celebration shows after 1.5s and displays for ~4s
+      // Wait for celebration modal to finish before navigating
       const celebrationWaitTime = 5500; // 1500ms delay + 4000ms display time
 
-      const verifyAndRedirect = async () => {
-        // First wait for celebration modal to finish
-        await new Promise(resolve => setTimeout(resolve, celebrationWaitTime));
-
-        const maxAttempts = 5;
-        const delayMs = 500; // 500ms between attempts (faster polling after celebration)
-
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          try {
-            const token = await getAuthToken();
-            const response = await fetch(getApiUrl(`/api/analysis/${savedAnalysisId}`), {
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
-            });
-
-            if (response.ok) {
-              // Analysis found in database, redirect to details page
-              onClose();
-              router.push(`/analyze/details/${savedAnalysisId}`);
-              return;
-            }
-          } catch {
-            // Ignore errors, keep polling
-          }
-
-          // Wait before next attempt
-          await new Promise(resolve => setTimeout(resolve, delayMs));
-        }
-
-        // If still not found after max attempts, redirect anyway (fallback)
+      const timer = setTimeout(() => {
         onClose();
-        router.push(`/analyze/details/${savedAnalysisId}`);
-      };
+        if (onReportReady) {
+          onReportReady(savedAnalysisId);
+        } else {
+          router.push(`/analyze/details/${savedAnalysisId}`);
+        }
+      }, celebrationWaitTime);
 
-      verifyAndRedirect();
+      return () => clearTimeout(timer);
     }
-  }, [reportSaved, savedAnalysisId, router, onClose]);
+  }, [reportSaved, savedAnalysisId, router, onClose, onReportReady]);
 
   // Run full analysis
   const handleStartAnalysis = async () => {
@@ -565,7 +551,9 @@ export function AnalysisDialog({
 
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(getApiUrl('/api/analysis/full'), {
+      const forceParam = forceAnalysisRef.current ? '?force=true' : '';
+      forceAnalysisRef.current = false;
+      const response = await fetch(getApiUrl(`/api/analysis/full${forceParam}`), {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -586,11 +574,39 @@ export function AnalysisDialog({
       }
 
       if (!response.ok) {
-        if (response.status === 402) {
-          notifyInsufficientCredits(25, data.data?.currentBalance || 0);
-          throw new Error('Insufficient credits (25 required). Please purchase more credits.');
+        // Handle duplicate analysis warning (409)
+        if (response.status === 409 && data.error?.code === 'RECENT_ANALYSIS_EXISTS') {
+          setIsRunning(false);
+          setDuplicateWarning({
+            message: data.error.message,
+            existingId: data.error.existingAnalysisId,
+            minutesAgo: data.error.analyzedMinutesAgo,
+            score: data.error.score,
+          });
+          setDialogStep('duplicate_warning');
+          return;
         }
-        throw new Error(data.error?.message || 'Full analysis failed');
+
+        if (response.status === 402) {
+          const errorCode = data.error?.code;
+
+          if (errorCode === 'DAILY_PASS_REQUIRED') {
+            // Do NOT auto-purchase - user must purchase the pass explicitly
+            const currentBalance = data.error?.currentBalance || 0;
+            notifyInsufficientCredits(100, currentBalance);
+            throw new Error('Daily Analysis Pass required (100 credits). Please go back and purchase a pass first.');
+          } else if (errorCode === 'DAILY_LIMIT_REACHED') {
+            throw new Error('Daily analysis limit reached (10/10). Your pass will reset at midnight UTC.');
+          } else if (errorCode === 'INSUFFICIENT_CREDITS') {
+            const currentBalance = data.error?.currentBalance || 0;
+            notifyInsufficientCredits(data.error?.required || 100, currentBalance);
+            throw new Error(data.error?.message || 'Insufficient credits. Please purchase more credits.');
+          } else {
+            throw new Error(data.error?.message || 'Analysis failed. Please try again.');
+          }
+        } else {
+          throw new Error(data.error?.message || 'Full analysis failed');
+        }
       }
 
       const analysisData = data.data;
@@ -637,6 +653,7 @@ export function AnalysisDialog({
         6: steps.tradePlan || {},
         7: { ...steps.verdict, preliminaryVerdict: steps.preliminaryVerdict },
         8: analysisData.mlisConfirmation || null, // Step 8: ML Confirmation
+        9: analysisData.ragEnrichment || null, // Step 9: RAG Intelligence Layer
       };
 
       // Progressive reveal: show each step completing one-by-one
@@ -653,6 +670,12 @@ export function AnalysisDialog({
         setActiveStep(stepId);
         setResults(prev => ({ ...prev, [stepId]: allResults[stepId] }));
         setCompletedSteps(completedIds.slice(0, i + 1));
+      }
+
+      // Store RAG enrichment data (step 9) without progressive reveal
+      // so it's available when saveReportToDatabase fires
+      if (allResults[9]) {
+        setResults(prev => ({ ...prev, 9: allResults[9] }));
       }
 
       // Small pause on the last step so user sees completion
@@ -705,7 +728,17 @@ export function AnalysisDialog({
     && !normalizedVerdict.includes('wait') && !normalizedVerdict.includes('avoid') && !normalizedVerdict.includes('sell');
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 isolate" role="dialog" aria-modal="true" aria-labelledby="analysis-dialog-title">
+    <div
+      className={cn(
+        'fixed inset-0 z-[100] isolate',
+        dialogStep === 'results'
+          ? 'flex items-end sm:items-stretch sm:justify-end'
+          : 'flex items-center justify-center p-4 sm:p-6'
+      )}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="analysis-dialog-title"
+    >
       {/* Accessible title for screen readers */}
       <h2 id="analysis-dialog-title" className="sr-only">Analysis Results</h2>
       {/* Backdrop with blur */}
@@ -714,8 +747,13 @@ export function AnalysisDialog({
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-white/10 bg-[#0a0f1a] animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+      {/* Container: centered modal during analysis, drawer for results */}
+      <div className={cn(
+        'relative overflow-hidden shadow-2xl border border-white/10 bg-[#0a0f1a] flex flex-col transition-all duration-300',
+        dialogStep === 'results'
+          ? 'w-full sm:w-[520px] sm:max-w-[50vw] max-h-[85vh] sm:max-h-full sm:h-full rounded-t-2xl sm:rounded-t-none sm:rounded-l-2xl animate-in slide-in-from-bottom sm:slide-in-from-right duration-300'
+          : 'w-full max-w-2xl max-h-[90vh] rounded-2xl sm:rounded-3xl animate-in fade-in zoom-in-95 duration-200'
+      )}>
         {/* Animated background gradient orbs */}
         <div className="absolute inset-0 overflow-hidden rounded-2xl sm:rounded-3xl pointer-events-none">
           <div
@@ -786,6 +824,46 @@ export function AnalysisDialog({
 
         {/* Content */}
         <div className="relative flex-1 overflow-y-auto p-5 sm:p-6">
+          {/* Duplicate Warning */}
+          {dialogStep === 'duplicate_warning' && duplicateWarning && (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-4">
+                <AlertTriangle className="w-8 h-8 text-amber-500" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                Recent Analysis Found
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mb-2">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">{symbol}</span> was analyzed on the <span className="font-semibold text-gray-700 dark:text-gray-300">{timeframe}</span> timeframe <span className="font-semibold text-amber-600 dark:text-amber-400">{duplicateWarning.minutesAgo} minutes ago</span>.
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-6">
+                Score: {duplicateWarning.score.toFixed(1)}/10 — Running again will use your daily pass.
+              </p>
+              <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
+                <button
+                  onClick={() => {
+                    onClose();
+                    router.push(`/analyze/details/${duplicateWarning.existingId}`);
+                  }}
+                  className="px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  View Existing
+                </button>
+                <button
+                  onClick={() => {
+                    forceAnalysisRef.current = true;
+                    setDuplicateWarning(null);
+                    setDialogStep('analyzing');
+                    analysisStartedRef.current = false;
+                  }}
+                  className="px-4 py-2.5 text-sm font-medium rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors"
+                >
+                  Analyze Again
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Analyzing */}
           {dialogStep === 'analyzing' && (
             <div className="space-y-6">
@@ -967,7 +1045,13 @@ export function AnalysisDialog({
                       {activeStep === 5 && <TrapCheck data={results[5]} symbol={symbol} />}
                       {activeStep === 6 && (
                         results[6] ? (
-                          <TradePlan data={results[6]} symbol={symbol} />
+                          <TradePlan
+                            data={results[6]}
+                            symbol={symbol}
+                            interval={timeframe}
+                            fibonacciLevels={results[4]?.fibonacci?.levels}
+                            elliottWave={results[2]?.elliottWave}
+                          />
                         ) : (
                           <div
                             className="p-4 rounded-xl text-center"
@@ -984,7 +1068,7 @@ export function AnalysisDialog({
                           </div>
                         )
                       )}
-                      {activeStep === 7 && <FinalVerdict data={results[7]} symbol={symbol} allResults={results} />}
+                      {activeStep === 7 && <FinalVerdict data={results[7]} symbol={symbol} allResults={results} interval={timeframe} />}
                       {activeStep === 8 && results[8] && (
                         <MLConfirmationResult data={results[8]} />
                       )}

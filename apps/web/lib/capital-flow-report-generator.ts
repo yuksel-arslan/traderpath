@@ -1,6 +1,6 @@
 // ===========================================
 // Capital Flow Professional Report Generator
-// 2026 Professional PDF & Email Report System
+// 2026 Professional PDF Report System
 // ===========================================
 
 import { jsPDF } from 'jspdf';
@@ -617,7 +617,7 @@ export function generateCapitalFlowEmailHTML(data: CapitalFlowData): string {
     <!-- CTA -->
     <tr>
       <td style="padding: 0 25px 25px 25px; text-align: center;">
-        <a href="https://traderpath.io/capital-flow" style="display: inline-block; background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%); color: #FFFFFF; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-size: 14px; font-weight: 600;">View Live Dashboard →</a>
+        <a href="https://traderpath.io/flow" style="display: inline-block; background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%); color: #FFFFFF; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-size: 14px; font-weight: 600;">View Live Dashboard →</a>
       </td>
     </tr>
 

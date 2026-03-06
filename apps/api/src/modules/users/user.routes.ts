@@ -25,7 +25,7 @@ export default async function userRoutes(app: FastifyInstance) {
   app.get('/profile', async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.user!.id;
 
-    const [user, analysisCount, achievementCount, referralCount] = await Promise.all([
+    const [user, analysisCount, achievementCount, referralCount, successfulSignals] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
         include: { creditBalance: true },
@@ -33,6 +33,9 @@ export default async function userRoutes(app: FastifyInstance) {
       prisma.analysis.count({ where: { userId } }),
       prisma.userAchievement.count({ where: { userId, isUnlocked: true } }),
       prisma.referral.count({ where: { referrerId: userId } }),
+      prisma.analysis.count({
+        where: { userId, outcome: { in: ['tp1_hit', 'tp2_hit', 'tp3_hit'] } },
+      }),
     ]);
 
     if (!user) {
@@ -43,7 +46,7 @@ export default async function userRoutes(app: FastifyInstance) {
     }
 
     // Calculate level info
-    const { LEVEL_THRESHOLDS } = await import('@traderpath/types');
+    const { LEVEL_THRESHOLDS } = await import('../../types');
     const matchingLevels = LEVEL_THRESHOLDS.filter((l) => user.xp >= l.xp);
     const currentLevel = matchingLevels[matchingLevels.length - 1] || LEVEL_THRESHOLDS[0];
     const nextLevel = LEVEL_THRESHOLDS.find((l) => l.xp > user.xp);
@@ -65,7 +68,7 @@ export default async function userRoutes(app: FastifyInstance) {
         },
         stats: {
           totalAnalyses: analysisCount,
-          successfulSignals: 0, // TODO: Track this
+          successfulSignals,
           achievementsCount: achievementCount,
           referralsCount: referralCount,
         },

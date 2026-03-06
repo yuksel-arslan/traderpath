@@ -4,12 +4,7 @@
 
 ### Her Commit Öncesi:
 1. Bu dosyayı kontrol et
-2. Yaptığın değişiklik bir fix ise → "Çözülen Bug'lar" tablosuna HEMEN ekle
-3. Eklemeden commit YAPMA
-
-### Her Session Sonunda:
-1. "Son Güncellemeler"e bugünün tarihiyle özet yaz
-2. Yazmadan session'ı KAPATMA
+2. Kurallara uygunluğu doğrula
 
 > ⚠️ Bu kuralları asla atlama.
 
@@ -23,80 +18,6 @@
 - Font: Inter veya Geist Sans (Google Fonts'tan)
 - Mobile-first yaklaşım: `sm:`, `md:`, `lg:` sırasıyla
 
-### 🎨 TASARIM SİSTEMİ: Railway/Linear Minimal (ZORUNLU)
-
-> **Referans**: Railway Project Settings sayfası tarzı — sade, temiz, profesyonel SaaS.
-> **Felsefe**: "Az çoktur." Dekoratif elementler yerine içerik ön planda.
-
-#### Arka Plan & Renkler
-- **Arka plan**: `bg-white dark:bg-[#0A0A0A]` — saf beyaz/siyah, gradient yok
-- **Kart arka planı**: `bg-white dark:bg-[#111111]` — şeffaflık/glassmorphism YOK
-- **Border**: `border border-gray-200 dark:border-gray-800` — ince, subtle
-- **Accent renk**: Tek bir vurgu rengi: `teal-500` (#14B8A6) — sadece CTA butonlar ve aktif state
-- **Metin**: `text-gray-900 dark:text-gray-100` (başlık), `text-gray-600 dark:text-gray-400` (açıklama)
-- **Negatif**: `text-red-500`, **Pozitif**: `text-green-500` — sadece veri gösteriminde
-
-#### Tipografi
-- **Font**: `font-sans` (Inter) — tüm sayfada tek font
-- **Başlık**: `text-2xl font-semibold` — büyük, bold değil semibold
-- **Alt başlık**: `text-sm text-gray-500` — küçük, soluk
-- **Veri/Sayı**: `font-mono` — sadece fiyat, skor gibi numerik değerlerde
-- **Label**: `text-sm font-medium text-gray-700 dark:text-gray-300`
-
-#### Layout
-- **Max genişlik**: `max-w-4xl mx-auto` — içerik dar ve ortalı
-- **Spacing**: `space-y-8` bölümler arası, `space-y-4` bölüm içi
-- **Padding**: `p-6` kart içi, `py-8 px-4 sm:px-6` sayfa kenar boşlukları
-- **Kart border radius**: `rounded-lg` — `rounded-2xl` değil, `rounded-xl` değil
-
-#### Kaldırılacaklar (YASAK)
-- ❌ Gradient orbs (arka plan küreleri)
-- ❌ Grain/noise texture overlay
-- ❌ Glassmorphism (backdrop-blur, bg-white/5)
-- ❌ Neon glow efektleri
-- ❌ Marquee/kayan yazı
-- ❌ Kinetic typography
-- ❌ Animasyonlu gradient text (başlıklar düz renk olacak)
-- ❌ `bg-white/5`, `bg-white/10` — şeffaf arka planlar
-- ❌ `backdrop-blur-md`, `backdrop-blur-xl`
-- ❌ `shadow-xl`, `shadow-2xl` — maksimum `shadow-sm`
-- ❌ Pulse/ping/bounce animasyonları (loading spinner hariç)
-
-#### İzin Verilenler
-- ✅ Hover'da subtle border renk değişimi: `hover:border-gray-300`
-- ✅ Transition: `transition-colors duration-150`
-- ✅ Loading spinner: `animate-spin`
-- ✅ `shadow-sm` — sadece dropdown/modal'larda
-- ✅ Accent renk CTA butonlarında: `bg-teal-500 hover:bg-teal-600 text-white`
-- ✅ Divider: `border-t border-gray-200 dark:border-gray-800`
-- ✅ Badge: `text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600`
-
-#### Kart Yapısı (Standart)
-```html
-<div class="border border-gray-200 dark:border-gray-800 rounded-lg p-6 bg-white dark:bg-[#111111]">
-  <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Başlık</h3>
-  <p class="text-sm text-gray-500 mt-1">Açıklama</p>
-  <!-- İçerik -->
-</div>
-```
-
-#### Buton Stilleri
-```html
-<!-- Primary CTA -->
-<button class="bg-teal-500 hover:bg-teal-600 text-white text-sm font-medium px-4 py-2 rounded-md transition-colors">
-  Update
-</button>
-<!-- Secondary -->
-<button class="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium px-4 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-  Cancel
-</button>
-```
-
-#### Input Stilleri
-```html
-<input class="w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-[#111111] text-gray-900 dark:text-gray-100 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition-colors" />
-```
-
 ### Teknik
 - Python 3.11 syntax kullan
 - Node.js 22+ features (ES modules default)
@@ -105,35 +26,26 @@
 
 ### Veri Mimarisi
 - **Analysis tablosu**: Kullanıcının yaptığı analizler (totalScore, outcome, step results)
-- **Report tablosu**: Kullanıcı raporları (PDF export vb. için)
+- **Report tablosu**: Kullanıcı raporları (Snapshot PNG olarak Telegram/Discord'a gönderim)
 - **TÜM ANALİZ İSTATİSTİKLERİ → Analysis tablosundan** (platform-stats, statistics vb.)
 - Report tablosu analiz istatistikleri için KULLANILMAZ
 - Platform accuracy = TP hits / (TP hits + SL hits) from Analysis.outcome
 - **Asla karıştırma!** Report, Analysis'in sonucudur, istatistik kaynağı değil
 
-### Piyasa Veri Kaynakları (ZORUNLU)
-| Asset Class | Veri Kaynağı | Not |
-|-------------|--------------|-----|
-| **Crypto** | Binance API | BTC, ETH, SOL vb. tüm kripto paralar |
-| **Stocks** | Yahoo Finance | AAPL, MSFT, SPY, QQQ vb. hisse senetleri |
-| **Metals** | Yahoo Finance | GLD, SLV, IAU, XAUUSD vb. değerli metaller |
-| **Bonds** | Yahoo Finance | TLT, IEF, BND vb. tahvil ETF'leri |
-
-- **Default timeframe: 1D** (ETF'ler ve hisse senetleri için intraday veri sınırlı olabilir)
-- Multi-asset data provider: `apps/api/src/modules/analysis/providers/multi-asset-data-provider.ts`
-- Chart endpoint: `GET /api/analysis/chart/candles?symbol=X&interval=1d&limit=100`
-
 ### Analiz ve Rapor Kuralları (ZORUNLU)
 - **Analiz çok detaylı yapılacak**: Tüm 40+ enstrüman/indikatör kullanılacak
 - **Sadece 2 rapor tipi var** (başka tip ekleme!):
 
-| Rapor Tipi | İçerik | Sayfa |
-|------------|--------|-------|
-| **Executive Summary** | 7 aşama sonucu + işlem planı (kısa, öz) | 6 sayfa |
-| **Detailed Analysis Report** | Her türlü detay, tüm indikatör grafikleri | 10+ sayfa |
+| Rapor Tipi | İçerik | Format |
+|------------|--------|--------|
+| **Executive Summary** | 7 aşama sonucu + işlem planı (kısa, öz) | 3-4 Snapshot PNG |
+| **Detailed Analysis Report** | Her türlü detay, tüm indikatör grafikleri | 6-8 Snapshot PNG |
 
 - Executive Summary: Hızlı karar için özet
 - Detailed Analysis Report: Derinlemesine inceleme için tam detay
+- **Format: Snapshot PNG** (Puppeteer screenshot, pixel-perfect Chrome rendering)
+- **Dağıtım: Telegram + Discord** (inline görünüm, indirme gerektirmez)
+- **PDF KULLANILMAZ** — satır kayması ve font sorunları nedeniyle kaldırıldı
 
 ### Yapılmaması Gerekenler ❌
 - `!important` kullanma
@@ -142,229 +54,6 @@
 - Console.log'ları commit'leme
 - Hardcoded URL/secret kullanma
 - Prisma Decimal'i direkt JSON'a serialize etme (Number() ile çevir)
-
----
-
-## 🌍 CAPITAL FLOW PRENSİBİ (TEMEL FELSEFİ)
-
-> **"Para nereye akıyorsa potansiyel oradadır"**
-
-### Temel Yaklaşım
-
-TraderPath artık **Top-Down** yaklaşımla çalışır:
-
-```
-ESKİ (Bottom-Up):
-  Kullanıcı coin seçer → 7 adım analiz → Karar
-
-YENİ (Top-Down):
-  Global Likidite → Hangi Piyasa? → Hangi Sektör? → Hangi Asset? → Mikro Analiz
-```
-
-### Para Akış Hiyerarşisi
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    LAYER 1: GLOBAL LİKİDİTE                     │
-│         Fed Balance Sheet, M2 Money Supply, DXY, VIX            │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        ▼                     ▼                     ▼
-   ┌─────────┐          ┌─────────┐          ┌─────────┐
-   │ STOCKS  │          │  BONDS  │          │ CRYPTO  │
-   │ METALS  │          │         │          │         │
-   └────┬────┘          └────┬────┘          └────┬────┘
-        │                    │                    │
-   SPX, NDX              10Y, 2Y            Total MCap
-   XAU, XAG              Yield Curve        BTC Dominance
-                                                  │
-                                         ┌────────┴────────┐
-                                         ▼                 ▼
-                                      BTC/ETH          ALTCOINS
-                                                           │
-                                              ┌────────────┼────────────┐
-                                              ▼            ▼            ▼
-                                           DeFi        Layer2       Meme/AI
-```
-
-### Cevaplanması Gereken Sorular
-
-| Soru | Kaynak | Güncelleme |
-|------|--------|------------|
-| Para nereye akıyor? | Flow hızı ve yönü | Günlük |
-| Ne kadar hızla akıyor? | 7d/30d flow değişimi | Günlük |
-| Ne zamandır orada? | Faz tespiti (gün sayısı) | Günlük |
-| Ne kadar daha kalacak? | Tarihsel faz süreleri | Haftalık |
-| Sonra nereye gidecek? | Rotasyon pattern'leri | Haftalık |
-
-### Piyasa Fazları
-
-| Faz | Süre | Anlam | Aksiyon |
-|-----|------|-------|---------|
-| **EARLY** | 0-30 gün | Para yeni girmeye başladı | ✅ EN İYİ GİRİŞ |
-| **MID** | 30-60 gün | Trend olgunlaşıyor | ⚠️ Dikkatli giriş |
-| **LATE** | 60-90 gün | Trend yoruluyor | ⛔ Yeni giriş yapma |
-| **EXIT** | 90+ gün / tersine dönüş | Para çıkıyor | 🚫 ASLA GİRME |
-
-### Desteklenen Piyasalar
-
-| Piyasa | Veri Kaynağı | Analiz Tipi |
-|--------|--------------|-------------|
-| **Crypto** | Binance, CoinGecko, DefiLlama | Full 7-Step / MLIS |
-| **Stocks** | Yahoo Finance | Temel Trend Analizi |
-| **Bonds** | FRED API | Yield Curve, Flow |
-| **Metals** | Yahoo Finance | XAU/XAG Trend |
-
-### Flow Hesaplama Metrikleri
-
-```typescript
-interface MarketFlow {
-  market: 'crypto' | 'stocks' | 'bonds' | 'metals';
-
-  // Flow Metrikleri
-  flow7d: number;          // 7 günlük % değişim
-  flow30d: number;         // 30 günlük % değişim
-  flowVelocity: number;    // Hız (flow7d - önceki 7d)
-
-  // Faz Tespiti
-  phase: 'early' | 'mid' | 'late' | 'exit';
-  daysInPhase: number;
-  avgPhaseDuration: number; // Tarihsel ortalama
-
-  // Rotasyon Sinyali
-  rotationSignal: 'entering' | 'stable' | 'exiting' | null;
-  rotationTarget: string | null; // Örn: 'crypto', 'bonds'
-}
-```
-
-### Karar Ağacı (ZORUNLU)
-
-```
-1. Global Likidite Genişliyor mu? (Fed, M2)
-   ├── HAYIR → "Risk-off ortam, sadece BONDS/GOLD analiz et"
-   └── EVET → Devam
-
-2. DXY (Dolar) Zayıflıyor mu?
-   ├── HAYIR → "Risk varlıkları zayıf, dikkatli ol"
-   └── EVET → Devam
-
-3. Hangi Piyasaya Para Akıyor? (En yüksek flow)
-   ├── STOCKS → Stock analizi öner
-   ├── CRYPTO → Crypto analizi öner
-   ├── METALS → Gold/Silver analizi öner
-   └── BONDS → "Safe haven modu, bekle"
-
-4. Piyasa Hangi Fazda?
-   ├── EARLY → ✅ "Optimal giriş zamanı"
-   ├── MID → ⚠️ "Giriş yapılabilir, dikkatli"
-   ├── LATE → ⛔ "Yeni giriş önerilmez"
-   └── EXIT → 🚫 "Kesinlikle girme"
-
-5. Seçilen Piyasada Sektör Seçimi → Mikro Analiz
-```
-
-### API Endpoint'ler
-
-| Endpoint | Method | Açıklama | Maliyet |
-|----------|--------|----------|---------|
-| `/api/capital-flow` | GET | Tüm piyasalar flow özeti | FREE |
-| `/api/capital-flow/:market` | GET | Tek piyasa detay | FREE |
-| `/api/capital-flow/recommendation` | GET | Hangi piyasada fırsat var? | FREE |
-| `/api/capital-flow/rotation-history` | GET | Tarihsel rotasyon verileri | FREE |
-
-### Kod Lokasyonları
-
-| Servis | Dosya |
-|--------|-------|
-| Capital Flow Service | `apps/api/src/modules/capital-flow/capital-flow.service.ts` |
-| FRED API Integration | `apps/api/src/modules/capital-flow/providers/fred.provider.ts` |
-| Yahoo Finance Integration | `apps/api/src/modules/capital-flow/providers/yahoo.provider.ts` |
-| DefiLlama Integration | `apps/api/src/modules/capital-flow/providers/defillama.provider.ts` |
-| Flow Calculator | `apps/api/src/modules/capital-flow/flow-calculator.ts` |
-
-### ENV Variables
-
-```env
-# Capital Flow APIs
-FRED_API_KEY=           # Federal Reserve Economic Data
-ALPHA_VANTAGE_KEY=      # Stocks fallback (optional)
-```
-
----
-
-## 💰 DAILY PASS FİYATLANDIRMA MODELİ (2026-01-31)
-
-### Katmanlı Erişim Sistemi
-
-| Katman | Fiyat | İçerik | Limit |
-|--------|-------|--------|-------|
-| **Layer 1-2** | FREE | Global Likidite, Market Flow | Sınırsız |
-| **Layer 3** | 25 kredi/gün | Sector Activity | Sınırsız erişim |
-| **Layer 4** | 25 kredi/gün | AI Recommendations (BUY/SELL) | Sınırsız erişim |
-| **Asset Analysis** | 100 kredi/gün | 7-Step / MLIS Pro | Günlük max 10 analiz |
-
-> **Toplam:** 150 kredi/aktif gün (25 + 25 + 100)
-> **Not:** Sadece kullanıcının giriş yaptığı günler hesaba katılır.
-
-### Daily Pass Mantığı
-
-```typescript
-// Günlük Pass Konfigürasyonu
-DAILY_PASS_CONFIG = {
-  CAPITAL_FLOW_L3: {
-    cost: 25,           // Kredi
-    maxUsage: 1,        // Sınırsız erişim (tek pass)
-    expiresAt: 'EOD',   // Gece 00:00 UTC sıfırlanır
-  },
-  CAPITAL_FLOW_L4: {
-    cost: 25,           // Kredi
-    maxUsage: 1,        // Sınırsız erişim (tek pass)
-    expiresAt: 'EOD',   // Gece 00:00 UTC sıfırlanır
-  },
-  ASSET_ANALYSIS: {
-    cost: 100,          // Kredi
-    maxUsage: 10,       // Max 10 analiz/gün
-    expiresAt: 'EOD',   // Gece 00:00 UTC sıfırlanır
-  },
-}
-```
-
-### API Endpoint'ler
-
-| Endpoint | Method | Açıklama |
-|----------|--------|----------|
-| `/api/passes/status` | GET | Kullanıcının aktif pass'leri |
-| `/api/passes/purchase` | POST | Pass satın al |
-| `/api/passes/check/:type` | GET | Belirli pass tipini kontrol et |
-| `/api/passes/config` | GET | Pass fiyat konfigürasyonu |
-
-### Kod Lokasyonları
-
-| Dosya | Açıklama |
-|-------|----------|
-| `apps/api/src/modules/passes/daily-pass.service.ts` | Pass yönetim servisi |
-| `apps/api/src/modules/passes/daily-pass.routes.ts` | API routes |
-| `apps/api/prisma/schema.prisma` | DailyPass model |
-| `apps/web/app/(dashboard)/analyze/page.tsx` | Frontend pass UI |
-| `apps/web/app/(dashboard)/capital-flow/page.tsx` | Layer 4 paywall |
-
-### Maliyet Analizi (Aylık $200 API Bütçesi)
-
-```
-Günlük API Bütçesi: $200/30 = $6.67/gün
-
-Asset Analysis (100 kredi/gün, max 10 analiz):
-- Analiz başına API maliyeti: ~$0.05 (Gemini + Binance/Yahoo)
-- En kötü senaryo: 10 analiz × $0.05 = $0.50/kullanıcı/gün
-- Kar marjı: $5+ (100 kredi ≈ $10 değer)
-
-Capital Flow L4 (25 kredi/gün):
-- API maliyeti: ~$0.01/gün (cache + minimal API)
-- Kar marjı: %99+
-
-✅ Model, $200/ay bütçe ile sürdürülebilir
-```
 
 ---
 
@@ -440,11 +129,19 @@ Capital Flow L4 (25 kredi/gün):
 
 | Hak | Miktar | Ücretsiz Limit | Sonrası Maliyet | Takip Alanı |
 |-----|--------|----------------|-----------------|-------------|
-| AI Expert Sohbet | 3 | 3 soru/analiz | 5 kredi/soru | `Analysis.aiExpertQuestionsUsed` |
-| PDF İndirme | 2 | 2 indirme/analiz | 5 kredi/indirme | `Analysis.pdfDownloadsUsed` |
-| Email Gönderme | 2 | 2 email/analiz | 5 kredi/email | `Analysis.emailsSentUsed` |
-| Otomatik Özet Email | ∞ | Ücretsiz | - | Otomatik gönderilir |
+| AI Expert Sohbet | 5 | 5 soru/analiz (Analysis Subscription dahil) | Abonelik gerekli | `Analysis.aiExpertQuestionsUsed` |
+| Snapshot Rapor | Otomatik | Sınırsız | $0 | Telegram/Discord'a otomatik gönderim |
 
+> **Not:** Raporlar Snapshot PNG olarak Telegram ve Discord'a otomatik gönderilir (inline görünüm, indirme gerektirmez). PDF kaldırıldı. İşlem sonuçları (TP/SL hit) Telegram/Discord ile bildirilir. Auth emailleri (doğrulama, şifre sıfırlama) için Resend Free Tier kullanılır.
+
+### Haftalık Abonelik Planları (YENİ)
+
+| Plan | Fiyat | Kota | İçerik |
+|------|-------|------|--------|
+| **Intelligent Report Subscription** | $13.99/hafta | 7 rapor/hafta (1/gün) | Executive Summary veya Detailed Analysis, Snapshot PNG, Telegram+Discord delivery |
+| **Capital Flow & Asset Analysis Subscription** | $13.99/hafta | 7 analiz/hafta | Full analiz + 5 AI Expert soru/analiz, AI Concierge/Auto/Tailored |
+
+> **Not:** Planlar birbirinden bağımsızdır — kullanıcı birini seçer. Kota her hafta yenilenir. 3 ücretsiz analiz kayıt bonusu devam eder.
 ### Trade Type Completion Bonus (Otomatik)
 
 | Trade Type | Bonus Kredi | Açıklama |
@@ -454,12 +151,6 @@ Capital Flow L4 (25 kredi/gün):
 | Swing Trade | +1 kredi | Standart bonus |
 
 > **Not:** Bonus, analiz tamamlandığında otomatik olarak eklenir. `creditService.add()` ile `BONUS` tipinde kaydedilir.
-
-### Otomatik Bildirimler (Analiz Tamamlandığında)
-
-1. **Email Özeti** - `emailService.sendAnalysisSummary()` ile kullanıcının email'ine gönderilir
-2. **Telegram Bildirimi** - Bağlıysa `telegramChatId` üzerinden gönderilir
-3. **Discord Webhook** - Bağlıysa `discordWebhookUrl` üzerinden gönderilir
 
 ### Orchestration Akışı
 
@@ -477,15 +168,19 @@ Trade Type Bonus Eklenir:
     ├── Day Trade → +2 kredi
     └── Swing Trade → +1 kredi
     ↓
-Otomatik Bildirimler Gönderilir (fire & forget)
-    ├── Email Özeti → Kullanıcı email'i
-    ├── Telegram → telegramChatId (varsa)
-    └── Discord → discordWebhookUrl (varsa)
+Signal Auto-Publish (Confidence > 70% ve GO/COND_GO ise):
+    ├── Signal DB'ye kaydedilir
+    ├── Telegram kanalına yayınlanır (sadece Signal aboneleri)
+    └── Discord'a bildirim gönderilir (sadece Signal aboneleri)
+    ↓
+Snapshot Rapor Gönderimi:
+    ├── HTML template → Puppeteer screenshot (2x retina)
+    ├── Telegram sendPhoto (inline görünüm)
+    └── Discord webhook embed (inline görünüm)
     ↓
 Kullanıcı Hakları Aktif:
     ├── 3x AI Expert sohbet (ücretsiz)
-    ├── 2x PDF indirme (ücretsiz)
-    └── 2x Email gönderme (ücretsiz)
+    └── Snapshot rapor (otomatik, sınırsız)
 ```
 
 ### Kod Lokasyonları
@@ -494,10 +189,9 @@ Kullanıcı Hakları Aktif:
 |-----------|-------|-------|
 | Analiz oluşturma | `analysis.routes.ts` | 528-544 |
 | Trade type bonus | `analysis.routes.ts` | 549-562 |
-| Otomatik email | `analysis.routes.ts` | 564-596 |
+| Signal auto-publish | `analysis.routes.ts` | 1268-1421 |
 | AI Expert hak kontrolü | `ai-expert.routes.ts` | 186-358 |
-| PDF indirme hak kontrolü | `report.routes.ts` | 564-662 |
-| Email gönderme hak kontrolü | `report.routes.ts` | 1209-1328 |
+| Snapshot rapor gönderimi | `report.routes.ts` | 564-662 |
 
 ### Önemli Kurallar
 
@@ -690,11 +384,7 @@ Kullanıcı Hakları Aktif:
 | 2026-01-18 | Scroll Animations - IntersectionObserver ile görünürlük | Akıcı, profesyonel geçişler |
 | 2026-01-18 | Hover Animations - Scale, shadow, border efektleri | Etkileşimli, responsive |
 | 2026-01-18 | Timeframe Seçimi (15m, 1h, 4h, 1d) | Trade type yerine timeframe seçimi - daha sezgisel ve anlaşılır |
-| 2026-01-19 | PDF Rapor: Logo dikey düzen | Logo tek başına üstte, altında TraderPath markası - profesyonel görünüm |
-| 2026-01-19 | PDF Rapor: Dark grafik arka plan | #1a1a2e koyu arka plan - grafik görünürlüğü artırıldı |
-| 2026-01-19 | PDF Rapor: Tokenomics uyarı sayfası | Veri yoksa detaylı açıklama ve risk uyarısı gösteriliyor |
-| 2026-01-19 | PDF Rapor: 40+ indikatör özeti | Tüm kategoriler ve indikatörler detaylı gösteriliyor |
-| 2026-01-19 | PDF Rapor: Verdict tek sayfa | Analiz kararı sadece final sayfada - tekrar önlendi |
+| 2026-01-19 | ~~PDF Rapor kaldırıldı~~ | Satır kayması ve font sorunları — Snapshot PNG ile değiştirildi |
 | 2026-01-19 | Reports sayfası: Stats kutuları kaldırıldı | Report tablosu senkronize değil - Dashboard'dan bakılacak |
 | 2026-01-19 | Reports sayfası: 2026 trend tasarımı | Glassmorphism, gradient orbs, grain texture, modern filtreler |
 | 2026-01-19 | Reports sayfası: Teal/Coral kurumsal renkler | Tüm renkler kurumsal palette uygun (purple→teal, red→orange/coral) |
@@ -703,24 +393,81 @@ Kullanıcı Hakları Aktif:
 | 2026-01-20 | Recent Analyses: Verdict filtresi | All/GO/COND/WAIT/AVOID filtre butonları - hızlı analiz filtreleme |
 | 2026-01-20 | Mobile App Icon: Dark mode versiyonları | 512x512, dark bg (#0D1421), scale 2.0, rounded corners (96px), glow efekti |
 | 2026-01-20 | Mobile App Icon: Alternatif renk düzeni | Yeşil-kırmızı-yeşil-kırmızı (çapraz) vs orijinal (2 yeşil + 2 kırmızı) |
-| 2026-01-20 | PDF Rapor: Gerçek candlestick grafik | Son 50 mum OHLCV verisiyle SVG candlestick chart - yeşil/kırmızı mumlar, entry/SL/TP seviyeleri |
+| 2026-01-20 | Snapshot Rapor: Gerçek candlestick grafik | Son 50 mum OHLCV verisiyle SVG candlestick chart - yeşil/kırmızı mumlar, entry/SL/TP seviyeleri |
 | 2026-01-27 | Testimonials → Platform Metrics | Sahte yorumlar yerine gerçek API verileri - şeffaflık ve güvenilirlik |
 | 2026-01-27 | Feature 1 → AI-Powered Market Scanner | 7-Step Analysis Suite formatında, "Find Your Next Winning Trade" yerine |
 | 2026-01-27 | Real Results section Hero altına taşındı | Metrikler daha erken görünsün |
-| 2026-01-28 | Kutlama Modal: Confetti ve balon animasyonları | Kullanıcı ödül kazandığında mutlu etme - gamification |
-| 2026-01-28 | Kredi Bildirimi: Toast notification sistemi | Kredi harcama/kazanma anında kullanıcıyı bilgilendirme |
-| 2026-01-28 | Login sayfası: Tema uyumlu marketing paneli | Sol panel artık light/dark mode'a uygun görünüyor |
-| 2026-01-31 | Analyze sayfası: LAYER 4 minimalist tasarım | Karmaşık animasyonlar kaldırıldı, Capital Flow context eklendi, 4 adımlı akış |
-| 2026-01-31 | Dashboard: Platform + My Performance bölümleri | Capital Flow entegrasyonu, her layer için özet kartları, platform ve kişisel AI stats |
-| 2026-01-31 | Scheduled sayfası: Kurumsal stil tasarımı | Glassmorphism kartlar, gradient orbs, animasyonlu status badge'leri, progress bar, hover efektleri |
-| 2026-02-02 | Capital Flow: Dual-line Moving Average Sparklines | Gürültülü günlük veriler yerine 3d MA (ince, soluk) ve 7d MA (kalın, belirgin) ile daha düzgün, laminar akış gösterimi |
-| 2026-02-06 | Intelligence Dashboard: Funnel-Waterfall Layout | Mind-map yerine sol akış + sağ içerik yapısı - "From Charts to Clarity" sloganına uygun |
-| 2026-02-06 | Intelligence Dashboard: Default Trade Plan View | Varsayılan olarak Trade Plan gösterilir, üst katmanlar "kanıt" olarak sol panelde |
-| 2026-02-06 | Intelligence Dashboard: Performance Attribution Matrix | 4-layer katkı analizi (Capital Flow, Sector, Timing, ML) - "Explainable AI" |
-| 2026-02-06 | Analyze Page: Enforced Top-Down Flow (Step 0→A→B) | Capital Flow zorunlu, AI recommendation sonrası asset seçimi, corporate decision framework |
-| 2026-02-06 | Details Page: Top-Down Evidence Chain | L1-L4 + Analysis + ML Confirmation alignment durumu, "X/Y Aligned" badge |
-| 2026-02-07 | Nav Restructure: Top-Down Flow Order | Explore(L1-L4) → Analyze → Signals → Dashboard. Intelligence→Explore, Signals primary'ye terfi, Profile user menu'ye, Capital Flow ayrı sayfa kaldırıldı |
-| 2026-02-08 | Dashboard: Mobile-First Fintech Rebuild | Monolitik 1483 satır → 5 modüler dosya. SVG Arc Gauge, glassmorphism kartlar, accordion layout, yatay trade kartları, 48px touch targets |
+| 2026-02-26 | Dashboard: "Decision Engine Control Room" layout | Enterprise dashboard → intelligence-first tasarım, PrimaryDecision + ProfitTracker + FlowChain |
+| 2026-02-26 | Dashboard: ScoreRing, PulseDot, Sparkline bileşenleri | Paylaşılan intelligence UI primitives - animasyonlu SVG |
+| 2026-02-26 | Dashboard: AgentPanel (ARIA/NEXUS/ORACLE/SENTINEL) | 4 AI agent durum göstergesi, PulseDot + ScoreRing |
+| 2026-02-26 | Dashboard: FlowChain pipeline (Capital→Sector→Asset→Plan) | Akış bazlı karar zinciri görselleştirme |
+| 2026-02-26 | Analyze: Sol panel konfigürasyon + sağ panel pipeline | İki kolonlu layout, MarketContext + TrendingAssets sol, pipeline + recent sağ |
+| 2026-02-26 | Analyze: AnalysisPipelineCard 3 adımlı görsel | Shimmer animasyonlu adım ilerlemesi, Daily Pass sayacı |
+| 2026-02-26 | Analyze: RecentAnalysisRow genişletilebilir satır | ScoreRing + VerdictBadge + Entry/SL/TP detay kartları |
+| 2026-02-26 | Analyze: Verdict filtresi (All/GO/COND/AVOID) | Hızlı filtreleme, yeşil/mavi/kırmızı renk kodlu |
+| 2026-02-26 | Renk paleti: #00F5A0 bullish, #FF4757 bearish, #00D4FF accent | Tutarlı intelligence renk sistemi |
+| 2026-02-26 | Font: JetBrains Mono (sayılar) + Inter (metin) | Monospace sayılar için okunabilirlik, sans-serif metin için modernlik |
+| 2026-02-26 | Terminal: Monolitik 2700 satır → 9 ayrı bileşen dosyası | Modülerlik, bakım kolaylığı, yeniden kullanılabilirlik |
+| 2026-02-26 | Terminal: TerminalSummaryBar her bölümün üstünde | Tek cümle özet + skor + durum göstergesi - hızlı bilgi erişimi |
+| 2026-02-26 | Terminal: Sidebar SELECTED bölümü ScoreRing + VerdictBadge | 32px ScoreRing + fiyat + change + verdict badge - zenginleştirilmiş seçim bilgisi |
+| 2026-02-26 | Terminal: L1 GlobalLiquidity Sparkline'lı macro kartlar | Her kart: label + büyük değer + change% + mini sparkline - trend görünürlüğü |
+| 2026-02-26 | Terminal: L2 MarketFlow phase badge'leri renkli | EARLY=#00F5A0, MID=#FFB800, LATE=#A855F7, EXIT=#FF4757 + flow strength bar |
+| 2026-02-26 | Terminal: RotationMatrix ScoreRing + phase timeline | 64px ScoreRing'ler + FlowArrow bağlantıları + yatay phase timeline bar |
+| 2026-02-26 | Terminal: L3 SectorActivity heatmap + list view toggle | Heatmap: renk kodlu kutular (change%'ye göre). List: flow bar'lı detaylı satırlar |
+| 2026-02-26 | Terminal: L4 AIRecommendation decision bar + gate check | PrimaryDecision tarzı regime bar + gate check list (yeşil/kırmızı sol border) + signal kartları |
+| 2026-02-26 | Terminal: AssetTable ScoreRing(28px) + verdict filter | Kompakt ScoreRing + VerdictBadge + Analyze/Chart action butonları + verdict filter tabs |
+| 2026-02-26 | Terminal: RunAnalysis tahmin + INP fix + duplicate fix | requestAnimationFrame ile INP <100ms, zaman/kredi tahmini, Quick Add duplicate filtreleme |
+| 2026-02-26 | Terminal: TradeVisualizer risk metrics + forecast panel | Confidence bar + mini forecast sparkline + Position Size/Max Loss/R:R risk metrikleri |
+| 2026-02-26 | Landing Page: 13-section content overhaul | Hero→Stats→Problem→Pipeline→7-Layer→Comparison→Preview→Performance→Services→Pricing→Social→CTA→Footer |
+| 2026-02-26 | Landing: ProblemSolution 3-column grid | Lagging Indicators / Information Overload / Invisible Capital Flows + SVG icons |
+| 2026-02-26 | Landing: Pipeline 3-step (Detect→Analyze→Act) | SVG flow arrows, color-coded steps, output descriptions |
+| 2026-02-26 | Landing: ComparisonTable (Typical vs TraderPath) | 5-row comparison, red X / green check visual indicators |
+| 2026-02-26 | Landing: LivePreview 4 platform cards (2x2) | Dashboard/Terminal/Analyzer/Trade Visualizer — screenshot slots + gradient placeholders, hover scale+glow |
+| 2026-02-26 | Landing: ThreeServices credit-based cards | Capital Flow (50 cr), 7-Step (100 cr), Best Opportunities (50 cr) |
+| 2026-02-26 | Landing: SocialProof trust metrics + tech stack | 200+ assets, 5 markets, 24/7 scanning, 309+ analyses + tech badges |
+| 2026-02-26 | Landing: PricingSection Free/Pro/Enterprise | Credit-based, no subscriptions, Popular badge on Pro tier |
+| 2026-02-26 | Landing: PerformanceChart metrics grid | Total Signals, Win Rate, Avg R:R, Max Drawdown + disclaimer |
+| 2026-02-26 | AnalysisDialog: Duplicate analysis warning | 4 saat içinde aynı asset+timeframe uyarısı, View Existing / Analyze Again butonları |
+| 2026-02-26 | AnalysisDialog: Results drawer format | Mobilde bottom-up (%85vh), desktopda sağdan sola (520px panel) |
+| 2026-02-26 | OpportunityRadar: CF-only filtering | Primary market önce, exit-phase ve negatif flow gizleniyor |
+| 2026-02-26 | AnimatedCounter: Landing Stats count-up | IntersectionObserver + rAF + easeOutCubic, viewport'a girince 0→değer animasyonu |
+| 2026-02-26 | LivePreview: SVG placeholder görseller + Next.js Image | 4 adet detaylı SVG placeholder (dashboard/terminal/analyzer/visualizer), aspect-video, lazy loading, onerror fallback |
+| 2026-02-26 | Header/Footer: bg-background ile sayfa rengi eşitleme | Navbar `bg-white/bg-[#0A0A0A]` → `bg-background`, Footer `bg-slate-50/bg-[#0B1121]` → `bg-background`, Dashboard header `bg-card/80` → `bg-background/80`, Dashboard footer `bg-card/50` → `bg-background` |
+| 2026-02-26 | Auth Layout: Marketing paneli kaldırıldı | Sol taraftaki %50 marketing paneli kaldırıldı, logo formun üstüne küçük (sm) yerleştirildi, tek kolonlu centered layout |
+| 2026-02-26 | LivePreview: Perspective Tilt 3D layout | Kartlar perspective(1200px) + rotateY(±3deg) ile açılı yerleşim, hover'da düzleşir + scale(1.03) + translateZ(20px), cubic-bezier geçiş |
+| 2026-02-27 | Auth Layout: Dynamic gradient arka plan | Dashboard bg-background eşleşmesi + 4 animasyonlu gradient orb (teal/coral) + grain texture overlay, light/dark mod desteği |
+| 2026-02-27 | Dashboard: System Performance → Platform-wide veri | ProfitTracker artık platform-performance-history API'den tüm kullanıcıların P/L verilerini gösteriyor |
+| 2026-02-27 | Dashboard: Performance → My Performance | Ortadaki PnLChart "My Performance" olarak yeniden adlandırıldı - kullanıcıya özel veri gösterir |
+| 2026-02-28 | Pricing: Kredi → Analiz Paket modeli | Kredi sistemi yerine analiz paketi: Explorer(5/$9.99), Trader(20/$29.99), Pro(50/$59.99), Elite(150/$149.99) |
+| 2026-02-28 | Pricing: Sinyal Servisi → Intelligence Reports | "Signal Service" → "Intelligence Reports" olarak yeniden markalaştırıldı, rapor + sinyal dahil |
+| 2026-02-28 | Pricing: Report Standard $29/mo, Pro $59/mo | Standard: 5 rapor/gün Crypto, Pro: 10 rapor/gün 4 piyasa, PDF + sinyal + outcome tracking |
+| 2026-02-28 | Pricing: Platform Subscriptions yeniden yapılandırma | Starter $29/mo (3/gün), Pro $59/mo (10/gün), Elite $99/mo (sınırsız) — analiz bazlı, kredi bazlı değil |
+| 2026-02-28 | Pricing: Kayıt bonusu 25 kredi → 3 analiz | Yeni kullanıcılar 3 ücretsiz analiz alıyor (kredi kartı gerekmez) |
+| 2026-02-28 | Pricing: Landing PricingSection 4 paket grid | Explorer/Trader/Pro/Elite kartları + "Every Analysis Includes" bölümü + Intelligence Reports callout |
+| 2026-02-28 | Pricing: /pricing sayfası 3 modlu tasarım | Analysis Packages / Intelligence Reports / Monthly Plans — tab toggle ile geçiş |
+| 2026-02-28 | Pricing: Value Comparison bölümü | Professional Analyst ($75-140) vs TraderPath ($0.88) karşılaştırma kartları |
+| 2026-02-28 | Pricing: FAQ bölümü eklendi | 6 sık sorulan soru — analiz nedir, süre dolumu, rapor servisi, piyasalar vb. |
+| 2026-02-28 | Rapor: PDF → Snapshot PNG geçişi | PDF kaldırıldı (satır kayması/font sorunları), Puppeteer screenshot ile pixel-perfect PNG |
+| 2026-02-28 | Rapor: Telegram/Discord inline gönderim | Snapshot PNG'ler Telegram sendPhoto + Discord webhook ile inline görüntülenir, indirme gerektirmez |
+| 2026-02-28 | Rapor: Executive Summary 3-4 PNG, Detailed 6-8 PNG | Bölüm bazlı snapshot: Header+Verdict, 7-Step Özet, Chart+Levels, İşlem Planı+Final |
+| 2026-02-28 | İletişim: WhatsApp kaldırıldı | Telegram + Discord + Resend Free yeterli, WhatsApp $50-150/ay tasarruf |
+| 2026-02-28 | Email: Resend Pro → Free Tier | Sadece auth emailleri (doğrulama, şifre sıfırlama) için Free Tier yeterli (3,000/ay) |
+| 2026-02-28 | Nav: Primary → Concierge, Dashboard, Analyzer, Terminal, Reports | Concierge öne çıktı, Analyze→Analyzer, Signals kaldırıldı |
+| 2026-02-28 | Nav: More dropdown → Price Alerts, Notifications, Methodology | Smart Alerts kaldırıldı (Notifications'a merge) |
+| 2026-02-28 | Signals sayfası kaldırıldı | Signal bildirimleri Notifications sayfasından SIGNAL filtresiyle görüntülenir |
+| 2026-02-28 | Smart Alerts → Notifications merge | ALERT tipi bildirimler artık L1-L4 layer, severity, market badge'leri gösteriyor |
+| 2026-02-28 | Notifications: Zenginleştirilmiş ALERT/SIGNAL kartları | ALERT: layer icon + severity badge + market + action. SIGNAL: direction + confidence badge |
+| 2026-02-28 | Analyzer: 3-tab layout (Auto / Tailored / Scheduled) | analyze/layout.tsx ile tab navigasyonu, Scheduled artık Analyzer'ın parçası |
+| 2026-02-28 | Analyzer: Scheduled /analyze/scheduled'a taşındı | More dropdown'dan kaldırıldı, Analyzer tab olarak erişilir |
+| 2026-02-28 | Pricing: Haftalık abonelik modeli | Eski karmaşık paketler (Explorer/Trader/Pro/Elite + Report Standard/Pro + Platform Starter/Pro/Elite) → 2 basit haftalık plan |
+| 2026-02-28 | Pricing: Intelligent Report Subscription $13.99/hafta | 7 rapor/hafta (günde 1), Executive Summary veya Detailed Analysis, Telegram + Discord Snapshot PNG delivery |
+| 2026-02-28 | Pricing: Capital Flow & Asset Analysis Subscription $13.99/hafta | 7 analiz/hafta + analiz başına 5 AI Expert soru, AI Concierge/Auto/Tailored yöntemler, aynı fiyat |
+| 2026-02-28 | Pricing: Planlar bağımsız | Kullanıcı birini seçer: ya Intelligent Report ya Capital Flow & Asset Analysis |
+| 2026-02-28 | Pricing: Birim fiyat $2.00 | $13.99 / 7 = $2.00 per analiz veya rapor — %97 tasarruf (geleneksel analist $75-140) |
+| 2026-02-28 | Pricing: /pricing sayfası 2 kart layout | Tab toggle kaldırıldı, 2 yan yana kart (violet=Report, emerald=Analysis) + How It Works + Value Comparison + FAQ |
+| 2026-02-28 | Pricing: Landing PricingSection 2 plan grid | 4 paket grid → 2 bağımsız plan grid, güncel bilgilerle |
+| 2026-02-28 | DB: WeeklyPlan modeli eklendi | weekly_plans tablosu: planType (REPORT_WEEKLY/ANALYSIS_WEEKLY), quota tracking, Stripe entegrasyonu |
+| 2026-02-28 | API: /api/weekly-plans routes | plans, status, checkout, cancel, resume endpoints — Stripe haftalık recurring billing |
 
 ---
 
@@ -2365,265 +2112,83 @@ Kullanıcı Hakları Aktif:
   - **Yatay Trade Kartları**: Aktif pozisyonlar overflow-x-auto ile yatay kaydırılabilir
   - Build doğrulandı: TypeScript type uyumsuzluğu düzeltildi (CapitalFlowSummary GlobalLiquidity interface alignment)
 
----
+### Altyapı
 
-## 🔔 SMART ALERTS (L1-L4 Hierarchy Change Detection)
+| Servis | Plan | Maliyet/Ay | Açıklama |
+|--------|------|-----------|----------|
+| Railway (API Backend) | Pro | $20 | Node.js API sunucusu |
+| Vercel (Frontend) | Pro | $20 | Next.js SSR, CDN |
+| Neon (PostgreSQL) | Pro | $25 | Managed database |
+| Upstash (Redis) | Pro | $10 | Cache, rate limiting, pub/sub |
+| Cloudflare (Domain/SSL) | Free | $0 | DNS, SSL, DDoS koruması |
+| **Alt Toplam** | | **$75** | |
 
-### Temel Prensip
-> **Sadece fiyat değil, Capital Flow hiyerarşisindeki kritik değişimleri otomatik bildir.**
+### Geliştirme & İzleme
 
-### Alarm Tetikleyicileri
+| Servis | Plan | Maliyet/Ay | Açıklama |
+|--------|------|-----------|----------|
+| Claude Code | Max | $100 | AI geliştirme asistanı |
+| Sentry | Team | $26 | Error monitoring, crash reporting |
+| Vercel Analytics | Pro dahil | $0 | Web analytics (Pro plan'a dahil) |
+| GitHub | Free | $0 | Repo, CI/CD Actions |
+| **Alt Toplam** | | **$126** | |
 
-| Layer | Tetikleyici | Severity | Cooldown |
-|-------|------------|----------|----------|
-| L1 | Liquidity bias değişimi (risk_on↔risk_off) | CRITICAL/WARNING | 1 saat |
-| L1 | VIX > 25 spike | WARNING | 30 dk |
-| L1 | VIX > 30 extreme | CRITICAL | 30 dk |
-| L1 | DXY > 1.5% haftalık hareket | WARNING | 1 saat |
-| L1 | Fed BS > 5% aylık değişim | WARNING | 1 gün |
-| L1 | Yield curve inversion flip | CRITICAL/INFO | 1 gün |
-| L2 | Market phase değişimi (early→mid→late→exit) | varies | 2 saat |
-| L2 | Rotation tespit (entering/exiting) | WARNING | 1 saat |
-| L2 | Market preference değişimi (Crypto→Stocks vb.) | WARNING | 1 saat |
-| L3 | Sector flow anomalisi (>10% haftalık) | WARNING/CRITICAL | 1 saat |
-| L3 | Sector dominance kayması (>5pp) | INFO | 2 saat |
-| L4 | AI recommendation yön değişimi (BUY↔SELL) | WARNING | 30 dk |
-| L4 | High momentum tespiti | INFO | 1 saat |
+### İletişim Kanalları
 
-### API Endpoint'leri
+| Servis | Plan | Maliyet/Ay | Açıklama |
+|--------|------|-----------|----------|
+| Telegram Bot API | Free | $0 | Sinyal/rapor/bildirim gönderimi, sınırsız |
+| Discord Webhooks | Free | $0 | Sinyal/rapor bildirimleri, sınırsız |
+| Resend (Email) | Free | $0 | Sadece auth emailleri (3,000/ay limit) |
+| **Alt Toplam** | | **$0** | |
 
-| Endpoint | Method | Açıklama |
-|----------|--------|----------|
-| `/api/smart-alerts` | GET | Kullanıcının akıllı alarmları |
-| `/api/smart-alerts/preferences` | GET | Tercihler |
-| `/api/smart-alerts/preferences` | PATCH | Tercih güncelleme |
-| `/api/smart-alerts/status` | GET | Motor durumu |
-| `/api/smart-alerts/scan` | POST | Manuel tarama (admin) |
+### Ödeme İşleme (Lemon Squeezy)
 
-### Kod Lokasyonları
+| Bileşen | Oran |
+|---------|------|
+| İşlem komisyonu | 5% + $0.50/işlem |
+| Vergi hesaplama & ödeme | Dahil |
+| Aylık platform ücreti | $0 |
 
-| Dosya | Açıklama |
-|-------|----------|
-| `apps/api/src/modules/automation/alert-triggers.ts` | L1-L4 tetikleyici logic |
-| `apps/api/src/modules/automation/smart-alerts.service.ts` | Ana servis, cron job, delivery |
-| `apps/api/src/modules/automation/smart-alerts.routes.ts` | API routes |
-| `apps/web/app/(dashboard)/alerts/smart/page.tsx` | Alarm listesi sayfası |
-| `apps/web/app/(dashboard)/alerts/smart/settings/page.tsx` | Tercih ayarları |
+### Müşteri Desteği
 
----
+| Servis | Plan | Maliyet/Ay |
+|--------|------|-----------|
+| Crisp Chat | Mini | $45 |
 
-## 📡 SIGNAL SERVICE (Proactive Signals)
+### AI Motor (Gemini)
 
-### Servis Mantığı
+| Bileşen | Flash | Pro |
+|---------|-------|-----|
+| 7-Step Analiz (1,000/ay) | ~$3 | ~$43 |
+| AI Concierge sohbet (2,000 mesaj/ay) | ~$1 | ~$10 |
+| BILGE hata analizi + haftalık rapor | ~$1 | ~$3 |
+| AI Expert soruları (500/ay) | ~$0.50 | ~$10 |
+| **Alt Toplam** | **~$5.50** | **~$66** |
 
-| Özellik | Değer |
-|---------|-------|
-| **Tarama Sıklığı** | Her saat başı :15 |
-| **Analiz Tipi** | 7-Step + MLIS Pro (entegre) |
-| **Teslimat** | Telegram, Discord, Email |
-| **Sinyal Validasyonu** | Score >= 7.0, Confidence >= 70%, MLIS confirms |
+> **Not:** Concierge — kullanıcıların doğal dille analiz başlattığı, kredi onay mekanizmalı AI chatbot. BILGE — sistem sağlığı izleme, hata pattern tespiti, haftalık bakım raporu üreten AI guardian. Her ikisi de Gemini API kullanır.
 
-### Abonelik Paketleri
+### Toplam Aylık Maliyet (1,000 analiz/ay)
 
-| Paket | Fiyat | Markets | Sinyal/Gün |
-|-------|-------|---------|------------|
-| Basic | $9/mo | Crypto | 5-10 |
-| Pro | $19/mo | Crypto, Stocks, Metals, Bonds | 10-20 |
-| Pro Annual | $149/yr | Tüm marketler | 10-20 |
+| Senaryo | Flash | Pro |
+|---------|-------|-----|
+| Altyapı | $75 | $75 |
+| Geliştirme & İzleme | $126 | $126 |
+| İletişim | $0 | $0 |
+| Lemon Squeezy (~$3K gelir) | $200 | $200 |
+| Müşteri Desteği | $45 | $45 |
+| AI Motor (Analiz+Concierge+BILGE) | $5.50 | $66 |
+| **TOPLAM** | **$451.50** | **$512** |
 
-### Maliyet Analizi
+### Senaryo Bazlı Kar/Zarar
 
-```
-Aylık API Maliyeti: ~$180 (Gemini AI × 6000 analiz)
-Break-even: 10 abone @ $19/mo = $190
-Kar marjı: 100 abone @ $19/mo = $1,720 kar/ay
-```
+| Dönem | Kullanıcı | Gelir | Gider (Flash) | Net Kar | Marj |
+|-------|----------|-------|--------------|---------|------|
+| Erken | 50 | $1,500 | $341 | $1,159 | 77.3% |
+| Büyüme | 200 | $6,000 | $654 | $5,346 | 89.1% |
+| Olgun | 1,000 | $25,000 | $1,939 | $23,061 | 92.2% |
 
-### API Endpoint'leri
-
-| Endpoint | Method | Açıklama |
-|----------|--------|----------|
-| `/api/v1/signals` | GET | Kullanıcının aldığı sinyaller |
-| `/api/v1/signals/:id` | GET | Sinyal detayı |
-| `/api/v1/signals/preferences` | GET/PATCH | Kullanıcı tercihleri |
-| `/api/v1/signals/admin/generate` | POST | Manuel sinyal üretimi (admin) |
-
-### Kod Lokasyonları
-
-| Dosya | Açıklama |
-|-------|----------|
-| `apps/api/src/modules/signals/signal-generator.job.ts` | Saatlik cron job |
-| `apps/api/src/modules/signals/signal.service.ts` | Sinyal CRUD |
-| `apps/api/src/modules/signals/telegram-formatter.ts` | Telegram formatı |
-| `apps/api/src/modules/signals/types.ts` | Type tanımlamaları |
-
----
-
-## 🎯 ASSET-SPECIFIC ANALYSIS SYSTEM
-
-### Neden Gerekli?
-Kripto için Fear & Greed, BTC dominance gibi metrikler anlamlıyken, GLD (altın) için:
-- Dolar (DXY) güçlendiğinde altın genellikle düşer (ters korelasyon)
-- VIX yükseldiğinde altın güvenli liman olarak yükselir
-- Real yield negatifken altın cazibe kazanır
-
-Bu metrikler kripto ile aynı değil, bu yüzden her varlık sınıfı kendi analizörüne sahip.
-
-### Mimari
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    ASSET ANALYZER ORCHESTRATOR                   │
-│            detectAssetClass() → Route to Analyzer                │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │
-        ┌───────────────────┼───────────────────┐
-        ▼                   ▼                   ▼
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   METALS    │     │   STOCKS    │     │   BONDS     │
-│  Analyzer   │     │  Analyzer   │     │  Analyzer   │
-├─────────────┤     ├─────────────┤     ├─────────────┤
-│ • DXY       │     │ • VIX       │     │ • Yield     │
-│ • Real Yld  │     │ • Put/Call  │     │   Curve     │
-│ • VIX       │     │ • Breadth   │     │ • Fed       │
-│ • Inflation │     │ • Sectors   │     │ • Inflation │
-│ • ETF Flow  │     │ • 10Y Yield │     │ • Credit    │
-│ • CB Demand │     │ • DXY       │     │ • Flight    │
-└─────────────┘     └─────────────┘     └─────────────┘
-```
-
-### Inter-Market Validation
-
-```typescript
-// Regime Detection
-const regime = detectMarketRegime(metals, stocks, bonds);
-// Örn: VIX > 25 && goldBullish && bondsBullish → 'risk_off'
-
-// Expected Behavior
-REGIME_EXPECTATIONS = {
-  risk_on:  { crypto: 'bullish', stocks: 'bullish', metals: 'bearish', bonds: 'bearish' },
-  risk_off: { crypto: 'bearish', stocks: 'bearish', metals: 'bullish', bonds: 'bullish' },
-  inflation:{ crypto: 'neutral', stocks: 'bearish', metals: 'bullish', bonds: 'bearish' },
-  deflation:{ crypto: 'bearish', stocks: 'bearish', metals: 'neutral', bonds: 'bullish' },
-};
-
-// Anomaly Detection
-if (expected !== actual) {
-  warnings.push(`⚠️ ${asset} showing ${actual}, expected ${expected} in ${regime} regime`);
-}
-```
-
-### Kullanım
-
-```typescript
-// analysis.engine.ts içinde
-const assetContext = await getAssetSpecificContext(symbol);
-
-// Non-crypto varlıklar için özel metrikler
-if (assetContext.metrics) {
-  // Verdict hesaplamasında %25 ağırlık
-  directionSources.push({
-    source: 'Metals Analysis',
-    direction: assetContext.metrics.sentiment === 'bullish' ? 'long' : 'short',
-    weight: 0.25,
-    reason: `Metals sentiment: bullish (72/100)`
-  });
-}
-```
-
----
-
-## 🧠 RAG INTELLIGENCE LAYER
-
-### Temel Prensip
-> **Core engine output'ları truth source olarak kalır. RAG bir "interpretation / planning / reporting" layer'dır.**
-
-### Mimari
-
-```
-Capital Flow (top filter) → 7-Step Engine (truth) → RAG Orchestrator:
-  1. Web Research  ─────┐ (parallel)
-  2. Forecast Bands ────┤ (parallel)
-                        ├→ 3. Multi-Strategy (depends on 2)
-                        └→ 4. Validation (depends on 1, 2, 3)
-                               → Final Result
-```
-
-### Bileşenler
-
-| Bileşen | Dosya | Açıklama |
-|---------|-------|----------|
-| Types | `rag/types.ts` | Tüm RAG type tanımlamaları |
-| Source Allowlist | `rag/web-research/sources/source-allowlist.ts` | 35+ güvenilir kaynak, tier-based scoring |
-| Citation Service | `rag/web-research/citation.service.ts` | Kaynak yönetimi, puanlama, deduplikasyon |
-| Web Research | `rag/web-research/web-research.service.ts` | 3 mod: fast (free), news ($0.001), deep ($0.005) |
-| Band Calculator | `rag/forecast/band-calculator.ts` | ATR-bazlı P10/P50/P90 olasılık dağılımı |
-| Forecast Bands | `rag/forecast/forecast-band.service.ts` | AI tahmin bantları üretimi |
-| Breakout | `rag/strategy/strategies/breakout.strategy.ts` | Kırılım stratejisi |
-| Pullback | `rag/strategy/strategies/pullback.strategy.ts` | Geri çekilme stratejisi |
-| Trend Following | `rag/strategy/strategies/trend-following.strategy.ts` | Trend takip stratejisi |
-| Range | `rag/strategy/strategies/range.strategy.ts` | Aralık stratejisi |
-| Multi-Strategy | `rag/strategy/multi-strategy.service.ts` | 4 strateji orchestration |
-| Plan Validation | `rag/validation/plan-validation.service.ts` | 10-kural gatekeeper |
-| RAG Orchestrator | `rag/rag-orchestrator.service.ts` | Tek giriş noktası |
-| RAG Routes | `rag/rag.routes.ts` | API endpoint'leri |
-
-### API Endpoint'leri
-
-| Endpoint | Method | Açıklama | Maliyet |
-|----------|--------|----------|---------|
-| `/api/v1/rag/enrich` | POST | Tam RAG enrichment | $0-0.005 |
-| `/api/v1/rag/forecast/:symbol` | GET | Forecast bands (cached) | FREE |
-| `/api/v1/rag/validate` | POST | Plan validasyonu | FREE |
-
-### Research Modları
-
-| Mod | Maliyet | İçerik | Cache |
-|-----|---------|--------|-------|
-| `fast` | FREE | Mevcut news/calendar verisi | 15 dk |
-| `news` | ~$0.001 | + Gemini özet | 5 dk |
-| `deep` | ~$0.005 | + Tam RAG analiz | 2 dk |
-
-### Forecast Bands Formülü
-
-```
-bandWidth = ATR × horizonMultiplier × sqrt(barsAhead) × assetFactor × phaseFactor
-
-Asset Factors: crypto=1.3, stocks=1.0, metals=0.9, bonds=0.6, bist=1.1
-Phase Factors: early=1.1, mid=0.9, late=1.2, exit=1.4
-```
-
-### Validation Kuralları (10 adet)
-
-| Kural | Severity | Açıklama |
-|-------|----------|----------|
-| Max SL Distance | BLOCK | SL > %10 uzakta → plan reddi |
-| Min SL Distance | WARN | SL < %0.5 → çok sıkı uyarısı |
-| Min R/R Ratio | BLOCK | R:R < 1.0 → plan reddi |
-| SL Direction Sanity | BLOCK | SL yönü hatalı → plan reddi |
-| TP Direction Sanity | BLOCK | TP yönü hatalı → plan reddi |
-| Entry Realism | WARN | Entry > %5 uzakta → uyarı |
-| Economic Event | BLOCK | High-impact event yakın → plan reddi |
-| Capital Flow Direction | WARN | Flow'a ters → Counter-Trend uyarısı |
-| Exit Phase | WARN | EXIT fazda → yeni giriş yapma |
-| TP in Forecast Band | INFO | TP P90 dışında → bilgi notu |
-
-### Frontend Bileşenleri
-
-| Bileşen | Dosya | Açıklama |
-|---------|-------|----------|
-| ForecastBandOverlay | `components/analysis/ForecastBandOverlay.tsx` | P10/P50/P90 görsel range bar |
-| MultiStrategyCards | `components/analysis/MultiStrategyCards.tsx` | 4 strateji kartları |
-| WebResearchPanel | `components/analysis/WebResearchPanel.tsx` | Araştırma özeti ve kaynaklar |
-| PlanValidationBadge | `components/analysis/PlanValidationBadge.tsx` | Validasyon durumu badge'i |
-
-### ThemeConfig
-
-| Dosya | Açıklama |
-|-------|----------|
-| `apps/web/lib/theme-config.ts` | Merkezi renk yönetimi |
-
-Helper fonksiyonlar: `getVerdictColor()`, `getPhaseColor()`, `getDirectionColor()`, `getSentimentColor()`, `getBiasColor()`
+> **Not:** En büyük maliyet kalemi Lemon Squeezy komisyonu (gelire orantılı). Break-even: ~$452 gelir/ay (~15 Trader paketi). AI Motor maliyeti Concierge ve BILGE dahil.
 
 ---
 
@@ -2631,9 +2196,7 @@ Helper fonksiyonlar: `getVerdictColor()`, `getPhaseColor()`, `getDirectionColor(
 
 1. **Session başında** bu dosyayı oku
 2. **Kod yazarken** yukarıdaki kurallara uy
-3. **Bug fix sonrası** → HEMEN "Çözülen Bug'lar" tablosuna ekle
-4. **UI kararı sonrası** → HEMEN "UI Kararları" tablosuna ekle
-5. **Session sonunda** → "Son Güncellemeler"e tarihle özet yaz
-6. **Commit öncesi** → Bu dosya güncellendi mi kontrol et
-7. **Microservice değişikliğinde** ilgili SERVICE.md'yi güncelle
-8. **Önemli değişiklikler için** → PR hazırla ve kullanıcıya link ver
+3. **UI kararı sonrası** → HEMEN "UI Kararları" tablosuna ekle
+4. **Commit öncesi** → Bu dosya güncellendi mi kontrol et
+5. **Microservice değişikliğinde** ilgili SERVICE.md'yi güncelle
+6. **Önemli değişiklikler için** → PR hazırla ve kullanıcıya link ver

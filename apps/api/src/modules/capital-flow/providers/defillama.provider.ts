@@ -11,8 +11,24 @@
  */
 
 import { SectorFlow, CryptoSector } from '../types';
+import { logger } from '../../../core/logger';
 
 const DEFILLAMA_BASE_URL = process.env['DEFILLAMA_API_URL'] || 'https://api.llama.fi';
+
+// Track whether DefiLlama is returning live data or fallback
+let _defillamaLiveFetches = 0;
+let _defillamaFallbackFetches = 0;
+
+/** Returns true if the most recent DefiLlama fetch cycle used live data */
+export function isDefillamaLive(): boolean {
+  return _defillamaLiveFetches > 0 && _defillamaFallbackFetches === 0;
+}
+
+/** Reset fetch counters */
+export function resetDefillamaCounters(): void {
+  _defillamaLiveFetches = 0;
+  _defillamaFallbackFetches = 0;
+}
 
 interface DefiLlamaTvl {
   date: number;
@@ -67,6 +83,7 @@ export async function getDeFiTvl(): Promise<{
     const data: DefiLlamaTvl[] = await response.json();
 
     if (!data.length) {
+      _defillamaFallbackFetches++;
       return getFallbackTvlData();
     }
 
@@ -86,6 +103,7 @@ export async function getDeFiTvl(): Promise<{
       tvl: d.tvl / 1_000_000_000, // Convert to billions
     }));
 
+    _defillamaLiveFetches++;
     return {
       current: current / 1_000_000_000, // Billions
       change7d: parseFloat(change7d.toFixed(2)),
@@ -93,7 +111,8 @@ export async function getDeFiTvl(): Promise<{
       history,
     };
   } catch (error) {
-    console.error('[DefiLlama] Error fetching TVL:', error);
+    logger.error('[DefiLlama] Error fetching TVL:', error);
+    _defillamaFallbackFetches++;
     return getFallbackTvlData();
   }
 }
@@ -133,7 +152,7 @@ export async function getChainTvl(): Promise<Array<{
 
     return topChains;
   } catch (error) {
-    console.error('[DefiLlama] Error fetching chain TVL:', error);
+    logger.error('[DefiLlama] Error fetching chain TVL:', error);
     return [];
   }
 }
@@ -174,7 +193,7 @@ export async function getStablecoinMarketCap(): Promise<{
       change7d: parseFloat(change7d.toFixed(2)),
     };
   } catch (error) {
-    console.error('[DefiLlama] Error fetching stablecoin data:', error);
+    logger.error('[DefiLlama] Error fetching stablecoin data:', error);
     return { total: 130, change7d: 0 };
   }
 }
@@ -208,9 +227,14 @@ export async function getCryptoSectors(): Promise<SectorFlow[]> {
     for (const protocol of protocols) {
       const category = mapProtocolCategory(protocol.category);
       if (category && categories[category]) {
-        categories[category].tvl += protocol.tvl || 0;
-        categories[category].change7d += (protocol.tvl || 0) * (protocol.change_7d || 0);
-        if (categories[category].protocols.length < 5) {
+        // Only use positive TVL — negative TVL (leveraged/debt protocols) causes
+        // near-zero net TVL while change7d accumulates large values → absurd %.
+        const protocolTvl = Math.max(0, protocol.tvl || 0);
+        categories[category].tvl += protocolTvl;
+        // Cap per-protocol change to ±200% to prevent outlier protocols from skewing
+        const cappedChange = Math.max(-200, Math.min(200, protocol.change_7d || 0));
+        categories[category].change7d += protocolTvl * cappedChange;
+        if (categories[category].protocols.length < 5 && protocolTvl > 0) {
           categories[category].protocols.push(protocol.symbol || protocol.name);
         }
       }
@@ -223,7 +247,9 @@ export async function getCryptoSectors(): Promise<SectorFlow[]> {
     const sectors: SectorFlow[] = Object.entries(categories)
       .filter(([_, data]) => data.tvl > 0)
       .map(([name, data]) => {
-        const weightedChange = data.tvl > 0 ? data.change7d / data.tvl : 0;
+        const raw = data.tvl > 0 ? data.change7d / data.tvl : 0;
+        // Final safety clamp — NaN/Infinity from edge cases become 0
+        const weightedChange = Number.isFinite(raw) ? Math.max(-200, Math.min(200, raw)) : 0;
         const trending: 'up' | 'down' | 'stable' = weightedChange > 3 ? 'up' : weightedChange < -3 ? 'down' : 'stable';
         return {
           name,
@@ -238,7 +264,7 @@ export async function getCryptoSectors(): Promise<SectorFlow[]> {
 
     return sectors;
   } catch (error) {
-    console.error('[DefiLlama] Error fetching crypto sectors:', error);
+    logger.error('[DefiLlama] Error fetching crypto sectors:', error);
     return getFallbackSectors();
   }
 }

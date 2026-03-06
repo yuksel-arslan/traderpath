@@ -64,7 +64,7 @@ export interface NewsAnalysis {
 // ============================================================================
 
 const CRYPTOPANIC_BASE_URL = 'https://cryptopanic.com/api/v1';
-const CRYPTOPANIC_API_KEY = process.env.CRYPTOPANIC_API_KEY || '';
+const CRYPTOPANIC_API_KEY = process.env.CRYPTOPANIC_API_KEY || process.env.NEWS_API_KEY || '';
 
 interface CryptoPanicPost {
   id: number;

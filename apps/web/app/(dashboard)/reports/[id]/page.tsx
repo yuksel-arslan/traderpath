@@ -5,7 +5,7 @@
 // All 7 analysis steps + AI Expert Review
 // ===========================================
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import html2canvas from 'html2canvas';
@@ -25,12 +25,11 @@ import {
   Bot,
   Download,
   ChevronDown,
-  Mail,
   Image,
-  Check,
+  Send,
 } from 'lucide-react';
 import { cn } from '../../../../lib/utils';
-import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../lib/coin-icons';
+import { CoinIcon } from '../../../../components/common/CoinIcon';
 import { TradePlanChart } from '../../../../components/analysis/TradePlanChart';
 import { TradeDecisionVisual } from '../../../../components/analysis/TradeDecisionVisual';
 import { authFetch } from '../../../../lib/api';
@@ -103,7 +102,7 @@ function renderAIExpertComment(comment: string) {
                 <div className="text-lg flex-shrink-0">{config.emoji}</div>
                 <div className="flex-1">
                   <div className={cn('text-xs font-semibold mb-1', config.color)}>{config.name}</div>
-                  <p className="text-sm text-gray-700 dark:text-slate-300 leading-relaxed">{section.content}</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{section.content}</p>
                 </div>
               </div>
             );
@@ -118,7 +117,7 @@ function renderAIExpertComment(comment: string) {
             <div className="text-lg flex-shrink-0">🤖</div>
             <div className="flex-1">
               <div className="text-xs font-semibold mb-1 text-teal-600 dark:text-teal-400">VOLTRAN - Final Synthesis</div>
-              <p className="text-sm text-gray-700 dark:text-slate-300 leading-relaxed font-medium">{voltranContent}</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-medium">{voltranContent}</p>
             </div>
           </div>
         </div>
@@ -126,7 +125,7 @@ function renderAIExpertComment(comment: string) {
 
       {/* Fallback if no sections parsed */}
       {sections.length === 0 && !voltranContent && !verdict && (
-        <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
           {comment}
         </p>
       )}
@@ -153,6 +152,14 @@ interface ReportData {
     volume24h?: number;
     indicators: { rsi: number; macd: { histogram: number; signal: string } };
     levels?: { support: number[]; resistance: number[] };
+    elliottWave?: {
+      currentWave?: string;
+      waveType?: string;
+      direction?: string;
+      confidence?: number;
+      projectedTarget?: number;
+      waves?: Array<{ wave: string; startPrice: number; endPrice: number }>;
+    };
   };
   safetyCheck: {
     riskLevel: string;
@@ -162,6 +169,14 @@ interface ReportData {
   timing: {
     tradeNow: boolean;
     reason: string;
+    fibonacci?: {
+      nearGoldenZone: boolean;
+      retracementPct: number;
+      goldenZone?: { upper: number; lower: number } | null;
+      nearestFibSupport?: number | null;
+      nearestFibResistance?: number | null;
+      levels?: Array<{ level: number; price: number; type: string }>;
+    };
   };
   tradePlan: {
     direction: string;
@@ -189,35 +204,37 @@ function formatPrice(price: number): string {
   return `$${price.toFixed(6)}`;
 }
 
-// Temporarily remove canvas elements before html2canvas capture to prevent createPattern error
-function hideCanvasesForCapture(container: HTMLElement): Array<{ canvas: HTMLCanvasElement; parent: HTMLElement; next: ChildNode | null }> {
-  const saved: Array<{ canvas: HTMLCanvasElement; parent: HTMLElement; next: ChildNode | null }> = [];
+// Snapshot every lightweight-charts canvas to a static <img>, hide originals.
+// Returns a cleanup function that restores originals and removes temp images.
+function replaceCanvasesWithImages(container: HTMLElement): () => void {
+  const ops: Array<() => void> = [];
   const canvases = container.querySelectorAll('canvas');
-  canvases.forEach((canvas) => {
-    if (canvas.parentElement) {
-      saved.push({
-        canvas: canvas as HTMLCanvasElement,
-        parent: canvas.parentElement as HTMLElement,
-        next: canvas.nextSibling,
-      });
-      canvas.parentElement.removeChild(canvas);
-    }
-  });
-  return saved;
-}
 
-function restoreCanvases(saved: Array<{ canvas: HTMLCanvasElement; parent: HTMLElement; next: ChildNode | null }>) {
-  saved.forEach(({ canvas, parent, next }) => {
+  canvases.forEach((canvas) => {
+    const parent = canvas.parentElement;
+    if (!parent) return;
+
     try {
-      if (next && next.parentNode === parent) {
-        parent.insertBefore(canvas, next);
-      } else {
-        parent.appendChild(canvas);
-      }
+      const dataUrl = canvas.toDataURL('image/png');
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.style.cssText = `width:${canvas.offsetWidth}px;height:${canvas.offsetHeight}px;display:block;`;
+      img.setAttribute('data-canvas-replacement', 'true');
+
+      parent.insertBefore(img, canvas);
+      (canvas as HTMLElement).style.display = 'none';
+
+      ops.push(() => {
+        (canvas as HTMLElement).style.display = '';
+        if (img.parentNode) img.parentNode.removeChild(img);
+      });
     } catch {
-      // DOM may have changed (React re-render); silently skip restoration
+      (canvas as HTMLElement).style.display = 'none';
+      ops.push(() => { (canvas as HTMLElement).style.display = ''; });
     }
   });
+
+  return () => ops.forEach((fn) => fn());
 }
 
 export default function ReportViewPage() {
@@ -232,11 +249,8 @@ export default function ReportViewPage() {
   const [error, setError] = useState<string | null>(null);
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-  const [autoEmailInProgress, setAutoEmailInProgress] = useState(false);
-  const [autoEmailDone, setAutoEmailDone] = useState(false);
+  const [sending, setSending] = useState(false);
   const [reportMeta, setReportMeta] = useState<{ analysisId: string; interval?: string } | null>(null);
-  const autoEmailTriggered = useRef(false);
   const chartRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
 
@@ -268,84 +282,6 @@ export default function ReportViewPage() {
     fetchReport();
   }, [reportId, router]);
 
-  // Auto-email handler for ?email=true parameter
-  const handleAutoEmail = useCallback(async () => {
-    if (!pageRef.current || !report || !reportMeta || autoEmailTriggered.current) return;
-
-    autoEmailTriggered.current = true;
-    setAutoEmailInProgress(true);
-
-    try {
-      // Wait for chart to render
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
-
-      let canvas: HTMLCanvasElement;
-      try {
-        canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
-          scale: 1.5,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          windowWidth: 1200,
-          onclone: (clonedDoc) => {
-            const clonedElement = clonedDoc.querySelector('[data-export-container]');
-            if (clonedElement) {
-              (clonedElement as HTMLElement).style.overflow = 'visible';
-            }
-          },
-        });
-      } finally {
-        restoreCanvases(savedCanvases);
-      }
-
-      const imageBase64 = canvas.toDataURL('image/jpeg', 0.80);
-
-      // Send via email
-      const response = await authFetch('/api/reports/email-screenshot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          analysisId: reportMeta.analysisId,
-          symbol: report.symbol,
-          interval: reportMeta.interval || report.interval || '4h',
-          screenshot: imageBase64,
-          score: report.verdict?.overallScore ? report.verdict.overallScore * 10 : 0,
-          direction: report.tradePlan?.direction || 'long',
-        }),
-      });
-
-      if (response.ok) {
-        setAutoEmailDone(true);
-        setEmailSent(true);
-        // Redirect back to reports page after showing success
-        setTimeout(() => {
-          router.push('/reports');
-        }, 2000);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Auto email send failed:', response.status, errorData);
-        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
-        setAutoEmailInProgress(false);
-      }
-    } catch (err) {
-      console.error('Failed to auto send email:', err);
-      alert('Failed to send email. Please try again.');
-      setAutoEmailInProgress(false);
-    }
-  }, [report, reportMeta, router]);
-
-  // Trigger auto-email when report is loaded and email=true parameter is present
-  useEffect(() => {
-    const shouldAutoEmail = searchParams.get('email') === 'true';
-    if (shouldAutoEmail && report && reportMeta && !loading && !autoEmailTriggered.current) {
-      handleAutoEmail();
-    }
-  }, [searchParams, report, reportMeta, loading, handleAutoEmail]);
-
   // Export as PNG
   const handleExportPNG = async () => {
     if (!pageRef.current || exporting || !report) return;
@@ -353,33 +289,36 @@ export default function ReportViewPage() {
     setExporting(true);
     setExportDropdownOpen(false);
     try {
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
+      // Snapshot canvases to static images so html2canvas can capture them
+      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
 
       let canvas: HTMLCanvasElement;
       try {
         canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#0A0A0A',
           scale: 2,
           logging: false,
           useCORS: true,
           allowTaint: true,
           windowWidth: 1200,
           onclone: (clonedDoc) => {
+            clonedDoc.documentElement.classList.add('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
+              (clonedElement as HTMLElement).style.backgroundColor = '#0A0A0A';
+              (clonedElement as HTMLElement).style.color = '#e5e7eb';
             }
           },
         });
       } finally {
-        restoreCanvases(savedCanvases);
+        restoreCanvases();
       }
 
       const imageBase64 = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       const symbol = report.symbol || 'Report';
-      const date = new Date().toISOString().split('T')[0];
+      const date = new Date(report.generatedAt || Date.now()).toISOString().split('T')[0];
       link.download = `TraderPath_${symbol}_${date}.png`;
       link.href = imageBase64;
       link.click();
@@ -398,33 +337,36 @@ export default function ReportViewPage() {
     setExporting(true);
     setExportDropdownOpen(false);
     try {
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
+      // Snapshot canvases to static images so html2canvas can capture them
+      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
 
       let canvas: HTMLCanvasElement;
       try {
         canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#0A0A0A',
           scale: 2,
           logging: false,
           useCORS: true,
           allowTaint: true,
           windowWidth: 1200,
           onclone: (clonedDoc) => {
+            clonedDoc.documentElement.classList.add('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
+              (clonedElement as HTMLElement).style.backgroundColor = '#0A0A0A';
+              (clonedElement as HTMLElement).style.color = '#e5e7eb';
             }
           },
         });
       } finally {
-        restoreCanvases(savedCanvases);
+        restoreCanvases();
       }
 
       const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
       const link = document.createElement('a');
       const symbol = report.symbol || 'Report';
-      const date = new Date().toISOString().split('T')[0];
+      const date = new Date(report.generatedAt || Date.now()).toISOString().split('T')[0];
       link.download = `TraderPath_${symbol}_${date}.jpg`;
       link.href = imageBase64;
       link.click();
@@ -436,73 +378,41 @@ export default function ReportViewPage() {
     }
   };
 
-  // Send via Email - downloads JPG and sends email
-  const handleSendEmail = async () => {
-    if (!pageRef.current || exporting || !report) return;
-
-    setExporting(true);
+  // Send report snapshots to Telegram/Discord
+  const handleSendReport = async () => {
+    if (sending) return;
+    setSending(true);
     setExportDropdownOpen(false);
     try {
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
-
-      let canvas: HTMLCanvasElement;
-      try {
-        canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
-          scale: 2,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          windowWidth: 1200,
-          onclone: (clonedDoc) => {
-            const clonedElement = clonedDoc.querySelector('[data-export-container]');
-            if (clonedElement) {
-              (clonedElement as HTMLElement).style.overflow = 'visible';
-            }
-          },
-        });
-      } finally {
-        restoreCanvases(savedCanvases);
-      }
-
-      const imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
-
-      // Download the image first
-      const link = document.createElement('a');
-      const symbol = report.symbol || 'Report';
-      const date = new Date().toISOString().split('T')[0];
-      link.download = `TraderPath_${symbol}_${date}.jpg`;
-      link.href = imageBase64;
-      link.click();
-
-      // Then send via email
-      const response = await authFetch('/api/reports/email-screenshot', {
+      const response = await authFetch(`/api/reports/${reportId}/distribute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          analysisId: report.analysisId,
-          symbol: report.symbol,
-          interval: report.interval || '4h',
-          screenshot: imageBase64,
-          score: report.verdict?.overallScore ? report.verdict.overallScore * 10 : 0,
-          direction: report.tradePlan?.direction || 'long',
-        }),
+        body: JSON.stringify({ type: 'executive' }),
       });
 
-      if (response.ok) {
-        setEmailSent(true);
-        setTimeout(() => setEmailSent(false), 3000);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Email send failed:', response.status, errorData);
-        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
+      if (!response.ok) {
+        const err = await response.json();
+        alert(err.error?.message || 'Failed to send report');
+        return;
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        const { telegramSent, discordSent } = data.data;
+        const channels: string[] = [];
+        if (telegramSent > 0) channels.push('Telegram');
+        if (discordSent > 0) channels.push('Discord');
+        if (channels.length > 0) {
+          alert(`Report sent via ${channels.join(' & ')}!`);
+        } else {
+          alert('No notification channels configured. Set up Telegram or Discord in Settings.');
+        }
       }
     } catch (err) {
-      console.error('Failed to send email:', err);
-      alert('Failed to send email');
+      console.error('Failed to send report:', err);
+      alert('Failed to send report');
     } finally {
-      setExporting(false);
+      setSending(false);
     }
   };
 
@@ -555,29 +465,6 @@ export default function ReportViewPage() {
 
   return (
     <>
-      {/* Auto-email overlay - shows on top of page content */}
-      {autoEmailInProgress && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl text-center max-w-md mx-4">
-            {autoEmailDone ? (
-              <>
-                <div className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
-                  <Check className="w-8 h-8 text-green-500" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Email Sent!</h2>
-                <p className="text-gray-500 dark:text-slate-400">Your report screenshot has been sent to your email. Redirecting...</p>
-              </>
-            ) : (
-              <>
-                <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-teal-500" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Sending Email...</h2>
-                <p className="text-gray-500 dark:text-slate-400">Capturing full report screenshot and sending to your email...</p>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
       <div className="flex items-center justify-center min-h-[calc(100vh-200px)] p-4">
         <div className="w-full max-w-4xl">
           {/* Back Button */}
@@ -590,21 +477,14 @@ export default function ReportViewPage() {
           <div
             ref={pageRef}
             data-export-container
-            className="bg-white dark:bg-slate-800/80 rounded-2xl p-4 sm:p-6 shadow-xl border border-gray-200 dark:border-transparent">
+            className="bg-white dark:bg-[#0A0A0A] rounded-lg p-4 sm:p-6 border border-gray-200 dark:border-gray-800">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
-              <img
-                src={getCoinIcon(report.symbol)}
-                alt={report.symbol}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-contain"
-                onError={(e) => {
-                  e.currentTarget.src = FALLBACK_COIN_ICON;
-                }}
-              />
+              <CoinIcon symbol={report.symbol.replace(/USDT$/i, '')} size={48} className="w-10 h-10 sm:w-12 sm:h-12" />
               <div>
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{report.symbol}/USDT Analysis</h1>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">{report.generatedAt}</p>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{report.generatedAt}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 justify-between sm:justify-end">
@@ -622,7 +502,7 @@ export default function ReportViewPage() {
           {/* 6 Info Cards - 1 col mobile, 2 col desktop */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
             {/* 1. Market Pulse */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+            <div className="bg-gray-50 dark:bg-[#111111] rounded-lg p-4 border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
@@ -633,13 +513,13 @@ export default function ReportViewPage() {
                   marketStatus === 'Bullish' ? 'text-green-600 dark:text-green-400' : marketStatus === 'Bearish' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{marketStatus}</span>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Fear & Greed: {report.marketPulse?.fearGreedIndex || 0} ({report.marketPulse?.fearGreedLabel || 'N/A'}) • BTC Dominance: {report.marketPulse?.btcDominance?.toFixed(1) || '0'}%
               </p>
             </div>
 
             {/* 2. Asset Scan */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+            <div className="bg-gray-50 dark:bg-[#111111] rounded-lg p-4 border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Search className="w-4 h-4 text-purple-500 dark:text-purple-400" />
@@ -652,13 +532,13 @@ export default function ReportViewPage() {
                   assetStatus === 'Weak' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'
                 )}>{assetStatus}</span>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Price: {formatPrice(report.assetScan?.currentPrice)} • 24h: {(report.assetScan?.priceChange24h || 0) >= 0 ? '+' : ''}{report.assetScan?.priceChange24h?.toFixed(2) || '0'}%
               </p>
             </div>
 
             {/* 3. Safety Check */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+            <div className="bg-gray-50 dark:bg-[#111111] rounded-lg p-4 border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-amber-500 dark:text-amber-400" />
@@ -669,13 +549,13 @@ export default function ReportViewPage() {
                   safetyStatus === 'Safe' ? 'text-green-600 dark:text-green-400' : safetyStatus === 'Risky' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{safetyStatus}</span>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 {report.safetyCheck?.manipulation?.pumpDumpRisk === 'low' ? 'No manipulation detected' : 'Manipulation risk detected'} • Whale activity: {report.safetyCheck?.whaleActivity?.bias || 'neutral'}
               </p>
             </div>
 
             {/* 4. Timing Analysis */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+            <div className="bg-gray-50 dark:bg-[#111111] rounded-lg p-4 border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-blue-500 dark:text-blue-400" />
@@ -686,13 +566,13 @@ export default function ReportViewPage() {
                   timingStatus === 'Good' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{timingStatus}</span>
               </div>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 RSI: {report.assetScan?.indicators?.rsi?.toFixed(0) || 'N/A'} • MACD: {macdDesc}
               </p>
             </div>
 
             {/* 5. Trade Plan */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+            <div className="bg-gray-50 dark:bg-[#111111] rounded-lg p-4 border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Target className="w-4 h-4 text-cyan-500 dark:text-cyan-400" />
@@ -703,7 +583,7 @@ export default function ReportViewPage() {
                   planStatus === 'Ready' ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{planStatus}</span>
               </div>
-              <div className="text-sm text-gray-500 dark:text-slate-400 space-y-0.5 sm:space-y-0">
+              <div className="text-sm text-gray-500 dark:text-gray-400 space-y-0.5 sm:space-y-0">
                 <span className="block sm:inline">Entry: {formatPrice(report.tradePlan?.averageEntry)}</span>
                 <span className="hidden sm:inline"> • </span>
                 <span className="block sm:inline">TP: {formatPrice(report.tradePlan?.takeProfits?.[0]?.price)}</span>
@@ -713,7 +593,7 @@ export default function ReportViewPage() {
             </div>
 
             {/* 6. Trap Check */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-transparent">
+            <div className="bg-gray-50 dark:bg-[#111111] rounded-lg p-4 border border-gray-200 dark:border-gray-800">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Crosshair className="w-4 h-4 text-red-500 dark:text-red-400" />
@@ -724,7 +604,7 @@ export default function ReportViewPage() {
                   trapStatus === 'Clear' ? 'text-green-600 dark:text-green-400' : trapStatus === 'Warning' ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'
                 )}>{trapStatus}</span>
               </div>
-              <div className="text-sm text-gray-500 dark:text-slate-400 space-y-0.5 sm:space-y-0">
+              <div className="text-sm text-gray-500 dark:text-gray-400 space-y-0.5 sm:space-y-0">
                 <span className="block sm:inline">Bull trap: {report.trapCheck?.traps?.bullTrap ? 'Yes' : 'No'}</span>
                 <span className="hidden sm:inline"> • </span>
                 <span className="block sm:inline">Bear trap: {report.trapCheck?.traps?.bearTrap ? 'Yes' : 'No'}</span>
@@ -753,7 +633,7 @@ export default function ReportViewPage() {
 
           {/* AI Recommendation */}
           <div className={cn(
-            "rounded-xl p-4 mb-6",
+            "rounded-lg p-4 mb-6",
             isNeutral ? "bg-gray-50 dark:bg-gray-500/10 border border-gray-500/20" :
             isLong ? "bg-green-50 dark:bg-green-500/10 border border-green-500/20" : "bg-red-50 dark:bg-red-500/10 border border-red-500/20"
           )}>
@@ -763,7 +643,7 @@ export default function ReportViewPage() {
                 AI Recommendation
               </span>
             </div>
-            <p className="text-sm text-gray-600 dark:text-slate-300">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               {report.verdict?.aiSummary || `Market conditions favor ${isNeutral ? 'sideways' : isLong ? 'bullish' : 'bearish'} continuation. Entry zone ${formatPrice(report.tradePlan?.averageEntry)} with ${report.tradePlan?.riskReward?.toFixed(1) || '0'}:1 risk-reward ratio. Set stop-loss at ${formatPrice(report.tradePlan?.stopLoss?.price)} to protect against downside.`}
             </p>
           </div>
@@ -778,31 +658,24 @@ export default function ReportViewPage() {
                   <button
                     onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
                     disabled={exporting}
-                    className={cn(
-                      "flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition disabled:opacity-50",
-                      emailSent
-                        ? "bg-green-500 text-white"
-                        : "bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white"
-                    )}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition disabled:opacity-50 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white"
                   >
                     {exporting ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : emailSent ? (
-                      <Check className="w-4 h-4" />
                     ) : (
                       <Download className="w-4 h-4" />
                     )}
-                    <span>{exporting ? 'Exporting...' : emailSent ? 'Sent!' : 'Export'}</span>
+                    <span>{exporting ? 'Exporting...' : 'Export'}</span>
                     <ChevronDown className={cn("w-3 h-3 transition-transform", exportDropdownOpen && "rotate-180")} />
                   </button>
 
                   {exportDropdownOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setExportDropdownOpen(false)} />
-                      <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-200 dark:border-slate-700 z-50 overflow-hidden">
+                      <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-[#111111] rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 z-50 overflow-hidden">
                         <button
                           onClick={handleExportPNG}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
                         >
                           <Image className="w-4 h-4 text-teal-500" />
                           <div>
@@ -812,7 +685,7 @@ export default function ReportViewPage() {
                         </button>
                         <button
                           onClick={handleExportJPG}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
                         >
                           <Image className="w-4 h-4 text-blue-500" />
                           <div>
@@ -820,27 +693,49 @@ export default function ReportViewPage() {
                             <div className="text-xs text-gray-400">Smaller Size</div>
                           </div>
                         </button>
+                        <div className="border-t border-gray-200 dark:border-gray-800" />
+                        <button
+                          onClick={handleSendReport}
+                          disabled={sending}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition disabled:opacity-50"
+                        >
+                          {sending ? (
+                            <Loader2 className="w-4 h-4 text-emerald-500 animate-spin" />
+                          ) : (
+                            <Send className="w-4 h-4 text-emerald-500" />
+                          )}
+                          <div>
+                            <div>{sending ? 'Sending...' : 'Send to Telegram/Discord'}</div>
+                            <div className="text-xs text-gray-400">Snapshot PNG inline</div>
+                          </div>
+                        </button>
                       </div>
                     </>
                   )}
                 </div>
               </div>
-              <div ref={chartRef} className="bg-white dark:bg-slate-800 rounded-xl p-2">
+              <div ref={chartRef} className="bg-white dark:bg-[#111111] rounded-lg p-2">
                 <TradePlanChart
                   symbol={report.symbol}
                   direction={(isLong ? 'long' : 'short') as 'long' | 'short'}
                   entries={report.tradePlan.averageEntry ? [{ price: report.tradePlan.averageEntry, percentage: 100 }] : []}
                   stopLoss={{ price: report.tradePlan.stopLoss?.price || 0, percentage: 0 }}
-                  takeProfits={report.tradePlan.takeProfits?.map((tp, i) => ({
+                  takeProfits={report.tradePlan.takeProfits?.map((tp: { price: number; riskReward?: number }, i: number) => ({
                     price: tp.price,
                     percentage: 0,
-                    riskReward: report.tradePlan.riskReward || (i + 1),
+                    riskReward: tp.riskReward
+                      || (report.tradePlan.stopLoss?.price && report.tradePlan.averageEntry
+                        ? parseFloat((Math.abs(tp.price - report.tradePlan.averageEntry) / Math.abs(report.tradePlan.averageEntry - report.tradePlan.stopLoss.price)).toFixed(1))
+                        : (i + 1)),
                   })) || []}
                   currentPrice={report.assetScan?.currentPrice || report.tradePlan.averageEntry || 0}
                   support={report.assetScan?.levels?.support}
                   resistance={report.assetScan?.levels?.resistance}
                   tradeType={report.tradeType}
+                  interval={reportMeta?.interval || report.interval}
                   analysisTime={report.generatedAt}
+                  fibonacciLevels={report.timing?.fibonacci?.levels}
+                  elliottWave={report.assetScan?.elliottWave}
                 />
               </div>
             </div>
@@ -848,7 +743,7 @@ export default function ReportViewPage() {
 
           {/* AI Expert Review Section - Only show if comment exists */}
           {aiExpertComment && (
-            <div className="rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-4 mb-6">
+            <div className="rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-4 mb-6">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
                   <Bot className="w-4 h-4 text-white" />
@@ -859,18 +754,18 @@ export default function ReportViewPage() {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-800/50 rounded-lg p-4 border border-amber-200 dark:border-amber-500/20">
+              <div className="bg-white dark:bg-[#111111] rounded-lg p-4 border border-amber-200 dark:border-amber-500/20">
                 {renderAIExpertComment(aiExpertComment)}
               </div>
             </div>
           )}
 
           {/* Footer - Copyright */}
-          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-700">
-            <p className="text-center text-xs text-gray-500 dark:text-slate-400">
+          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-800">
+            <p className="text-center text-xs text-gray-500 dark:text-gray-400">
               © 2025 <span className="font-semibold text-teal-500">TraderPath</span>. All rights reserved.
             </p>
-            <p className="text-center text-xs text-gray-400 dark:text-slate-500 mt-1">
+            <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-1">
               For informational and educational purposes only. Not financial advice. Past performance does not guarantee future results.
             </p>
           </div>

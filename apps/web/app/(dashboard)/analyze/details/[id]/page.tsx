@@ -24,16 +24,13 @@ import {
   Crosshair,
   Check,
   FileText,
-  Mail,
   Zap,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { cn } from '../../../../../lib/utils';
-import { getCoinIcon, FALLBACK_COIN_ICON } from '../../../../../lib/coin-icons';
+import { CoinIcon } from '../../../../../components/common/CoinIcon';
 import { TradePlanChart } from '../../../../../components/analysis/TradePlanChart';
 import { TradeDecisionVisual } from '../../../../../components/analysis/TradeDecisionVisual';
-import { ForecastBandOverlay } from '../../../../../components/analysis/ForecastBandOverlay';
-import { MultiStrategyCards } from '../../../../../components/analysis/MultiStrategyCards';
 import { WebResearchPanel } from '../../../../../components/analysis/WebResearchPanel';
 import { PlanValidationBadge } from '../../../../../components/analysis/PlanValidationBadge';
 import { StarLogo } from '../../../../../components/common/TraderPathLogo';
@@ -65,38 +62,42 @@ function formatPrice(price: number): string {
   return `$${price.toFixed(6)}`;
 }
 
-// Temporarily hide all canvas elements in container before html2canvas capture.
-// lightweight-charts creates canvases that cause "createPattern" error when html2canvas
-// clones the DOM (canvas elements end up with 0 width/height in the cloned document).
-// We physically remove them from the DOM, run capture, then restore them.
-function hideCanvasesForCapture(container: HTMLElement): Array<{ canvas: HTMLCanvasElement; parent: HTMLElement; next: ChildNode | null }> {
-  const saved: Array<{ canvas: HTMLCanvasElement; parent: HTMLElement; next: ChildNode | null }> = [];
+// Snapshot every lightweight-charts canvas inside `container` to a static <img>,
+// then hide the originals so html2canvas never touches them (avoids the
+// "createPattern on 0×0 canvas" error).  Returns a cleanup function that
+// restores the originals and removes the temporary images.
+function replaceCanvasesWithImages(container: HTMLElement): () => void {
+  const ops: Array<() => void> = [];
   const canvases = container.querySelectorAll('canvas');
-  canvases.forEach((canvas) => {
-    if (canvas.parentElement) {
-      saved.push({
-        canvas: canvas as HTMLCanvasElement,
-        parent: canvas.parentElement as HTMLElement,
-        next: canvas.nextSibling,
-      });
-      canvas.parentElement.removeChild(canvas);
-    }
-  });
-  return saved;
-}
 
-function restoreCanvases(saved: Array<{ canvas: HTMLCanvasElement; parent: HTMLElement; next: ChildNode | null }>) {
-  saved.forEach(({ canvas, parent, next }) => {
+  canvases.forEach((canvas) => {
+    const parent = canvas.parentElement;
+    if (!parent) return;
+
     try {
-      if (next && next.parentNode === parent) {
-        parent.insertBefore(canvas, next);
-      } else {
-        parent.appendChild(canvas);
-      }
+      // Snapshot the visible canvas to a data-URL
+      const dataUrl = canvas.toDataURL('image/png');
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.style.cssText = `width:${canvas.offsetWidth}px;height:${canvas.offsetHeight}px;display:block;`;
+      img.setAttribute('data-canvas-replacement', 'true');
+
+      // Insert the image right before the canvas, then hide the canvas
+      parent.insertBefore(img, canvas);
+      (canvas as HTMLElement).style.display = 'none';
+
+      ops.push(() => {
+        (canvas as HTMLElement).style.display = '';
+        if (img.parentNode) img.parentNode.removeChild(img);
+      });
     } catch {
-      // DOM may have changed (React re-render); silently skip restoration
+      // canvas tainted or not renderable – just hide it
+      (canvas as HTMLElement).style.display = 'none';
+      ops.push(() => { (canvas as HTMLElement).style.display = ''; });
     }
   });
+
+  return () => ops.forEach((fn) => fn());
 }
 
 export default function AnalysisDetailsPage() {
@@ -110,15 +111,10 @@ export default function AnalysisDetailsPage() {
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-  const [autoEmailInProgress, setAutoEmailInProgress] = useState(false);
-  const [autoEmailDone, setAutoEmailDone] = useState(false);
-  const autoEmailTriggered = useRef(false);
-  const [autoPdfInProgress, setAutoPdfInProgress] = useState(false);
-  const [autoPdfDone, setAutoPdfDone] = useState(false);
-  const autoPdfTriggered = useRef(false);
+  const [downloadingSnapshot, setDownloadingSnapshot] = useState(false);
+  const [autoSnapshotInProgress, setAutoSnapshotInProgress] = useState(false);
+  const [autoSnapshotDone, setAutoSnapshotDone] = useState(false);
+  const autoSnapshotTriggered = useRef(false);
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -143,174 +139,84 @@ export default function AnalysisDetailsPage() {
     fetchAnalysis();
   }, [analysisId]);
 
-  // Auto-email handler for ?email=true parameter
-  const handleAutoEmail = useCallback(async () => {
-    if (!pageRef.current || !analysis || autoEmailTriggered.current) return;
+  // Auto-snapshot handler for ?snapshot=true parameter
+  const handleAutoSnapshot = useCallback(async () => {
+    if (!pageRef.current || !analysis || autoSnapshotTriggered.current) return;
 
-    autoEmailTriggered.current = true;
-    setAutoEmailInProgress(true);
-
-    try {
-      // Wait for chart to render
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
-
-      let canvas: HTMLCanvasElement;
-      try {
-        canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
-          scale: 1.5,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          windowWidth: 1200,
-          onclone: (clonedDoc) => {
-            const clonedElement = clonedDoc.querySelector('[data-export-container]');
-            if (clonedElement) {
-              (clonedElement as HTMLElement).style.overflow = 'visible';
-            }
-          },
-        });
-      } finally {
-        restoreCanvases(savedCanvases);
-      }
-
-      const imageBase64 = canvas.toDataURL('image/jpeg', 0.80);
-
-      // Send via email
-      const response = await authFetch('/api/reports/email-screenshot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          analysisId: analysis.id,
-          symbol: analysis.symbol,
-          interval: analysis.interval,
-          screenshot: imageBase64,
-          score: analysis.totalScore,
-          direction: analysis.step5Result?.direction || analysis.step7Result?.direction || 'long',
-        }),
-      });
-
-      if (response.ok) {
-        setAutoEmailDone(true);
-        setEmailSent(true);
-        // Redirect back to analyze page after showing success
-        setTimeout(() => {
-          router.push('/analyze#recent-analyses');
-        }, 2000);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Auto email send failed:', response.status, errorData);
-        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
-        setAutoEmailInProgress(false);
-      }
-    } catch (err) {
-      console.error('Failed to auto send email:', err);
-      alert('Failed to send email. Please try again.');
-      setAutoEmailInProgress(false);
-    }
-  }, [analysis, router]);
-
-  // Trigger auto-email when analysis is loaded and email=true parameter is present
-  useEffect(() => {
-    const shouldAutoEmail = searchParams.get('email') === 'true';
-    if (shouldAutoEmail && analysis && !loading && !autoEmailTriggered.current) {
-      handleAutoEmail();
-    }
-  }, [searchParams, analysis, loading, handleAutoEmail]);
-
-  // Auto-PDF handler for ?pdf=true parameter
-  const handleAutoPdf = useCallback(async () => {
-    if (!pageRef.current || !analysis || autoPdfTriggered.current) return;
-
-    autoPdfTriggered.current = true;
-    setAutoPdfInProgress(true);
+    autoSnapshotTriggered.current = true;
+    setAutoSnapshotInProgress(true);
 
     try {
       // Wait for chart to render
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Dynamic import jsPDF
-      const { jsPDF } = await import('jspdf');
-
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
+      // Snapshot canvases to static images so html2canvas can capture them
+      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
 
       let canvas: HTMLCanvasElement;
       try {
         canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#ffffff',
+          backgroundColor: '#0A0A0A',
           scale: 2,
           logging: false,
           useCORS: true,
           allowTaint: true,
           windowWidth: 1400,
           onclone: (clonedDoc) => {
+            clonedDoc.documentElement.classList.add('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#ffffff';
+              (clonedElement as HTMLElement).style.backgroundColor = '#0A0A0A';
+              (clonedElement as HTMLElement).style.color = '#e5e7eb';
               (clonedElement as HTMLElement).style.padding = '24px';
             }
           },
         });
       } finally {
-        restoreCanvases(savedCanvases);
+        restoreCanvases();
       }
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
+      // Download as PNG snapshot
+      const link = document.createElement('a');
+      link.download = `TraderPath_${analysis.symbol || 'Analysis'}_${new Date(analysis.createdAt || Date.now()).toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
 
-      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-
-      const symbol = analysis.symbol || 'Analysis';
-      const date = new Date().toISOString().split('T')[0];
-      pdf.save(`TraderPath_${symbol}_${date}.pdf`);
-
-      setAutoPdfDone(true);
-      // Redirect back to analyze page after showing success
+      setAutoSnapshotDone(true);
       setTimeout(() => {
-        router.push('/analyze#recent-analyses');
+        setAutoSnapshotInProgress(false);
       }, 2000);
     } catch (err) {
-      console.error('Failed to auto generate PDF:', err);
-      alert('Failed to generate PDF. Please try again.');
-      setAutoPdfInProgress(false);
+      console.error('Failed to auto generate snapshot:', err);
+      alert('Failed to generate snapshot. Please try again.');
+      setAutoSnapshotInProgress(false);
     }
-  }, [analysis, router]);
+  }, [analysis]);
 
-  // Trigger auto-PDF when analysis is loaded and pdf=true parameter is present
+  // Trigger auto-snapshot when analysis is loaded and snapshot=true parameter is present
   useEffect(() => {
-    const shouldAutoPdf = searchParams.get('pdf') === 'true';
-    if (shouldAutoPdf && analysis && !loading && !autoPdfTriggered.current) {
-      handleAutoPdf();
+    const shouldAutoSnapshot = searchParams.get('snapshot') === 'true';
+    if (shouldAutoSnapshot && analysis && !loading && !autoSnapshotTriggered.current) {
+      handleAutoSnapshot();
     }
-  }, [searchParams, analysis, loading, handleAutoPdf]);
+  }, [searchParams, analysis, loading, handleAutoSnapshot]);
 
-  // Download PDF (dark mode capture)
-  const handleDownloadPdf = async () => {
-    if (!pageRef.current || downloadingPdf || !analysis) return;
+  // Download Snapshot PNG (dark mode capture)
+  const handleDownloadSnapshot = async () => {
+    if (!pageRef.current || downloadingSnapshot || !analysis) return;
 
-    setDownloadingPdf(true);
+    setDownloadingSnapshot(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Dynamic import jsPDF
-      const { jsPDF } = await import('jspdf');
-
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
+      // Snapshot canvases to static images so html2canvas can capture them
+      const restoreCanvases = replaceCanvasesWithImages(pageRef.current);
 
       let canvas: HTMLCanvasElement;
       try {
         canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#0f172a',
+          backgroundColor: '#0A0A0A',
           scale: 2,
           logging: false,
           useCORS: true,
@@ -319,126 +225,35 @@ export default function AnalysisDetailsPage() {
           removeContainer: true,
           imageTimeout: 5000,
           onclone: (clonedDoc) => {
+            clonedDoc.documentElement.classList.add('dark');
             const clonedElement = clonedDoc.querySelector('[data-export-container]');
             if (clonedElement) {
               (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#1e293b';
-              (clonedElement as HTMLElement).style.color = '#ffffff';
-              clonedElement.classList.add('dark');
+              (clonedElement as HTMLElement).style.backgroundColor = '#0A0A0A';
+              (clonedElement as HTMLElement).style.color = '#e5e7eb';
             }
-            clonedDoc.documentElement.classList.add('dark');
           },
         });
       } finally {
-        restoreCanvases(savedCanvases);
+        restoreCanvases();
       }
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
-
-      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-
-      const symbol = analysis.symbol || 'Analysis';
-      const date = new Date().toISOString().split('T')[0];
-      pdf.save(`TraderPath_${symbol}_${date}.pdf`);
+      // Download as PNG snapshot
+      const link = document.createElement('a');
+      link.download = `TraderPath_${analysis.symbol || 'Analysis'}_${new Date(analysis.createdAt || Date.now()).toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
     } catch (err) {
-      console.error('Failed to download PDF:', err);
-      alert('Failed to download PDF: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      console.error('Failed to download snapshot:', err);
+      alert('Failed to download snapshot: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
-      setDownloadingPdf(false);
-    }
-  };
-
-  // Send Email with PDF attachment
-  const handleEmailReport = async () => {
-    if (!pageRef.current || sendingEmail || !analysis) return;
-
-    setSendingEmail(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Dynamic import jsPDF
-      const { jsPDF } = await import('jspdf');
-
-      // Remove canvas elements from DOM to prevent html2canvas createPattern error
-      const savedCanvases = hideCanvasesForCapture(pageRef.current);
-
-      let canvas: HTMLCanvasElement;
-      try {
-        canvas = await html2canvas(pageRef.current, {
-          backgroundColor: '#0f172a',
-          scale: 2,
-          logging: false,
-          useCORS: true,
-          allowTaint: true,
-          foreignObjectRendering: false,
-          removeContainer: true,
-          imageTimeout: 5000,
-          onclone: (clonedDoc) => {
-            const clonedElement = clonedDoc.querySelector('[data-export-container]');
-            if (clonedElement) {
-              (clonedElement as HTMLElement).style.overflow = 'visible';
-              (clonedElement as HTMLElement).style.backgroundColor = '#1e293b';
-              (clonedElement as HTMLElement).style.color = '#ffffff';
-              clonedElement.classList.add('dark');
-            }
-            clonedDoc.documentElement.classList.add('dark');
-          },
-        });
-      } finally {
-        restoreCanvases(savedCanvases);
-      }
-
-      // Generate PDF
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({
-        orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      });
-      pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
-
-      // Get PDF as base64
-      const pdfBase64 = pdf.output('datauristring').split(',')[1];
-
-      // Send email with PDF attachment
-      const response = await authFetch('/api/reports/email-pdf-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          analysisId: analysis.id,
-          symbol: analysis.symbol,
-          interval: analysis.interval,
-          pdfBase64,
-          score: analysis.totalScore,
-          direction: analysis.step5Result?.direction || analysis.step7Result?.direction || 'long',
-          verdict: typeof step7.verdict === 'string' ? step7.verdict.toUpperCase() : 'WAIT',
-        }),
-      });
-
-      if (response.ok) {
-        setEmailSent(true);
-        setTimeout(() => setEmailSent(false), 3000);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Email send failed:', response.status, errorData);
-        alert(errorData?.error?.message || 'Failed to send email. Please try again.');
-      }
-    } catch (err) {
-      console.error('Failed to send email:', err);
-      alert('Failed to send email: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    } finally {
-      setSendingEmail(false);
+      setDownloadingSnapshot(false);
     }
   };
 
   const getTradeType = (interval: string): 'scalping' | 'dayTrade' | 'swing' => {
     if (interval === '5m' || interval === '15m') return 'scalping';
-    if (interval === '1h' || interval === '4h') return 'dayTrade';
+    if (interval === '30m' || interval === '1h' || interval === '2h' || interval === '4h') return 'dayTrade';
     return 'swing';
   };
 
@@ -537,46 +352,23 @@ export default function AnalysisDetailsPage() {
 
   return (
     <>
-      {/* Auto-email overlay - shows on top of page content */}
-      {autoEmailInProgress && (
+      {/* Auto-Snapshot overlay - shows on top of page content */}
+      {autoSnapshotInProgress && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl text-center max-w-md mx-4">
-            {autoEmailDone ? (
+            {autoSnapshotDone ? (
               <>
                 <div className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
                   <Check className="w-8 h-8 text-green-500" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Email Sent!</h2>
-                <p className="text-gray-500 dark:text-slate-400">Your analysis screenshot has been sent to your email. Redirecting...</p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Snapshot Downloaded!</h2>
+                <p className="text-gray-500 dark:text-slate-400">Your analysis report has been saved as PNG snapshot.</p>
               </>
             ) : (
               <>
                 <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-teal-500" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Sending Email...</h2>
-                <p className="text-gray-500 dark:text-slate-400">Capturing full analysis screenshot and sending to your email...</p>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Auto-PDF overlay - shows on top of page content */}
-      {autoPdfInProgress && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-2xl text-center max-w-md mx-4">
-            {autoPdfDone ? (
-              <>
-                <div className="w-16 h-16 mx-auto mb-4 bg-green-500/20 rounded-full flex items-center justify-center">
-                  <Check className="w-8 h-8 text-green-500" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">PDF Downloaded!</h2>
-                <p className="text-gray-500 dark:text-slate-400">Your analysis report has been saved as PDF. Redirecting...</p>
-              </>
-            ) : (
-              <>
-                <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-red-500" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Generating PDF...</h2>
-                <p className="text-gray-500 dark:text-slate-400">Creating your analysis report as PDF. This may take a moment...</p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Generating Snapshot...</h2>
+                <p className="text-gray-500 dark:text-slate-400">Creating your analysis report as PNG snapshot. This may take a moment...</p>
               </>
             )}
           </div>
@@ -592,40 +384,19 @@ export default function AnalysisDetailsPage() {
               <span>Back to Analyze</span>
             </Link>
 
-            {/* Download PDF and Email Report Buttons */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleDownloadPdf}
-                disabled={downloadingPdf}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg"
-              >
-                {downloadingPdf ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <FileText className="w-4 h-4" />
-                )}
-                <span>{downloadingPdf ? 'Generating...' : 'Download PDF'}</span>
-              </button>
-              <button
-                onClick={handleEmailReport}
-                disabled={sendingEmail}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50",
-                  emailSent
-                    ? "bg-green-500 text-white"
-                    : "bg-slate-700 hover:bg-slate-600 text-white"
-                )}
-              >
-                {sendingEmail ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : emailSent ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <Mail className="w-4 h-4" />
-                )}
-                <span>{sendingEmail ? 'Sending...' : emailSent ? 'Sent!' : 'Email Report'}</span>
-              </button>
-            </div>
+            {/* Download Snapshot Button */}
+            <button
+              onClick={handleDownloadSnapshot}
+              disabled={downloadingSnapshot}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg"
+            >
+              {downloadingSnapshot ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileText className="w-4 h-4" />
+              )}
+              <span>{downloadingSnapshot ? 'Generating...' : 'Download Snapshot'}</span>
+            </button>
           </div>
 
         {/* Main Card */}
@@ -655,24 +426,27 @@ export default function AnalysisDetailsPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
-              <img
-                src={getCoinIcon(analysis.symbol)}
-                alt={analysis.symbol}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-contain"
-                onError={(e) => {
-                  e.currentTarget.src = FALLBACK_COIN_ICON;
-                }}
-              />
+              <CoinIcon symbol={analysis.symbol.replace(/USDT$/i, '')} size={48} className="w-10 h-10 sm:w-12 sm:h-12" />
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{analysis.symbol}/USDT Analysis</h1>
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{analysis.symbol}{isNonCrypto ? '' : '/USDT'} Analysis</h1>
                   {/* Timeframe Badge */}
                   <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-slate-500 to-slate-600 text-white rounded-full uppercase">
                     {analysis.interval || '4H'}
                   </span>
-                  {mlisConfirmationData && (
+                  {mlisConfirmationData && confirmationStatus === 'CONFIRMED' && (
                     <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-full">
                       ML Confirmed
+                    </span>
+                  )}
+                  {mlisConfirmationData && confirmationStatus === 'PARTIALLY_CONFIRMED' && (
+                    <span className="px-2 py-0.5 text-xs font-bold bg-blue-500 text-white rounded-full">
+                      ML Partial
+                    </span>
+                  )}
+                  {mlisConfirmationData && confirmationStatus === 'CONTRADICTED' && (
+                    <span className="px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full">
+                      ML Warning
                     </span>
                   )}
                 </div>
@@ -1119,7 +893,7 @@ export default function AnalysisDetailsPage() {
                 <div className="divide-y divide-slate-100 dark:divide-slate-700/40">
                   {chainItems.map((item, i) => (
                     <div key={i} className="flex items-center justify-between px-4 py-2.5">
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 flex-shrink-0">
                         <div className={cn(
                           "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0",
                           item.status === true ? "bg-green-500" :
@@ -1135,7 +909,7 @@ export default function AnalysisDetailsPage() {
                         </div>
                         <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{item.label}</span>
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-slate-400 text-right max-w-[50%] truncate" title={item.detail}>
+                      <span className="text-xs text-gray-500 dark:text-slate-400 text-right max-w-[55%] overflow-hidden break-words">
                         {item.detail}
                       </span>
                     </div>
@@ -1150,7 +924,7 @@ export default function AnalysisDetailsPage() {
             <TradeDecisionVisual
               verdict={(step7.verdict || (Number(step7.overallScore) >= 7 ? 'go' : Number(step7.overallScore) >= 5 ? 'conditional_go' : Number(step7.overallScore) >= 3 ? 'wait' : 'avoid')) as 'go' | 'conditional_go' | 'wait' | 'avoid'}
               direction={isNeutral ? null : (isLong ? 'long' : 'short')}
-              score={Number(step7.overallScore) * 10 || Number(analysis.totalScore) * 10 || 50}
+              score={typeof step7.overallScore === 'number' ? step7.overallScore * 10 : (analysis.totalScore ?? 5) * 10}
               symbol={analysis.symbol}
               size="lg"
             />
@@ -1186,12 +960,17 @@ export default function AnalysisDetailsPage() {
                   takeProfits={[tp1, tp2].filter(Boolean).map((tp, i) => ({
                     price: tp,
                     percentage: 0,
-                    riskReward: step5.riskReward || (i + 1),
+                    riskReward: step5.takeProfits?.[i]?.riskReward
+                      || (stopLossPrice && entryPrice ? parseFloat((Math.abs(tp - entryPrice) / Math.abs(entryPrice - stopLossPrice)).toFixed(1)) : (i + 1)),
                   }))}
                   currentPrice={step2.currentPrice || entryPrice}
                   support={step2.levels?.support}
                   resistance={step2.levels?.resistance}
+                  forecastBands={step7?.ragEnrichment?.forecastBands || []}
+                  fibonacciLevels={step4?.fibonacci?.levels || []}
+                  elliottWave={step2?.elliottWave}
                   tradeType={getTradeType(analysis.interval)}
+                  interval={analysis.interval}
                   chartId="trade-plan-chart"
                   analysisTime={analysis.createdAt}
                   tradePlanStatus={step5.tradePlanStatus}
@@ -1225,23 +1004,8 @@ export default function AnalysisDetailsPage() {
               {/* Web Research */}
               <WebResearchPanel research={step7.ragEnrichment.research} />
 
-              {/* Forecast Bands */}
-              {step7.ragEnrichment.forecastBands && step7.ragEnrichment.forecastBands.length > 0 && (
-                <ForecastBandOverlay
-                  bands={step7.ragEnrichment.forecastBands}
-                  currentPrice={step2?.currentPrice || entryPrice || 0}
-                  symbol={analysis.symbol}
-                />
-              )}
-
-              {/* Multi-Strategy Plans */}
-              {step7.ragEnrichment.strategies && step7.ragEnrichment.strategies.strategies?.length > 0 && (
-                <MultiStrategyCards
-                  strategies={step7.ragEnrichment.strategies.strategies}
-                  recommended={step7.ragEnrichment.strategies.recommended}
-                  currentPrice={step2?.currentPrice || entryPrice || 0}
-                />
-              )}
+              {/* Multi-Strategy Plans → Detaylı Rapor'da gösterilir */}
+              {/* Forecast Bands → TradePlanChart overlay olarak gösterilir (P10/P50/P90 çizgiler) */}
             </div>
           )}
 

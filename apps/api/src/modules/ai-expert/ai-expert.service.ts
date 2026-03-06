@@ -22,72 +22,62 @@ import { fetchCandles as fetchMultiAssetCandles, getAssetClass } from '../analys
 // Gemini API configuration (for API key check)
 const GEMINI_API_KEY = config.gemini.apiKey;
 
-// Sanitize AI response - remove forbidden content
+// Sanitize AI response - remove forbidden CTA/promotional content
 function sanitizeAIResponse(text: string): string {
   let cleaned = text;
 
-  // Remove "---" lines and everything after (all variations)
-  const dashPatterns = [/\n---.*$/s, /^---.*$/s, /\n-{3,}.*$/s];
-  for (const pattern of dashPatterns) {
-    cleaned = cleaned.replace(pattern, '');
-  }
+  // Remove standalone "---" separator lines (not content after them)
+  cleaned = cleaned.replace(/\n-{3,}\s*\n/g, '\n');
+  // Remove trailing "---" at end of response
+  cleaned = cleaned.replace(/\n-{3,}\s*$/, '');
 
-  // Remove 🚀 lines and everything after
-  const rocketPatterns = [/\n🚀.*$/s, /^🚀.*$/s, /\n\n🚀.*$/s];
-  for (const pattern of rocketPatterns) {
-    cleaned = cleaned.replace(pattern, '');
-  }
+  // Remove lines that are just a 🚀 CTA
+  cleaned = cleaned.replace(/\n🚀[^\n]*$/g, '');
 
-  // Remove paragraphs containing forbidden phrases (Turkish)
+  // Remove trailing paragraphs containing CTA/forbidden phrases (Turkish)
   const forbiddenPatternsTR = [
-    /\n\n[^\n]*ister misin[^\n]*$/is,
-    /\n\n[^\n]*yapayım mı[^\n]*$/is,
-    /\n\n[^\n]*kredi[^\n]*$/is,
-    /\n\n[^\n]*raporuna ekle[^\n]*$/is,
-    /\n\n[^\n]*gerçek analiz[^\n]*$/is,
-    /\n\n[^\n]*gerçek bir coin[^\n]*$/is,
-    /\n[^\n]*ister misin\?[^\n]*$/is,
-    /\n[^\n]*yapayım mı\?[^\n]*$/is,
+    /\n\n[^\n]*ister misin\??[^\n]*$/i,
+    /\n\n[^\n]*yapayım mı\??[^\n]*$/i,
+    /\n\n[^\n]*\d+\s*kredi[^\n]*$/i,
+    /\n\n[^\n]*raporuna ekle[^\n]*$/i,
+    /\n\n[^\n]*gerçek analiz[^\n]*$/i,
+    /\n\n[^\n]*gerçek bir coin[^\n]*$/i,
   ];
 
-  // Remove paragraphs containing forbidden phrases (English)
+  // Remove trailing paragraphs containing CTA/forbidden phrases (English)
   const forbiddenPatternsEN = [
-    /\n\n[^\n]*want me to[^\n]*$/is,
-    /\n\n[^\n]*shall I[^\n]*$/is,
-    /\n\n[^\n]*would you like me to[^\n]*$/is,
-    /\n\n[^\n]*credits[^\n]*$/is,
-    /\n\n[^\n]*add to.*report[^\n]*$/is,
-    /\n\n[^\n]*real analysis[^\n]*$/is,
-    /\n[^\n]*want me to\?[^\n]*$/is,
-    /\n[^\n]*shall I\?[^\n]*$/is,
+    /\n\n[^\n]*want me to\??[^\n]*$/i,
+    /\n\n[^\n]*shall I\??[^\n]*$/i,
+    /\n\n[^\n]*would you like me to\??[^\n]*$/i,
+    /\n\n[^\n]*\d+\s*credits[^\n]*$/i,
+    /\n\n[^\n]*add to.*report[^\n]*$/i,
+    /\n\n[^\n]*real analysis[^\n]*$/i,
   ];
 
   for (const pattern of [...forbiddenPatternsTR, ...forbiddenPatternsEN]) {
     cleaned = cleaned.replace(pattern, '');
   }
 
-  // Clean forbidden phrases from last lines
+  // Clean forbidden phrases from last lines only
   const lines = cleaned.split('\n');
   while (lines.length > 0) {
-    const lastLine = lines[lines.length - 1].toLowerCase();
+    const lastLine = lines[lines.length - 1].toLowerCase().trim();
     if (
-      // Turkish
-      lastLine.includes('ister misin') ||
-      lastLine.includes('yapayım mı') ||
-      lastLine.includes('kredi') ||
+      lastLine === '' ||
+      lastLine === '---' ||
+      // Turkish CTAs
+      /ister misin\??/.test(lastLine) ||
+      /yapayım mı\??/.test(lastLine) ||
+      /\d+\s*kredi/.test(lastLine) ||
       lastLine.includes('raporuna ekle') ||
-      lastLine.includes('gerçek analiz') ||
-      // English
-      lastLine.includes('want me to') ||
-      lastLine.includes('shall i') ||
-      lastLine.includes('would you like me to') ||
-      lastLine.includes('credits') ||
+      // English CTAs
+      /want me to\??/.test(lastLine) ||
+      /shall i\??/.test(lastLine) ||
+      /would you like me to\??/.test(lastLine) ||
+      /\d+\s*credits/.test(lastLine) ||
       lastLine.includes('add to your report') ||
-      lastLine.includes('real analysis') ||
       // Symbols
-      lastLine.includes('🚀') ||
-      lastLine.trim() === '---' ||
-      lastLine.trim() === ''
+      lastLine.startsWith('🚀')
     ) {
       lines.pop();
     } else {
@@ -1256,7 +1246,7 @@ export class AIExpertService {
             temperature: 0.8,
             topP: 0.92,
             topK: 40,
-            maxOutputTokens: 800,
+            maxOutputTokens: 2500,
           },
           safetySettings: [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
@@ -1849,7 +1839,7 @@ Reference specific indicators from the data. Focus on ${tradeCtx.focus}. NOT Bit
     // Dynamic output length based on expert type
     const isARIA = expertId === 'aria';
     const maxSentences = isARIA ? '3-4' : '2-3';
-    const maxTokens = isARIA ? 350 : 250;
+    const maxTokens = isARIA ? 600 : 450;
 
     const prompt = `You are ${expert.name}, ${expert.title} at TraderPath.
 
@@ -1991,7 +1981,7 @@ FORMAT: Just your professional ${tradeCtx.label} synthesis about ${symbol}. Star
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 600, // Increased from 300 to ensure complete responses
+            maxOutputTokens: 1000, // Ensure complete panel synthesis responses
           },
         },
         3, // maxRetries - balanced for speed vs reliability

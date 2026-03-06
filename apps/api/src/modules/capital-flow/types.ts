@@ -323,7 +323,7 @@ export const VERDICT_TO_MLIS_MAP: Record<string, string[]> = {
   'GO': ['STRONG_BUY', 'BUY'],
   'CONDITIONAL_GO': ['BUY', 'HOLD'],
   'WAIT': ['HOLD'],
-  'AVOID': ['SELL', 'STRONG_SELL', 'HOLD'],
+  'AVOID': ['SELL', 'STRONG_SELL'],
 } as const;
 
 // Suggested Asset for Layer 4 → Asset Analysis connection
@@ -379,6 +379,17 @@ export interface CapitalFlowSummary {
 
   // Cache info
   cacheExpiry?: Date;
+
+  // Data source tracking — helps UI show live/stale indicators
+  dataSource?: 'live' | 'cached' | 'fallback';
+
+  // Granular per-component data source tracking
+  dataSources?: {
+    fred: 'live' | 'fallback';       // Fed BS, M2, Yields, RRP, TGA
+    yahoo: 'live' | 'fallback';      // DXY, VIX, Stocks, Metals, Bonds
+    binance: 'live' | 'fallback';    // Crypto flow
+    defillama: 'live' | 'fallback';  // DeFi TVL, Sectors
+  };
 }
 
 // AI-generated insights for each layer
@@ -387,11 +398,11 @@ export interface LayerInsights {
   layer2: string;  // Market Flow interpretation
   layer3: string;  // Sector analysis
   layer4: string;  // Overall recommendation reasoning
-  // RAG Yorumları - Veriye dayalı kısa özetler
-  ragLayer1?: string;  // Net Liquidity yorumu (1-2 cümle)
-  ragLayer2?: string;  // Market rotasyonu yorumu (1-2 cümle)
-  ragLayer3?: string;  // Sektör fırsatı yorumu (1-2 cümle)
-  ragLayer4?: string;  // Aksiyon önerisi yorumu (1-2 cümle)
+  // RAG Commentaries - Data-driven short summaries
+  ragLayer1?: string;  // Net Liquidity commentary (1-2 sentences)
+  ragLayer2?: string;  // Market rotation commentary (1-2 sentences)
+  ragLayer3?: string;  // Sector opportunity commentary (1-2 sentences)
+  ragLayer4?: string;  // Action recommendation commentary (1-2 sentences)
   generatedAt: Date;
 }
 
