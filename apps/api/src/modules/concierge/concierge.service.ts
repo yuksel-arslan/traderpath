@@ -3405,12 +3405,25 @@ ${synthesis}`;
         trapCheck,
       });
 
+      // Get capital flow phase for trade plan SL adjustment
+      let cfPhase: 'early' | 'mid' | 'late' | 'exit' | undefined;
+      try {
+        const cfSummary = await capitalFlowService.getCapitalFlowSummary();
+        const rawPhase = cfSummary?.recommendation?.phase?.toLowerCase();
+        if (rawPhase === 'early' || rawPhase === 'mid' || rawPhase === 'late' || rawPhase === 'exit') {
+          cfPhase = rawPhase;
+        }
+      } catch {
+        // proceed without phase
+      }
+
       // Generate trade plan
       const tradePlanResult = await analysisEngine.integratedTradePlan(
         upperSymbol,
         preliminaryVerdict,
         { marketPulse, assetScan, safetyCheck, timing, trapCheck },
-        10000 // Default account size
+        10000, // Default account size
+        cfPhase
       );
 
       // Generate final verdict
