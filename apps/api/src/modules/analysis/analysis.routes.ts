@@ -21,6 +21,7 @@ import { analyzeMLIS, MLISResult } from './services/mlis.service';
 import { logger } from '../../core/logger';
 import { fetchCandles, getAssetClass, fetchTicker } from './providers/multi-asset-data-provider';
 import { getCapitalFlowModifier, CapitalFlowModifier } from '../capital-flow/capital-flow.service';
+import { weeklyPlanService } from '../weekly-plans/weekly-plan.service';
 import {
   MarketType,
   MLISConfirmation,
@@ -749,10 +750,27 @@ Warn about potential traps and give protective advice.`;
     // Debug log to track interval issues
     console.log(`[ANALYSIS] Symbol: ${body.symbol}, Requested interval: ${body.interval}, Resolved interval: ${interval}, TradeType: ${tradeType}`);
 
-    // Check for Daily Pass system (100 credits/day, max 10 analyses)
-    // Admin users bypass the daily pass system
+    // Check weekly plan first, then fall back to daily pass
+    let usedWeeklyPlan = false;
     let usedDailyPass = false;
+
     if (!isAdmin) {
+      // Weekly plan check — subscribers bypass daily pass
+      try {
+        const weeklyPlan = await weeklyPlanService.getUserPlan(userId, 'ANALYSIS_WEEKLY');
+        if (weeklyPlan && (weeklyPlan as Record<string, unknown>).status === 'ACTIVE' && ((weeklyPlan as Record<string, unknown>).remainingQuota as number) > 0) {
+          const consumed = await weeklyPlanService.consumeQuota(userId, 'ANALYSIS_WEEKLY');
+          if (consumed.success) {
+            usedWeeklyPlan = true;
+          }
+        }
+      } catch {
+        // weekly plan check failed — fall through to daily pass
+      }
+    }
+
+    // Daily Pass system — only if weekly plan was not used
+    if (!isAdmin && !usedWeeklyPlan) {
       const { dailyPassService } = await import('../passes/daily-pass.service');
       const passCheck = await dailyPassService.checkPass(userId, 'ASSET_ANALYSIS');
 

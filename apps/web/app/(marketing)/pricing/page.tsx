@@ -20,6 +20,8 @@ import {
   MessageSquare,
   Bot,
   ChevronDown,
+  Zap,
+  Radio,
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import {
@@ -68,6 +70,40 @@ export default function PricingPage() {
       const response = await authFetch('/api/weekly-plans/checkout', {
         method: 'POST',
         body: JSON.stringify({ planType }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error?.message || 'Failed to create checkout session');
+      }
+
+      const data = await response.json();
+
+      if (data.data?.url) {
+        window.location.href = data.data.url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(message || 'Failed to start checkout');
+      setPurchasing(null);
+    }
+  };
+
+  const handleSignalSubscribe = async (tier: 'SIGNAL_BASIC' | 'SIGNAL_PRO') => {
+    if (!isLoggedIn) {
+      router.push('/register');
+      return;
+    }
+
+    setPurchasing(tier);
+    setError(null);
+
+    try {
+      const response = await authFetch('/api/v1/signals/subscription/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ tier }),
       });
 
       if (!response.ok) {
@@ -229,10 +265,15 @@ export default function PricingPage() {
                             {plan.quota} {report ? 'reports' : 'analyses'}/week
                           </span>
                           <span className="w-px h-3.5 bg-slate-200 dark:bg-white/10" />
-                          <span className="text-sm text-slate-400">
-                            {plan.perUnit} each
+                          <span className={cn(
+                            'text-sm font-bold',
+                            report ? 'text-violet-500' : 'text-teal-500'
+                          )}>
+                            {plan.perUnit}
                           </span>
+                          <span className="text-sm text-slate-400">each</span>
                         </div>
+                        <p className="text-xs text-slate-400 mt-1.5">{'\u2248'} $55/month {'\u00b7'} Cancel anytime</p>
                       </div>
 
                       {/* Features */}
@@ -314,6 +355,124 @@ export default function PricingPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </section>
+
+        {/* AutoEdge Signal Subscriptions */}
+        <section className="py-16 border-t border-slate-100 dark:border-white/[0.04]">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/20 rounded-full mb-4">
+                <Zap className="w-3.5 h-3.5 text-cyan-500" />
+                <span className="text-xs font-medium text-cyan-600 dark:text-cyan-400 tracking-wide">
+                  AUTOEDGE SIGNALS
+                </span>
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                AutoEdge Signal Subscriptions
+              </h2>
+              <p className="text-sm text-slate-500 max-w-lg mx-auto">
+                Receive AI-generated trade signals automatically — no manual analysis needed.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+              {/* SIGNAL_BASIC */}
+              <div className="rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#111111] p-6 md:p-8 transition-all hover:shadow-xl hover:shadow-slate-200/30 dark:hover:shadow-black/30">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-slate-100 text-slate-600 dark:bg-white/[0.06] dark:text-slate-400 mb-4">
+                  <Radio className="w-3 h-3" />
+                  Signals
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Signal Basic</h3>
+                <div className="flex items-baseline gap-1 mt-3">
+                  <span className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">$9</span>
+                  <span className="text-sm text-slate-400 font-medium">/mo</span>
+                </div>
+                <div className="space-y-3 mt-6 mb-8">
+                  {[
+                    '5–10 signals/day',
+                    'Crypto markets only',
+                    'Telegram & email delivery',
+                    'Entry / SL / TP included',
+                    'Outcome notifications',
+                  ].map((feature) => (
+                    <div key={feature} className="flex items-start gap-3">
+                      <div className="w-5 h-5 rounded-full bg-slate-100 dark:bg-white/[0.06] flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-slate-500 dark:text-slate-400" />
+                      </div>
+                      <span className="text-sm text-slate-600 dark:text-slate-300">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => handleSignalSubscribe('SIGNAL_BASIC')}
+                  disabled={purchasing === 'SIGNAL_BASIC' || loading}
+                  className={cn(
+                    'w-full py-3 px-6 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2',
+                    'bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-900 dark:text-white',
+                    (purchasing === 'SIGNAL_BASIC' || loading) && 'opacity-50 cursor-not-allowed'
+                  )}
+                >
+                  {purchasing === 'SIGNAL_BASIC' ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+                  ) : !isLoggedIn ? (
+                    <>Sign Up & Subscribe</>
+                  ) : (
+                    <>Subscribe</>
+                  )}
+                </button>
+              </div>
+
+              {/* SIGNAL_PRO */}
+              <div className="relative rounded-2xl border-2 border-teal-500/50 dark:border-teal-500/30 bg-white dark:bg-[#111111] p-6 md:p-8 transition-all hover:shadow-xl hover:shadow-teal-200/30 dark:hover:shadow-teal-900/30">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-teal-500 text-white text-[11px] font-bold px-3 py-1 rounded-full tracking-wide">
+                  Most Popular
+                </div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400 mb-4">
+                  <Zap className="w-3 h-3" />
+                  Signals Pro
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Signal Pro</h3>
+                <div className="flex items-baseline gap-1 mt-3">
+                  <span className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">$19</span>
+                  <span className="text-sm text-slate-400 font-medium">/mo</span>
+                </div>
+                <div className="space-y-3 mt-6 mb-8">
+                  {[
+                    '10–20 signals/day',
+                    'All markets (crypto, stocks, metals)',
+                    'Telegram & email delivery',
+                    'Entry / SL / TP included',
+                    'Outcome notifications',
+                    'BIST signals included',
+                  ].map((feature) => (
+                    <div key={feature} className="flex items-start gap-3">
+                      <div className="w-5 h-5 rounded-full bg-teal-100 dark:bg-teal-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-teal-600 dark:text-teal-400" />
+                      </div>
+                      <span className="text-sm text-slate-600 dark:text-slate-300">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => handleSignalSubscribe('SIGNAL_PRO')}
+                  disabled={purchasing === 'SIGNAL_PRO' || loading}
+                  className={cn(
+                    'w-full py-3 px-6 rounded-xl font-semibold text-white text-sm transition-all duration-200 flex items-center justify-center gap-2',
+                    'bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40',
+                    (purchasing === 'SIGNAL_PRO' || loading) && 'opacity-50 cursor-not-allowed shadow-none'
+                  )}
+                >
+                  {purchasing === 'SIGNAL_PRO' ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+                  ) : !isLoggedIn ? (
+                    <>Sign Up & Subscribe <ArrowRight className="w-4 h-4" /></>
+                  ) : (
+                    <>Subscribe <ArrowRight className="w-4 h-4" /></>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </section>

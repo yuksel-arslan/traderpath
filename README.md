@@ -40,7 +40,6 @@ traderpath/
 │   └── api/          # Fastify backend
 ├── packages/
 │   ├── types/        # Shared TypeScript types
-│   ├── analysis-engine/  # Core analysis logic
 │   └── ui/           # Shared UI components
 └── infrastructure/   # Terraform, K8s, Docker
 ```
@@ -150,6 +149,18 @@ Key variables:
 | Full Analysis | 15 |
 | Price Alert | 1 |
 | AI Chat Question | 2 |
+
+## Production Migration: Signals System
+
+AutoEdge and Signal system require the signals tables. Apply this SQL to your production Neon DB:
+
+```bash
+# Run via Railway or Neon console:
+psql $DATABASE_URL -f apps/api/prisma/migrations/apply_signals_production.sql
+```
+
+This creates: `signals`, `user_signal_preferences`, and `signal_subscriptions` tables.
+The AutoEdge cron safely skips if tables don't exist yet.
 
 ## Deployment
 
