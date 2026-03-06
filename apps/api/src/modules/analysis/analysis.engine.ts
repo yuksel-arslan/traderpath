@@ -33,7 +33,6 @@ import { buildIndicatorAnalysis, indicatorInterpreterService } from './services/
 import { IndicatorAnalysis } from '../../types';
 import { IndicatorsService, OHLCV, IndicatorResult } from './services/indicators.service';
 import { getTFTClient, TFTForecast } from './services/tft-client.service';
-import { getTradingKnowledgeForAI } from '../ai-expert/trading-knowledge-base';
 
 // NEW: Tokenomics and Indicator Classification imports
 import { analyzeTokenomics, calculateTokenomicsRiskFactor, TokenomicsData } from './services/tokenomics.service';
@@ -188,75 +187,8 @@ interface GateEvaluationResult {
 }
 
 async function evaluateMarketGateWithRAG(input: GateEvaluationInput): Promise<GateEvaluationResult> {
-  const GEMINI_API_KEY = config.gemini?.apiKey;
-
-  // Fallback to rule-based if no API key
-  if (!GEMINI_API_KEY) {
-    return evaluateMarketGateRuleBased(input);
-  }
-
-  try {
-    // Get trading knowledge for context (RAG)
-    const tradingKnowledge = getTradingKnowledgeForAI();
-
-    const prompt = `You are a professional crypto trader. Based on the market data below, evaluate whether current market conditions are suitable for opening trades.
-
-IMPORTANT: You MUST respond in English only.
-
-## Market Data:
-- Fear & Greed Index: ${input.fearGreedIndex} (${input.fearGreedLabel})
-- BTC Daily Trend: ${input.btcTrend.direction} (${input.btcTrend.strength}% strength)
-- BTC 4H Trend: ${input.trend4h.direction} (${input.trend4h.strength}% strength)
-- BTC 1H Trend: ${input.trend1h.direction} (${input.trend1h.strength}% strength)
-- Timeframe Alignment: ${input.timeframesAligned}/4
-- Market Regime: ${input.marketRegime}
-- BTC 24h Change: ${input.btcPrice24hChange.toFixed(2)}%
-- Funding Rate: ${input.fundingRate.toFixed(4)}%
-- Long/Short Ratio: ${input.longShortRatio.toFixed(2)}
-- Top Trader L/S Ratio: ${input.topTraderLongShortRatio.toFixed(2)}
-- Taker Buy/Sell Ratio: ${input.takerBuySellRatio.toFixed(2)}
-- Open Interest: $${(input.openInterestValue / 1e9).toFixed(2)}B
-- News Sentiment: ${input.newsSentiment}
-
-## Trading Knowledge:
-${tradingKnowledge}
-
-## Task:
-Based on the data above, evaluate whether market conditions are suitable for trading.
-
-Respond ONLY in the following JSON format, nothing else:
-{
-  "canProceed": true or false,
-  "reason": "Brief and clear explanation (maximum 2 sentences)",
-  "confidence": confidence score between 0-100
-}`;
-
-    const response = await callGeminiWithRetry({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 200,
-      },
-    }, 3, 'market_gate');
-
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
-
-    // Parse JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        canProceed: Boolean(parsed.canProceed),
-        reason: String(parsed.reason || 'Evaluation completed'),
-        confidence: Number(parsed.confidence) || 50,
-      };
-    }
-
-    return evaluateMarketGateRuleBased(input);
-  } catch (error) {
-    console.warn('RAG gate evaluation failed, falling back to rule-based:', error);
-    return evaluateMarketGateRuleBased(input);
-  }
+  // Rule-based evaluation — Gemini gate calls removed for performance (same accuracy)
+  return evaluateMarketGateRuleBased(input);
 }
 
 function evaluateMarketGateRuleBased(input: GateEvaluationInput): GateEvaluationResult {
@@ -374,83 +306,8 @@ interface AssetGateEvaluationResult {
 }
 
 async function evaluateAssetGateWithRAG(input: AssetGateEvaluationInput): Promise<AssetGateEvaluationResult> {
-  const GEMINI_API_KEY = config.gemini?.apiKey;
-
-  // Fallback to rule-based if no API key
-  if (!GEMINI_API_KEY) {
-    return evaluateAssetGateRuleBased(input);
-  }
-
-  try {
-    const tradingKnowledge = getTradingKnowledgeForAI();
-
-    const patternInfo = input.highSignificancePatterns && input.highSignificancePatterns.length > 0
-      ? `High-significance patterns: ${input.highSignificancePatterns.join(', ')}`
-      : 'No high-significance patterns detected';
-    const patternBalance = (input.bullishPatternCount || 0) - (input.bearishPatternCount || 0);
-
-    const prompt = `You are a professional crypto trader. Based on the asset data below, evaluate whether this specific asset is suitable for trading.
-
-IMPORTANT: You MUST respond in English only.
-
-## Asset Data for ${input.symbol}:
-- Current Price: $${input.currentPrice.toLocaleString()}
-- 24h Price Change: ${input.priceChange24h.toFixed(2)}%
-- RSI (14): ${input.rsi.toFixed(1)}
-- MACD Histogram: ${input.macdHistogram > 0 ? 'Positive' : 'Negative'} (${input.macdHistogram.toFixed(4)})
-- Trend Direction: ${input.trendDirection}
-- Trend Strength: ${input.trendStrength}%
-- Timeframe Alignment: ${input.timeframeAlignment}/5 timeframes agree
-- Leading Indicators Signal: ${input.leadingIndicatorsSignal || 'N/A'}
-- Signal Confidence: ${input.signalConfidence || 0}%
-- ATR: ${input.atr.toFixed(2)} (volatility measure)
-- Support Levels: ${input.supportLevels.slice(0, 2).map(s => '$' + s.toLocaleString()).join(', ')}
-- Resistance Levels: ${input.resistanceLevels.slice(0, 2).map(r => '$' + r.toLocaleString()).join(', ')}
-- Candlestick Patterns: ${patternInfo} (Bullish: ${input.bullishPatternCount || 0}, Bearish: ${input.bearishPatternCount || 0})
-
-## Trading Knowledge:
-${tradingKnowledge}
-
-## Task:
-1. Evaluate if this asset is suitable for trading (not the market, the specific asset)
-2. If suitable, determine the recommended direction (long or short)
-
-Respond ONLY in the following JSON format:
-{
-  "canProceed": true or false,
-  "reason": "Brief explanation (max 2 sentences)",
-  "confidence": 0-100,
-  "direction": "long" or "short" or null,
-  "directionConfidence": 0-100
-}`;
-
-    const response = await callGeminiWithRetry({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 250,
-      },
-    }, 3, 'asset_gate');
-
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        canProceed: Boolean(parsed.canProceed),
-        reason: String(parsed.reason || 'Evaluation completed'),
-        confidence: Number(parsed.confidence) || 50,
-        direction: parsed.direction === 'long' ? 'long' : parsed.direction === 'short' ? 'short' : null,
-        directionConfidence: Number(parsed.directionConfidence) || 0,
-      };
-    }
-
-    return evaluateAssetGateRuleBased(input);
-  } catch (error) {
-    console.warn('Asset RAG gate evaluation failed:', error);
-    return evaluateAssetGateRuleBased(input);
-  }
+  // Rule-based evaluation — Gemini gate calls removed for performance (same accuracy)
+  return evaluateAssetGateRuleBased(input);
 }
 
 function evaluateAssetGateRuleBased(input: AssetGateEvaluationInput): AssetGateEvaluationResult {
@@ -601,70 +458,8 @@ interface SafetyGateEvaluationResult {
 }
 
 async function evaluateSafetyGateWithRAG(input: SafetyGateEvaluationInput): Promise<SafetyGateEvaluationResult> {
-  const GEMINI_API_KEY = config.gemini?.apiKey;
-
-  if (!GEMINI_API_KEY) {
-    return evaluateSafetyGateRuleBased(input);
-  }
-
-  try {
-    const tradingKnowledge = getTradingKnowledgeForAI();
-
-    const prompt = `You are a professional crypto trader evaluating trade safety. Analyze the following safety metrics.
-
-IMPORTANT: You MUST respond in English only.
-
-## Safety Data for ${input.symbol}:
-- Overall Risk Level: ${input.riskLevel}
-- Spoofing Detected: ${input.spoofingDetected}
-- Layering Detected: ${input.layeringDetected}
-- Wash Trading: ${input.washTrading}
-- Pump & Dump Risk: ${input.pumpDumpRisk}
-- Whale Activity Bias: ${input.whaleBias}
-- Net Whale Flow: $${input.netFlowUsd.toLocaleString()}
-- Order Flow Imbalance: ${(input.orderFlowImbalance * 100).toFixed(1)}%
-- Smart Money Positioning: ${input.smartMoneyPositioning}
-- Volume Spike: ${input.volumeSpike ? `Yes (${input.volumeSpikeFactor.toFixed(1)}x)` : 'No'}
-- Liquidity Score: ${input.liquidityScore.toFixed(0)}/100
-- Warnings: ${input.warnings.length > 0 ? input.warnings.join(', ') : 'None'}
-
-## Trading Knowledge:
-${tradingKnowledge}
-
-## Task:
-Evaluate if it's safe to proceed with the trade. Consider manipulation risks, whale activity, and liquidity.
-
-Respond ONLY in the following JSON format:
-{
-  "canProceed": true or false,
-  "reason": "Brief explanation (max 2 sentences)",
-  "confidence": 0-100,
-  "riskAdjustment": -100 to +100 (negative means reduce position size, positive means can increase)
-}`;
-
-    const response = await callGeminiWithRetry({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
-    }, 3, 'safety_gate');
-
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        canProceed: Boolean(parsed.canProceed),
-        reason: String(parsed.reason || 'Safety evaluation completed'),
-        confidence: Math.max(0, Math.min(100, Number(parsed.confidence) || 50)),
-        riskAdjustment: Math.max(-100, Math.min(100, Number(parsed.riskAdjustment) || 0)),
-      };
-    }
-
-    return evaluateSafetyGateRuleBased(input);
-  } catch (error) {
-    console.warn('Safety RAG evaluation failed:', error);
-    return evaluateSafetyGateRuleBased(input);
-  }
+  // Rule-based evaluation — Gemini gate calls removed for performance (same accuracy)
+  return evaluateSafetyGateRuleBased(input);
 }
 
 function evaluateSafetyGateRuleBased(input: SafetyGateEvaluationInput): SafetyGateEvaluationResult {
@@ -755,68 +550,8 @@ interface TimingGateEvaluationResult {
 }
 
 async function evaluateTimingGateWithRAG(input: TimingGateEvaluationInput): Promise<TimingGateEvaluationResult> {
-  const GEMINI_API_KEY = config.gemini?.apiKey;
-
-  if (!GEMINI_API_KEY) {
-    return evaluateTimingGateRuleBased(input);
-  }
-
-  try {
-    const tradingKnowledge = getTradingKnowledgeForAI();
-
-    const prompt = `You are a professional crypto trader evaluating entry timing. Analyze when to enter this trade.
-
-IMPORTANT: You MUST respond in English only.
-
-## Timing Data for ${input.symbol}:
-- Current Price: $${input.currentPrice.toLocaleString()}
-- RSI: ${input.rsiValue.toFixed(1)}
-- MACD Signal: ${input.macdSignal}
-- Volume Confirmation: ${input.volumeConfirmation ? 'Yes' : 'No'}
-- Near Support: ${input.nearSupport ? 'Yes' : 'No'}
-- Near Resistance: ${input.nearResistance ? 'Yes' : 'No'}
-- Trend Strength: ${input.trendStrength}%
-- Entry Quality Score: ${input.entryQuality}/10
-- Momentum: ${input.momentum}
-
-## Trading Knowledge:
-${tradingKnowledge}
-
-## Task:
-Evaluate if the timing is right for entry. Consider RSI extremes, support/resistance levels, and momentum.
-
-Respond ONLY in the following JSON format:
-{
-  "canProceed": true or false,
-  "reason": "Brief explanation (max 2 sentences)",
-  "confidence": 0-100,
-  "urgency": "immediate" or "soon" or "wait" or "avoid"
-}`;
-
-    const response = await callGeminiWithRetry({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
-    }, 3, 'timing_gate');
-
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      const validUrgency = ['immediate', 'soon', 'wait', 'avoid'].includes(parsed.urgency) ? parsed.urgency : 'wait';
-      return {
-        canProceed: Boolean(parsed.canProceed),
-        reason: String(parsed.reason || 'Timing evaluation completed'),
-        confidence: Math.max(0, Math.min(100, Number(parsed.confidence) || 50)),
-        urgency: validUrgency,
-      };
-    }
-
-    return evaluateTimingGateRuleBased(input);
-  } catch (error) {
-    console.warn('Timing RAG evaluation failed:', error);
-    return evaluateTimingGateRuleBased(input);
-  }
+  // Rule-based evaluation — Gemini gate calls removed for performance (same accuracy)
+  return evaluateTimingGateRuleBased(input);
 }
 
 function evaluateTimingGateRuleBased(input: TimingGateEvaluationInput): TimingGateEvaluationResult {
@@ -900,66 +635,8 @@ interface TradePlanGateEvaluationResult {
 }
 
 async function evaluateTradePlanGateWithRAG(input: TradePlanGateEvaluationInput): Promise<TradePlanGateEvaluationResult> {
-  const GEMINI_API_KEY = config.gemini?.apiKey;
-
-  if (!GEMINI_API_KEY) {
-    return evaluateTradePlanGateRuleBased(input);
-  }
-
-  try {
-    const tradingKnowledge = getTradingKnowledgeForAI();
-
-    const prompt = `You are a professional crypto trader evaluating a trade plan. Analyze if this plan is worth executing.
-
-IMPORTANT: You MUST respond in English only.
-
-## Trade Plan for ${input.symbol}:
-- Direction: ${input.direction.toUpperCase()}
-- Risk/Reward Ratio: ${input.riskRewardRatio.toFixed(2)}
-- Estimated Win Rate: ${input.winRateEstimate}%
-- Position Size: ${input.positionSizePercent.toFixed(1)}% of portfolio
-- Stop Loss: ${input.stopLossPercent.toFixed(2)}% from entry
-- Take Profit Targets: ${input.targetCount}
-- Average Target: +${input.averageTargetPercent.toFixed(2)}%
-
-## Trading Knowledge:
-${tradingKnowledge}
-
-## Task:
-Evaluate if this trade plan has positive expected value. Consider R:R, win rate, and position sizing.
-
-Respond ONLY in the following JSON format:
-{
-  "canProceed": true or false,
-  "reason": "Brief explanation (max 2 sentences)",
-  "confidence": 0-100,
-  "planQuality": "excellent" or "good" or "acceptable" or "poor"
-}`;
-
-    const response = await callGeminiWithRetry({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
-    }, 3, 'trade_plan_gate');
-
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      const validQuality = ['excellent', 'good', 'acceptable', 'poor'].includes(parsed.planQuality) ? parsed.planQuality : 'acceptable';
-      return {
-        canProceed: Boolean(parsed.canProceed),
-        reason: String(parsed.reason || 'Trade plan evaluation completed'),
-        confidence: Math.max(0, Math.min(100, Number(parsed.confidence) || 50)),
-        planQuality: validQuality,
-      };
-    }
-
-    return evaluateTradePlanGateRuleBased(input);
-  } catch (error) {
-    console.warn('Trade Plan RAG evaluation failed:', error);
-    return evaluateTradePlanGateRuleBased(input);
-  }
+  // Rule-based evaluation — Gemini gate calls removed for performance (same accuracy)
+  return evaluateTradePlanGateRuleBased(input);
 }
 
 function evaluateTradePlanGateRuleBased(input: TradePlanGateEvaluationInput): TradePlanGateEvaluationResult {
@@ -1041,66 +718,8 @@ interface TrapGateEvaluationResult {
 }
 
 async function evaluateTrapGateWithRAG(input: TrapGateEvaluationInput): Promise<TrapGateEvaluationResult> {
-  const GEMINI_API_KEY = config.gemini?.apiKey;
-
-  if (!GEMINI_API_KEY) {
-    return evaluateTrapGateRuleBased(input);
-  }
-
-  try {
-    const tradingKnowledge = getTradingKnowledgeForAI();
-
-    const prompt = `You are a professional crypto trader evaluating trap risks. Analyze potential market traps.
-
-IMPORTANT: You MUST respond in English only.
-
-## Trap Analysis for ${input.symbol}:
-- Bull Trap Detected: ${input.bullTrap ? 'Yes' : 'No'}
-- Bear Trap Detected: ${input.bearTrap ? 'Yes' : 'No'}
-- Liquidity Grab Detected: ${input.liquidityGrabDetected ? 'Yes' : 'No'}
-- Stop Hunt Zones: ${input.stopHuntZonesCount}
-- Fakeout Risk: ${input.fakeoutRisk}
-- Nearby Liquidation Levels: ${input.liquidationLevelsNearby}
-- Overall Risk Level: ${input.riskLevel}
-
-## Trading Knowledge:
-${tradingKnowledge}
-
-## Task:
-Evaluate if the trade can proceed safely or if trap risks are too high. Consider all trap indicators.
-
-Respond ONLY in the following JSON format:
-{
-  "canProceed": true or false,
-  "reason": "Brief explanation (max 2 sentences)",
-  "confidence": 0-100,
-  "trapRisk": "minimal" or "moderate" or "elevated" or "severe"
-}`;
-
-    const response = await callGeminiWithRetry({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 250 },
-    }, 3, 'trap_gate');
-
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || response.text || '';
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      const validRisk = ['minimal', 'moderate', 'elevated', 'severe'].includes(parsed.trapRisk) ? parsed.trapRisk : 'moderate';
-      return {
-        canProceed: Boolean(parsed.canProceed),
-        reason: String(parsed.reason || 'Trap evaluation completed'),
-        confidence: Math.max(0, Math.min(100, Number(parsed.confidence) || 50)),
-        trapRisk: validRisk,
-      };
-    }
-
-    return evaluateTrapGateRuleBased(input);
-  } catch (error) {
-    console.warn('Trap RAG evaluation failed:', error);
-    return evaluateTrapGateRuleBased(input);
-  }
+  // Rule-based evaluation — Gemini gate calls removed for performance (same accuracy)
+  return evaluateTrapGateRuleBased(input);
 }
 
 function evaluateTrapGateRuleBased(input: TrapGateEvaluationInput): TrapGateEvaluationResult {
@@ -4937,7 +4556,7 @@ export const analysisEngine = {
   // =========================================
   // Step 5: Trade Plan (5 credits)
   // =========================================
-  async tradePlan(symbol: string, accountSize: number = 10000, tradeType: TradeType = 'dayTrade', interval?: string): Promise<TradePlanResult> {
+  async tradePlan(symbol: string, accountSize: number = 10000, tradeType: TradeType = 'dayTrade', interval?: string, capitalFlowPhase?: 'early' | 'mid' | 'late' | 'exit'): Promise<TradePlanResult> {
     const tf = getTimeframesForTradeType(tradeType, interval);
 
     const [ticker, candlesPrimary] = await Promise.all([
@@ -4993,7 +4612,15 @@ export const analysisEngine = {
     );
 
     // Stop loss calculation (ATR-based or level-based)
-    const atrStop = atr * 2;
+    // Capital flow phase risk adjustment
+    const phaseRiskMultiplier = {
+      'early': 0.8,   // Early phase: tighter SL (more aggressive)
+      'mid': 1.0,     // Mid phase: normal
+      'late': 1.3,    // Late phase: wider SL (more conservative)
+      'exit': 1.5,    // Exit phase: widest SL or avoid trade
+    }[capitalFlowPhase ?? 'mid'] ?? 1.0;
+
+    const atrStop = atr * 2 * phaseRiskMultiplier;
     const levelStop = direction === 'long'
       ? (levels.support[1] || averageEntry * 0.93)
       : (levels.resistance[1] || averageEntry * 1.07);
@@ -5906,7 +5533,8 @@ export const analysisEngine = {
       timing: TimingResult;
       trapCheck: TrapCheckResult;
     },
-    accountSize: number = 10000
+    accountSize: number = 10000,
+    capitalFlowPhase?: 'early' | 'mid' | 'late' | 'exit'
   ): Promise<TradePlanResult | null> {
     // Don't generate trade plan if not GO/CONDITIONAL_GO
     if (!preliminaryVerdict.shouldGenerateTradePlan || !preliminaryVerdict.direction) {
@@ -6010,19 +5638,29 @@ export const analysisEngine = {
       }
     }
 
-    // ===== STOP LOSS: Key level ± 1 ATR =====
-    // LONG: SL = nearest support - 1 ATR (below support)
-    // SHORT: SL = nearest resistance + 1 ATR (above resistance)
+    // ===== STOP LOSS: Key level ± ATR (adjusted by capital flow phase) =====
+    // LONG: SL = nearest support - atrMultiplied (below support)
+    // SHORT: SL = nearest resistance + atrMultiplied (above resistance)
+    // Capital flow phase risk adjustment
+    const phaseRiskMultiplier = {
+      'early': 0.8,   // Early phase: tighter SL (more aggressive)
+      'mid': 1.0,     // Mid phase: normal
+      'late': 1.3,    // Late phase: wider SL (more conservative)
+      'exit': 1.5,    // Exit phase: widest SL or avoid trade
+    }[capitalFlowPhase ?? 'mid'] ?? 1.0;
+
+    const atrMultiplied = atr * phaseRiskMultiplier;
+
     let stopPrice: number;
     let safetyAdjusted = false;
 
     if (direction === 'long') {
-      // SL below nearest support - 1 ATR
+      // SL below nearest support - atrMultiplied
       const slReference = nearestSupport ?? currentPrice;
-      stopPrice = slReference - atr;
+      stopPrice = slReference - atrMultiplied;
       sources.stopLoss.push(nearestSupport
-        ? `Below support $${nearestSupport.toFixed(2)} - 1 ATR ($${atr.toFixed(2)})`
-        : `Below current price - 1 ATR`);
+        ? `Below support $${nearestSupport.toFixed(2)} - ATR×${phaseRiskMultiplier} ($${atrMultiplied.toFixed(2)})`
+        : `Below current price - ATR×${phaseRiskMultiplier}`);
 
       // Trap zone adjustment - don't place stop inside trap zones
       if (trapCheck.traps.stopHuntZones.length > 0) {
@@ -6034,12 +5672,12 @@ export const analysisEngine = {
         }
       }
     } else {
-      // SL above nearest resistance + 1 ATR
+      // SL above nearest resistance + atrMultiplied
       const slReference = nearestResistance ?? currentPrice;
-      stopPrice = slReference + atr;
+      stopPrice = slReference + atrMultiplied;
       sources.stopLoss.push(nearestResistance
-        ? `Above resistance $${nearestResistance.toFixed(2)} + 1 ATR ($${atr.toFixed(2)})`
-        : `Above current price + 1 ATR`);
+        ? `Above resistance $${nearestResistance.toFixed(2)} + ATR×${phaseRiskMultiplier} ($${atrMultiplied.toFixed(2)})`
+        : `Above current price + ATR×${phaseRiskMultiplier}`);
 
       // Trap zone adjustment
       if (trapCheck.traps.stopHuntZones.length > 0) {

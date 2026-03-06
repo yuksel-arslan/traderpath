@@ -301,6 +301,16 @@ export interface UnifiedReport {
   overallDirection: 'long' | 'short' | 'neutral';
   overallConfidence: number;
   summary: string; // 2-3 sentence AI summary
+  // Trade plan (only for GO/CONDITIONAL_GO)
+  tradePlan?: {
+    direction: 'long' | 'short' | 'neutral';
+    entries: Array<{ price: number; percentage: number; type: string }>;
+    averageEntry: number;
+    stopLoss: { price: number; percentage: number; reason: string };
+    takeProfits: Array<{ price: number; percentage: number; reason: string; riskReward: number }>;
+    riskRewardRatio: number;
+    positionSizePercent: number;
+  };
 }
 
 // ============================================================================
