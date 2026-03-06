@@ -179,7 +179,7 @@ export default function AnalysisDetailsPage() {
 
       // Download as PNG snapshot
       const link = document.createElement('a');
-      link.download = `TraderPath_${analysis.symbol || 'Analysis'}_${new Date().toISOString().split('T')[0]}.png`;
+      link.download = `TraderPath_${analysis.symbol || 'Analysis'}_${new Date(analysis.createdAt || Date.now()).toISOString().split('T')[0]}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
 
@@ -240,7 +240,7 @@ export default function AnalysisDetailsPage() {
 
       // Download as PNG snapshot
       const link = document.createElement('a');
-      link.download = `TraderPath_${analysis.symbol || 'Analysis'}_${new Date().toISOString().split('T')[0]}.png`;
+      link.download = `TraderPath_${analysis.symbol || 'Analysis'}_${new Date(analysis.createdAt || Date.now()).toISOString().split('T')[0]}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     } catch (err) {

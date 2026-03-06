@@ -49,6 +49,7 @@ interface TradePlanProps {
   data?: TradePlanData;
   symbol: string;
   interval?: string;
+  analysisTime?: string | Date;
   fibonacciLevels?: Array<{ level: number; price: number; type: string }>;
   elliottWave?: {
     currentWave?: string; waveType?: string; direction?: string;
@@ -113,7 +114,7 @@ function generateLevelExplanation(data: TradePlanData): string {
   return explanation;
 }
 
-export function TradePlan({ data, symbol, interval, fibonacciLevels, elliottWave }: TradePlanProps) {
+export function TradePlan({ data, symbol, interval, analysisTime, fibonacciLevels, elliottWave }: TradePlanProps) {
   const [showDetails, setShowDetails] = useState(true);
 
   if (!data) {
@@ -227,6 +228,7 @@ export function TradePlan({ data, symbol, interval, fibonacciLevels, elliottWave
           fibonacciLevels={fibonacciLevels}
           elliottWave={elliottWave}
           interval={interval}
+          analysisTime={analysisTime}
         />
       </div>
 

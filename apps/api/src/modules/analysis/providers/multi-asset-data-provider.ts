@@ -79,8 +79,10 @@ const BINANCE_INTERVAL_MAP: Record<string, string> = {
   '15m': '15m',
   '30m': '30m',
   '1h': '1h',
+  '2h': '2h',
   '4h': '4h',
   '1d': '1d',
+  '1W': '1w',
 };
 
 async function fetchBinanceCandles(symbol: string, interval: string, limit: number = 500, endTime?: number): Promise<OHLCV[]> {
@@ -191,8 +193,10 @@ const YAHOO_INTERVAL_MAP: Record<string, string> = {
   '15m': '15m',
   '30m': '30m',
   '1h': '60m',
+  '2h': '60m', // Yahoo doesn't have 2h directly, we'll aggregate
   '4h': '60m', // Yahoo doesn't have 4h directly, we'll aggregate
   '1d': '1d',
+  '1W': '1wk',
 };
 
 const YAHOO_RANGE_MAP: Record<string, string> = {
@@ -200,8 +204,10 @@ const YAHOO_RANGE_MAP: Record<string, string> = {
   '15m': '5d',
   '30m': '1mo',
   '1h': '1mo',
+  '2h': '3mo',
   '4h': '6mo',
   '1d': '1y',
+  '1W': '5y',
 };
 
 async function fetchYahooCandles(symbol: string, interval: string, limit: number = 500): Promise<OHLCV[]> {

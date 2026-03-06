@@ -146,9 +146,10 @@ interface FinalVerdictProps {
   symbol: string;
   allResults?: AllResultsData;
   interval?: string;
+  analysisTime?: string | Date;
 }
 
-export function FinalVerdict({ data, symbol, allResults, interval }: FinalVerdictProps) {
+export function FinalVerdict({ data, symbol, allResults, interval, analysisTime }: FinalVerdictProps) {
   const router = useRouter();
 
   if (!data) {
@@ -525,6 +526,7 @@ export function FinalVerdict({ data, symbol, allResults, interval }: FinalVerdic
             confidence?: number; projectedTarget?: number;
           } | undefined}
           interval={interval}
+          analysisTime={analysisTime}
           chartId="trade-plan-chart-visible"
         />
       )}

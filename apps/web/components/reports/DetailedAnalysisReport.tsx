@@ -769,7 +769,7 @@ export async function generateDetailedReport(data: DetailedReportData): Promise<
   }
 
   const tradeTypeShort = data.tradeType === 'scalping' ? 'Scalp' : data.tradeType === 'dayTrade' ? 'Day' : 'Swing';
-  const dateStr = new Date().toISOString().split('T')[0];
+  const dateStr = new Date(data.generatedAt || Date.now()).toISOString().split('T')[0];
   const baseFileName = `TraderPath_${data.symbol}_${tradeTypeShort}_Detailed_${dateStr}`;
 
   const snapshots: { base64: string; fileName: string }[] = [];
