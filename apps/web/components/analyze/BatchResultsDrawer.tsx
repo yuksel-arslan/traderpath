@@ -452,7 +452,7 @@ export function BatchResultsDrawer({ analysisIds, isOpen, onClose }: BatchResult
                             setExpandedId(isExpanded ? null : a.id);
                           }}
                         >
-                          <ScoreRing score={a.totalScore} size={42} strokeWidth={3} />
+                          <ScoreRing score={Math.round((a.totalScore ?? 0) * 10)} size={42} strokeWidth={3} />
 
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             <CoinIcon symbol={a.symbol} size={24} />

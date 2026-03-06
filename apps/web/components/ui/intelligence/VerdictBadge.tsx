@@ -15,6 +15,7 @@ const verdictConfig: Record<VerdictType, { color: string; bg: string; label: str
 };
 
 function normalizeVerdict(verdict: string): VerdictType {
+  if (!verdict || typeof verdict !== 'string') return 'WAIT';
   const v = verdict.toUpperCase().replace(/[^A-Z_]/g, '');
   if (v === 'GO') return 'GO';
   if (v === 'CONDITIONAL_GO' || v === 'CONDITIONALGO' || v === 'COND' || v === 'CGO' || v === 'C_GO') return 'COND';

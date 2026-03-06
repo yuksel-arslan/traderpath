@@ -22,6 +22,13 @@ interface RecentAnalysisRowProps {
   item: RecentAnalysisItem;
 }
 
+function formatPrice(price: number): string {
+  if (price >= 1000) return `$${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  if (price >= 1) return `$${price.toFixed(2)}`;
+  if (price >= 0.01) return `$${price.toFixed(4)}`;
+  return `$${price.toFixed(6)}`;
+}
+
 function verdictToLabel(verdict: string): string {
   if (verdict === 'go') return 'GO';
   if (verdict === 'conditional_go') return 'COND';
@@ -32,7 +39,9 @@ function verdictToLabel(verdict: string): string {
 
 export function RecentAnalysisRow({ item }: RecentAnalysisRowProps) {
   const [expanded, setExpanded] = useState(false);
-  const score = item.score ?? 0;
+  // totalScore from API is 0-10 scale, ScoreRing expects 0-100
+  const rawScore = item.score ?? 0;
+  const score = rawScore <= 10 ? Math.round(rawScore * 10) : Math.round(rawScore);
   const isLive = item.outcome === 'pending';
   const direction = item.direction?.toUpperCase() || '';
 
@@ -107,7 +116,7 @@ export function RecentAnalysisRow({ item }: RecentAnalysisRowProps) {
                 className="text-sm font-bold text-gray-900 dark:text-white mt-1"
                 style={{ fontFamily: "'JetBrains Mono', monospace" }}
               >
-                {item.entryPrice ? `$${item.entryPrice}` : '--'}
+                {item.entryPrice ? formatPrice(item.entryPrice) : '--'}
               </div>
             </div>
             <div className="rounded-lg p-3" style={{ background: 'rgba(255,71,87,0.05)' }}>
@@ -116,7 +125,7 @@ export function RecentAnalysisRow({ item }: RecentAnalysisRowProps) {
                 className="text-sm font-bold mt-1"
                 style={{ color: '#FF4757', fontFamily: "'JetBrains Mono', monospace" }}
               >
-                {item.stopLoss ? `$${item.stopLoss}` : '--'}
+                {item.stopLoss ? formatPrice(item.stopLoss) : '--'}
               </div>
             </div>
             <div className="rounded-lg p-3" style={{ background: 'rgba(0,245,160,0.05)' }}>
@@ -125,7 +134,7 @@ export function RecentAnalysisRow({ item }: RecentAnalysisRowProps) {
                 className="text-sm font-bold mt-1"
                 style={{ color: '#00F5A0', fontFamily: "'JetBrains Mono', monospace" }}
               >
-                {item.takeProfit1 ? `$${item.takeProfit1}` : '--'}
+                {item.takeProfit1 ? formatPrice(item.takeProfit1) : '--'}
               </div>
             </div>
           </div>
@@ -137,10 +146,10 @@ export function RecentAnalysisRow({ item }: RecentAnalysisRowProps) {
               View Full Report
             </Link>
             <Link
-              href={`/analyze/details/${item.id}?download=true`}
+              href={`/analyze/details/${item.id}?snapshot=true`}
               className="px-3 py-1.5 rounded-md text-[11px] font-medium transition-all hover:bg-gray-100 dark:hover:bg-white/10 bg-gray-50 dark:bg-white/[0.05] text-gray-600 dark:text-white/60 border border-gray-200 dark:border-white/[0.08]"
             >
-              Download PDF
+              Download Snapshot
             </Link>
           </div>
         </div>

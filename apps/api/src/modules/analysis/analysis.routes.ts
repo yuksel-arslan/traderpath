@@ -1789,11 +1789,15 @@ Explain the key risks and what conditions would need to change before trading th
     try {
       const userId = getUser(request).id;
 
-      // Get user's analyses with trade plans (have entry price)
+      // Get user's analyses: active (not expired) OR recently completed (TP/SL hit)
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       const analyses = await prisma.analysis.findMany({
         where: {
           userId,
-          expiresAt: { gt: new Date() }, // Only active analyses
+          OR: [
+            { expiresAt: { gt: new Date() } }, // Active analyses
+            { outcome: { not: null }, createdAt: { gt: sevenDaysAgo } }, // Recently completed (TP/SL hit)
+          ],
         },
         orderBy: { createdAt: 'desc' },
         take: 20,
