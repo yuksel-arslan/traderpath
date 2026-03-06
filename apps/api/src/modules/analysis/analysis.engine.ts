@@ -59,6 +59,7 @@ import {
   fetchTicker as fetchMultiAssetTicker,
   getAssetClass,
   isSymbolSupported,
+  isBinanceAvailable,
   CandleData,
   TickerData,
   AssetClass,
@@ -1996,12 +1997,22 @@ async function fetchWithRetry(
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        // HTTP 451/418/403 from Binance: fail immediately, no retries
+        if (response.status === 451 || response.status === 418) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText} (geo-blocked)`);
+        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
+
+      // Don't retry geo-block errors
+      const errMsg = error instanceof Error ? error.message : '';
+      if (errMsg.includes('451') || errMsg.includes('418') || errMsg.includes('geo-blocked')) {
+        throw error;
+      }
 
       if (attempt === retries) {
         throw error;
@@ -2205,6 +2216,10 @@ async function fetchOrderBook(
   symbol: string,
   limit: number = 100
 ): Promise<{ bids: [string, string][]; asks: [string, string][] }> {
+  // Skip if Binance is geo-blocked
+  if (!isBinanceAvailable()) {
+    return { bids: [], asks: [] };
+  }
   try {
     const url = `https://api.binance.com/api/v3/depth?symbol=${symbol}USDT&limit=${limit}`;
     const response = await fetchWithRetry(url);
@@ -2221,6 +2236,10 @@ async function fetchRecentTrades(
 ): Promise<
   Array<{ price: string; qty: string; time: number; isBuyerMaker: boolean }>
 > {
+  // Skip if Binance is geo-blocked
+  if (!isBinanceAvailable()) {
+    return [];
+  }
   try {
     const url = `https://api.binance.com/api/v3/trades?symbol=${symbol}USDT&limit=${limit}`;
     const response = await fetchWithRetry(url);
@@ -2246,6 +2265,11 @@ async function fetchFundingRate(symbol: string = 'BTC'): Promise<FundingRateData
   const cacheKey = `funding_rate:${symbol}`;
   const cached = getCached<FundingRateData>(cacheKey);
   if (cached) return cached;
+
+  // Skip if Binance is geo-blocked
+  if (!isBinanceAvailable()) {
+    return { symbol, fundingRate: 0, fundingTime: Date.now(), nextFundingTime: Date.now() + 8 * 60 * 60 * 1000 };
+  }
 
   try {
     const url = `https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=1`;
@@ -2324,6 +2348,11 @@ async function fetchOpenInterest(symbol: string = 'BTC'): Promise<OpenInterestDa
   const cached = getCached<OpenInterestData>(cacheKey);
   if (cached) return cached;
 
+  // Skip if Binance is geo-blocked
+  if (!isBinanceAvailable()) {
+    return { symbol, openInterest: 0, openInterestValue: 0 };
+  }
+
   try {
     const url = `https://fapi.binance.com/fapi/v1/openInterest?symbol=${symbol}USDT`;
     const response = await fetchWithRetry(url);
@@ -2360,6 +2389,11 @@ async function fetchLongShortRatio(symbol: string = 'BTC'): Promise<LongShortRat
   const cacheKey = `long_short_ratio:${symbol}`;
   const cached = getCached<LongShortRatioData>(cacheKey);
   if (cached) return cached;
+
+  // Skip if Binance is geo-blocked
+  if (!isBinanceAvailable()) {
+    return { symbol, longShortRatio: 1, longAccount: 50, shortAccount: 50, timestamp: Date.now() };
+  }
 
   try {
     const url = `https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${symbol}USDT&period=5m&limit=1`;
@@ -2404,6 +2438,11 @@ async function fetchTopTraderSentiment(symbol: string = 'BTC'): Promise<TopTrade
   const cached = getCached<TopTraderSentiment>(cacheKey);
   if (cached) return cached;
 
+  // Skip if Binance is geo-blocked
+  if (!isBinanceAvailable()) {
+    return { symbol, topTraderLongShortRatio: 1, topTraderLongAccount: 50, topTraderShortAccount: 50, timestamp: Date.now() };
+  }
+
   try {
     const url = `https://fapi.binance.com/futures/data/topLongShortAccountRatio?symbol=${symbol}USDT&period=5m&limit=1`;
     const response = await fetchWithRetry(url);
@@ -2445,6 +2484,11 @@ async function fetchTakerBuySellRatio(symbol: string = 'BTC'): Promise<TakerBuyS
   const cacheKey = `taker_buy_sell:${symbol}`;
   const cached = getCached<TakerBuySellRatio>(cacheKey);
   if (cached) return cached;
+
+  // Skip if Binance is geo-blocked
+  if (!isBinanceAvailable()) {
+    return { buySellRatio: 1, buyVolume: 0, sellVolume: 0, timestamp: Date.now() };
+  }
 
   try {
     const url = `https://fapi.binance.com/futures/data/takerlongshortRatio?symbol=${symbol}USDT&period=5m&limit=1`;

@@ -40,6 +40,40 @@ const CACHE_TTL = {
 };
 
 // ============================================================================
+// BINANCE CIRCUIT BREAKER
+// When Binance returns HTTP 451 (geo-block), skip ALL subsequent Binance calls
+// for CIRCUIT_BREAKER_TTL to avoid wasting 3-7 seconds per call on retries.
+// ============================================================================
+
+let binanceCircuitOpen = false;
+let binanceCircuitOpenedAt = 0;
+const CIRCUIT_BREAKER_TTL = 5 * 60 * 1000; // 5 minutes
+
+function isBinanceBlocked(): boolean {
+  if (!binanceCircuitOpen) return false;
+  // Auto-reset after TTL
+  if (Date.now() - binanceCircuitOpenedAt > CIRCUIT_BREAKER_TTL) {
+    binanceCircuitOpen = false;
+    console.log('[CircuitBreaker] Binance circuit breaker reset - will retry Binance on next call');
+    return false;
+  }
+  return true;
+}
+
+function tripBinanceCircuitBreaker(reason: string): void {
+  if (!binanceCircuitOpen) {
+    binanceCircuitOpen = true;
+    binanceCircuitOpenedAt = Date.now();
+    console.warn(`[CircuitBreaker] Binance circuit breaker TRIPPED: ${reason}. All Binance calls will skip to Yahoo fallback for ${CIRCUIT_BREAKER_TTL / 1000}s`);
+  }
+}
+
+/** Exported so analysis.engine.ts can check before direct Binance calls */
+export function isBinanceAvailable(): boolean {
+  return !isBinanceBlocked();
+}
+
+// ============================================================================
 // FETCH WITH RETRY
 // ============================================================================
 
@@ -56,14 +90,34 @@ async function fetchWithRetry(url: string, options?: RequestInit, retries = 3): 
 
       if (response.ok) return response;
 
+      // HTTP 451 = geo-block: trip circuit breaker and fail immediately (no retries)
+      if (response.status === 451) {
+        const isBinanceUrl = url.includes('binance.com');
+        if (isBinanceUrl) {
+          tripBinanceCircuitBreaker(`HTTP 451 from ${new URL(url).hostname}`);
+        }
+        throw new Error(`HTTP 451: Unavailable For Legal Reasons (geo-blocked)`);
+      }
+
       if (response.status === 429) {
         await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
         continue;
       }
 
+      // HTTP 418 (Binance IP ban) or 403 - also trip circuit breaker
+      if ((response.status === 418 || response.status === 403) && url.includes('binance.com')) {
+        tripBinanceCircuitBreaker(`HTTP ${response.status} from Binance`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     } catch (error) {
       if (i === retries - 1) throw error;
+      // Don't retry if circuit breaker tripped
+      const errMsg = error instanceof Error ? error.message : '';
+      if (errMsg.includes('circuit breaker') || errMsg.includes('451') || errMsg.includes('418')) {
+        throw error;
+      }
       await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
     }
   }
@@ -85,7 +139,12 @@ const BINANCE_INTERVAL_MAP: Record<string, string> = {
   '1W': '1w',
 };
 
-async function fetchBinanceCandles(symbol: string, interval: string, limit: number = 500, endTime?: number): Promise<OHLCV[]> {
+async function fetchBinanceCandles(symbol: string, interval: string, limit: number = 500): Promise<OHLCV[]> {
+  // Circuit breaker: skip Binance entirely if geo-blocked
+  if (isBinanceBlocked()) {
+    throw new Error('Binance circuit breaker open - skipping to fallback');
+  }
+
   const binanceInterval = BINANCE_INTERVAL_MAP[interval] || '4h';
 
   // Normalize symbol: remove any suffix and add USDT
@@ -124,6 +183,11 @@ async function fetchBinanceCandles(symbol: string, interval: string, limit: numb
 }
 
 async function fetchBinanceTicker(symbol: string): Promise<MarketData> {
+  // Circuit breaker: skip Binance entirely if geo-blocked
+  if (isBinanceBlocked()) {
+    throw new Error('Binance circuit breaker open - skipping to fallback');
+  }
+
   let normalizedSymbol = symbol.toUpperCase();
   const suffixes = ['USDT', 'BUSD', 'USD', 'PERP', 'USDC'];
   for (const suffix of suffixes) {
@@ -464,6 +528,11 @@ export async function fetchCandles(
 
   try {
     if (assetClass === 'crypto') {
+      // If Binance is known to be blocked, skip directly to Yahoo
+      if (isBinanceBlocked()) {
+        const yahooSymbol = cryptoToYahooSymbol(symbol);
+        return await fetchYahooCandles(yahooSymbol, interval, limit);
+      }
       try {
         return await fetchBinanceCandles(symbol, interval, limit, endTime);
       } catch (binanceError) {
@@ -492,8 +561,8 @@ export async function fetchCandles(
       return candles;
     }
   } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    console.error(`[MultiAssetProvider] Error fetching candles for ${symbol}: ${errMsg}. Returning empty array.`);
+    console.error(`[MultiAssetProvider] Error fetching candles for ${symbol}:`, error);
+    // Return empty array instead of throwing - callers handle empty candles gracefully
     return [];
   }
 }
@@ -510,6 +579,22 @@ export async function fetchTicker(symbol: string): Promise<TickerData> {
 
   try {
     if (assetClass === 'crypto') {
+      // If Binance is known to be blocked, skip directly to Yahoo
+      if (isBinanceBlocked()) {
+        const yahooSymbol = cryptoToYahooSymbol(symbol);
+        const data = await fetchYahooTicker(yahooSymbol);
+        return {
+          symbol: symbol.toUpperCase().replace(/USDT|BUSD|USD|PERP|USDC$/, ''),
+          assetClass: 'crypto',
+          price: data.price,
+          change24h: data.change24h,
+          changePercent24h: data.changePercent24h,
+          high24h: data.high24h,
+          low24h: data.low24h,
+          volume24h: data.volume24h,
+          marketCap: data.marketCap,
+        };
+      }
       try {
         const data = await fetchBinanceTicker(symbol);
         return {

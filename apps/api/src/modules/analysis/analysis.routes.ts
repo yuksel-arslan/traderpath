@@ -2976,55 +2976,17 @@ Explain the key risks and what conditions would need to change before trading th
       const tradeType = (request.query.tradeType || 'dayTrade') as TradeType;
       const timeframe = request.query.timeframe || '4h';
 
-      // Validate timeframe against the 6 standard values
-      if (!isValidTimeframe(timeframe)) {
-        return reply.status(400).send({
-          success: false,
-          error: { code: 'INVALID_TIMEFRAME', message: `Invalid timeframe '${timeframe}'. Accepted: ${VALID_TIMEFRAMES.join(', ')}` },
-        });
-      }
-      const interval = timeframe; // standard timeframes map 1-to-1 to Binance intervals
+      const interval = timeframe || '4h';
 
-      // Fetch kline data from Binance (500 candles for good chart data)
-      const response = await fetch(
-        `https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}USDT&interval=${interval}&limit=500`
-      );
+      // Fetch candles using multi-asset provider (handles Binance + Yahoo Finance fallback)
+      const ohlcv = await fetchCandles(symbol, interval, 500);
 
-      if (!response.ok) {
+      if (!ohlcv || ohlcv.length === 0) {
         return reply.status(400).send({
           success: false,
           error: { code: 'FETCH_ERROR', message: 'Failed to fetch market data' }
         });
       }
-
-      // Safely parse JSON response
-      const responseText = await response.text();
-      if (!responseText || responseText.trim() === '') {
-        return reply.status(400).send({
-          success: false,
-          error: { code: 'EMPTY_RESPONSE', message: 'Empty response from Binance API' }
-        });
-      }
-
-      let klines: (string | number)[][];
-      try {
-        klines = JSON.parse(responseText);
-      } catch {
-        return reply.status(400).send({
-          success: false,
-          error: { code: 'PARSE_ERROR', message: 'Invalid JSON response from Binance API' }
-        });
-      }
-
-      // Convert Binance klines to OHLCV format
-      const ohlcv = klines.map((k: (string | number)[]) => ({
-        timestamp: Number(k[0]),
-        open: parseFloat(k[1] as string),
-        high: parseFloat(k[2] as string),
-        low: parseFloat(k[3] as string),
-        close: parseFloat(k[4] as string),
-        volume: parseFloat(k[5] as string),
-      }));
 
       // Define indicators per step based on trade type (40+ indicators total)
       // Trade type specific configurations with different periods and indicator focus
