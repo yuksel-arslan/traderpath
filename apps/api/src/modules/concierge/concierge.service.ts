@@ -3508,13 +3508,16 @@ Score: ${score}/10
 ${this.generateNaturalResponse(upperSymbol, interval, verdict, score, language)}`;
 
       // AI-powered synthesis for analysis results
-      const analysisMessage = await synthesizeWithAI({
+      let analysisMessage = await synthesizeWithAI({
         intent: 'ANALYSIS',
         userMessage: `Analyze ${upperSymbol} ${interval}`,
         dataContext,
         language,
         templateFallback,
       });
+
+      // Append report link
+      analysisMessage += `\n\n📊 ${isTurkish ? 'Detaylı rapor için' : 'For detailed report'}: /report?symbol=${upperSymbol}`;
 
       return {
         success: true,

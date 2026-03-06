@@ -900,27 +900,32 @@ Warn about potential traps and give protective advice.`;
         trapCheck,
       });
 
+      // Pre-compute Capital Flow phase for trade plan SL adjustment
+      let capitalFlowModifier: CapitalFlowModifier | null = null;
+      let capitalFlowPhase: 'early' | 'mid' | 'late' | 'exit' | undefined;
+      try {
+        const preAssetMarket = getAssetClass(body.symbol) as MarketType;
+        const preDirection = preliminaryVerdict.direction?.toUpperCase() === 'SHORT' ? 'SHORT' : 'LONG';
+        capitalFlowModifier = await getCapitalFlowModifier(preAssetMarket, preDirection as 'LONG' | 'SHORT');
+        capitalFlowPhase = (capitalFlowModifier.phase?.toLowerCase() as 'early' | 'mid' | 'late' | 'exit') || undefined;
+      } catch (cfError) {
+        logger.warn({ error: cfError, symbol: body.symbol }, '[Analysis] Capital Flow phase pre-fetch failed');
+      }
+
       // Step 7: Integrated Trade Plan - only generated for GO/CONDITIONAL_GO signals
-      // Uses ALL previous step data for intelligent decision making
+      // Uses ALL previous step data + capital flow phase for SL adjustment
       let tradePlan = await analysisEngine.integratedTradePlan(
         body.symbol,
         preliminaryVerdict,
         { marketPulse, assetScan, safetyCheck, timing, trapCheck },
-        body.accountSize
+        body.accountSize,
+        capitalFlowPhase
       );
 
       // Step 7.5: Apply Capital Flow Modifier to Trade Plan confidence
       // "Para nereye akıyorsa potansiyel oradadır" - Capital Flow integration
-      let capitalFlowModifier: CapitalFlowModifier | null = null;
-      if (tradePlan) {
+      if (tradePlan && capitalFlowModifier) {
         try {
-          // Get asset market type (crypto, stocks, bonds, metals)
-          const assetMarket = getAssetClass(body.symbol) as MarketType;
-          const direction = tradePlan.direction?.toUpperCase() === 'SHORT' ? 'SHORT' : 'LONG';
-
-          // Get Capital Flow modifier based on global liquidity, market phase, and flow direction
-          capitalFlowModifier = await getCapitalFlowModifier(assetMarket, direction);
-
           // Apply modifier to trade plan confidence
           // Original confidence × Capital Flow modifier = Adjusted confidence
           const originalConfidence = tradePlan.confidence;
@@ -943,8 +948,8 @@ Warn about potential traps and give protective advice.`;
 
           logger.info({
             symbol: body.symbol,
-            assetMarket,
-            direction,
+            assetMarket: getAssetClass(body.symbol),
+            direction: tradePlan.direction,
             originalConfidence,
             adjustedConfidence,
             modifier: capitalFlowModifier.modifier,

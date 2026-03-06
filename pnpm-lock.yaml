@@ -50,9 +50,6 @@ importers:
       '@prisma/client':
         specifier: ^6.2.1
         version: 6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)
-      '@traderpath/analysis-engine':
-        specifier: workspace:*
-        version: link:../../packages/analysis-engine
       '@traderpath/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -385,31 +382,6 @@ importers:
       tailwindcss:
         specifier: ^3.3.6
         version: 3.4.19(tsx@4.21.0)(yaml@2.8.2)
-      typescript:
-        specifier: ^5.3.0
-        version: 5.9.3
-      vitest:
-        specifier: ^1.0.4
-        version: 1.6.1(@types/node@20.19.29)(terser@5.46.0)
-
-  packages/analysis-engine:
-    dependencies:
-      '@traderpath/types':
-        specifier: workspace:*
-        version: link:../types
-      axios:
-        specifier: ^1.6.2
-        version: 1.13.2
-      date-fns:
-        specifier: ^2.30.0
-        version: 2.30.0
-      zod:
-        specifier: ^3.22.4
-        version: 3.25.76
-    devDependencies:
-      '@types/node':
-        specifier: ^20.10.0
-        version: 20.19.29
       typescript:
         specifier: ^5.3.0
         version: 5.9.3
