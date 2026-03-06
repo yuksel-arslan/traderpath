@@ -1019,51 +1019,87 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-5">
-              {/* Signal Generator (4h cycle) */}
-              <div className="rounded-lg p-4 bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06]">
-                <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="w-4 h-4 text-indigo-500" />
-                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Signal Generator</span>
+            {/* Generator Status Rows */}
+            <div className="space-y-2 px-5 pt-4">
+              {/* Signal Generator (4h) */}
+              <div className="flex items-center justify-between rounded-lg px-4 py-3 bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06]">
+                <div className="flex items-center gap-3">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${
+                    signalHealth?.generator?.active ? 'bg-green-500 animate-pulse' :
+                    signalHealth?.generator?.status === 'never_run' ? 'bg-gray-400' : 'bg-red-500'
+                  }`} />
+                  <TrendingUp className="w-4 h-4 text-indigo-500 shrink-0" />
+                  <div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">Signal Generator</span>
+                    <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                      signalHealth?.generator?.active
+                        ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                    }`}>
+                      {signalHealth?.generator?.active ? 'ACTIVE' : signalHealth?.generator?.status === 'never_run' ? 'NOT STARTED' : 'INACTIVE'}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                <div className="flex items-center gap-4 text-right">
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      {signalHealth?.metrics?.generator?.signalsGenerated ?? 0}
+                    </p>
+                    <p className="text-[10px] text-gray-400 dark:text-white/30">signals</p>
+                  </div>
+                  {signalHealth?.generator?.lastRun && (
+                    <p className="text-[10px] text-gray-400 dark:text-white/30">
+                      {new Date(signalHealth.generator.lastRun).toLocaleTimeString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* AutoEdge (15m) */}
+              <div className="flex items-center justify-between rounded-lg px-4 py-3 bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06]">
+                <div className="flex items-center gap-3">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${
+                    signalHealth?.autoedge?.active ? 'bg-green-500 animate-pulse' :
+                    signalHealth?.autoedge?.status === 'never_run' ? 'bg-gray-400' : 'bg-red-500'
+                  }`} />
+                  <Zap className="w-4 h-4 text-[#00F5A0] shrink-0" />
+                  <div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">AutoEdge v2</span>
+                    <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                      signalHealth?.autoedge?.active
+                        ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
+                    }`}>
+                      {signalHealth?.autoedge?.active ? 'ACTIVE' : signalHealth?.autoedge?.status === 'never_run' ? 'NOT STARTED' : 'INACTIVE'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-right">
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      {signalHealth?.metrics?.autoedge?.signalsGenerated ?? 0}
+                    </p>
+                    <p className="text-[10px] text-gray-400 dark:text-white/30">signals</p>
+                  </div>
+                  {signalHealth?.autoedge?.lastRun && (
+                    <p className="text-[10px] text-gray-400 dark:text-white/30">
+                      {new Date(signalHealth.autoedge.lastRun).toLocaleTimeString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Summary Stats Row */}
+            <div className="grid grid-cols-3 divide-x divide-gray-100 dark:divide-white/[0.06] px-5 py-3">
+              <div className="text-center">
+                <p className="text-[10px] text-gray-500 dark:text-white/35 mb-1">Total Signals</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                   {signalStats.totalSignals}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-white/40 mt-1">
-                  {signalStats.activeSignals} active
-                </p>
-                {signalHealth?.generator?.lastRunAt && (
-                  <p className="text-[10px] text-gray-400 dark:text-white/30 mt-2">
-                    Last: {new Date(signalHealth.generator.lastRunAt).toLocaleTimeString()}
-                  </p>
-                )}
               </div>
-
-              {/* AutoEdge Stats */}
-              <div className="rounded-lg p-4 bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06]">
-                <div className="flex items-center gap-2 mb-3">
-                  <Zap className="w-4 h-4 text-[#00F5A0]" />
-                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">AutoEdge v2</span>
-                </div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                  {signalHealth?.generator?.signalsGenerated ?? '—'}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-white/40 mt-1">
-                  generated total
-                </p>
-                <p className="text-[10px] text-gray-400 dark:text-white/30 mt-2">
-                  15m→5m hierarchical
-                </p>
-              </div>
-
-              {/* Win Rate */}
-              <div className="rounded-lg p-4 bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06]">
-                <div className="flex items-center gap-2 mb-3">
-                  <Target className="w-4 h-4 text-[#00F5A0]" />
-                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Win Rate</span>
-                </div>
+              <div className="text-center">
+                <p className="text-[10px] text-gray-500 dark:text-white/35 mb-1">Win Rate</p>
                 <p
-                  className="text-2xl font-bold"
+                  className="text-lg font-bold"
                   style={{
                     color: signalStats.winRate >= 60 ? '#00F5A0' : signalStats.winRate >= 40 ? '#FFB800' : '#FF4757',
                     fontFamily: "'JetBrains Mono', monospace",
@@ -1071,33 +1107,12 @@ export default function DashboardPage() {
                 >
                   {signalStats.winRate.toFixed(1)}%
                 </p>
-                <p className="text-xs text-gray-500 dark:text-white/40 mt-1">
-                  {signalStats.closedSignals} closed
-                </p>
               </div>
-
-              {/* Health Status */}
-              <div className="rounded-lg p-4 bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06]">
-                <div className="flex items-center gap-2 mb-3">
-                  <PulseDot
-                    color={signalHealth?.generator?.lastStatus === 'success' ? '#00F5A0' : '#FF4757'}
-                    size={6}
-                  />
-                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Health</span>
-                </div>
-                <p className="text-sm font-bold text-gray-900 dark:text-white capitalize">
-                  {signalHealth?.generator?.lastStatus ?? 'Unknown'}
+              <div className="text-center">
+                <p className="text-[10px] text-gray-500 dark:text-white/35 mb-1">Active</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  {signalStats.activeSignals}
                 </p>
-                {signalHealth?.generator?.consecutiveFailures > 0 && (
-                  <p className="text-xs text-red-500 mt-1">
-                    {signalHealth.generator.consecutiveFailures} consecutive failures
-                  </p>
-                )}
-                {signalHealth?.generator?.averageConfidence > 0 && (
-                  <p className="text-xs text-gray-500 dark:text-white/40 mt-1">
-                    Avg confidence: {signalHealth.generator.averageConfidence.toFixed(0)}%
-                  </p>
-                )}
               </div>
             </div>
 

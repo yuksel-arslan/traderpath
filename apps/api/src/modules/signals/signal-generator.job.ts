@@ -815,6 +815,7 @@ async function runAutoEdgeHierarchicalAnalysis(symbol: string): Promise<{
  * 3. Geçenleri sinyal olarak yayınla
  */
 export async function generateAutoEdgeSignal(): Promise<SignalGenerationResult> {
+  const startTime = Date.now();
   const result: SignalGenerationResult = {
     processed: 0,
     generated: 0,
@@ -900,10 +901,30 @@ export async function generateAutoEdgeSignal(): Promise<SignalGenerationResult> 
     }
 
     console.log('[AutoEdge] Cycle complete:', result);
+
+    // Record successful execution metrics
+    const duration = Date.now() - startTime;
+    await signalMonitoring.recordAutoEdgeRun({
+      success: true,
+      duration,
+      signalsGenerated: result.generated,
+      signalsPublished: result.published,
+      symbolsScanned: result.processed,
+    });
+
     return result;
 
   } catch (error) {
     console.error('[AutoEdge] Fatal error:', error);
+
+    // Record failure metrics
+    const duration = Date.now() - startTime;
+    await signalMonitoring.recordAutoEdgeRun({
+      success: false,
+      duration,
+      error: error instanceof Error ? error : new Error(String(error)),
+    });
+
     throw error;
   } finally {
     if (redis) await redis.del(AUTOEDGE_CONFIG.lockKey);
