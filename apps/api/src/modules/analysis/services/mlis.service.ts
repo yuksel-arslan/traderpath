@@ -42,6 +42,8 @@ export interface MLISConfig {
   includeOnchain?: boolean;
   includeSentiment?: boolean;
   confidenceThreshold?: number;
+  /** Pre-fetched candles from 7-Step analysis — avoids redundant API call */
+  candles?: OHLCV[];
 }
 
 export interface MLISSignals {
@@ -131,13 +133,16 @@ export class MLISService {
       includeOnchain = true,
       includeSentiment = true,
       confidenceThreshold = 0.65,
+      candles: preloadedCandles,
     } = config;
 
     const timestamp = new Date().toISOString();
 
     try {
-      // Fetch OHLCV data
-      const candles = await this.fetchCandles(symbol, timeframe);
+      // Use pre-loaded candles from 7-Step if available, otherwise fetch
+      const candles = preloadedCandles && preloadedCandles.length >= 50
+        ? preloadedCandles
+        : await this.fetchCandles(symbol, timeframe);
 
       if (!candles || candles.length < 50) {
         return this.createEmptyResult(symbol, timeframe, timestamp, 'Insufficient data');
@@ -191,29 +196,35 @@ export class MLISService {
       );
 
       // ── ML Layer 5: Platt Scaling Calibration ──
-      // Convert raw score to calibrated probability using historical outcomes
-      let historicalOutcomes: TrainingOutcome[] | undefined;
+      // Only activate after 30+ completed trades exist — before that, raw scores are more reliable
+      let plattCalibration: PlattCalibrationResult | undefined;
+      let effectiveConfidence = confidence;
+
       try {
-        const recentAnalyses = await prisma.analysis.findMany({
+        const outcomeCount = await prisma.analysis.count({
           where: { outcome: { in: ['tp1_hit', 'tp2_hit', 'tp3_hit', 'sl_hit'] } },
-          select: { totalScore: true, outcome: true },
-          orderBy: { createdAt: 'desc' },
-          take: 200,
         });
-        if (recentAnalyses.length >= 30) {
-          historicalOutcomes = recentAnalyses.map((a) => ({
+
+        if (outcomeCount >= 30) {
+          const recentAnalyses = await prisma.analysis.findMany({
+            where: { outcome: { in: ['tp1_hit', 'tp2_hit', 'tp3_hit', 'sl_hit'] } },
+            select: { totalScore: true, outcome: true },
+            orderBy: { createdAt: 'desc' },
+            take: 200,
+          });
+          const historicalOutcomes: TrainingOutcome[] = recentAnalyses.map((a) => ({
             score: Number(a.totalScore) || 50,
             outcome: (a.outcome === 'sl_hit' ? 0 : 1) as 0 | 1,
           }));
+          plattCalibration = calibrateScore(overallScore, historicalOutcomes);
+          if (plattCalibration.isCalibrated) {
+            effectiveConfidence = Math.round(plattCalibration.calibratedProbability * 100);
+          }
         }
       } catch {
-        // Fall back to default calibration if DB is unavailable
+        // DB unavailable — continue with raw confidence (no penalty)
+        logger.warn('[MLIS] Platt calibration skipped — DB unavailable');
       }
-      const plattCalibration = calibrateScore(overallScore, historicalOutcomes);
-      const calibratedConfidence = Math.round(plattCalibration.calibratedProbability * 100);
-
-      // Use calibrated confidence for recommendation/direction decisions
-      const effectiveConfidence = plattCalibration.isCalibrated ? calibratedConfidence : confidence;
 
       // Determine recommendation and direction
       const recommendation = this.getRecommendation(overallScore, effectiveConfidence, confidenceThreshold);
@@ -265,7 +276,7 @@ export class MLISService {
           garchResult,
           adaptiveThresholds,
           institutionalFlow,
-          plattCalibration,
+          ...(plattCalibration && { plattCalibration }),
         },
         method: 'mlis_pro',
         analysisVersion: '2.0.0',
@@ -763,23 +774,26 @@ export class MLISService {
     sentiment: MLISLayer | null,
     onchain: MLISLayer | null
   ): { overallScore: number; confidence: number } {
-    let totalWeight = 0;
+    // Collect only available layers
+    const activeLayers = [technical, momentum, volatility, volume];
+    if (sentiment) activeLayers.push(sentiment);
+    if (onchain) activeLayers.push(onchain);
+
+    // Redistribute weights proportionally among active layers
+    // so missing sentiment/onchain don't leave "dead weight"
+    const rawTotalWeight = activeLayers.reduce((sum, l) => sum + l.weight, 0);
+
     let weightedSum = 0;
     let confidenceSum = 0;
 
-    const layers = [technical, momentum, volatility, volume];
-    if (sentiment) layers.push(sentiment);
-    if (onchain) layers.push(onchain);
-
-    for (const layer of layers) {
-      weightedSum += layer.score * layer.weight;
-      totalWeight += layer.weight;
-      confidenceSum += layer.confidence * layer.weight;
+    for (const layer of activeLayers) {
+      const normalizedWeight = layer.weight / rawTotalWeight; // redistributed weight
+      weightedSum += layer.score * normalizedWeight;
+      confidenceSum += layer.confidence * normalizedWeight;
     }
 
-    // Normalize if weights don't sum to 1
-    const overallScore = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 50;
-    const confidence = totalWeight > 0 ? Math.round(confidenceSum / totalWeight) : 50;
+    const overallScore = Math.round(weightedSum);
+    const confidence = Math.round(confidenceSum);
 
     return { overallScore, confidence };
   }
