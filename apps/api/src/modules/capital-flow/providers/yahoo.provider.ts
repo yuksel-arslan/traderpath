@@ -1021,7 +1021,7 @@ async function getBistSectors(indexFlow7d: number, indexFlow30d: number): Promis
       topAssets: ['GARAN', 'AKBNK', 'YKBNK', 'ISCTR', 'HALKB'],
     },
     {
-      name: 'Holding',
+      name: 'Holdings',
       flow7d: (bankingFlow.flow7d + industrialFlow.flow7d) / 2, // Holdings are diversified
       flow30d: indexFlow30d,
       dominance: 15,

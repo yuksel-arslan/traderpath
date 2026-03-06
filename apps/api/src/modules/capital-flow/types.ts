@@ -398,11 +398,11 @@ export interface LayerInsights {
   layer2: string;  // Market Flow interpretation
   layer3: string;  // Sector analysis
   layer4: string;  // Overall recommendation reasoning
-  // RAG Commentaries - Data-driven short summaries
-  ragLayer1?: string;  // Net Liquidity commentary (1-2 sentences)
-  ragLayer2?: string;  // Market rotation commentary (1-2 sentences)
-  ragLayer3?: string;  // Sector opportunity commentary (1-2 sentences)
-  ragLayer4?: string;  // Action recommendation commentary (1-2 sentences)
+  // RAG Insights - Data-driven short summaries
+  ragLayer1?: string;  // Net Liquidity insight (1-2 sentences)
+  ragLayer2?: string;  // Market rotation insight (1-2 sentences)
+  ragLayer3?: string;  // Sector opportunity insight (1-2 sentences)
+  ragLayer4?: string;  // Action recommendation insight (1-2 sentences)
   generatedAt: Date;
 }
 
