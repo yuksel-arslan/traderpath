@@ -157,6 +157,8 @@ export default function AdminPage() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [cleanupResult, setCleanupResult] = useState<string | null>(null);
+  const [isGeneratingSignals, setIsGeneratingSignals] = useState(false);
+  const [isGeneratingAutoEdge, setIsGeneratingAutoEdge] = useState(false);
 
   // Grant credits modal state
   const [grantModalOpen, setGrantModalOpen] = useState(false);
@@ -284,6 +286,58 @@ export default function AdminPage() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleGenerateSignals = async () => {
+    setIsGeneratingSignals(true);
+    try {
+      const response = await authFetch('/api/v1/signals/admin/generate', {
+        method: 'POST',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const r = data.data;
+        setCleanupResult(`Signal generation complete: ${r.generated} generated, ${r.published} published, ${r.skipped} skipped`);
+        setTimeout(() => setCleanupResult(null), 8000);
+        fetchData(true);
+      } else {
+        const err = await response.json();
+        setCleanupResult(`Signal generation failed: ${err.error || 'Unknown error'}`);
+        setTimeout(() => setCleanupResult(null), 5000);
+      }
+    } catch (err) {
+      console.error(err);
+      setCleanupResult('Signal generation request failed');
+      setTimeout(() => setCleanupResult(null), 5000);
+    } finally {
+      setIsGeneratingSignals(false);
+    }
+  };
+
+  const handleGenerateAutoEdge = async () => {
+    setIsGeneratingAutoEdge(true);
+    try {
+      const response = await authFetch('/api/v1/signals/admin/generate-autoedge', {
+        method: 'POST',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const r = data.data;
+        setCleanupResult(`AutoEdge complete: ${r.generated} generated, ${r.published} published, ${r.skipped} skipped (${r.processed} scanned)`);
+        setTimeout(() => setCleanupResult(null), 8000);
+        fetchData(true);
+      } else {
+        const err = await response.json();
+        setCleanupResult(`AutoEdge failed: ${err.error || 'Unknown error'}`);
+        setTimeout(() => setCleanupResult(null), 5000);
+      }
+    } catch (err) {
+      console.error(err);
+      setCleanupResult('AutoEdge request failed');
+      setTimeout(() => setCleanupResult(null), 5000);
+    } finally {
+      setIsGeneratingAutoEdge(false);
     }
   };
 
@@ -702,16 +756,56 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Maintenance Actions */}
+            {/* Signal Generation */}
+            <div className="bg-card border rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Activity className="w-5 h-5 text-indigo-500" />
+                Signal Generation
+              </h3>
+              <div className="space-y-3">
+                <button
+                  onClick={handleGenerateSignals}
+                  disabled={isGeneratingSignals}
+                  className="w-full flex items-center justify-between p-3 bg-background border rounded-lg hover:bg-accent transition disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <TrendingUp className={`w-5 h-5 text-indigo-500 ${isGeneratingSignals ? 'animate-pulse' : ''}`} />
+                    <div className="text-left">
+                      <p className="font-medium">Generate Signals</p>
+                      <p className="text-sm text-muted-foreground">Run Capital Flow → 7-Step analysis cycle</p>
+                    </div>
+                  </div>
+                  {isGeneratingSignals && <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />}
+                </button>
+                <button
+                  onClick={handleGenerateAutoEdge}
+                  disabled={isGeneratingAutoEdge}
+                  className="w-full flex items-center justify-between p-3 bg-background border rounded-lg hover:bg-accent transition disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <Zap className={`w-5 h-5 text-[#00F5A0] ${isGeneratingAutoEdge ? 'animate-pulse' : ''}`} />
+                    <div className="text-left">
+                      <p className="font-medium">AutoEdge Scalp Signals</p>
+                      <p className="text-sm text-muted-foreground">Top 10 Binance USDT — 15m→5m hierarchical</p>
+                    </div>
+                  </div>
+                  {isGeneratingAutoEdge && <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Maintenance Actions */}
+          <div className="mt-6">
             <div className="bg-card border rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <Zap className="w-5 h-5 text-primary" />
                 Maintenance Actions
               </h3>
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <button
                   onClick={handleCleanup}
-                  className="w-full flex items-center justify-between p-3 bg-background border rounded-lg hover:bg-accent transition"
+                  className="flex items-center justify-between p-3 bg-background border rounded-lg hover:bg-accent transition"
                 >
                   <div className="flex items-center gap-3">
                     <Trash2 className="w-5 h-5 text-red-500" />
@@ -723,7 +817,7 @@ export default function AdminPage() {
                 </button>
                 <button
                   onClick={handleClearCache}
-                  className="w-full flex items-center justify-between p-3 bg-background border rounded-lg hover:bg-accent transition"
+                  className="flex items-center justify-between p-3 bg-background border rounded-lg hover:bg-accent transition"
                 >
                   <div className="flex items-center gap-3">
                     <HardDrive className="w-5 h-5 text-yellow-500" />
