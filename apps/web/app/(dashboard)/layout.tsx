@@ -22,7 +22,6 @@ import {
   Monitor,
   BarChart3,
   FlaskConical,
-  ClipboardList,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -38,9 +37,11 @@ const PriceTicker = dynamic(
 
 // Primary navigation - Top-Down Methodology Flow (L1→L7)
 const directNav = [
+  { name: 'Concierge', href: '/concierge', icon: Bot },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Analyzer', href: '/analyze', icon: BarChart3 },
-  { name: 'Trade Tracking', href: '/tracking', icon: ClipboardList },
+  { name: 'Terminal', href: '/terminal', icon: Monitor },
+  { name: 'Reports', href: '/reports', icon: FileText },
 ];
 
 // Dropdown navigation groups
@@ -49,9 +50,6 @@ const dropdownNav = [
     name: 'More',
     icon: Settings,
     items: [
-      { name: 'Concierge', href: '/concierge', icon: Bot },
-      { name: 'Terminal', href: '/terminal', icon: Monitor },
-      { name: 'Reports', href: '/reports', icon: FileText },
       { name: 'Price Alerts', href: '/alerts', icon: Bell },
       { name: 'Notifications', href: '/notifications', icon: Inbox },
       { name: 'Methodology', href: '/methodology', icon: FlaskConical },
