@@ -1710,6 +1710,229 @@ Explain the key risks and what conditions would need to change before trading th
   });
 
   /**
+   * GET /api/analysis/tracking
+   * Trade plan tracking table - all analyses with trade plans, outcomes, filtering & sorting
+   */
+  app.get('/tracking', {
+    preHandler: authenticate,
+  }, async (request: FastifyRequest<{
+    Querystring: {
+      limit?: string;
+      offset?: string;
+      sortBy?: string;
+      sortDir?: string;
+      symbol?: string;
+      verdict?: string;
+      direction?: string;
+      outcome?: string;
+      method?: string;
+      interval?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    }
+  }>, reply: FastifyReply) => {
+    try {
+      const userId = getUser(request).id;
+      const limit = safeParseInt(request.query.limit, 25, 1, 100);
+      const offset = safeParseInt(request.query.offset, 0, 0, 100000);
+      const sortBy = request.query.sortBy || 'createdAt';
+      const sortDir = (request.query.sortDir === 'asc' ? 'asc' : 'desc') as 'asc' | 'desc';
+
+      // Build where clause with filters
+      const where: Record<string, unknown> = { userId };
+
+      if (request.query.symbol) {
+        where.symbol = { contains: request.query.symbol.toUpperCase(), mode: 'insensitive' };
+      }
+      if (request.query.outcome && request.query.outcome !== 'all') {
+        if (request.query.outcome === 'pending' || request.query.outcome === 'live') {
+          // Both pending and live are subset of null/pending outcomes
+          where.outcome = { in: [null, 'pending'] };
+        } else if (request.query.outcome === 'tp') {
+          where.outcome = { in: ['tp1_hit', 'tp2_hit', 'tp3_hit'] };
+        } else if (request.query.outcome === 'sl') {
+          where.outcome = 'sl_hit';
+        }
+      }
+      if (request.query.method && request.query.method !== 'all') {
+        where.method = request.query.method;
+      }
+      if (request.query.interval && request.query.interval !== 'all') {
+        where.interval = request.query.interval;
+      }
+      if (request.query.dateFrom || request.query.dateTo) {
+        const createdAt: Record<string, Date> = {};
+        if (request.query.dateFrom) createdAt.gte = new Date(request.query.dateFrom);
+        if (request.query.dateTo) createdAt.lte = new Date(request.query.dateTo);
+        where.createdAt = createdAt;
+      }
+
+      // Build orderBy
+      const allowedSortFields = ['createdAt', 'symbol', 'totalScore', 'outcome', 'interval', 'method'];
+      const orderField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+      const orderBy = { [orderField]: sortDir };
+
+      // Verdict/direction/live filters are in JSON fields - must fetch all then filter
+      const needsClientFilter = (request.query.verdict && request.query.verdict !== 'all') ||
+        (request.query.direction && request.query.direction !== 'all') ||
+        (request.query.outcome === 'live') ||
+        (request.query.outcome === 'pending');
+
+      const analyses = await prisma.analysis.findMany({
+        where,
+        orderBy,
+        // If client-side filtering needed, fetch all; otherwise use DB pagination
+        ...(needsClientFilter ? {} : { take: limit, skip: offset }),
+        select: {
+          id: true,
+          symbol: true,
+          interval: true,
+          totalScore: true,
+          method: true,
+          outcome: true,
+          outcomePrice: true,
+          outcomeAt: true,
+          creditsSpent: true,
+          createdAt: true,
+          expiresAt: true,
+          step5Result: true,
+          step7Result: true,
+        },
+      });
+
+      // Enrich with extracted verdict/tradePlan data
+      const enriched = analyses.map((a) => {
+        const verdictData = a.step7Result as Record<string, unknown> | null;
+        const tradePlan = a.step5Result as Record<string, unknown> | null;
+        const stopLossData = tradePlan?.stopLoss as Record<string, unknown> | null;
+        const takeProfits = tradePlan?.takeProfits as Array<{ price: number; percentage: number }> | null;
+
+        const verdict = typeof verdictData?.verdict === 'string' ? verdictData.verdict : 'N/A';
+        const direction = typeof tradePlan?.direction === 'string' ? tradePlan.direction : null;
+        const entryPrice = Number(tradePlan?.averageEntry || tradePlan?.entryPrice || 0) || null;
+        const stopLoss = Number(stopLossData?.price || 0) || null;
+        const tp1 = Number(takeProfits?.[0]?.price || 0) || null;
+        const tp2 = Number(takeProfits?.[1]?.price || 0) || null;
+
+        // Determine if this is a real LIVE trade (tradeable verdict + has trade plan)
+        const vLower = verdict.toLowerCase();
+        const isTradeable = vLower === 'go' || vLower === 'conditional_go' || vLower === 'cond';
+        const isLive = (!a.outcome || a.outcome === 'pending') && isTradeable && !!entryPrice && !!stopLoss;
+
+        // Calculate P/L if outcome exists
+        let pnlPercent: number | null = null;
+        if (a.outcome && entryPrice && entryPrice > 0) {
+          if ((a.outcome === 'sl_hit') && stopLoss) {
+            const dirLower = (direction || '').toLowerCase();
+            pnlPercent = dirLower === 'short'
+              ? ((entryPrice - stopLoss) / entryPrice) * 100
+              : ((stopLoss - entryPrice) / entryPrice) * 100;
+          } else if (a.outcome.startsWith('tp') && a.outcomePrice) {
+            const outcomeP = Number(a.outcomePrice);
+            const dirLower = (direction || '').toLowerCase();
+            pnlPercent = dirLower === 'short'
+              ? ((entryPrice - outcomeP) / entryPrice) * 100
+              : ((outcomeP - entryPrice) / entryPrice) * 100;
+          }
+        }
+
+        return {
+          id: a.id,
+          symbol: a.symbol,
+          interval: a.interval,
+          totalScore: a.totalScore ? Number(a.totalScore) : null,
+          method: a.method,
+          outcome: a.outcome,
+          outcomePrice: a.outcomePrice ? Number(a.outcomePrice) : null,
+          outcomeAt: a.outcomeAt,
+          verdict,
+          direction,
+          entryPrice,
+          stopLoss,
+          takeProfit1: tp1,
+          takeProfit2: tp2,
+          pnlPercent: pnlPercent !== null ? Math.round(pnlPercent * 100) / 100 : null,
+          creditsSpent: a.creditsSpent,
+          createdAt: a.createdAt,
+          expiresAt: a.expiresAt,
+          isLive,
+        };
+      });
+
+      // Apply verdict/direction/live filters (JSON fields, can't filter in Prisma)
+      let filtered = enriched;
+      if (request.query.verdict && request.query.verdict !== 'all') {
+        const vf = request.query.verdict.toLowerCase();
+        filtered = filtered.filter(a => {
+          const v = (a.verdict || '').toLowerCase();
+          if (vf === 'go') return v === 'go';
+          if (vf === 'conditional_go') return v === 'conditional_go' || v === 'cond';
+          if (vf === 'wait') return v === 'wait';
+          if (vf === 'avoid') return v === 'avoid';
+          return true;
+        });
+      }
+      if (request.query.direction && request.query.direction !== 'all') {
+        const df = request.query.direction.toLowerCase();
+        filtered = filtered.filter(a => (a.direction || '').toLowerCase() === df);
+      }
+      if (request.query.outcome === 'live') {
+        filtered = filtered.filter(a => a.isLive);
+      } else if (request.query.outcome === 'pending') {
+        // "Pending" filter: only non-live pending analyses
+        filtered = filtered.filter(a => !a.isLive);
+      }
+
+      // Apply pagination on filtered results when client-side filtering was used
+      const total = needsClientFilter ? filtered.length : await prisma.analysis.count({ where });
+      const paginatedResults = needsClientFilter
+        ? filtered.slice(offset, offset + limit)
+        : filtered;
+
+      // Fetch current prices for LIVE trades to calculate unrealized P/L
+      const liveAnalyses = paginatedResults.filter(a => a.isLive);
+      if (liveAnalyses.length > 0) {
+        const uniqueSymbols = [...new Set(liveAnalyses.map(a => a.symbol))];
+        const priceMap: Record<string, number> = {};
+        await Promise.all(uniqueSymbols.map(async (sym) => {
+          try {
+            const ticker = await fetchTicker(sym);
+            if (ticker?.lastPrice) priceMap[sym] = ticker.lastPrice;
+          } catch { /* skip */ }
+        }));
+
+        for (const a of paginatedResults) {
+          if (a.isLive && a.entryPrice && a.entryPrice > 0) {
+            const currentPrice = priceMap[a.symbol];
+            if (currentPrice) {
+              const dirLower = (a.direction || '').toLowerCase();
+              const pnl = dirLower === 'short'
+                ? ((a.entryPrice - currentPrice) / a.entryPrice) * 100
+                : ((currentPrice - a.entryPrice) / a.entryPrice) * 100;
+              a.pnlPercent = Math.round(pnl * 100) / 100;
+              (a as Record<string, unknown>).currentPrice = currentPrice;
+            }
+          }
+        }
+      }
+
+      return reply.send({
+        success: true,
+        data: {
+          analyses: paginatedResults,
+          pagination: { total, limit, offset, filtered: paginatedResults.length },
+        },
+      });
+    } catch (error) {
+      logger.error({ error }, 'Analysis tracking error');
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'FETCH_ERROR', message: 'Failed to fetch tracking data' },
+      });
+    }
+  });
+
+  /**
    * GET /api/analysis/:id
    * Get a specific analysis by ID
    * User can access if they own it OR have purchased it
