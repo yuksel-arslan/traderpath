@@ -587,6 +587,10 @@ export default function AutomatedAnalysisPage() {
             }
           }}
           onReportReady={(id) => {
+            // Navigate FIRST to ensure it happens before any state updates
+            router.push(`/analyze/details/${id}`);
+
+            // Then update state
             setShowAnalysisDialog(false);
             const newCompleted = [...completedAnalysisIds, id];
             setCompletedAnalysisIds(newCompleted);
@@ -599,8 +603,6 @@ export default function AutomatedAnalysisPage() {
               setCurrentQueueIndex(nextIndex);
               setSelectedAsset(analysisQueue[nextIndex]);
             }
-            // Always navigate to the completed analysis detail page
-            router.push(`/analyze/details/${id}`);
 
             if (nextIndex >= analysisQueue.length) {
               // All assets analyzed

@@ -491,7 +491,7 @@ export default function AnalysisDetailsPage() {
 
           {/* Capital Flow Context Banner */}
           {(() => {
-            const cfCtx = step5?.capitalFlowContext;
+            const cfCtx = step1?.capitalFlowContext;
             const flowAligned = step7?.ragEnrichment?.capitalFlowAligned;
             if (!cfCtx && flowAligned == null) return null;
 

@@ -527,16 +527,21 @@ export function AnalysisDialog({
       setPdfGenerating(true);
 
       // Wait for celebration modal to finish before navigating
-      const celebrationWaitTime = 5500; // 1500ms delay + 4000ms display time
+      const celebrationWaitTime = 3500; // Reduced from 5500ms for snappier UX
 
-      const timer = setTimeout(() => {
-        onClose();
+      const navigateToDetails = () => {
+        // Navigate first, THEN close the dialog to avoid unmounting issues
+        const targetUrl = `/analyze/details/${savedAnalysisId}`;
         if (onReportReady) {
           onReportReady(savedAnalysisId);
         } else {
-          router.push(`/analyze/details/${savedAnalysisId}`);
+          router.push(targetUrl);
         }
-      }, celebrationWaitTime);
+        // Close after a short delay to let navigation initiate
+        setTimeout(() => onClose(), 100);
+      };
+
+      const timer = setTimeout(navigateToDetails, celebrationWaitTime);
 
       return () => clearTimeout(timer);
     }
@@ -1167,9 +1172,31 @@ export function AnalysisDialog({
                         <Loader2 className="w-5 h-5 animate-spin" />
                         <span className="font-semibold">Opening Analysis Details...</span>
                       </div>
-                      <p className="text-sm text-slate-400 text-center">
+                      <p className="text-sm text-slate-400 text-center mb-3">
                         Your analysis is complete! You will be redirected to the details page shortly...
                       </p>
+                      {/* Manual redirect button as fallback */}
+                      {savedAnalysisId && (
+                        <button
+                          onClick={() => {
+                            onClose();
+                            if (onReportReady) {
+                              onReportReady(savedAnalysisId);
+                            } else {
+                              router.push(`/analyze/details/${savedAnalysisId}`);
+                            }
+                          }}
+                          className="w-full px-4 py-2.5 rounded-xl font-medium transition flex items-center justify-center gap-2 hover:scale-[1.02] text-sm"
+                          style={{
+                            background: 'linear-gradient(135deg, #2DD4BF, #0D9488)',
+                            color: 'white',
+                            boxShadow: '0 6px 20px rgba(45, 212, 191, 0.3)',
+                          }}
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          View Analysis Details Now
+                        </button>
+                      )}
                     </>
                   ) : (
                     <>

@@ -372,8 +372,16 @@ export const BONDS_SYMBOLS = [
 ];
 
 export const STOCKS_INDICES = [
+  // Major indices & ETFs
   'SPY', 'QQQ', 'DIA', 'IWM', 'VTI', 'VOO',
   'SPX', 'NDX', 'DJI', 'RUT',
+  // Sector ETFs (SPDR Select Sector)
+  'XLE', 'XLF', 'XLK', 'XLV', 'XLI', 'XLC', 'XLY', 'XLP', 'XLU', 'XLB', 'XLRE',
+  // Other popular ETFs
+  'ARKK', 'ARKW', 'ARKF', 'ARKG', 'ARKQ',
+  'SMH', 'XBI', 'KRE', 'XOP', 'GDX', 'GDXJ',
+  'EEM', 'EFA', 'FXI', 'KWEB', 'INDA',
+  'RSP', 'MDY', 'IJR', 'SCHD', 'VIG', 'DVY',
 ];
 
 export function detectAssetClass(symbol: string): AssetClass {
@@ -411,7 +419,12 @@ export function detectAssetClass(symbol: string): AssetClass {
   }
 
   // Check if it's a known stock ticker (not crypto)
-  const knownStocks = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'JPM', 'V', 'WMT'];
+  const knownStocks = [
+    'AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'META', 'NVDA', 'TSLA', 'JPM', 'V', 'WMT',
+    'MA', 'UNH', 'HD', 'PG', 'JNJ', 'BAC', 'COST', 'NFLX', 'CRM', 'AMD', 'INTC',
+    'DIS', 'PEP', 'KO', 'CSCO', 'ADBE', 'ORCL', 'ABT', 'MRK', 'PFE', 'LLY',
+    'PYPL', 'SHOP', 'SQ', 'UBER', 'ABNB', 'COIN', 'PLTR', 'SNOW', 'NET', 'DDOG',
+  ];
   if (knownStocks.some(s => upperSymbol === s)) {
     return 'stocks';
   }
