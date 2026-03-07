@@ -916,7 +916,7 @@ Warn about potential traps and give protective advice.`;
         safetyCheck,
         timing,
         trapCheck,
-      });
+      }, interval);
 
       // Pre-compute Capital Flow phase for trade plan SL adjustment
       let capitalFlowModifier: CapitalFlowModifier | null = null;
@@ -937,7 +937,8 @@ Warn about potential traps and give protective advice.`;
         preliminaryVerdict,
         { marketPulse, assetScan, safetyCheck, timing, trapCheck },
         body.accountSize,
-        capitalFlowPhase
+        capitalFlowPhase,
+        interval
       );
 
       // Step 7.5: Apply Capital Flow Modifier to Trade Plan confidence
@@ -986,7 +987,8 @@ Warn about potential traps and give protective advice.`;
         preliminaryVerdict,
         { marketPulse, assetScan, safetyCheck, timing, trapCheck },
         tradePlan,
-        tradeType
+        tradeType,
+        interval
       );
 
       // Step 8: MLIS Confirmation - ML validation layer (ALWAYS runs)

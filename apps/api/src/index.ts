@@ -49,6 +49,7 @@ import { multiMarketRoutes } from './modules/analysis/multi-market.routes';
 import dailyPassRoutes from './modules/passes/daily-pass.routes';
 import assetLogosRoutes from './modules/asset-logos/asset-logos.routes';
 import { initializeAssetLogos } from './modules/asset-logos/asset-logos.service';
+import { initializeStrategyPrompts } from './modules/analysis/services/strategy-prompt.service';
 import { bilgeRoutes } from './modules/bilge/bilge.routes';
 import { initializeBilgeService, collectError } from './modules/bilge/bilge.service';
 import { startBilgeWeeklyReportJob, stopBilgeWeeklyReportJob } from './modules/bilge/bilge-cron.job';
@@ -700,6 +701,14 @@ const start = async () => {
       logger.info('  Skipped: outcome tracker, price checker, scheduled reports,');
       logger.info('           coin score cache, signals, BILGE cron, asset logos.');
     } else {
+      // Initialize strategy prompt files (synchronous, fast - just reads MD files)
+      try {
+        initializeStrategyPrompts();
+        logger.info('✓ Strategy prompts initialized');
+      } catch (err) {
+        logger.warn({ err }, 'Strategy prompts initialization failed (will use fallbacks)');
+      }
+
       // Start outcome tracker (non-blocking - don't hold up server startup)
       startOutcomeTracker().catch((err) => {
         logger.error(err, 'Outcome tracker startup failed (non-blocking)');
