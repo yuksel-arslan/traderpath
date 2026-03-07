@@ -199,15 +199,29 @@ export default async function adminRoutes(app: FastifyInstance) {
       prisma.user.count({ where: { lastLoginAt: { gte: today } } }),
     ]);
 
-    // Analysis statistics
-    const [totalAnalyses, analysesToday, analysesWeek] = await Promise.all([
-      prisma.creditTransaction.count({ where: { source: { startsWith: 'analysis_' } } }),
-      prisma.creditTransaction.count({
-        where: { source: { startsWith: 'analysis_' }, createdAt: { gte: today } },
-      }),
-      prisma.creditTransaction.count({
-        where: { source: { startsWith: 'analysis_' }, createdAt: { gte: thisWeek } },
-      }),
+    // Analysis statistics - from Analysis table (real source of truth)
+    const [totalAnalyses, analysesToday, analysesWeek, analysesMonth] = await Promise.all([
+      prisma.analysis.count(),
+      prisma.analysis.count({ where: { createdAt: { gte: today } } }),
+      prisma.analysis.count({ where: { createdAt: { gte: thisWeek } } }),
+      prisma.analysis.count({ where: { createdAt: { gte: thisMonth } } }),
+    ]);
+
+    // Analysis outcomes - from Analysis table
+    const [tpHitCount, slHitCount, activeAnalyses] = await Promise.all([
+      prisma.analysis.count({ where: { outcome: 'TP_HIT' } }),
+      prisma.analysis.count({ where: { outcome: 'SL_HIT' } }),
+      prisma.analysis.count({ where: { outcome: null } }),
+    ]);
+    const totalWithOutcome = tpHitCount + slHitCount;
+    const platformAccuracy = totalWithOutcome > 0
+      ? Number(((tpHitCount / totalWithOutcome) * 100).toFixed(1))
+      : 0;
+
+    // Analysis method breakdown
+    const [classicCount, mlisCount] = await Promise.all([
+      prisma.analysis.count({ where: { method: { not: 'mlis_pro' } } }),
+      prisma.analysis.count({ where: { method: 'mlis_pro' } }),
     ]);
 
     // Credit statistics
@@ -232,21 +246,18 @@ export default async function adminRoutes(app: FastifyInstance) {
       prisma.report.count({ where: { expiresAt: { gt: now } } }),
     ]);
 
-    // Top analyzed coins
-    const topCoins = await prisma.creditTransaction.groupBy({
-      by: ['metadata'],
-      where: { source: 'analysis_full' },
-      _count: true,
+    // Top analyzed coins - from Analysis table directly
+    const topCoinsRaw = await prisma.analysis.groupBy({
+      by: ['symbol'],
+      _count: { id: true },
       orderBy: { _count: { id: 'desc' } },
       take: 10,
     });
 
-    const coinCounts = topCoins
-      .map(t => {
-        const meta = t.metadata as { symbol?: string } | null;
-        return { symbol: meta?.symbol || 'Unknown', count: t._count };
-      })
-      .filter(c => c.symbol !== 'Unknown');
+    const coinCounts = topCoinsRaw.map(t => ({
+      symbol: t.symbol,
+      count: t._count.id,
+    }));
 
     return reply.send({
       success: true,
@@ -262,6 +273,13 @@ export default async function adminRoutes(app: FastifyInstance) {
           total: totalAnalyses,
           today: analysesToday,
           thisWeek: analysesWeek,
+          thisMonth: analysesMonth,
+          active: activeAnalyses,
+          tpHit: tpHitCount,
+          slHit: slHitCount,
+          platformAccuracy,
+          classic: classicCount,
+          mlisPro: mlisCount,
         },
         credits: {
           totalSpent: Math.abs(totalCreditsSpent._sum.amount || 0),
