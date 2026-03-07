@@ -332,7 +332,7 @@ export default function BlogArticlePage() {
             </Link>
             <Link
               href="/register"
-              className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition whitespace-nowrap"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base bg-gradient-to-r from-teal-500 to-rose-500 text-white rounded-lg font-medium hover:from-teal-600 hover:to-rose-600 transition-all shadow-sm shadow-teal-500/20 whitespace-nowrap"
             >
               Get Started
             </Link>

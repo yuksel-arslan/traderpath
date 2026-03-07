@@ -450,7 +450,7 @@ function PricingSection() {
 
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Link href="/register" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors shadow-lg shadow-emerald-500/25">
+          <Link href="/register" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm font-semibold bg-gradient-to-r from-teal-500 to-rose-500 hover:from-teal-600 hover:to-rose-600 text-white rounded-xl transition-all shadow-lg shadow-teal-500/25">
             START WITH 3 FREE ANALYSES <ArrowRight className="w-4 h-4" />
           </Link>
           <Link href="/pricing" className="w-full sm:w-auto inline-flex items-center justify-center px-7 py-3 text-sm font-semibold border border-slate-200 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 rounded-xl hover:border-slate-300 dark:hover:border-white/[0.2] transition-colors">
@@ -515,7 +515,7 @@ export default function LandingPage() {
               Join {platformStats ? `${platformStats.totalUsers.toLocaleString()}+` : ''} traders who use capital flow intelligence to make smarter trading decisions.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link href="/register" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm font-medium bg-teal-500 hover:bg-teal-600 text-white rounded-md transition-colors">
+              <Link href="/register" className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 text-sm font-medium bg-gradient-to-r from-teal-500 to-rose-500 hover:from-teal-600 hover:to-rose-600 text-white rounded-md transition-all shadow-sm shadow-teal-500/20">
                 START FREE ANALYSIS <ArrowRight className="w-4 h-4" />
               </Link>
               <Link href="/pricing" className="w-full sm:w-auto inline-flex items-center justify-center px-7 py-3 text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
