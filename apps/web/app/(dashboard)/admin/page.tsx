@@ -297,8 +297,59 @@ export default function AdminPage() {
     }
   };
 
+  const pollSignalHealth = async (generatorType: 'signal' | 'autoedge') => {
+    const label = generatorType === 'signal' ? 'Signal Generator' : 'AutoEdge';
+    let attempts = 0;
+    const maxAttempts = 40; // 40 × 15s = 10 minutes max
+    const pollInterval = 15000; // 15 seconds
+
+    const poll = async () => {
+      attempts++;
+      try {
+        const healthRes = await authFetch('/api/v1/signals/admin/health');
+        if (healthRes.ok) {
+          const healthData = await healthRes.json();
+          const metrics = generatorType === 'signal'
+            ? healthData.data?.metrics?.generator
+            : healthData.data?.metrics?.autoedge;
+
+          if (metrics?.lastRunAt) {
+            const lastRunTime = new Date(metrics.lastRunAt).getTime();
+            const now = Date.now();
+            // If last run was within the last 30 seconds, it just finished
+            if (now - lastRunTime < 30000) {
+              const generated = metrics.signalsGenerated ?? 0;
+              setCleanupResult(`${label} completed: ${generated} total signals generated`);
+              if (generatorType === 'signal') setIsGeneratingSignals(false);
+              else setIsGeneratingAutoEdge(false);
+              fetchData(true);
+              setTimeout(() => setCleanupResult(null), 10000);
+              return; // Stop polling
+            }
+          }
+        }
+      } catch {
+        // ignore poll errors
+      }
+
+      if (attempts < maxAttempts) {
+        setCleanupResult(`${label} running... (${attempts * 15}s elapsed, checking every 15s)`);
+        setTimeout(poll, pollInterval);
+      } else {
+        setCleanupResult(`${label} may still be running. Check health status for results.`);
+        if (generatorType === 'signal') setIsGeneratingSignals(false);
+        else setIsGeneratingAutoEdge(false);
+        setTimeout(() => setCleanupResult(null), 10000);
+      }
+    };
+
+    // Start polling after initial delay
+    setTimeout(poll, pollInterval);
+  };
+
   const handleGenerateSignals = async () => {
     setIsGeneratingSignals(true);
+    setCleanupResult('Signal Generator started... Running Capital Flow → 7-Step analysis cycle.');
     try {
       const response = await authFetch('/api/v1/signals/admin/generate', {
         method: 'POST',
@@ -306,25 +357,41 @@ export default function AdminPage() {
       if (response.ok) {
         const data = await response.json();
         const r = data.data;
-        setCleanupResult(`Signal generation complete: ${r.generated} generated, ${r.published} published, ${r.skipped} skipped`);
-        setTimeout(() => setCleanupResult(null), 8000);
-        fetchData(true);
+        if (r.status === 'error') {
+          setCleanupResult(`⚠ Signal Generator: ${r.message}`);
+          setIsGeneratingSignals(false);
+          setTimeout(() => setCleanupResult(null), 10000);
+        } else if (r.status === 'skipped') {
+          setCleanupResult(`Signal Generator skipped: ${r.message}`);
+          setIsGeneratingSignals(false);
+          setTimeout(() => setCleanupResult(null), 10000);
+        } else if (r.status === 'started') {
+          // Fire-and-forget: poll for completion
+          setCleanupResult('Signal Generator started in background... Polling for results.');
+          pollSignalHealth('signal');
+        } else {
+          setCleanupResult(r.message || `Signal generation complete: ${r.generated} generated, ${r.published} published`);
+          setIsGeneratingSignals(false);
+          fetchData(true);
+          setTimeout(() => setCleanupResult(null), 10000);
+        }
       } else {
-        const err = await response.json();
+        const err = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
         setCleanupResult(`Signal generation failed: ${err.error || 'Unknown error'}`);
-        setTimeout(() => setCleanupResult(null), 5000);
+        setIsGeneratingSignals(false);
+        setTimeout(() => setCleanupResult(null), 8000);
       }
     } catch (err) {
       console.error(err);
-      setCleanupResult('Signal generation request failed');
-      setTimeout(() => setCleanupResult(null), 5000);
-    } finally {
+      setCleanupResult('Signal generation request failed — check network/API connection');
       setIsGeneratingSignals(false);
+      setTimeout(() => setCleanupResult(null), 8000);
     }
   };
 
   const handleGenerateAutoEdge = async () => {
     setIsGeneratingAutoEdge(true);
+    setCleanupResult('AutoEdge v2 started... Scanning top Binance USDT perpetuals.');
     try {
       const response = await authFetch('/api/v1/signals/admin/generate-autoedge', {
         method: 'POST',
@@ -332,20 +399,35 @@ export default function AdminPage() {
       if (response.ok) {
         const data = await response.json();
         const r = data.data;
-        setCleanupResult(`AutoEdge complete: ${r.generated} generated, ${r.published} published, ${r.skipped} skipped (${r.processed} scanned)`);
-        setTimeout(() => setCleanupResult(null), 8000);
-        fetchData(true);
+        if (r.status === 'error') {
+          setCleanupResult(`⚠ AutoEdge: ${r.message}`);
+          setIsGeneratingAutoEdge(false);
+          setTimeout(() => setCleanupResult(null), 10000);
+        } else if (r.status === 'skipped') {
+          setCleanupResult(`AutoEdge skipped: ${r.message}`);
+          setIsGeneratingAutoEdge(false);
+          setTimeout(() => setCleanupResult(null), 10000);
+        } else if (r.status === 'started') {
+          // Fire-and-forget: poll for completion
+          setCleanupResult('AutoEdge started in background... Polling for results.');
+          pollSignalHealth('autoedge');
+        } else {
+          setCleanupResult(r.message || `AutoEdge complete: ${r.generated} generated, ${r.published} published`);
+          setIsGeneratingAutoEdge(false);
+          fetchData(true);
+          setTimeout(() => setCleanupResult(null), 10000);
+        }
       } else {
-        const err = await response.json();
+        const err = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
         setCleanupResult(`AutoEdge failed: ${err.error || 'Unknown error'}`);
-        setTimeout(() => setCleanupResult(null), 5000);
+        setIsGeneratingAutoEdge(false);
+        setTimeout(() => setCleanupResult(null), 8000);
       }
     } catch (err) {
       console.error(err);
-      setCleanupResult('AutoEdge request failed');
-      setTimeout(() => setCleanupResult(null), 5000);
-    } finally {
+      setCleanupResult('AutoEdge request failed — check network/API connection');
       setIsGeneratingAutoEdge(false);
+      setTimeout(() => setCleanupResult(null), 8000);
     }
   };
 

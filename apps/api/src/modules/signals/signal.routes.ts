@@ -375,6 +375,9 @@ export async function signalRoutes(fastify: FastifyInstance) {
   /**
    * Trigger manual signal generation
    * POST /api/signals/admin/generate
+   *
+   * Fire-and-forget: starts generation in background, returns immediately.
+   * Poll GET /api/signals/admin/health to check status.
    */
   fastify.post(
     '/signals/admin/generate',
@@ -392,26 +395,36 @@ export async function signalRoutes(fastify: FastifyInstance) {
         });
       }
 
-      try {
-        const result = await runSignalGenerationManually();
+      // Fire-and-forget: start in background, respond immediately
+      runSignalGenerationManually()
+        .then((result) => {
+          console.log('[SignalRoutes] Manual signal generation complete:', result);
+        })
+        .catch((error) => {
+          console.error('[SignalRoutes] Manual generation error:', error);
+        });
 
-        return reply.send({
-          success: true,
-          data: result,
-        });
-      } catch (error) {
-        console.error('[SignalRoutes] Manual generation error:', error);
-        return reply.status(500).send({
-          success: false,
-          error: error instanceof Error ? error.message : 'Generation failed',
-        });
-      }
+      return reply.send({
+        success: true,
+        data: {
+          processed: 0,
+          generated: 0,
+          published: 0,
+          skipped: 0,
+          errors: [],
+          status: 'started',
+          message: 'Signal generation started in background. Check admin health endpoint for results.',
+        },
+      });
     }
   );
 
   /**
    * Trigger manual AutoEdge signal generation
    * POST /api/signals/admin/generate-autoedge
+   *
+   * Fire-and-forget: starts generation in background, returns immediately.
+   * Poll GET /api/signals/admin/health to check status.
    */
   fastify.post(
     '/signals/admin/generate-autoedge',
@@ -429,20 +442,27 @@ export async function signalRoutes(fastify: FastifyInstance) {
         });
       }
 
-      try {
-        const result = await runAutoEdgeManually();
+      // Fire-and-forget: start in background, respond immediately
+      runAutoEdgeManually()
+        .then((result) => {
+          console.log('[SignalRoutes] Manual AutoEdge generation complete:', result);
+        })
+        .catch((error) => {
+          console.error('[SignalRoutes] Manual AutoEdge generation error:', error);
+        });
 
-        return reply.send({
-          success: true,
-          data: result,
-        });
-      } catch (error) {
-        console.error('[SignalRoutes] Manual AutoEdge generation error:', error);
-        return reply.status(500).send({
-          success: false,
-          error: error instanceof Error ? error.message : 'AutoEdge generation failed',
-        });
-      }
+      return reply.send({
+        success: true,
+        data: {
+          processed: 0,
+          generated: 0,
+          published: 0,
+          skipped: 0,
+          errors: [],
+          status: 'started',
+          message: 'AutoEdge scan started in background. Check admin health endpoint for results.',
+        },
+      });
     }
   );
 

@@ -87,6 +87,8 @@ export interface SignalGenerationResult {
     symbol: string;
     error: string;
   }>;
+  message?: string;
+  status?: 'success' | 'skipped' | 'error';
 }
 
 export interface TelegramSignalMessage {
