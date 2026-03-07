@@ -8,6 +8,7 @@ import { config } from '../../core/config';
 import { callGeminiWithRetry } from '../../core/gemini';
 import { contractSecurityService } from '../security/contract-security.service';
 import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig, getMaxStopLossPercent, getMaxTakeProfitPercent } from './config/trade-config';
+import { getStrategyContext, checkMarketConditions as checkStrategyMarketConditions, StrategyContext, tradeTypeToStrategy } from './services/strategy-prompt.service';
 import { Timeframe as TimeframeEnum } from './config/timeframe.enum';
 import { selectBundle, getBundleType } from './bundles';
 import { aggregateScores, quickStepScore, STEP_WEIGHTS } from './scoring';
@@ -821,6 +822,10 @@ interface AIAnalysisSummaryInput {
     levels?: Array<{ level: number; price: number; type: string }>;
   };
   fibAlignedTargets?: boolean;
+  /** Strategy-specific context injected from strategy prompt MD files */
+  strategyContext?: StrategyContext;
+  /** Analysis interval for strategy detection */
+  interval?: string;
 }
 
 async function generateAIAnalysisSummary(input: AIAnalysisSummaryInput): Promise<{ aiSummary: string; tokenomicsInsight: string }> {
@@ -918,6 +923,22 @@ ${keyLevels ? `- Key Levels:\n${keyLevels}` : ''}
 ${input.fibAlignedTargets ? '- Take Profit Targets: ALIGNED with Fibonacci extensions (institutional targets)' : ''}`;
     }
 
+    // Build strategy-specific context for the AI summary
+    let strategyContextBlock = '';
+    const sc = input.strategyContext || (input.interval ? getStrategyContext(input.interval) : null);
+    if (sc) {
+      strategyContextBlock = `
+ACTIVE TRADING STRATEGY: ${sc.strategyType}
+- Expected Hold Time: ${sc.config.expectedHoldTime}
+- Minimum Confidence: ${sc.config.minConfidence}%
+- Minimum R:R: ${sc.config.minRiskReward}:1
+- Maximum Leverage: ${sc.config.maxLeverage}x
+- Narrative Style: ${sc.config.narrativeLength}
+
+${sc.verdictContext}
+`;
+    }
+
     const prompt = `You are a professional crypto analyst. Generate TWO separate analyses:
 
 ANALYSIS REQUEST FOR ${symbol}:
@@ -927,7 +948,7 @@ ANALYSIS REQUEST FOR ${symbol}:
 - Direction: ${direction}
 - Current Price: $${currentPrice}
 - R:R Ratio: ${riskReward}
-
+${strategyContextBlock}
 KEY METRICS:
 - RSI: ${rsi}
 - MACD Histogram: ${macdHist}
@@ -940,7 +961,7 @@ ${tokenomicsContext}${elliottWaveContext}${fibonacciContext}
 GENERATE:
 
 1. AI_SUMMARY (2-3 sentences):
-A concise professional summary explaining the verdict for ${symbol}. Include key reasons for the decision. Be specific about what traders should consider.
+A concise professional summary explaining the verdict for ${symbol}. ${sc ? `Apply the ${sc.strategyType} framework: consider the strategy-specific red flags, minimum confidence (${sc.config.minConfidence}%), and minimum R:R (${sc.config.minRiskReward}:1). Mention if current conditions meet or violate strategy requirements.` : 'Include key reasons for the decision.'} Be specific about what traders should consider.
 
 2. TOKENOMICS_INSIGHT (2-3 sentences):
 ${input.tokenomics ? `Interpret the tokenomics data for ${symbol}. Explain the supply dynamics, dilution risk, and how tokenomics affects the trade setup. Be specific with percentages.` : `State that tokenomics data is not available for ${symbol} and recommend checking supply metrics before large positions.`}
@@ -954,7 +975,8 @@ RULES:
 - Use specific numbers
 - No emojis
 - No questions at the end
-- Keep each section to 2-3 sentences max`;
+- Keep each section to 2-3 sentences max
+${sc ? `- Apply ${sc.strategyType} strategy standards when evaluating the trade` : ''}`;
 
     const response = await callGeminiWithRetry({
       contents: [{ parts: [{ text: prompt }] }],
@@ -1877,6 +1899,15 @@ interface TradePlanResult {
     reason: string;
     confidence: number;
     planQuality: 'excellent' | 'good' | 'acceptable' | 'poor';
+  };
+  // Strategy metadata (populated when strategy prompt integration is active)
+  strategyMetadata?: {
+    strategyType: string;
+    expectedHoldTime: string;
+    minConfidence: number;
+    minRiskReward: number;
+    maxLeverage: number;
+    riskPercentPerTrade: number;
   };
 }
 
@@ -5064,12 +5095,58 @@ export const analysisEngine = {
       safetyCheck: SafetyCheckResult;
       timing: TimingResult;
       trapCheck: TrapCheckResult;
-    }
+    },
+    interval?: string
   ): PreliminaryVerdictResult {
     const { marketPulse, assetScan, safetyCheck, timing, trapCheck } = steps;
 
     // Collect reasons for decision
     const reasons: PreliminaryVerdictResult['reasons'] = [];
+
+    // ===== STRATEGY MARKET CONDITION PRE-CHECKS =====
+    const strategyCtx = interval ? getStrategyContext(interval) : null;
+    if (strategyCtx) {
+      // Extract market data for strategy checks
+      const spread = safetyCheck.orderBook?.spread ?? 0;
+      const currentPrice = assetScan.currentPrice || 1;
+      const spreadPercent = (spread / currentPrice) * 100;
+      const volumeRatio = safetyCheck.volumeAnalysis?.relativeVolume ?? 1;
+      const adxValue = assetScan.indicators?.adx?.value ?? 20;
+      const fundingRate = safetyCheck.fundingRate ?? 0;
+      const fgiValue = marketPulse.fearGreedIndex ?? 50;
+      const rsiValue = assetScan.indicators?.rsi?.value ?? 50;
+
+      const conditionCheck = checkStrategyMarketConditions(strategyCtx.strategyType, {
+        spreadPercent,
+        volumeRatio,
+        adx: adxValue,
+        fundingRate,
+        fearGreedIndex: fgiValue,
+        rsi: rsiValue,
+      });
+
+      // Add warnings to reasons
+      for (const warning of conditionCheck.warnings) {
+        reasons.push({
+          factor: `⚠️ ${strategyCtx.strategyType} Warning: ${warning}`,
+          positive: false,
+          impact: 'medium' as const,
+          source: 'Strategy Market Conditions',
+        });
+      }
+
+      // Auto-wait conditions from strategy (e.g., scalping with high spread)
+      if (conditionCheck.autoWait) {
+        for (const reason of conditionCheck.autoWaitReasons) {
+          reasons.push({
+            factor: `🚫 ${strategyCtx.strategyType} AUTO-WAIT: ${reason}`,
+            positive: false,
+            impact: 'high' as const,
+            source: 'Strategy Market Conditions',
+          });
+        }
+      }
+    }
 
     // ===== AGGRESSIVE DIRECTION DETERMINATION =====
     // Use ALL available data sources with lower thresholds for EARLY ENTRY
@@ -5464,6 +5541,34 @@ export const analysisEngine = {
       direction = null;
       shouldGenerateTradePlan = false;
     }
+
+    // STRATEGY AUTO-WAIT: If strategy-specific market conditions require waiting
+    // (e.g., scalping with high spread or low volume), override to WAIT
+    if (strategyCtx && verdict !== 'avoid') {
+      const spread = safetyCheck.orderBook?.spread ?? 0;
+      const spreadPct = (spread / (assetScan.currentPrice || 1)) * 100;
+      const volRatio = safetyCheck.volumeAnalysis?.relativeVolume ?? 1;
+      const adxVal = assetScan.indicators?.adx?.value ?? 20;
+      const fundRate = safetyCheck.fundingRate ?? 0;
+      const fgiVal = marketPulse.fearGreedIndex ?? 50;
+      const rsiVal = assetScan.indicators?.rsi?.value ?? 50;
+
+      const strategyConditions = checkStrategyMarketConditions(strategyCtx.strategyType, {
+        spreadPercent: spreadPct,
+        volumeRatio: volRatio,
+        adx: adxVal,
+        fundingRate: fundRate,
+        fearGreedIndex: fgiVal,
+        rsi: rsiVal,
+      });
+
+      if (strategyConditions.autoWait) {
+        verdict = 'wait';
+        shouldGenerateTradePlan = false;
+        score = Math.min(score, 4); // Cap score when auto-wait triggered
+      }
+    }
+
     // ===== EARLY ENTRY LOGIC =====
     // Strong components override low direction confidence
     // When all indicators are strong, we should act early - not wait for confirmation
@@ -5578,7 +5683,8 @@ export const analysisEngine = {
       trapCheck: TrapCheckResult;
     },
     accountSize: number = 10000,
-    capitalFlowPhase?: 'early' | 'mid' | 'late' | 'exit'
+    capitalFlowPhase?: 'early' | 'mid' | 'late' | 'exit',
+    interval?: string
   ): Promise<TradePlanResult | null> {
     // Don't generate trade plan if not GO/CONDITIONAL_GO
     if (!preliminaryVerdict.shouldGenerateTradePlan || !preliminaryVerdict.direction) {
@@ -5588,6 +5694,10 @@ export const analysisEngine = {
     const { marketPulse, assetScan, safetyCheck, timing, trapCheck } = steps;
     const direction = preliminaryVerdict.direction;
     const currentPrice = assetScan.currentPrice;
+
+    // Get strategy-specific configuration for trade plan parameters
+    const strategyCtx = interval ? getStrategyContext(interval) : null;
+    const strategyConfig = strategyCtx?.config;
 
     // Track sources for transparency
     const sources: TradePlanResult['sources'] = {
@@ -5604,8 +5714,8 @@ export const analysisEngine = {
     // No pullback waiting - enter at current price immediately
     const entries: TradePlanResult['entries'] = [];
 
-    // Filter levels >10% from current price (historical levels not actionable)
-    const MAX_LEVEL_DISTANCE_PERCENT = 10;
+    // Filter levels beyond strategy-specific distance from current price
+    const MAX_LEVEL_DISTANCE_PERCENT = strategyConfig?.maxLevelDistance ?? 10;
     const levelWithinRange = (level: number | undefined): number | undefined => {
       if (level === undefined) return undefined;
       return Math.abs((level - currentPrice) / currentPrice * 100) <= MAX_LEVEL_DISTANCE_PERCENT ? level : undefined;
@@ -5736,7 +5846,7 @@ export const analysisEngine = {
 
     // Enforce minimum 1.5% and maximum 10% stop distance
     const minStopPct = 1.5;
-    const maxStopPct = 10;
+    const maxStopPct = strategyConfig?.maxStopPercent ?? 10;
     if (direction === 'long') {
       if (averageEntry - stopPrice < averageEntry * minStopPct / 100) {
         stopPrice = roundPrice(averageEntry * (1 - minStopPct / 100));
@@ -5820,15 +5930,19 @@ export const analysisEngine = {
         tp1Reason = '2R target';
         tp1Source = '2R calculation';
       }
+      // Strategy-specific TP distribution
+      const tp1Pct = strategyConfig?.tp1Percent ?? 60;
+      const tp2Pct = strategyConfig?.tp2Percent ?? 40;
+
       tp1Price = roundPrice(tp1Price);
       takeProfits.push({
-        price: tp1Price, percentage: 60,
+        price: tp1Price, percentage: tp1Pct,
         reason: tp1Reason, source: tp1Source,
         riskReward: calcTPRR(tp1Price),
       });
       sources.targets.push(tp1Source);
 
-      // TP2: Fibonacci extension beyond TP1 or further resistance or 3R fallback (40%)
+      // TP2: Fibonacci extension beyond TP1 or further resistance or 3R fallback
       let tp2Price: number;
       let tp2Reason: string;
       let tp2Source: string;
@@ -5850,13 +5964,17 @@ export const analysisEngine = {
       }
       tp2Price = roundPrice(Math.max(tp2Price, tp1Price + atr * 0.5));
       takeProfits.push({
-        price: tp2Price, percentage: 40,
+        price: tp2Price, percentage: tp2Pct,
         reason: tp2Reason, source: tp2Source,
         riskReward: calcTPRR(tp2Price),
       });
       sources.targets.push(tp2Source);
     } else {
-      // TP1: Fibonacci extension or nearest support or 2R fallback (60%)
+      // Strategy-specific TP distribution (SHORT side)
+      const tp1Pct = strategyConfig?.tp1Percent ?? 60;
+      const tp2Pct = strategyConfig?.tp2Percent ?? 40;
+
+      // TP1: Fibonacci extension or nearest support or 2R fallback
       // ENFORCE: TP1 must be at least 1R from entry
       let tp1Price: number;
       let tp1Reason: string;
@@ -5886,13 +6004,13 @@ export const analysisEngine = {
       }
       tp1Price = roundPrice(tp1Price);
       takeProfits.push({
-        price: tp1Price, percentage: 60,
+        price: tp1Price, percentage: tp1Pct,
         reason: tp1Reason, source: tp1Source,
         riskReward: calcTPRR(tp1Price),
       });
       sources.targets.push(tp1Source);
 
-      // TP2: Fibonacci extension beyond TP1 or further support or 3R fallback (40%)
+      // TP2: Fibonacci extension beyond TP1 or further support or 3R fallback
       let tp2Price: number;
       let tp2Reason: string;
       let tp2Source: string;
@@ -5914,15 +6032,15 @@ export const analysisEngine = {
       }
       tp2Price = roundPrice(Math.min(tp2Price, tp1Price - atr * 0.5));
       takeProfits.push({
-        price: tp2Price, percentage: 40,
+        price: tp2Price, percentage: tp2Pct,
         reason: tp2Reason, source: tp2Source,
         riskReward: calcTPRR(tp2Price),
       });
       sources.targets.push(tp2Source);
     }
 
-    // Maximum TP distance cap (20%)
-    const maxTPPercent = 20;
+    // Maximum TP distance cap (strategy-specific)
+    const maxTPPercent = strategyConfig?.maxTPPercent ?? 20;
     takeProfits.forEach(tp => {
       const tpDistance = Math.abs((tp.price - averageEntry) / averageEntry * 100);
       if (tpDistance > maxTPPercent) {
@@ -5943,22 +6061,24 @@ export const analysisEngine = {
     );
     const riskReward = parseFloat((avgTP / safeRiskAmount).toFixed(2));
 
-    // ===== POSITION SIZE (from Safety + Confidence) =====
-    let baseRiskPercent = 2.0; // Base 2% risk
+    // ===== POSITION SIZE (strategy-specific base + safety/confidence adjustments) =====
+    const strategyBaseRisk = strategyConfig?.riskPercentPerTrade ?? 2.0;
+    let baseRiskPercent = strategyBaseRisk;
 
     // Adjust based on safety score
-    if (safetyCheck.score >= 8) baseRiskPercent += 0.5;
-    else if (safetyCheck.score < 5) baseRiskPercent -= 0.5;
+    if (safetyCheck.score >= 8) baseRiskPercent += 0.25;
+    else if (safetyCheck.score < 5) baseRiskPercent -= 0.25;
 
     // Adjust based on confidence
-    if (preliminaryVerdict.confidence >= 80) baseRiskPercent += 0.5;
-    else if (preliminaryVerdict.confidence < 50) baseRiskPercent -= 0.5;
+    if (preliminaryVerdict.confidence >= 80) baseRiskPercent += 0.25;
+    else if (preliminaryVerdict.confidence < 50) baseRiskPercent -= 0.25;
 
     // Adjust based on market volatility
-    if (marketPulse.marketRegime === 'risk_off') baseRiskPercent -= 0.5;
+    if (marketPulse.marketRegime === 'risk_off') baseRiskPercent -= 0.25;
 
-    // Clamp to 1-3% range
-    baseRiskPercent = Math.max(1, Math.min(3, baseRiskPercent));
+    // Clamp: minimum 0.25%, maximum = strategy base × 1.5 (never exceed 1.5× strategy limit)
+    const maxRiskClamp = Math.min(strategyBaseRisk * 1.5, 5);
+    baseRiskPercent = Math.max(0.25, Math.min(maxRiskClamp, baseRiskPercent));
 
     const riskAmountUsd = accountSize * (baseRiskPercent / 100);
     const positionSizePercent = parseFloat(
@@ -6048,17 +6168,26 @@ export const analysisEngine = {
       sources,
       confidence: preliminaryVerdict.confidence,
       fibAlignedTargets: fibAligned,
-      // Gate evaluation for integrated trade plan
+      // Gate evaluation for integrated trade plan (strategy-specific min R:R)
       gate: {
-        canProceed: riskReward >= 1.5 && winRateEstimate >= 45,
-        reason: riskReward >= 1.5 && winRateEstimate >= 45
-          ? `Integrated plan has R:R ${riskReward.toFixed(1)} with ${winRateEstimate}% win rate`
-          : `R:R ${riskReward.toFixed(1)} or win rate ${winRateEstimate}% below threshold`,
+        canProceed: riskReward >= (strategyConfig?.minRiskReward ?? 1.5) && winRateEstimate >= 45,
+        reason: riskReward >= (strategyConfig?.minRiskReward ?? 1.5) && winRateEstimate >= 45
+          ? `Integrated plan has R:R ${riskReward.toFixed(1)} with ${winRateEstimate}% win rate (${strategyCtx?.strategyType ?? 'default'} min: ${strategyConfig?.minRiskReward ?? 1.5}:1)`
+          : `R:R ${riskReward.toFixed(1)} below ${strategyCtx?.strategyType ?? 'default'} minimum (${strategyConfig?.minRiskReward ?? 1.5}:1) or win rate ${winRateEstimate}% below threshold`,
         confidence: Math.round((riskReward / 3 + winRateEstimate / 100) * 50),
         planQuality: riskReward >= 3 && winRateEstimate >= 60 ? 'excellent'
           : riskReward >= 2 && winRateEstimate >= 50 ? 'good'
           : riskReward >= 1.5 ? 'acceptable' : 'poor',
       },
+      // Strategy metadata
+      strategyMetadata: strategyCtx ? {
+        strategyType: strategyCtx.strategyType,
+        expectedHoldTime: strategyCtx.config.expectedHoldTime,
+        minConfidence: strategyCtx.config.minConfidence,
+        minRiskReward: strategyCtx.config.minRiskReward,
+        maxLeverage: strategyCtx.config.maxLeverage,
+        riskPercentPerTrade: strategyCtx.config.riskPercentPerTrade,
+      } : undefined,
     };
   },
 
@@ -6077,7 +6206,8 @@ export const analysisEngine = {
       trapCheck: TrapCheckResult;
     },
     tradePlan: TradePlanResult | null,
-    tradeType: TradeType = 'dayTrade'
+    tradeType: TradeType = 'dayTrade',
+    interval?: string
   ): Promise<FinalVerdictResult> {
     const { marketPulse, assetScan, safetyCheck, timing, trapCheck } = allSteps;
     const hasTradePlan = tradePlan !== null;
@@ -6192,26 +6322,33 @@ export const analysisEngine = {
       confidenceFactors.push({ factor: `Good R:R ratio (${tradePlan.riskReward})`, positive: true, impact: 'medium' });
     }
 
+    // Strategy context for recommendation text
+    const strategyCtx = interval ? getStrategyContext(interval) : null;
+    const strategyLabel = strategyCtx
+      ? `${strategyCtx.strategyType} strategy (${strategyCtx.config.expectedHoldTime})`
+      : `${tradeType} strategy`;
+
     // Generate recommendation
     let recommendation = '';
 
     if (verdict === 'go' && tradePlan) {
       const targetPrice = tradePlan.takeProfits[1]?.price ?? tradePlan.takeProfits[0]?.price ?? tradePlan.averageEntry;
-      recommendation = `Conditions are favorable for ${symbol}. ${tradePlan.direction.toUpperCase()} position can be opened. ` +
+      recommendation = `Conditions are favorable for ${symbol} using ${strategyLabel}. ${tradePlan.direction.toUpperCase()} position can be opened. ` +
         `Entry: $${tradePlan.averageEntry}, Stop: $${tradePlan.stopLoss.price}, ` +
         `Target: $${targetPrice}. ` +
-        `Risk: ${tradePlan.positionSizePercent.toFixed(1)}% of portfolio.`;
+        `Risk: ${tradePlan.positionSizePercent.toFixed(1)}% of portfolio.` +
+        (strategyCtx ? ` Min R:R required: ${strategyCtx.config.minRiskReward}:1.` : '');
     } else if (verdict === 'conditional_go' && tradePlan) {
-      recommendation = `Cautious approach recommended for ${symbol}. ` +
+      recommendation = `Cautious approach recommended for ${symbol} (${strategyLabel}). ` +
         `${timing.waitFor ? 'Wait for ' + timing.waitFor.event + '. ' : ''}` +
         `If opening position, start small and scale in gradually. ` +
         `Suggested direction: ${tradePlan.direction.toUpperCase()}.`;
     } else if (verdict === 'wait') {
-      recommendation = `Waiting recommended for ${symbol}. ` +
+      recommendation = `Waiting recommended for ${symbol} (${strategyLabel}). ` +
         `${timing.waitFor ? 'Wait for ' + timing.waitFor.event + '. ' : 'Wait for better conditions. '}` +
         `Current score: ${overallScore}/10. No trade plan generated.`;
     } else {
-      recommendation = `Opening position not recommended for ${symbol}. ` +
+      recommendation = `Opening position not recommended for ${symbol} (${strategyLabel}). ` +
         `${safetyCheck.riskLevel === 'high' ? 'High manipulation risk. ' : ''}` +
         `${trapCheck.riskLevel === 'high' ? 'Trap risk present. ' : ''}` +
         `Wait until conditions improve. No trade plan generated.`;
@@ -6246,6 +6383,7 @@ export const analysisEngine = {
         levels: timing.fibonacci.levels,
       } : undefined,
       fibAlignedTargets: tradePlan?.fibAlignedTargets,
+      interval,
     });
 
     return {
