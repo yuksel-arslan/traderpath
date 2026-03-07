@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import {
   ArrowUpDown,
   ArrowUp,
@@ -27,14 +26,15 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
-
-const AreaChart = dynamic(() => import('recharts').then(m => m.AreaChart), { ssr: false });
-const Area = dynamic(() => import('recharts').then(m => m.Area), { ssr: false });
-const XAxis = dynamic(() => import('recharts').then(m => m.XAxis), { ssr: false });
-const YAxis = dynamic(() => import('recharts').then(m => m.YAxis), { ssr: false });
-const Tooltip = dynamic(() => import('recharts').then(m => m.Tooltip), { ssr: false });
-const ResponsiveContainer = dynamic(() => import('recharts').then(m => m.ResponsiveContainer), { ssr: false });
-const ReferenceLine = dynamic(() => import('recharts').then(m => m.ReferenceLine), { ssr: false });
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from 'recharts';
 
 // ─── Types ────────────────────────────────────────────────
 interface TrackingAnalysis {
