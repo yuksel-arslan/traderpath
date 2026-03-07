@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowUpDown,
@@ -46,8 +47,6 @@ interface TrackingAnalysis {
   creditsSpent: number;
   createdAt: string;
   expiresAt: string | null;
-  isLive?: boolean;
-  currentPrice?: number | null;
 }
 
 interface Pagination {
@@ -87,13 +86,8 @@ function getVerdictStyle(verdict: string) {
   return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30', label: 'N/A' };
 }
 
-function getOutcomeStyle(outcome: string | null, analysis?: TrackingAnalysis | null) {
-  if (!outcome || outcome === 'pending') {
-    if (analysis?.isLive) {
-      return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', label: 'LIVE', icon: Target };
-    }
-    return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30', label: 'PENDING', icon: Clock };
-  }
+function getOutcomeStyle(outcome: string | null) {
+  if (!outcome || outcome === 'pending') return { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30', label: 'LIVE', icon: Clock };
   if (outcome.startsWith('tp')) {
     const tpNum = outcome.replace('tp', '').replace('_hit', '');
     return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', label: `TP${tpNum} HIT`, icon: CheckCircle2 };
@@ -145,8 +139,7 @@ const DIRECTION_OPTIONS = [
 
 const OUTCOME_OPTIONS = [
   { value: 'all', label: 'All Outcomes' },
-  { value: 'live', label: 'Live' },
-  { value: 'pending', label: 'Pending' },
+  { value: 'pending', label: 'Live / Pending' },
   { value: 'tp', label: 'TP Hit' },
   { value: 'sl', label: 'SL Hit' },
 ];
@@ -197,6 +190,7 @@ function FilterSelect({ value, onChange, options, className }: {
 
 // ─── Main Page ───────────────────────────────────────────
 export default function TrackingPage() {
+  const router = useRouter();
   const [analyses, setAnalyses] = useState<TrackingAnalysis[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ total: 0, limit: 25, offset: 0, filtered: 0 });
   const [loading, setLoading] = useState(true);
@@ -208,6 +202,7 @@ export default function TrackingPage() {
 
   // Filters
   const [searchSymbol, setSearchSymbol] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [verdictFilter, setVerdictFilter] = useState('all');
   const [directionFilter, setDirectionFilter] = useState('all');
   const [outcomeFilter, setOutcomeFilter] = useState('all');
@@ -216,8 +211,19 @@ export default function TrackingPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const hasActiveFilters = searchSymbol || verdictFilter !== 'all' || directionFilter !== 'all' ||
+  // Debounce search input
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(searchSymbol);
+      setPagination(p => ({ ...p, offset: 0 }));
+    }, 400);
+    return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
+  }, [searchSymbol]);
+
+  const hasActiveFilters = debouncedSearch || verdictFilter !== 'all' || directionFilter !== 'all' ||
     outcomeFilter !== 'all' || methodFilter !== 'all' || intervalFilter !== 'all' || dateFrom || dateTo;
 
   const fetchData = useCallback(async () => {
@@ -229,7 +235,7 @@ export default function TrackingPage() {
       params.set('offset', String(pagination.offset));
       params.set('sortBy', sortBy);
       params.set('sortDir', sortDir);
-      if (searchSymbol) params.set('symbol', searchSymbol);
+      if (debouncedSearch) params.set('symbol', debouncedSearch);
       if (verdictFilter !== 'all') params.set('verdict', verdictFilter);
       if (directionFilter !== 'all') params.set('direction', directionFilter);
       if (outcomeFilter !== 'all') params.set('outcome', outcomeFilter);
@@ -252,7 +258,7 @@ export default function TrackingPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.limit, pagination.offset, sortBy, sortDir, searchSymbol, verdictFilter, directionFilter, outcomeFilter, methodFilter, intervalFilter, dateFrom, dateTo]);
+  }, [pagination.limit, pagination.offset, sortBy, sortDir, debouncedSearch, verdictFilter, directionFilter, outcomeFilter, methodFilter, intervalFilter, dateFrom, dateTo]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -277,6 +283,7 @@ export default function TrackingPage() {
 
   const clearFilters = () => {
     setSearchSymbol('');
+    setDebouncedSearch('');
     setVerdictFilter('all');
     setDirectionFilter('all');
     setOutcomeFilter('all');
@@ -293,7 +300,14 @@ export default function TrackingPage() {
   // Stats
   const tpCount = analyses.filter(a => a.outcome?.startsWith('tp')).length;
   const slCount = analyses.filter(a => a.outcome === 'sl_hit').length;
-  const liveCount = analyses.filter(a => a.isLive).length;
+  const liveCount = analyses.filter(a => !a.outcome || a.outcome === 'pending').length;
+  const closedCount = tpCount + slCount;
+  const winRate = closedCount > 0 ? Math.round((tpCount / closedCount) * 100) : null;
+  const totalPnL = analyses.reduce((sum, a) => sum + (a.pnlPercent || 0), 0);
+
+  const handleRowClick = (id: string) => {
+    router.push(`/analyze/details/${id}`);
+  };
 
   return (
     <div className="min-h-screen p-4 md:p-6 space-y-4">
@@ -314,10 +328,7 @@ export default function TrackingPage() {
               type="text"
               placeholder="Search symbol..."
               value={searchSymbol}
-              onChange={(e) => {
-                setSearchSymbol(e.target.value);
-                setPagination(p => ({ ...p, offset: 0 }));
-              }}
+              onChange={(e) => setSearchSymbol(e.target.value)}
               className="h-8 pl-8 pr-3 w-[140px] sm:w-[180px] rounded-lg bg-white/5 border border-white/10 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#4dd0e1]/50"
             />
           </div>
@@ -390,13 +401,13 @@ export default function TrackingPage() {
       )}
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+        <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
           <div className="flex items-center gap-2">
-            <Target className="w-4 h-4 text-emerald-400" />
-            <span className="text-xs text-emerald-300">Live</span>
+            <Clock className="w-4 h-4 text-blue-400" />
+            <span className="text-xs text-blue-300">Live</span>
           </div>
-          <p className="text-lg font-bold text-emerald-400 mt-1 font-mono">{liveCount}</p>
+          <p className="text-lg font-bold text-blue-400 mt-1 font-mono">{liveCount}</p>
         </div>
         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
           <div className="flex items-center gap-2">
@@ -411,6 +422,24 @@ export default function TrackingPage() {
             <span className="text-xs text-red-300">SL Hit</span>
           </div>
           <p className="text-lg font-bold text-red-400 mt-1 font-mono">{slCount}</p>
+        </div>
+        <div className="p-3 rounded-xl bg-[#4dd0e1]/10 border border-[#4dd0e1]/20">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-[#4dd0e1]" />
+            <span className="text-xs text-[#4dd0e1]/80">Win Rate</span>
+          </div>
+          <p className="text-lg font-bold text-[#4dd0e1] mt-1 font-mono">
+            {winRate !== null ? `${winRate}%` : '—'}
+          </p>
+        </div>
+        <div className={cn('p-3 rounded-xl border', totalPnL >= 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-red-500/10 border-red-500/20')}>
+          <div className="flex items-center gap-2">
+            <TrendingUp className={cn('w-4 h-4', totalPnL >= 0 ? 'text-emerald-400' : 'text-red-400')} />
+            <span className={cn('text-xs', totalPnL >= 0 ? 'text-emerald-300' : 'text-red-300')}>Total P/L</span>
+          </div>
+          <p className={cn('text-lg font-bold mt-1 font-mono', totalPnL >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+            {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)}%
+          </p>
         </div>
       </div>
 
@@ -481,12 +510,16 @@ export default function TrackingPage() {
               ) : (
                 analyses.map((a) => {
                   const verdictStyle = getVerdictStyle(a.verdict);
-                  const outcomeStyle = getOutcomeStyle(a.outcome, a);
+                  const outcomeStyle = getOutcomeStyle(a.outcome);
                   const dirInfo = getDirectionIcon(a.direction);
                   const OutcomeIcon = outcomeStyle.icon;
 
                   return (
-                    <tr key={a.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                    <tr
+                      key={a.id}
+                      onClick={() => handleRowClick(a.id)}
+                      className="border-b border-white/5 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                    >
                       {/* Date */}
                       <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">
                         {formatDate(a.createdAt)}
@@ -592,7 +625,9 @@ export default function TrackingPage() {
                       <td className="px-3 py-2.5">
                         <Link
                           href={`/analyze/details/${a.id}`}
+                          onClick={(e) => e.stopPropagation()}
                           className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-[#4dd0e1] hover:bg-[#4dd0e1]/10 transition-colors"
+                          title="Open in new tab"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                         </Link>
