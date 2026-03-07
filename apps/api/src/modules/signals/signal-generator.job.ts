@@ -116,6 +116,8 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
     const tableExists = await checkSignalsTableExists();
     if (!tableExists) {
       console.log('[SignalGenerator] Skipping - signals table not migrated yet');
+      result.message = 'Signal table not found in database. Run migration: apps/api/prisma/migrations/apply_signals_production.sql';
+      result.status = 'error';
       return result;
     }
 
@@ -124,6 +126,8 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
       const acquired = await cache.setNX(LOCK_KEY, '1', LOCK_TTL);
       if (!acquired) {
         console.log('[SignalGenerator] Another instance is running, skipping');
+        result.message = 'Another signal generation is already running. Please wait and try again.';
+        result.status = 'skipped';
         return result;
       }
     }
@@ -134,6 +138,8 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
 
     if (!recommendation) {
       console.log('[SignalGenerator] No Capital Flow recommendation available');
+      result.message = 'No Capital Flow recommendation available. Capital Flow data may not be loaded yet.';
+      result.status = 'skipped';
       return result;
     }
 
@@ -285,6 +291,11 @@ export async function generateSignals(): Promise<SignalGenerationResult> {
         });
       }
     }
+
+    result.status = 'success';
+    result.message = result.generated > 0
+      ? `Generated ${result.generated} signal(s), published ${result.published} to Telegram`
+      : `Scanned ${result.processed} asset(s) but no actionable signals found (${result.skipped} skipped)`;
 
     console.log(`[SignalGenerator] Cycle complete:`, result);
 
@@ -826,12 +837,18 @@ export async function generateAutoEdgeSignal(): Promise<SignalGenerationResult> 
 
   try {
     const tableExists = await checkSignalsTableExists();
-    if (!tableExists) return result;
+    if (!tableExists) {
+      result.message = 'Signal table not found in database. Run migration: apps/api/prisma/migrations/apply_signals_production.sql';
+      result.status = 'error';
+      return result;
+    }
 
     if (redis) {
       const acquired = await cache.setNX(AUTOEDGE_CONFIG.lockKey, '1', AUTOEDGE_CONFIG.lockTTL);
       if (!acquired) {
         console.log('[AutoEdge] Another instance running, skipping');
+        result.message = 'Another AutoEdge scan is already running. Please wait and try again.';
+        result.status = 'skipped';
         return result;
       }
     }
@@ -899,6 +916,11 @@ export async function generateAutoEdgeSignal(): Promise<SignalGenerationResult> 
         });
       }
     }
+
+    result.status = 'success';
+    result.message = result.generated > 0
+      ? `Scanned ${result.processed} symbols, generated ${result.generated} signal(s), published ${result.published} to Telegram`
+      : `Scanned ${result.processed} symbols but no actionable signals found (${result.skipped} skipped — need GO verdict on both 15m and 5m with MLIS confirmation)`;
 
     console.log('[AutoEdge] Cycle complete:', result);
 

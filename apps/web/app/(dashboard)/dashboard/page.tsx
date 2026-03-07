@@ -358,6 +358,9 @@ export default function DashboardPage() {
   const [signalHealth, setSignalHealth] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isGeneratingSignals, setIsGeneratingSignals] = useState(false);
+  const [isGeneratingAutoEdge, setIsGeneratingAutoEdge] = useState(false);
+  const [signalRunResult, setSignalRunResult] = useState<string | null>(null);
   const [pnlViewMode, setPnlViewMode] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const initialLoadDone = useRef(false);
 
@@ -802,6 +805,69 @@ export default function DashboardPage() {
   }
 
   // ===========================================
+  // Signal Generator Run Now handlers (admin)
+  // ===========================================
+  const handleGenerateSignals = async () => {
+    setIsGeneratingSignals(true);
+    setSignalRunResult('Signal Generator starting...');
+    try {
+      const response = await authFetch('/api/v1/signals/admin/generate', { method: 'POST' });
+      if (response.ok) {
+        const data = await response.json();
+        const r = data.data;
+        if (r.status === 'error') {
+          setSignalRunResult(`⚠ ${r.message}`);
+          setIsGeneratingSignals(false);
+        } else if (r.status === 'started') {
+          setSignalRunResult('Signal Generator running in background... Check admin panel for results.');
+          setTimeout(() => { setIsGeneratingSignals(false); setSignalRunResult(null); }, 30000);
+        } else {
+          setSignalRunResult(r.message || `Done: ${r.generated} generated`);
+          setIsGeneratingSignals(false);
+        }
+      } else {
+        const err = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        setSignalRunResult(`Failed: ${err.error || 'Unknown error'}`);
+        setIsGeneratingSignals(false);
+      }
+    } catch {
+      setSignalRunResult('Request failed — check network');
+      setIsGeneratingSignals(false);
+    }
+    setTimeout(() => setSignalRunResult(null), 15000);
+  };
+
+  const handleGenerateAutoEdge = async () => {
+    setIsGeneratingAutoEdge(true);
+    setSignalRunResult('AutoEdge v2 starting...');
+    try {
+      const response = await authFetch('/api/v1/signals/admin/generate-autoedge', { method: 'POST' });
+      if (response.ok) {
+        const data = await response.json();
+        const r = data.data;
+        if (r.status === 'error') {
+          setSignalRunResult(`⚠ ${r.message}`);
+          setIsGeneratingAutoEdge(false);
+        } else if (r.status === 'started') {
+          setSignalRunResult('AutoEdge running in background... Check admin panel for results.');
+          setTimeout(() => { setIsGeneratingAutoEdge(false); setSignalRunResult(null); }, 30000);
+        } else {
+          setSignalRunResult(r.message || `Done: ${r.generated} generated`);
+          setIsGeneratingAutoEdge(false);
+        }
+      } else {
+        const err = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        setSignalRunResult(`Failed: ${err.error || 'Unknown error'}`);
+        setIsGeneratingAutoEdge(false);
+      }
+    } catch {
+      setSignalRunResult('Request failed — check network');
+      setIsGeneratingAutoEdge(false);
+    }
+    setTimeout(() => setSignalRunResult(null), 15000);
+  };
+
+  // ===========================================
   // Render — Intelligence Command Center
   // ===========================================
   return (
@@ -1021,6 +1087,13 @@ export default function DashboardPage() {
 
             {/* Generator Status Rows */}
             <div className="space-y-2 px-5 pt-4">
+              {/* Signal Run Result Toast */}
+              {signalRunResult && (
+                <div className="px-3 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
+                  <p className="text-xs text-indigo-400">{signalRunResult}</p>
+                </div>
+              )}
+
               {/* Signal Generator (4h) */}
               <div className="flex items-center justify-between rounded-lg px-4 py-3 bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/[0.06]">
                 <div className="flex items-center gap-3">
@@ -1039,18 +1112,21 @@ export default function DashboardPage() {
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 text-right">
+                <div className="flex items-center gap-3 text-right">
                   <div>
                     <p className="text-sm font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       {signalHealth?.metrics?.generator?.signalsGenerated ?? 0}
                     </p>
                     <p className="text-[10px] text-gray-400 dark:text-white/30">signals</p>
                   </div>
-                  {signalHealth?.generator?.lastRun && (
-                    <p className="text-[10px] text-gray-400 dark:text-white/30">
-                      {new Date(signalHealth.generator.lastRun).toLocaleTimeString()}
-                    </p>
-                  )}
+                  <button
+                    onClick={handleGenerateSignals}
+                    disabled={isGeneratingSignals}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-indigo-500/10 text-indigo-500 rounded-md hover:bg-indigo-500/20 transition disabled:opacity-50"
+                  >
+                    {isGeneratingSignals ? <RefreshCw className="w-3 h-3 animate-spin" /> : <TrendingUp className="w-3 h-3" />}
+                    {isGeneratingSignals ? 'Running...' : 'Run Now'}
+                  </button>
                 </div>
               </div>
 
@@ -1072,18 +1148,21 @@ export default function DashboardPage() {
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 text-right">
+                <div className="flex items-center gap-3 text-right">
                   <div>
                     <p className="text-sm font-bold text-gray-900 dark:text-white" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       {signalHealth?.metrics?.autoedge?.signalsGenerated ?? 0}
                     </p>
                     <p className="text-[10px] text-gray-400 dark:text-white/30">signals</p>
                   </div>
-                  {signalHealth?.autoedge?.lastRun && (
-                    <p className="text-[10px] text-gray-400 dark:text-white/30">
-                      {new Date(signalHealth.autoedge.lastRun).toLocaleTimeString()}
-                    </p>
-                  )}
+                  <button
+                    onClick={handleGenerateAutoEdge}
+                    disabled={isGeneratingAutoEdge}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-emerald-500/10 text-emerald-500 rounded-md hover:bg-emerald-500/20 transition disabled:opacity-50"
+                  >
+                    {isGeneratingAutoEdge ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                    {isGeneratingAutoEdge ? 'Running...' : 'Run Now'}
+                  </button>
                 </div>
               </div>
             </div>
