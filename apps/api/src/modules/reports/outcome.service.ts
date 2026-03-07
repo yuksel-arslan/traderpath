@@ -141,45 +141,147 @@ async function fetchOHLCData(
   }
 }
 
-// Check if TP or SL was hit in the price history
-function checkTPSLHit(
+// Timeframe hierarchy for sub-candle drill-down
+const TIMEFRAME_DRILL_DOWN: Record<string, string[]> = {
+  '1W': ['1d', '4h', '1h', '15m', '5m', '1m'],
+  '1d': ['4h', '1h', '15m', '5m', '1m'],
+  '4h': ['1h', '15m', '5m', '1m'],
+  '2h': ['1h', '15m', '5m', '1m'],
+  '1h': ['15m', '5m', '1m'],
+  '30m': ['15m', '5m', '1m'],
+  '15m': ['5m', '1m'],
+  '5m': ['1m'],
+  '1m': [],
+};
+
+type HitType = 'tp1' | 'tp2' | 'tp3' | 'sl' | 'none';
+
+/**
+ * Check if SL or TP is hit in a single candle
+ */
+function checkSingleCandleHitsOutcome(
+  kline: KlineData,
+  direction: string,
+  stopLoss: number,
+  takeProfits: number[]
+): { slHit: boolean; bestTp: { hitType: 'tp1' | 'tp2' | 'tp3'; hitPrice: number } | null } {
+  const high = kline.high;
+  const low = kline.low;
+
+  let slHit = false;
+  let bestTp: { hitType: 'tp1' | 'tp2' | 'tp3'; hitPrice: number } | null = null;
+
+  if (direction === 'long') {
+    slHit = low <= stopLoss;
+    for (let i = takeProfits.length - 1; i >= 0; i--) {
+      if (high >= takeProfits[i]) {
+        bestTp = { hitType: ['tp1', 'tp2', 'tp3'][i] as 'tp1' | 'tp2' | 'tp3', hitPrice: takeProfits[i] };
+        break;
+      }
+    }
+  } else if (direction === 'short') {
+    slHit = high >= stopLoss;
+    for (let i = takeProfits.length - 1; i >= 0; i--) {
+      if (low <= takeProfits[i]) {
+        bestTp = { hitType: ['tp1', 'tp2', 'tp3'][i] as 'tp1' | 'tp2' | 'tp3', hitPrice: takeProfits[i] };
+        break;
+      }
+    }
+  }
+
+  return { slHit, bestTp };
+}
+
+/**
+ * When both SL and TP are hit in the same candle, drill down to a lower
+ * timeframe to determine which was actually hit first.
+ * Falls back to open-price-proximity if no lower timeframe resolves it.
+ */
+async function resolveConflictWithDrillDownOutcome(
+  symbol: string,
+  conflictCandle: KlineData,
+  direction: string,
+  stopLoss: number,
+  takeProfits: number[],
+  currentInterval: string,
+  bestTpResult: { hitType: 'tp1' | 'tp2' | 'tp3'; hitPrice: number }
+): Promise<{ hitType: HitType; hitPrice: number; hitTime: Date }> {
+  const drillDownChain = TIMEFRAME_DRILL_DOWN[currentInterval] || [];
+
+  for (const lowerInterval of drillDownChain) {
+    try {
+      const subKlines = await fetchOHLCData(
+        symbol,
+        new Date(conflictCandle.openTime),
+        new Date(conflictCandle.closeTime),
+        lowerInterval
+      );
+
+      if (subKlines.length === 0) continue;
+
+      for (const subKline of subKlines) {
+        const sub = checkSingleCandleHitsOutcome(subKline, direction, stopLoss, takeProfits);
+
+        // Only SL hit → SL was first
+        if (sub.slHit && !sub.bestTp) {
+          return { hitType: 'sl', hitPrice: stopLoss, hitTime: new Date(subKline.openTime) };
+        }
+        // Only TP hit → TP was first
+        if (!sub.slHit && sub.bestTp) {
+          return { ...sub.bestTp, hitTime: new Date(subKline.openTime) };
+        }
+        // Both hit → drill down further
+        if (sub.slHit && sub.bestTp) {
+          return resolveConflictWithDrillDownOutcome(
+            symbol, subKline, direction, stopLoss, takeProfits,
+            lowerInterval, sub.bestTp
+          );
+        }
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  // Fallback: open price proximity
+  const open = conflictCandle.open;
+  const distToSL = Math.abs(open - stopLoss);
+  const distToTP = Math.abs(open - bestTpResult.hitPrice);
+  if (distToTP <= distToSL) {
+    return { ...bestTpResult, hitTime: new Date(conflictCandle.openTime) };
+  }
+  return { hitType: 'sl', hitPrice: stopLoss, hitTime: new Date(conflictCandle.openTime) };
+}
+
+// Check if TP or SL was hit in the price history.
+// When both are hit in the same candle, drills down to lower timeframes
+// to determine the exact order (1d→4h→1h→15m→5m→1m).
+async function checkTPSLHit(
   klines: KlineData[],
   direction: string,
   entryPrice: number,
   stopLoss: number,
-  takeProfits: number[]
-): { hitType: 'tp1' | 'tp2' | 'tp3' | 'sl' | 'none'; hitPrice?: number; hitTime?: Date } {
+  takeProfits: number[],
+  symbol: string = '',
+  interval: string = '1h'
+): Promise<{ hitType: HitType; hitPrice?: number; hitTime?: Date }> {
 
   for (const kline of klines) {
-    const high = kline.high;
-    const low = kline.low;
+    const { slHit, bestTp } = checkSingleCandleHitsOutcome(kline, direction, stopLoss, takeProfits);
 
-    if (direction === 'long') {
-      // For LONG: SL is below entry, TP is above entry
-      // Check SL first (worst case)
-      if (low <= stopLoss) {
-        return { hitType: 'sl', hitPrice: stopLoss, hitTime: new Date(kline.openTime) };
-      }
-      // Check TPs (best case)
-      for (let i = 0; i < takeProfits.length; i++) {
-        if (high >= takeProfits[i]) {
-          const tpType = ['tp1', 'tp2', 'tp3'][i] as 'tp1' | 'tp2' | 'tp3';
-          return { hitType: tpType, hitPrice: takeProfits[i], hitTime: new Date(kline.openTime) };
-        }
-      }
-    } else if (direction === 'short') {
-      // For SHORT: SL is above entry, TP is below entry
-      // Check SL first (worst case)
-      if (high >= stopLoss) {
-        return { hitType: 'sl', hitPrice: stopLoss, hitTime: new Date(kline.openTime) };
-      }
-      // Check TPs (best case)
-      for (let i = 0; i < takeProfits.length; i++) {
-        if (low <= takeProfits[i]) {
-          const tpType = ['tp1', 'tp2', 'tp3'][i] as 'tp1' | 'tp2' | 'tp3';
-          return { hitType: tpType, hitPrice: takeProfits[i], hitTime: new Date(kline.openTime) };
-        }
-      }
+    // Both hit in same candle → drill down to lower timeframe
+    if (slHit && bestTp) {
+      return resolveConflictWithDrillDownOutcome(
+        symbol, kline, direction, stopLoss, takeProfits, interval, bestTp
+      );
+    }
+
+    if (slHit) {
+      return { hitType: 'sl', hitPrice: stopLoss, hitTime: new Date(kline.openTime) };
+    }
+
+    if (bestTp) {
+      return { ...bestTp, hitTime: new Date(kline.openTime) };
     }
   }
 
@@ -393,15 +495,17 @@ export async function calculateReportOutcome(reportId: string): Promise<OutcomeR
   }
 
   // Fetch historical OHLC data from analysis date to now
+  // Use the analysis's actual interval instead of hardcoded '1h'
+  const analysisInterval = (report as any).interval || '1h';
   const now = new Date();
-  const klines = await fetchOHLCData(report.symbol, report.generatedAt, now, '1h');
+  const klines = await fetchOHLCData(report.symbol, report.generatedAt, now, analysisInterval);
 
   // Extract TP/SL prices
   const slPrice = tradePlan.stopLoss.price;
   const tpPrices = tradePlan.takeProfits.map(tp => tp.price);
 
-  // Check if TP or SL was hit
-  const hitResult = checkTPSLHit(klines, tradePlan.direction, entryPrice, slPrice, tpPrices);
+  // Check if TP or SL was hit (async: may drill down to lower timeframes)
+  const hitResult = await checkTPSLHit(klines, tradePlan.direction, entryPrice, slPrice, tpPrices, report.symbol, analysisInterval);
 
   // Determine outcome - ONLY based on TP/SL hit, no time-based expiration
   let outcome: 'correct' | 'incorrect' | 'pending' = 'pending';
