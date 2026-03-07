@@ -91,6 +91,13 @@ interface AppStats {
     total: number;
     today: number;
     thisWeek: number;
+    thisMonth: number;
+    active: number;
+    tpHit: number;
+    slHit: number;
+    platformAccuracy: number;
+    classic: number;
+    mlisPro: number;
   };
   credits: {
     totalSpent: number;
@@ -641,7 +648,10 @@ export default function AdminPage() {
                 <span className="text-sm text-muted-foreground">Total Users</span>
               </div>
               <p className="text-3xl font-bold">{stats?.users.total || 0}</p>
-              <p className="text-sm text-green-500">+{stats?.users.newToday || 0} today</p>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-green-500">+{stats?.users.newToday || 0} today</span>
+                <span className="text-muted-foreground">· {stats?.users.activeToday || 0} active</span>
+              </div>
             </div>
 
             <div className="bg-card border rounded-lg p-4">
@@ -649,10 +659,28 @@ export default function AdminPage() {
                 <div className="p-2 bg-purple-500/10 rounded-lg">
                   <TrendingUp className="w-5 h-5 text-purple-500" />
                 </div>
-                <span className="text-sm text-muted-foreground">Analyses</span>
+                <span className="text-sm text-muted-foreground">Total Analyses</span>
               </div>
               <p className="text-3xl font-bold">{stats?.analyses.total || 0}</p>
-              <p className="text-sm text-green-500">+{stats?.analyses.today || 0} today</p>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-green-500">+{stats?.analyses.today || 0} today</span>
+                <span className="text-muted-foreground">· {stats?.analyses.thisWeek || 0} this week</span>
+              </div>
+            </div>
+
+            <div className="bg-card border rounded-lg p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-teal-500/10 rounded-lg">
+                  <Target className="w-5 h-5 text-teal-500" />
+                </div>
+                <span className="text-sm text-muted-foreground">Platform Accuracy</span>
+              </div>
+              <p className="text-3xl font-bold">{stats?.analyses.platformAccuracy || 0}%</p>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-green-500">{stats?.analyses.tpHit || 0} TP</span>
+                <span className="text-red-500">{stats?.analyses.slHit || 0} SL</span>
+                <span className="text-muted-foreground">· {stats?.analyses.active || 0} active</span>
+              </div>
             </div>
 
             <div className="bg-card border rounded-lg p-4">
@@ -660,10 +688,35 @@ export default function AdminPage() {
                 <div className="p-2 bg-yellow-500/10 rounded-lg">
                   <CreditCard className="w-5 h-5 text-yellow-500" />
                 </div>
-                <span className="text-sm text-muted-foreground">Credits Spent</span>
+                <span className="text-sm text-muted-foreground">Credits Economy</span>
               </div>
               <p className="text-3xl font-bold">{stats?.credits.totalSpent || 0}</p>
-              <p className="text-sm text-muted-foreground">{stats?.credits.spentToday || 0} today</p>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">{stats?.credits.spentToday || 0} spent today</span>
+                <span className="text-green-500">+{stats?.credits.totalPurchased || 0} purchased</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Analysis Breakdown */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="bg-card border rounded-lg p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-indigo-500/10 rounded-lg">
+                  <BarChart3 className="w-5 h-5 text-indigo-500" />
+                </div>
+                <span className="text-sm text-muted-foreground">Analysis Methods</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Classic 7-Step</span>
+                  <span className="font-bold">{stats?.analyses.classic || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">MLIS Pro</span>
+                  <span className="font-bold">{stats?.analyses.mlisPro || 0}</span>
+                </div>
+              </div>
             </div>
 
             <div className="bg-card border rounded-lg p-4">
@@ -673,8 +726,30 @@ export default function AdminPage() {
                 </div>
                 <span className="text-sm text-muted-foreground">Reports</span>
               </div>
-              <p className="text-3xl font-bold">{stats?.reports.active || 0}</p>
-              <p className="text-sm text-muted-foreground">{stats?.reports.expired || 0} expired</p>
+              <p className="text-3xl font-bold">{stats?.reports.total || 0}</p>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-green-500">{stats?.reports.active || 0} active</span>
+                <span className="text-muted-foreground">· {stats?.reports.expired || 0} expired</span>
+              </div>
+            </div>
+
+            <div className="bg-card border rounded-lg p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-amber-500/10 rounded-lg">
+                  <Clock className="w-5 h-5 text-amber-500" />
+                </div>
+                <span className="text-sm text-muted-foreground">Monthly Summary</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Users this month</span>
+                  <span className="font-bold">+{stats?.users.newThisMonth || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Analyses this month</span>
+                  <span className="font-bold">{stats?.analyses.thisMonth || 0}</span>
+                </div>
+              </div>
             </div>
           </div>
 
