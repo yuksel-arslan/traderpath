@@ -13,7 +13,7 @@ import { createHmac } from 'crypto';
 
 // ─── Configuration ────────────────────────────────────────────
 const TESTNET_BASE_URL = process.env['BINANCE_TESTNET_BASE_URL']
-  || 'https://testnet.binancefuture.com';
+  || 'https://demo-fapi.binance.com';
 const REQUEST_TIMEOUT = 10_000; // 10 seconds
 
 function getApiKey(): string {
