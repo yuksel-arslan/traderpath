@@ -25,6 +25,7 @@ const protectedPaths = [
   '/top-coins',
   '/notifications',
   '/terminal',
+  '/tracking',
 ];
 
 // Routes that should redirect to dashboard if already authenticated
