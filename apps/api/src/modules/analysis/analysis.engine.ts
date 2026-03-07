@@ -9,6 +9,7 @@ import { callGeminiWithRetry } from '../../core/gemini';
 import { contractSecurityService } from '../security/contract-security.service';
 import { TradeType, getTradeConfig, getStepConfig, Timeframe, AnalysisStep, IndicatorConfig, getMaxStopLossPercent, getMaxTakeProfitPercent } from './config/trade-config';
 import { getStrategyContext, checkMarketConditions as checkStrategyMarketConditions, StrategyContext, tradeTypeToStrategy } from './services/strategy-prompt.service';
+import { predictPriceTargets, AIPredictionInput, AIPredictionResult } from './services/ai-price-predictor.service';
 import { Timeframe as TimeframeEnum } from './config/timeframe.enum';
 import { selectBundle, getBundleType } from './bundles';
 import { aggregateScores, quickStepScore, STEP_WEIGHTS } from './scoring';
@@ -5792,29 +5793,40 @@ export const analysisEngine = {
       }
     }
 
-    // ===== STOP LOSS: Key level ± ATR (adjusted by capital flow phase) =====
-    // LONG: SL = nearest support - atrMultiplied (below support)
-    // SHORT: SL = nearest resistance + atrMultiplied (above resistance)
-    // Capital flow phase risk adjustment
+    // ===== STOP LOSS: Strategy-specific ATR multiplier + capital flow phase =====
+    // SCALPING:  ATR × 0.5 (tight, fast exits - from SCALPING_PROMPT.md)
+    // DAY_TRADE: ATR × 1.5 (wider of structural or 1.5×ATR - from DAYTRADING_PROMPT.md)
+    // SWING:     ATR × 2.0 (breathing room overnight - from SWINGTRADING_PROMPT.md)
+    // POSITION:  ATR × 3.0 (wide, noise tolerance - from POSITIONTRADING_PROMPT.md)
+    const strategyATRMultiplier: Record<string, number> = {
+      'SCALPING': 0.5,
+      'DAY_TRADE': 1.5,
+      'SWING_TRADE': 2.0,
+      'POSITION_TRADE': 3.0,
+    };
+    const baseATRMult = strategyATRMultiplier[strategyCtx?.strategyType ?? ''] ?? 1.0;
+
+    // Capital flow phase risk adjustment (layered on top of strategy multiplier)
     const phaseRiskMultiplier = {
-      'early': 0.8,   // Early phase: tighter SL (more aggressive)
+      'early': 0.9,   // Early phase: slightly tighter
       'mid': 1.0,     // Mid phase: normal
-      'late': 1.3,    // Late phase: wider SL (more conservative)
-      'exit': 1.5,    // Exit phase: widest SL or avoid trade
+      'late': 1.15,   // Late phase: slightly wider
+      'exit': 1.3,    // Exit phase: wider SL
     }[capitalFlowPhase ?? 'mid'] ?? 1.0;
 
-    const atrMultiplied = atr * phaseRiskMultiplier;
+    const atrMultiplied = atr * baseATRMult * phaseRiskMultiplier;
 
     let stopPrice: number;
     let safetyAdjusted = false;
 
     if (direction === 'long') {
-      // SL below nearest support - atrMultiplied
+      // SL below nearest support - atrMultiplied (strategy: ATR×baseATRMult×phase)
       const slReference = nearestSupport ?? currentPrice;
       stopPrice = slReference - atrMultiplied;
+      const slStrategyLabel = strategyCtx?.strategyType ?? 'default';
       sources.stopLoss.push(nearestSupport
-        ? `Below support $${nearestSupport.toFixed(2)} - ATR×${phaseRiskMultiplier} ($${atrMultiplied.toFixed(2)})`
-        : `Below current price - ATR×${phaseRiskMultiplier}`);
+        ? `Below support $${nearestSupport.toFixed(2)} - ATR×${baseATRMult}×${phaseRiskMultiplier} [${slStrategyLabel}] ($${atrMultiplied.toFixed(2)})`
+        : `Below current price - ATR×${baseATRMult}×${phaseRiskMultiplier} [${slStrategyLabel}]`);
 
       // Trap zone adjustment - don't place stop inside trap zones
       if (trapCheck.traps.stopHuntZones.length > 0) {
@@ -5826,12 +5838,13 @@ export const analysisEngine = {
         }
       }
     } else {
-      // SL above nearest resistance + atrMultiplied
+      // SL above nearest resistance + atrMultiplied (strategy: ATR×baseATRMult×phase)
       const slReference = nearestResistance ?? currentPrice;
       stopPrice = slReference + atrMultiplied;
+      const slStrategyLabel = strategyCtx?.strategyType ?? 'default';
       sources.stopLoss.push(nearestResistance
-        ? `Above resistance $${nearestResistance.toFixed(2)} + ATR×${phaseRiskMultiplier} ($${atrMultiplied.toFixed(2)})`
-        : `Above current price + ATR×${phaseRiskMultiplier}`);
+        ? `Above resistance $${nearestResistance.toFixed(2)} + ATR×${baseATRMult}×${phaseRiskMultiplier} [${slStrategyLabel}] ($${atrMultiplied.toFixed(2)})`
+        : `Above current price + ATR×${baseATRMult}×${phaseRiskMultiplier} [${slStrategyLabel}]`);
 
       // Trap zone adjustment
       if (trapCheck.traps.stopHuntZones.length > 0) {
@@ -5844,8 +5857,18 @@ export const analysisEngine = {
       }
     }
 
-    // Enforce minimum 1.5% and maximum 10% stop distance
-    const minStopPct = 1.5;
+    // Strategy-specific minimum stop distance (from prompt rules)
+    // SCALPING: 0.3% min (tight, per SCALPING_PROMPT.md "ATR×0.5")
+    // DAY_TRADE: 1.0% min (per DAYTRADING_PROMPT.md "wider of structural or 1.5×ATR")
+    // SWING: 2.0% min (per SWINGTRADING_PROMPT.md "1.5× ATR minimum")
+    // POSITION: 5.0% min (per POSITIONTRADING_PROMPT.md "15-30% from entry is NORMAL")
+    const strategyMinStopPct: Record<string, number> = {
+      'SCALPING': 0.3,
+      'DAY_TRADE': 1.0,
+      'SWING_TRADE': 2.0,
+      'POSITION_TRADE': 5.0,
+    };
+    const minStopPct = strategyMinStopPct[strategyCtx?.strategyType ?? ''] ?? 1.5;
     const maxStopPct = strategyConfig?.maxStopPercent ?? 10;
     if (direction === 'long') {
       if (averageEntry - stopPrice < averageEntry * minStopPct / 100) {
@@ -5900,35 +5923,56 @@ export const analysisEngine = {
 
     let fibAligned = false;
 
+    // Strategy-specific R:R multipliers for TP fallback targets (from prompt rules)
+    // SCALPING:  TP1=1.5R, TP2=2.5R (from SCALPING_PROMPT.md "1.5× risk / 2.5× risk")
+    // DAY_TRADE: TP1=2.0R, TP2=3.0R (from DAYTRADING_PROMPT.md "2:1 R/R / 3:1 R/R")
+    // SWING:     TP1=2.5R, TP2=4.0R (from SWINGTRADING_PROMPT.md "2.5:1 R/R / 4:1 R/R")
+    // POSITION:  TP1=2.0R, TP2=5.0R (from POSITIONTRADING_PROMPT.md "2× gain / measured move")
+    const strategyTP1Mult: Record<string, number> = {
+      'SCALPING': 1.5,
+      'DAY_TRADE': 2.0,
+      'SWING_TRADE': 2.5,
+      'POSITION_TRADE': 2.0,
+    };
+    const strategyTP2Mult: Record<string, number> = {
+      'SCALPING': 2.5,
+      'DAY_TRADE': 3.0,
+      'SWING_TRADE': 4.0,
+      'POSITION_TRADE': 5.0,
+    };
+    const tp1RRMult = strategyTP1Mult[strategyCtx?.strategyType ?? ''] ?? 2.0;
+    const tp2RRMult = strategyTP2Mult[strategyCtx?.strategyType ?? ''] ?? 3.0;
+    // Minimum R:R threshold for TP1 to qualify (scalping accepts lower R:R)
+    const tp1MinRR = strategyCtx?.strategyType === 'SCALPING' ? 0.8 : 1.0;
+
     if (direction === 'long') {
-      // TP1: nearest resistance or Fibonacci extension or 2R fallback (60% of position)
-      // ENFORCE: TP1 must be at least 1R from entry
+      // TP1: Fibonacci extension or S/R level or strategy-specific R:R fallback
       let tp1Price: number;
       let tp1Reason: string;
       let tp1Source: string;
 
-      // Priority: 1) Fibonacci 1.272/1.618 extension if ≥1R, 2) S/R level if ≥1R, 3) 2R fallback
+      // Priority: 1) Fibonacci extension if ≥ min R:R, 2) S/R level if ≥ min R:R, 3) Strategy R:R fallback
       const fibTP1 = findFibTP(averageEntry, null);
-      if (fibTP1 && (fibTP1.price - averageEntry) / safeRiskAmount >= 1.0) {
+      if (fibTP1 && (fibTP1.price - averageEntry) / safeRiskAmount >= tp1MinRR) {
         tp1Price = fibTP1.price;
         tp1Reason = `Fibonacci ${fibTP1.level} extension`;
         tp1Source = `Fib ${fibTP1.level} extension`;
         fibAligned = true;
       } else if (nearestResistance && nearestResistance > averageEntry) {
         const tp1RR = (nearestResistance - averageEntry) / safeRiskAmount;
-        if (tp1RR >= 1.0) {
+        if (tp1RR >= tp1MinRR) {
           tp1Price = nearestResistance;
           tp1Reason = 'Nearest resistance';
           tp1Source = 'Resistance level';
         } else {
-          tp1Price = averageEntry + safeRiskAmount * 2;
-          tp1Reason = `2R target (resistance at ${roundPrice(nearestResistance)} only ${tp1RR.toFixed(1)}R)`;
-          tp1Source = '2R calculation (min 1R enforced)';
+          tp1Price = averageEntry + safeRiskAmount * tp1RRMult;
+          tp1Reason = `${tp1RRMult}R target (resistance at ${roundPrice(nearestResistance)} only ${tp1RR.toFixed(1)}R)`;
+          tp1Source = `${tp1RRMult}R ${strategyCtx?.strategyType ?? 'default'} strategy`;
         }
       } else {
-        tp1Price = averageEntry + safeRiskAmount * 2;
-        tp1Reason = '2R target';
-        tp1Source = '2R calculation';
+        tp1Price = averageEntry + safeRiskAmount * tp1RRMult;
+        tp1Reason = `${tp1RRMult}R target`;
+        tp1Source = `${tp1RRMult}R ${strategyCtx?.strategyType ?? 'default'} strategy`;
       }
       // Strategy-specific TP distribution
       const tp1Pct = strategyConfig?.tp1Percent ?? 60;
@@ -5958,9 +6002,9 @@ export const analysisEngine = {
         tp2Reason = 'Further resistance';
         tp2Source = 'Resistance level';
       } else {
-        tp2Price = averageEntry + safeRiskAmount * 3;
-        tp2Reason = '3R target';
-        tp2Source = '3R calculation';
+        tp2Price = averageEntry + safeRiskAmount * tp2RRMult;
+        tp2Reason = `${tp2RRMult}R target`;
+        tp2Source = `${tp2RRMult}R ${strategyCtx?.strategyType ?? 'default'} strategy`;
       }
       tp2Price = roundPrice(Math.max(tp2Price, tp1Price + atr * 0.5));
       takeProfits.push({
@@ -5981,26 +6025,26 @@ export const analysisEngine = {
       let tp1Source: string;
 
       const fibTP1 = findFibTP(averageEntry, null);
-      if (fibTP1 && (averageEntry - fibTP1.price) / safeRiskAmount >= 1.0) {
+      if (fibTP1 && (averageEntry - fibTP1.price) / safeRiskAmount >= tp1MinRR) {
         tp1Price = fibTP1.price;
         tp1Reason = `Fibonacci ${fibTP1.level} extension`;
         tp1Source = `Fib ${fibTP1.level} extension`;
         fibAligned = true;
       } else if (nearestSupport && nearestSupport < averageEntry) {
         const tp1RR = (averageEntry - nearestSupport) / safeRiskAmount;
-        if (tp1RR >= 1.0) {
+        if (tp1RR >= tp1MinRR) {
           tp1Price = nearestSupport;
           tp1Reason = 'Nearest support';
           tp1Source = 'Support level';
         } else {
-          tp1Price = averageEntry - safeRiskAmount * 2;
-          tp1Reason = `2R target (support at ${roundPrice(nearestSupport)} only ${tp1RR.toFixed(1)}R)`;
-          tp1Source = '2R calculation (min 1R enforced)';
+          tp1Price = averageEntry - safeRiskAmount * tp1RRMult;
+          tp1Reason = `${tp1RRMult}R target (support at ${roundPrice(nearestSupport)} only ${tp1RR.toFixed(1)}R)`;
+          tp1Source = `${tp1RRMult}R ${strategyCtx?.strategyType ?? 'default'} strategy`;
         }
       } else {
-        tp1Price = averageEntry - safeRiskAmount * 2;
-        tp1Reason = '2R target';
-        tp1Source = '2R calculation';
+        tp1Price = averageEntry - safeRiskAmount * tp1RRMult;
+        tp1Reason = `${tp1RRMult}R target`;
+        tp1Source = `${tp1RRMult}R ${strategyCtx?.strategyType ?? 'default'} strategy`;
       }
       tp1Price = roundPrice(tp1Price);
       takeProfits.push({
@@ -6026,9 +6070,9 @@ export const analysisEngine = {
         tp2Reason = 'Further support';
         tp2Source = 'Support level';
       } else {
-        tp2Price = averageEntry - safeRiskAmount * 3;
-        tp2Reason = '3R target';
-        tp2Source = '3R calculation';
+        tp2Price = averageEntry - safeRiskAmount * tp2RRMult;
+        tp2Reason = `${tp2RRMult}R target`;
+        tp2Source = `${tp2RRMult}R ${strategyCtx?.strategyType ?? 'default'} strategy`;
       }
       tp2Price = roundPrice(Math.min(tp2Price, tp1Price - atr * 0.5));
       takeProfits.push({
