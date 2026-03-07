@@ -340,8 +340,20 @@ export default function TrackingPage() {
   const liveCount = analyses.filter(a => !a.outcome).length;
   const pendingCount = analyses.filter(a => a.outcome === 'pending').length;
   const closedCount = tpCount + slCount;
-  const winRate = closedCount > 0 ? Math.round((tpCount / closedCount) * 100) : null;
-  const totalPnL = analyses.reduce((sum, a) => sum + (a.pnlPercent || 0), 0);
+
+  // Win Rate: for live trades use unrealized P/L (in profit = win), for closed use TP/SL
+  const liveInProfit = analyses.filter(a => !a.outcome && (livePrices[a.id]?.unrealizedPnL ?? 0) > 0).length;
+  const liveTotalWithPrice = analyses.filter(a => !a.outcome && livePrices[a.id]?.unrealizedPnL != null).length;
+  const winRateDenom = closedCount + liveTotalWithPrice;
+  const winRate = winRateDenom > 0 ? Math.round(((tpCount + liveInProfit) / winRateDenom) * 100) : null;
+
+  // Total P/L: sum realized (closed) + unrealized (live) P/L
+  const totalPnL = analyses.reduce((sum, a) => {
+    if (!a.outcome && livePrices[a.id]?.unrealizedPnL != null) {
+      return sum + livePrices[a.id].unrealizedPnL!;
+    }
+    return sum + (a.pnlPercent || 0);
+  }, 0);
 
   const handleRowClick = (id: string) => {
     router.push(`/analyze/details/${id}`);
