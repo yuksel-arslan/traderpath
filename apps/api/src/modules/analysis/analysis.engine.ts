@@ -186,6 +186,7 @@ interface GateEvaluationResult {
   canProceed: boolean;
   reason: string;
   confidence: number;
+  stepFocus?: string;
 }
 
 async function evaluateMarketGateWithRAG(input: GateEvaluationInput): Promise<GateEvaluationResult> {
@@ -939,6 +940,24 @@ ${sc.verdictContext}
 `;
     }
 
+    // Build step-level AI focus instructions from trade-config
+    let stepFocusBlock = '';
+    const stepNames: AnalysisStep[] = ['marketPulse', 'assetScan', 'safetyCheck', 'timing', 'tradePlan', 'trapCheck', 'verdict'];
+    const stepLabels = ['Market Pulse', 'Asset Scanner', 'Safety Check', 'Timing', 'Trade Plan', 'Trap Check', 'Final Verdict'];
+    const focusLines: string[] = [];
+    for (let i = 0; i < stepNames.length; i++) {
+      const cfg = getStepConfig(tradeType, stepNames[i]);
+      if (cfg?.aiPromptFocus) {
+        focusLines.push(`  Step ${i + 1} (${stepLabels[i]}): ${cfg.aiPromptFocus}`);
+      }
+    }
+    if (focusLines.length > 0) {
+      stepFocusBlock = `
+STEP-LEVEL ANALYSIS FOCUS (${tradeTypeLabel}):
+${focusLines.join('\n')}
+`;
+    }
+
     const prompt = `You are a professional crypto analyst. Generate TWO separate analyses:
 
 ANALYSIS REQUEST FOR ${symbol}:
@@ -948,7 +967,7 @@ ANALYSIS REQUEST FOR ${symbol}:
 - Direction: ${direction}
 - Current Price: $${currentPrice}
 - R:R Ratio: ${riskReward}
-${strategyContextBlock}
+${strategyContextBlock}${stepFocusBlock}
 KEY METRICS:
 - RSI: ${rsi}
 - MACD Histogram: ${macdHist}
@@ -961,7 +980,7 @@ ${tokenomicsContext}${elliottWaveContext}${fibonacciContext}
 GENERATE:
 
 1. AI_SUMMARY (2-3 sentences):
-A concise professional summary explaining the verdict for ${symbol}. ${sc ? `Apply the ${sc.strategyType} framework: consider the strategy-specific red flags, minimum confidence (${sc.config.minConfidence}%), and minimum R:R (${sc.config.minRiskReward}:1). Mention if current conditions meet or violate strategy requirements.` : 'Include key reasons for the decision.'} Be specific about what traders should consider.
+A concise professional summary explaining the verdict for ${symbol}. ${sc ? `Apply the ${sc.strategyType} framework: consider the strategy-specific red flags, minimum confidence (${sc.config.minConfidence}%), and minimum R:R (${sc.config.minRiskReward}:1). Mention if current conditions meet or violate strategy requirements.` : 'Include key reasons for the decision.'} ${stepFocusBlock ? 'Reference the step-level analysis focus areas where relevant.' : ''} Be specific about what traders should consider.
 
 2. TOKENOMICS_INSIGHT (2-3 sentences):
 ${input.tokenomics ? `Interpret the tokenomics data for ${symbol}. Explain the supply dynamics, dilution risk, and how tokenomics affects the trade setup. Be specific with percentages.` : `State that tokenomics data is not available for ${symbol} and recommend checking supply metrics before large positions.`}
@@ -1616,6 +1635,7 @@ interface MarketPulseResult {
     canProceed: boolean;
     reason: string;
     confidence: number;
+    stepFocus?: string;
   };
 }
 
@@ -1703,6 +1723,7 @@ interface AssetScanResult {
     canProceed: boolean;
     reason: string;
     confidence: number;
+    stepFocus?: string;
   };
   // Direction recommendation from this step
   direction: 'long' | 'short' | null;
@@ -1795,6 +1816,7 @@ interface SafetyCheckResult {
     reason: string;
     confidence: number;
     riskAdjustment: number;
+    stepFocus?: string;
   };
 }
 
@@ -1828,6 +1850,7 @@ interface TimingResult {
     reason: string;
     confidence: number;
     urgency: 'immediate' | 'soon' | 'wait' | 'avoid';
+    stepFocus?: string;
   };
   // Fibonacci analysis for entry timing
   fibonacci?: {
@@ -1899,6 +1922,7 @@ interface TradePlanResult {
     reason: string;
     confidence: number;
     planQuality: 'excellent' | 'good' | 'acceptable' | 'poor';
+    stepFocus?: string;
   };
   // Strategy metadata (populated when strategy prompt integration is active)
   strategyMetadata?: {
@@ -1942,6 +1966,7 @@ interface TrapCheckResult {
     reason: string;
     confidence: number;
     trapRisk: 'minimal' | 'moderate' | 'elevated' | 'severe';
+    stepFocus?: string;
   };
 }
 
@@ -3626,6 +3651,7 @@ export const analysisEngine = {
         canProceed: gateResult.canProceed,
         reason: gateResult.reason,
         confidence: gateResult.confidence,
+        stepFocus: getStepConfig('dayTrade', 'marketPulse')?.aiPromptFocus,
       },
     };
   },
@@ -3945,6 +3971,7 @@ export const analysisEngine = {
         canProceed: gateResult.canProceed,
         reason: gateResult.reason,
         confidence: gateResult.confidence,
+        stepFocus: getStepConfig(tradeType, 'assetScan')?.aiPromptFocus,
       },
       // Direction recommendation from this step
       direction: gateResult.direction,
@@ -4353,6 +4380,7 @@ export const analysisEngine = {
         reason: gateResult.reason,
         confidence: gateResult.confidence,
         riskAdjustment: gateResult.riskAdjustment,
+        stepFocus: getStepConfig(tradeType, 'safetyCheck')?.aiPromptFocus,
       },
     };
   },
@@ -4615,6 +4643,7 @@ export const analysisEngine = {
         reason: timingGateResult.reason,
         confidence: timingGateResult.confidence,
         urgency: timingGateResult.urgency,
+        stepFocus: getStepConfig(tradeType, 'timing')?.aiPromptFocus,
       },
       // Fibonacci analysis for scoring integration
       fibonacci: {
@@ -4865,6 +4894,7 @@ export const analysisEngine = {
         reason: tradePlanGateResult.reason,
         confidence: tradePlanGateResult.confidence,
         planQuality: tradePlanGateResult.planQuality,
+        stepFocus: getStepConfig(tradeType, 'tradePlan')?.aiPromptFocus,
       },
     };
   },
@@ -5079,6 +5109,7 @@ export const analysisEngine = {
         canProceed: trapGateResult.canProceed,
         reason: trapGateResult.reason,
         confidence: trapGateResult.confidence,
+        stepFocus: getStepConfig(tradeType, 'trapCheck')?.aiPromptFocus,
         trapRisk: trapGateResult.trapRisk,
       },
     };
