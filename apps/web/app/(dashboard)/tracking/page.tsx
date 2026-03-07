@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import {
   ArrowUpDown,
   ArrowUp,
@@ -26,6 +27,14 @@ import {
 } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 import { authFetch } from '../../../lib/api';
+
+const AreaChart = dynamic(() => import('recharts').then(m => m.AreaChart), { ssr: false });
+const Area = dynamic(() => import('recharts').then(m => m.Area), { ssr: false });
+const XAxis = dynamic(() => import('recharts').then(m => m.XAxis), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then(m => m.YAxis), { ssr: false });
+const Tooltip = dynamic(() => import('recharts').then(m => m.Tooltip), { ssr: false });
+const ResponsiveContainer = dynamic(() => import('recharts').then(m => m.ResponsiveContainer), { ssr: false });
+const ReferenceLine = dynamic(() => import('recharts').then(m => m.ReferenceLine), { ssr: false });
 
 // ─── Types ────────────────────────────────────────────────
 interface TrackingAnalysis {
@@ -60,6 +69,16 @@ interface Pagination {
   offset: number;
   filtered: number;
 }
+
+interface PnLPoint {
+  date: string;
+  daily: number;
+  cumulative: number;
+  trades: number;
+  wins: number;
+}
+
+type PnLPeriod = 'day' | 'week' | 'month';
 
 type SortField = 'createdAt' | 'symbol' | 'totalScore' | 'outcome' | 'interval' | 'method';
 type SortDir = 'asc' | 'desc';
@@ -221,6 +240,28 @@ export default function TrackingPage() {
   const [showFilters, setShowFilters] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Cumulative P/L chart
+  const [pnlPeriod, setPnlPeriod] = useState<PnLPeriod>('month');
+  const [pnlPoints, setPnlPoints] = useState<PnLPoint[]>([]);
+  const [pnlSummary, setPnlSummary] = useState({ totalPnL: 0, totalTrades: 0, totalWins: 0 });
+  const [pnlLoading, setPnlLoading] = useState(true);
+
+  const fetchPnlHistory = useCallback(async (period: PnLPeriod) => {
+    setPnlLoading(true);
+    try {
+      const res = await authFetch(`/api/analysis/tracking/pnl-history?period=${period}`);
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json.success) {
+        setPnlPoints(json.data.points);
+        setPnlSummary({ totalPnL: json.data.totalPnL, totalTrades: json.data.totalTrades, totalWins: json.data.totalWins });
+      }
+    } catch { /* silently ignore */ }
+    finally { setPnlLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchPnlHistory(pnlPeriod); }, [pnlPeriod, fetchPnlHistory]);
+
   // Live prices for open trades (unrealized P/L)
   const [livePrices, setLivePrices] = useState<Record<string, LivePriceData>>({});
   const livePriceTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -298,6 +339,12 @@ export default function TrackingPage() {
   }, [pagination.limit, pagination.offset, sortBy, sortDir, debouncedSearch, verdictFilter, directionFilter, outcomeFilter, methodFilter, intervalFilter, dateFrom, dateTo]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Refresh P/L chart every 2 minutes to keep it live
+  useEffect(() => {
+    const timer = setInterval(() => fetchPnlHistory(pnlPeriod), 120000);
+    return () => clearInterval(timer);
+  }, [pnlPeriod, fetchPnlHistory]);
 
   const handleSort = (field: string) => {
     const col = COLUMNS.find(c => c.key === field);
@@ -497,6 +544,95 @@ export default function TrackingPage() {
           <p className={cn('text-lg font-bold mt-1 font-mono', totalPnL >= 0 ? 'text-emerald-400' : 'text-red-400')}>
             {totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)}%
           </p>
+        </div>
+      </div>
+
+      {/* Cumulative P/L Chart */}
+      <div className="rounded-xl bg-white/5 border border-white/10 backdrop-blur-md p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Cumulative P/L</h2>
+            <p className={cn('text-lg font-bold font-mono', pnlSummary.totalPnL >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+              {pnlSummary.totalPnL >= 0 ? '+' : ''}{pnlSummary.totalPnL.toFixed(2)}%
+              <span className="text-xs font-normal text-muted-foreground ml-2">
+                {pnlSummary.totalTrades} trades &middot; {pnlSummary.totalWins} wins
+              </span>
+            </p>
+          </div>
+          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
+            {(['day', 'week', 'month'] as PnLPeriod[]).map(p => (
+              <button
+                key={p}
+                onClick={() => setPnlPeriod(p)}
+                className={cn(
+                  'px-3 py-1 rounded-md text-xs font-medium transition-colors',
+                  pnlPeriod === p
+                    ? 'bg-[#4dd0e1]/20 text-[#4dd0e1]'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {p === 'day' ? '1D' : p === 'week' ? '1W' : '1M'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="h-[180px]">
+          {pnlLoading ? (
+            <div className="w-full h-full bg-white/5 rounded animate-pulse" />
+          ) : pnlPoints.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={pnlPoints} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id="pnlGradientPos" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#4dd0e1" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#4dd0e1" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="pnlGradientNeg" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ff5f5f" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#ff5f5f" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10, fill: '#6b7280' }}
+                  tickFormatter={(d: string) => {
+                    const dt = new Date(d);
+                    return pnlPeriod === 'day'
+                      ? dt.toLocaleTimeString('en-US', { hour: '2-digit' })
+                      : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  }}
+                  interval="preserveStartEnd"
+                  minTickGap={40}
+                />
+                <YAxis hide domain={['auto', 'auto']} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#0f1729', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '12px' }}
+                  labelFormatter={(d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  formatter={(value: number, name: string) => [
+                    `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`,
+                    name === 'cumulative' ? 'Cumulative' : 'Daily',
+                  ]}
+                />
+                <ReferenceLine y={0} stroke="rgba(255,255,255,0.1)" strokeDasharray="3 3" />
+                <Area
+                  type="monotone"
+                  dataKey="cumulative"
+                  stroke={pnlSummary.totalPnL >= 0 ? '#4dd0e1' : '#ff5f5f'}
+                  strokeWidth={2}
+                  fill={pnlSummary.totalPnL >= 0 ? 'url(#pnlGradientPos)' : 'url(#pnlGradientNeg)'}
+                  dot={false}
+                  activeDot={{ r: 4, fill: pnlSummary.totalPnL >= 0 ? '#4dd0e1' : '#ff5f5f' }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+              No closed trades in this period
+            </div>
+          )}
         </div>
       </div>
 

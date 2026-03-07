@@ -1959,6 +1959,95 @@ Explain the key risks and what conditions would need to change before trading th
   });
 
   /**
+   * GET /api/analysis/tracking/pnl-history
+   * User's cumulative P/L history for chart (day/week/month)
+   */
+  app.get('/tracking/pnl-history', {
+    preHandler: authenticate,
+  }, async (request: FastifyRequest<{ Querystring: { period?: string } }>, reply: FastifyReply) => {
+    try {
+      const userId = getUser(request).id;
+      const period = request.query.period || 'month';
+      const days = period === 'day' ? 1 : period === 'week' ? 7 : 30;
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      startDate.setHours(0, 0, 0, 0);
+
+      const closedAnalyses = await prisma.analysis.findMany({
+        where: {
+          userId,
+          outcome: { in: ['tp1_hit', 'tp2_hit', 'tp3_hit', 'sl_hit'] },
+          outcomeAt: { gte: startDate },
+        },
+        select: {
+          outcome: true,
+          outcomeAt: true,
+          outcomePrice: true,
+          step5Result: true,
+          symbol: true,
+        },
+        orderBy: { outcomeAt: 'asc' },
+      });
+
+      // Build daily buckets
+      const now = new Date();
+      const dailyData: Record<string, { realized: number; trades: number; wins: number }> = {};
+      for (let i = 0; i < days; i++) {
+        const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+        dailyData[d.toISOString().split('T')[0]] = { realized: 0, trades: 0, wins: 0 };
+      }
+
+      closedAnalyses.forEach(a => {
+        if (!a.outcomeAt) return;
+        const dateStr = a.outcomeAt.toISOString().split('T')[0];
+        if (!dailyData[dateStr]) return;
+
+        const step5 = a.step5Result as Record<string, unknown> | null;
+        const entryPrice = Number(step5?.averageEntry || step5?.entryPrice || 0);
+        const outcomePrice = a.outcomePrice ? Number(a.outcomePrice) : 0;
+        const direction = ((step5?.direction as string) || 'long').toLowerCase();
+
+        if (entryPrice > 0 && outcomePrice > 0) {
+          const pnl = direction === 'short'
+            ? ((entryPrice - outcomePrice) / entryPrice) * 100
+            : ((outcomePrice - entryPrice) / entryPrice) * 100;
+          dailyData[dateStr].realized += pnl;
+          dailyData[dateStr].trades++;
+          if (pnl > 0) dailyData[dateStr].wins++;
+        }
+      });
+
+      const sortedDates = Object.keys(dailyData).sort();
+      let cumulative = 0;
+      const points = sortedDates.map(date => {
+        cumulative += dailyData[date].realized;
+        return {
+          date,
+          daily: Math.round(dailyData[date].realized * 100) / 100,
+          cumulative: Math.round(cumulative * 100) / 100,
+          trades: dailyData[date].trades,
+          wins: dailyData[date].wins,
+        };
+      });
+
+      return reply.send({
+        success: true,
+        data: {
+          points,
+          totalPnL: Math.round(cumulative * 100) / 100,
+          totalTrades: closedAnalyses.length,
+          totalWins: closedAnalyses.filter(a => a.outcome?.startsWith('tp')).length,
+        },
+      });
+    } catch (error) {
+      logger.error({ error }, 'Tracking P/L history error');
+      return reply.status(500).send({
+        success: false,
+        error: { code: 'FETCH_ERROR', message: 'Failed to fetch P/L history' },
+      });
+    }
+  });
+
+  /**
    * GET /api/analysis/live-prices
    * Get current prices for user's analyses with trade plans
    * Returns current price and unrealized P/L for each analysis
