@@ -36,13 +36,11 @@ const PriceTicker = dynamic(
   { ssr: false, loading: () => <div className="w-full h-10 bg-card/50 border-b border-border/50" /> }
 );
 
-// Primary navigation - Top-Down Methodology Flow (L1→L7)
+// Primary navigation
 const directNav = [
-  { name: 'Concierge', href: '/concierge', icon: Bot },
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Analyzer', href: '/analyze', icon: BarChart3 },
-  { name: 'Terminal', href: '/terminal', icon: Monitor },
-  { name: 'Reports', href: '/reports', icon: FileText },
+  { name: 'Trade Tracking', href: '/tracking', icon: ClipboardList },
 ];
 
 // Dropdown navigation groups
@@ -51,7 +49,9 @@ const dropdownNav = [
     name: 'More',
     icon: Settings,
     items: [
-      { name: 'Trade Tracking', href: '/tracking', icon: ClipboardList },
+      { name: 'Concierge', href: '/concierge', icon: Bot },
+      { name: 'Terminal', href: '/terminal', icon: Monitor },
+      { name: 'Reports', href: '/reports', icon: FileText },
       { name: 'Price Alerts', href: '/alerts', icon: Bell },
       { name: 'Notifications', href: '/notifications', icon: Inbox },
       { name: 'Methodology', href: '/methodology', icon: FlaskConical },
