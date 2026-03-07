@@ -2,14 +2,18 @@
  * Binance Futures Testnet Client
  * HMAC SHA256 signed requests for order management on testnet
  *
- * Base URL: https://testnet.binancefuture.com
- * Docs: https://binance-docs.github.io/apidocs/futures/en/
+ * Default URL: https://testnet.binancefuture.com (legacy)
+ * New URL:     https://demo-fapi.binance.com     (official docs 2025+)
+ *
+ * Override with env: BINANCE_TESTNET_BASE_URL
+ * Docs: https://developers.binance.com/docs/derivatives/usds-margined-futures/general-info
  */
 
 import { createHmac } from 'crypto';
 
 // ─── Configuration ────────────────────────────────────────────
-const TESTNET_BASE_URL = 'https://testnet.binancefuture.com';
+const TESTNET_BASE_URL = process.env['BINANCE_TESTNET_BASE_URL']
+  || 'https://testnet.binancefuture.com';
 const REQUEST_TIMEOUT = 10_000; // 10 seconds
 
 function getApiKey(): string {
