@@ -62,6 +62,9 @@ import {
   stopSignalOutcomeTracker,
   startAutoEdgeJob,
   stopAutoEdgeJob,
+  startAutoEdgeMonitorJob,
+  stopAutoEdgeMonitorJob,
+  autoedgeRoutes,
 } from './modules/signals';
 import subscriptionRoutes from './modules/subscriptions/subscription.routes';
 import weeklyPlanRoutes from './modules/weekly-plans/weekly-plan.routes';
@@ -414,6 +417,9 @@ app.register(signalRoutes, { prefix: '/api/v1' });
 app.register(signalRoutes, { prefix: '/api' }); // Legacy
 // Signal Subscription routes
 app.register(signalSubscriptionRoutes, { prefix: '/api/v1/signals' });
+// AutoEdge trade management routes (admin)
+app.register(autoedgeRoutes, { prefix: '/api/v1/autoedge' });
+app.register(autoedgeRoutes, { prefix: '/api/autoedge' });
 // Subscription management routes (credit-based)
 app.register(subscriptionRoutes, { prefix: '/api/v1/subscriptions' });
 app.register(subscriptionRoutes, { prefix: '/api/subscriptions' }); // Legacy
@@ -747,6 +753,7 @@ const start = async () => {
       safeCronStart('BILGE weekly report cron', () => startBilgeWeeklyReportJob());
       safeCronStart('Signal generator cron', () => startSignalGeneratorJob());
       safeCronStart('AutoEdge signal generator cron', () => startAutoEdgeJob());
+      safeCronStart('AutoEdge position monitor cron', () => startAutoEdgeMonitorJob());
       safeCronStart('Signal outcome tracker cron', () => startSignalOutcomeTracker());
       safeCronStart('Smart alert cron', () => startSmartAlertJob());
       safeCronStart('Subscription daily credits cron', () => startDailyCreditsJob());
@@ -832,6 +839,10 @@ const shutdown = async (signal: string) => {
     // Stop AutoEdge Signal Generator cron
     stopAutoEdgeJob();
     logger.info('✓ AutoEdge signal generator cron stopped');
+
+    // Stop AutoEdge Position Monitor cron
+    stopAutoEdgeMonitorJob();
+    logger.info('✓ AutoEdge position monitor cron stopped');
 
     // Stop Signal Outcome Tracker cron
     stopSignalOutcomeTracker();

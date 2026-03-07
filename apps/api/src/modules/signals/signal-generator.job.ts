@@ -19,6 +19,8 @@ import { formatTelegramSignal } from './telegram-formatter';
 import { signalMonitoring } from './signal-monitoring.service';
 import { calculateSignalQuality, type ScoringInput } from './signal-scoring.service';
 import type { SignalData, SignalGenerationResult, SignalQualityEnrichment } from './types';
+import { executeAutoEdgeTrade } from './autoedge-executor.service';
+import { isTestnetConfigured } from './binance-testnet.client';
 
 // Telegram bot configuration
 const TELEGRAM_BOT_TOKEN = process.env['TELEGRAM_BOT_TOKEN'];
@@ -902,6 +904,20 @@ export async function generateAutoEdgeSignal(): Promise<SignalGenerationResult> 
             result.published++;
           } catch (e) {
             console.error(`[AutoEdge] Telegram failed for ${symbol}:`, e);
+          }
+        }
+
+        // Execute trade on Binance Futures Testnet (if configured)
+        if (isTestnetConfigured()) {
+          try {
+            const tradeResult = await executeAutoEdgeTrade(signalId, signal);
+            if (tradeResult.success) {
+              console.log(`[AutoEdge] ✓ Trade executed: ${symbol} ${signal.direction.toUpperCase()} qty=${tradeResult.trade?.quantity} @ $${tradeResult.trade?.entryPrice}`);
+            } else {
+              console.log(`[AutoEdge] Trade skipped for ${symbol}: ${tradeResult.reason || tradeResult.error}`);
+            }
+          } catch (tradeErr) {
+            console.error(`[AutoEdge] Trade execution error for ${symbol}:`, tradeErr);
           }
         }
 
