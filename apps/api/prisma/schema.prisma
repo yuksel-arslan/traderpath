@@ -1272,3 +1272,53 @@ enum WeeklyPlanType {
   REPORT_WEEKLY      // $6.99/week - 7 reports delivered daily
   ANALYSIS_WEEKLY    // $6.99/week - 7 analyses + 5 AI Expert questions per analysis
 }
+
+// ─── AutoEdge Trades (Binance Futures Testnet) ────────────────
+model AutoEdgeTrade {
+  id                String    @id @default(uuid()) @db.Uuid
+  signalId          String    @map("signal_id") @db.VarChar(50)
+  symbol            String    @db.VarChar(20)
+  binanceSymbol     String    @map("binance_symbol") @db.VarChar(30)
+  direction         String    @db.VarChar(10) // long, short
+  status            String    @default("open") @db.VarChar(20) // open, tp1_hit, tp2_hit, sl_hit, closed_manual, error
+
+  // Entry
+  entryOrderId      BigInt    @map("entry_order_id")
+  entryPrice        Decimal   @map("entry_price") @db.Decimal(20, 8)
+  quantity          Decimal   @db.Decimal(20, 8)
+
+  // SL/TP Order IDs from Binance
+  slOrderId         BigInt?   @map("sl_order_id")
+  tp1OrderId        BigInt?   @map("tp1_order_id")
+  tp2OrderId        BigInt?   @map("tp2_order_id")
+
+  // Planned Levels (from signal)
+  plannedEntry      Decimal   @map("planned_entry") @db.Decimal(20, 8)
+  plannedSl         Decimal   @map("planned_sl") @db.Decimal(20, 8)
+  plannedTp1        Decimal   @map("planned_tp1") @db.Decimal(20, 8)
+  plannedTp2        Decimal   @map("planned_tp2") @db.Decimal(20, 8)
+
+  // Trade Settings
+  leverage          Int       @default(5)
+  positionSizeUsdt  Decimal?  @map("position_size_usdt") @db.Decimal(20, 8)
+
+  // TP1 Partial Close Tracking
+  tp1Hit            Boolean   @default(false) @map("tp1_hit")
+  tp1HitAt          DateTime? @map("tp1_hit_at")
+
+  // Outcome
+  exitPrice         Decimal?  @map("exit_price") @db.Decimal(20, 8)
+  pnlUsdt           Decimal?  @map("pnl_usdt") @db.Decimal(20, 8)
+  pnlPercent        Decimal?  @map("pnl_percent") @db.Decimal(10, 4)
+  closedAt          DateTime? @map("closed_at")
+
+  // Timestamps
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([symbol])
+  @@index([signalId])
+  @@index([createdAt])
+  @@map("auto_edge_trades")
+}

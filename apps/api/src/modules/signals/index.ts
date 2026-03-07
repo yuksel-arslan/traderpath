@@ -37,4 +37,18 @@ export {
   formatCapitalFlowAlert,
 } from './telegram-formatter';
 export { signalMonitoring } from './signal-monitoring.service';
+export {
+  startAutoEdgeMonitorJob,
+  stopAutoEdgeMonitorJob,
+} from './autoedge-monitor.job';
+export {
+  executeAutoEdgeTrade,
+  monitorOpenTrades,
+  getOpenTrades,
+  getAllTrades,
+  getTradeStats,
+  emergencyCloseAll,
+} from './autoedge-executor.service';
+export { autoedgeRoutes } from './autoedge.routes';
+export { isTestnetConfigured } from './binance-testnet.client';
 export * from './types';
