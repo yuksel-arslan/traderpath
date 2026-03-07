@@ -55,7 +55,7 @@ export function Navbar() {
 
           <Link
             href="/register"
-            className="px-3 py-1.5 text-[11px] font-semibold bg-black dark:bg-white text-white dark:text-black rounded-sm hover:opacity-80 transition-opacity"
+            className="px-3 py-1.5 text-[11px] font-semibold bg-gradient-to-r from-teal-500 to-rose-500 text-white rounded-sm hover:opacity-90 transition-opacity shadow-sm shadow-teal-500/20"
           >
             GET STARTED
           </Link>

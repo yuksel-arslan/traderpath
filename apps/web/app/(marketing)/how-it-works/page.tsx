@@ -156,7 +156,7 @@ export default function MethodologyPublicPage() {
             <Link href="/login" className="px-4 py-2 text-muted-foreground hover:text-foreground transition">
               Sign In
             </Link>
-            <Link href="/register" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition">
+            <Link href="/register" className="px-4 py-2 bg-gradient-to-r from-teal-500 to-rose-500 text-white rounded-lg font-medium hover:from-teal-600 hover:to-rose-600 transition-all shadow-sm shadow-teal-500/20">
               Get Started
             </Link>
           </div>
