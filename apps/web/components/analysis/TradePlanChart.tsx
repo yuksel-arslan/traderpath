@@ -763,18 +763,18 @@ export function TradePlanChart({
       </div>
 
       {/* Price Levels Summary */}
-      <div className="p-4 border-t grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      <div className="p-4 border-t grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4">
         {/* Average Entry - Highlighted */}
         <div className="space-y-1">
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Entry Point</div>
-          <div className="flex justify-between text-sm gap-2">
-            <span className="text-yellow-400 font-bold shrink-0">▶ AVG</span>
-            <span className="font-sans font-bold text-yellow-400 truncate">${formatPrice(avgEntry)}</span>
+          <div className="text-sm">
+            <span className="text-yellow-400 font-bold">▶ AVG</span>
+            <span className="font-sans font-bold text-yellow-400 ml-2">${formatPrice(avgEntry)}</span>
           </div>
           {entries?.filter(e => e != null).map((entry, i) => (
-            <div key={i} className="flex justify-between text-xs text-muted-foreground gap-2">
-              <span className="text-cyan-500 shrink-0">E{i + 1}</span>
-              <span className="font-sans truncate">${formatPrice(entry.price ?? 0)}</span>
+            <div key={i} className="text-xs text-muted-foreground">
+              <span className="text-cyan-500">E{i + 1}</span>
+              <span className="font-sans ml-2">${formatPrice(entry.price ?? 0)}</span>
             </div>
           ))}
         </div>
@@ -782,9 +782,9 @@ export function TradePlanChart({
         {/* Stop Loss */}
         <div className="space-y-1">
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Stop Loss</div>
-          <div className="flex justify-between text-sm gap-2">
-            <span className="text-red-500 shrink-0">SL</span>
-            <span className="font-sans truncate">${formatPrice(slPrice)}</span>
+          <div className="text-sm">
+            <span className="text-red-500">SL</span>
+            <span className="font-sans ml-2">${formatPrice(slPrice)}</span>
           </div>
           <div className="text-xs text-red-400">-{(stopLoss?.percentage ?? 0).toFixed(1)}% risk</div>
         </div>
@@ -792,12 +792,12 @@ export function TradePlanChart({
         {/* Take Profits */}
         <div className="space-y-1 col-span-1 sm:col-span-2">
           <div className="text-xs text-muted-foreground uppercase tracking-wide">Take Profit Targets</div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 sm:gap-2">
             {takeProfits?.filter(tp => tp != null).map((tp, i) => (
               <div key={i} className="text-sm">
-                <div className="flex justify-between gap-1">
-                  <span className="text-green-500 shrink-0">TP{i + 1}</span>
-                  <span className="font-sans truncate">${formatPrice(tp.price ?? 0)}</span>
+                <div>
+                  <span className="text-green-500">TP{i + 1}</span>
+                  <span className="font-sans ml-2">${formatPrice(tp.price ?? 0)}</span>
                 </div>
                 <div className="text-xs text-green-400">{(tp.riskReward ?? 0).toFixed(1)}R</div>
               </div>
