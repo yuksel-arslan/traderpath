@@ -763,46 +763,37 @@ export function TradePlanChart({
       </div>
 
       {/* Price Levels Summary */}
-      <div className="p-4 border-t grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4">
-        {/* Average Entry - Highlighted */}
-        <div className="space-y-1">
-          <div className="text-xs text-muted-foreground uppercase tracking-wide">Entry Point</div>
-          <div className="text-sm">
-            <span className="text-yellow-400 font-bold">▶ AVG</span>
-            <span className="font-sans font-bold text-yellow-400 ml-2">${formatPrice(avgEntry)}</span>
-          </div>
+      <div className="p-3 sm:p-4 border-t grid grid-cols-3 gap-1 sm:gap-4">
+        {/* Entry Point */}
+        <div className="text-center space-y-0.5">
+          <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">Entry</div>
+          <div className="text-xs sm:text-sm font-bold text-yellow-400 font-sans">${formatPrice(avgEntry)}</div>
           {entries?.filter(e => e != null).map((entry, i) => (
-            <div key={i} className="text-xs text-muted-foreground">
-              <span className="text-cyan-500">E{i + 1}</span>
-              <span className="font-sans ml-2">${formatPrice(entry.price ?? 0)}</span>
+            <div key={i} className="text-[10px] sm:text-xs text-muted-foreground font-sans">
+              E{i + 1} ${formatPrice(entry.price ?? 0)}
             </div>
           ))}
         </div>
 
         {/* Stop Loss */}
-        <div className="space-y-1">
-          <div className="text-xs text-muted-foreground uppercase tracking-wide">Stop Loss</div>
-          <div className="text-sm">
-            <span className="text-red-500">SL</span>
-            <span className="font-sans ml-2">${formatPrice(slPrice)}</span>
-          </div>
-          <div className="text-xs text-red-400">-{(stopLoss?.percentage ?? 0).toFixed(1)}% risk</div>
+        <div className="text-center space-y-0.5">
+          <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">Stop Loss</div>
+          <div className="text-xs sm:text-sm font-bold text-red-500 font-sans">${formatPrice(slPrice)}</div>
+          <div className="text-[10px] sm:text-xs text-red-400">-{(stopLoss?.percentage ?? 0).toFixed(1)}% risk</div>
         </div>
 
         {/* Take Profits */}
-        <div className="space-y-1 col-span-1 sm:col-span-2">
-          <div className="text-xs text-muted-foreground uppercase tracking-wide">Take Profit Targets</div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 sm:gap-2">
-            {takeProfits?.filter(tp => tp != null).map((tp, i) => (
-              <div key={i} className="text-sm">
-                <div>
-                  <span className="text-green-500">TP{i + 1}</span>
-                  <span className="font-sans ml-2">${formatPrice(tp.price ?? 0)}</span>
-                </div>
-                <div className="text-xs text-green-400">{(tp.riskReward ?? 0).toFixed(1)}R</div>
+        <div className="text-center space-y-0.5">
+          <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">Take Profit</div>
+          {takeProfits?.filter(tp => tp != null).map((tp, i) => (
+            <div key={i}>
+              <div className="text-xs sm:text-sm font-bold text-green-500 font-sans">
+                <span className="text-[10px] sm:text-xs font-normal text-green-400 mr-0.5">TP{i + 1}</span>
+                ${formatPrice(tp.price ?? 0)}
               </div>
-            ))}
-          </div>
+              <div className="text-[10px] sm:text-xs text-green-400">{(tp.riskReward ?? 0).toFixed(1)}R</div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
