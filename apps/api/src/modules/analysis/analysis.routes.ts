@@ -1745,7 +1745,8 @@ Explain the key risks and what conditions would need to change before trading th
         where.symbol = { contains: request.query.symbol.toUpperCase(), mode: 'insensitive' };
       }
       if (request.query.outcome && request.query.outcome !== 'all') {
-        if (request.query.outcome === 'pending') {
+        if (request.query.outcome === 'pending' || request.query.outcome === 'live') {
+          // Both pending and live are subset of null/pending outcomes
           where.outcome = { in: [null, 'pending'] };
         } else if (request.query.outcome === 'tp') {
           where.outcome = { in: ['tp1_hit', 'tp2_hit', 'tp3_hit'] };
@@ -1771,32 +1772,35 @@ Explain the key risks and what conditions would need to change before trading th
       const orderField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
       const orderBy = { [orderField]: sortDir };
 
-      const [analyses, total] = await Promise.all([
-        prisma.analysis.findMany({
-          where,
-          orderBy,
-          take: limit,
-          skip: offset,
-          select: {
-            id: true,
-            symbol: true,
-            interval: true,
-            totalScore: true,
-            method: true,
-            outcome: true,
-            outcomePrice: true,
-            outcomeAt: true,
-            creditsSpent: true,
-            createdAt: true,
-            expiresAt: true,
-            step5Result: true,
-            step7Result: true,
-          },
-        }),
-        prisma.analysis.count({ where }),
-      ]);
+      // Verdict/direction/live filters are in JSON fields - must fetch all then filter
+      const needsClientFilter = (request.query.verdict && request.query.verdict !== 'all') ||
+        (request.query.direction && request.query.direction !== 'all') ||
+        (request.query.outcome === 'live') ||
+        (request.query.outcome === 'pending');
 
-      // Enrich with extracted verdict/tradePlan data and apply client-side verdict/direction filters
+      const analyses = await prisma.analysis.findMany({
+        where,
+        orderBy,
+        // If client-side filtering needed, fetch all; otherwise use DB pagination
+        ...(needsClientFilter ? {} : { take: limit, skip: offset }),
+        select: {
+          id: true,
+          symbol: true,
+          interval: true,
+          totalScore: true,
+          method: true,
+          outcome: true,
+          outcomePrice: true,
+          outcomeAt: true,
+          creditsSpent: true,
+          createdAt: true,
+          expiresAt: true,
+          step5Result: true,
+          step7Result: true,
+        },
+      });
+
+      // Enrich with extracted verdict/tradePlan data
       const enriched = analyses.map((a) => {
         const verdictData = a.step7Result as Record<string, unknown> | null;
         const tradePlan = a.step5Result as Record<string, unknown> | null;
@@ -1809,6 +1813,11 @@ Explain the key risks and what conditions would need to change before trading th
         const stopLoss = Number(stopLossData?.price || 0) || null;
         const tp1 = Number(takeProfits?.[0]?.price || 0) || null;
         const tp2 = Number(takeProfits?.[1]?.price || 0) || null;
+
+        // Determine if this is a real LIVE trade (tradeable verdict + has trade plan)
+        const vLower = verdict.toLowerCase();
+        const isTradeable = vLower === 'go' || vLower === 'conditional_go' || vLower === 'cond';
+        const isLive = (!a.outcome || a.outcome === 'pending') && isTradeable && !!entryPrice && !!stopLoss;
 
         // Calculate P/L if outcome exists
         let pnlPercent: number | null = null;
@@ -1846,10 +1855,11 @@ Explain the key risks and what conditions would need to change before trading th
           creditsSpent: a.creditsSpent,
           createdAt: a.createdAt,
           expiresAt: a.expiresAt,
+          isLive,
         };
       });
 
-      // Apply verdict/direction filters (these are in JSON, can't filter in Prisma)
+      // Apply verdict/direction/live filters (JSON fields, can't filter in Prisma)
       let filtered = enriched;
       if (request.query.verdict && request.query.verdict !== 'all') {
         const vf = request.query.verdict.toLowerCase();
@@ -1866,12 +1876,51 @@ Explain the key risks and what conditions would need to change before trading th
         const df = request.query.direction.toLowerCase();
         filtered = filtered.filter(a => (a.direction || '').toLowerCase() === df);
       }
+      if (request.query.outcome === 'live') {
+        filtered = filtered.filter(a => a.isLive);
+      } else if (request.query.outcome === 'pending') {
+        // "Pending" filter: only non-live pending analyses
+        filtered = filtered.filter(a => !a.isLive);
+      }
+
+      // Apply pagination on filtered results when client-side filtering was used
+      const total = needsClientFilter ? filtered.length : await prisma.analysis.count({ where });
+      const paginatedResults = needsClientFilter
+        ? filtered.slice(offset, offset + limit)
+        : filtered;
+
+      // Fetch current prices for LIVE trades to calculate unrealized P/L
+      const liveAnalyses = paginatedResults.filter(a => a.isLive);
+      if (liveAnalyses.length > 0) {
+        const uniqueSymbols = [...new Set(liveAnalyses.map(a => a.symbol))];
+        const priceMap: Record<string, number> = {};
+        await Promise.all(uniqueSymbols.map(async (sym) => {
+          try {
+            const ticker = await fetchTicker(sym);
+            if (ticker?.lastPrice) priceMap[sym] = ticker.lastPrice;
+          } catch { /* skip */ }
+        }));
+
+        for (const a of paginatedResults) {
+          if (a.isLive && a.entryPrice && a.entryPrice > 0) {
+            const currentPrice = priceMap[a.symbol];
+            if (currentPrice) {
+              const dirLower = (a.direction || '').toLowerCase();
+              const pnl = dirLower === 'short'
+                ? ((a.entryPrice - currentPrice) / a.entryPrice) * 100
+                : ((currentPrice - a.entryPrice) / a.entryPrice) * 100;
+              a.pnlPercent = Math.round(pnl * 100) / 100;
+              (a as Record<string, unknown>).currentPrice = currentPrice;
+            }
+          }
+        }
+      }
 
       return reply.send({
         success: true,
         data: {
-          analyses: filtered,
-          pagination: { total, limit, offset, filtered: filtered.length },
+          analyses: paginatedResults,
+          pagination: { total, limit, offset, filtered: paginatedResults.length },
         },
       });
     } catch (error) {
