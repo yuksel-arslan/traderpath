@@ -46,6 +46,8 @@ interface TrackingAnalysis {
   creditsSpent: number;
   createdAt: string;
   expiresAt: string | null;
+  isLive?: boolean;
+  currentPrice?: number | null;
 }
 
 interface Pagination {
@@ -85,8 +87,13 @@ function getVerdictStyle(verdict: string) {
   return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30', label: 'N/A' };
 }
 
-function getOutcomeStyle(outcome: string | null) {
-  if (!outcome || outcome === 'pending') return { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30', label: 'LIVE', icon: Clock };
+function getOutcomeStyle(outcome: string | null, analysis?: TrackingAnalysis | null) {
+  if (!outcome || outcome === 'pending') {
+    if (analysis?.isLive) {
+      return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', label: 'LIVE', icon: Target };
+    }
+    return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30', label: 'PENDING', icon: Clock };
+  }
   if (outcome.startsWith('tp')) {
     const tpNum = outcome.replace('tp', '').replace('_hit', '');
     return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', label: `TP${tpNum} HIT`, icon: CheckCircle2 };
@@ -138,7 +145,8 @@ const DIRECTION_OPTIONS = [
 
 const OUTCOME_OPTIONS = [
   { value: 'all', label: 'All Outcomes' },
-  { value: 'pending', label: 'Live / Pending' },
+  { value: 'live', label: 'Live' },
+  { value: 'pending', label: 'Pending' },
   { value: 'tp', label: 'TP Hit' },
   { value: 'sl', label: 'SL Hit' },
 ];
@@ -285,7 +293,7 @@ export default function TrackingPage() {
   // Stats
   const tpCount = analyses.filter(a => a.outcome?.startsWith('tp')).length;
   const slCount = analyses.filter(a => a.outcome === 'sl_hit').length;
-  const liveCount = analyses.filter(a => !a.outcome || a.outcome === 'pending').length;
+  const liveCount = analyses.filter(a => a.isLive).length;
 
   return (
     <div className="min-h-screen p-4 md:p-6 space-y-4">
@@ -383,12 +391,12 @@ export default function TrackingPage() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-blue-300">Live</span>
+            <Target className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs text-emerald-300">Live</span>
           </div>
-          <p className="text-lg font-bold text-blue-400 mt-1 font-mono">{liveCount}</p>
+          <p className="text-lg font-bold text-emerald-400 mt-1 font-mono">{liveCount}</p>
         </div>
         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
           <div className="flex items-center gap-2">
@@ -473,7 +481,7 @@ export default function TrackingPage() {
               ) : (
                 analyses.map((a) => {
                   const verdictStyle = getVerdictStyle(a.verdict);
-                  const outcomeStyle = getOutcomeStyle(a.outcome);
+                  const outcomeStyle = getOutcomeStyle(a.outcome, a);
                   const dirInfo = getDirectionIcon(a.direction);
                   const OutcomeIcon = outcomeStyle.icon;
 
