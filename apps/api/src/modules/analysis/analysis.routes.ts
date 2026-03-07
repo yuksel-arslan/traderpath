@@ -1816,8 +1816,12 @@ Explain the key risks and what conditions would need to change before trading th
         where.symbol = { contains: request.query.symbol.toUpperCase(), mode: 'insensitive' };
       }
       if (request.query.outcome && request.query.outcome !== 'all') {
-        if (request.query.outcome === 'pending') {
-          where.outcome = { in: [null, 'pending'] };
+        if (request.query.outcome === 'live') {
+          // LIVE: outcome is null (actively being tracked, not yet hit TP/SL)
+          where.outcome = null;
+        } else if (request.query.outcome === 'pending') {
+          // PENDING: outcome explicitly set to 'pending'
+          where.outcome = 'pending';
         } else if (request.query.outcome === 'tp') {
           where.outcome = { in: ['tp1_hit', 'tp2_hit', 'tp3_hit'] };
         } else if (request.query.outcome === 'sl') {

@@ -19,6 +19,7 @@ import {
   RefreshCw,
   Target,
   AlertTriangle,
+  Clock,
   CheckCircle2,
   XCircle,
   Calendar,
@@ -91,7 +92,8 @@ function getVerdictStyle(verdict: string) {
 }
 
 function getOutcomeStyle(outcome: string | null) {
-  if (!outcome || outcome === 'pending') return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', label: 'LIVE', icon: TrendingUp };
+  if (!outcome) return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', label: 'LIVE', icon: TrendingUp };
+  if (outcome === 'pending') return { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30', label: 'PENDING', icon: Clock };
   if (outcome.startsWith('tp')) {
     const tpNum = outcome.replace('tp', '').replace('_hit', '');
     return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', label: `TP${tpNum} HIT`, icon: CheckCircle2 };
@@ -144,7 +146,8 @@ const DIRECTION_OPTIONS = [
 
 const OUTCOME_OPTIONS = [
   { value: 'all', label: 'All Outcomes' },
-  { value: 'pending', label: 'Live / Pending' },
+  { value: 'live', label: 'Live' },
+  { value: 'pending', label: 'Pending' },
   { value: 'tp', label: 'TP Hit' },
   { value: 'sl', label: 'SL Hit' },
 ];
@@ -334,7 +337,8 @@ export default function TrackingPage() {
   // Stats
   const tpCount = analyses.filter(a => a.outcome?.startsWith('tp')).length;
   const slCount = analyses.filter(a => a.outcome === 'sl_hit').length;
-  const liveCount = analyses.filter(a => !a.outcome || a.outcome === 'pending').length;
+  const liveCount = analyses.filter(a => !a.outcome).length;
+  const pendingCount = analyses.filter(a => a.outcome === 'pending').length;
   const closedCount = tpCount + slCount;
   const winRate = closedCount > 0 ? Math.round((tpCount / closedCount) * 100) : null;
   const totalPnL = analyses.reduce((sum, a) => sum + (a.pnlPercent || 0), 0);
@@ -435,13 +439,20 @@ export default function TrackingPage() {
       )}
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-emerald-400" />
             <span className="text-xs text-emerald-300">Live</span>
           </div>
           <p className="text-lg font-bold text-emerald-400 mt-1 font-mono">{liveCount}</p>
+        </div>
+        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-amber-400" />
+            <span className="text-xs text-amber-300">Pending</span>
+          </div>
+          <p className="text-lg font-bold text-amber-400 mt-1 font-mono">{pendingCount}</p>
         </div>
         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
           <div className="flex items-center gap-2">
@@ -543,7 +554,8 @@ export default function TrackingPage() {
                 </tr>
               ) : (
                 analyses.map((a) => {
-                  const isLive = !a.outcome || a.outcome === 'pending';
+                  const isLive = !a.outcome;
+                  const isPending = a.outcome === 'pending';
                   const verdictStyle = getVerdictStyle(a.verdict);
                   const outcomeStyle = getOutcomeStyle(a.outcome);
                   const dirInfo = getDirectionIcon(a.direction);
