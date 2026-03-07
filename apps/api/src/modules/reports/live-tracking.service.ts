@@ -780,18 +780,6 @@ async function fetchKlines(
   return allKlines;
 }
 
-// Timeframe hierarchy for sub-candle drill-down
-const TIMEFRAME_DRILL_DOWN: Record<string, string[]> = {
-  '1W': ['1d', '4h', '1h', '15m', '5m', '1m'],
-  '1d': ['4h', '1h', '15m', '5m', '1m'],
-  '4h': ['1h', '15m', '5m', '1m'],
-  '2h': ['1h', '15m', '5m', '1m'],
-  '1h': ['15m', '5m', '1m'],
-  '30m': ['15m', '5m', '1m'],
-  '15m': ['5m', '1m'],
-  '5m': ['1m'],
-  '1m': [],
-};
 
 /**
  * Check if SL or TP is hit in a single candle
@@ -828,11 +816,11 @@ function checkSingleCandleHits(
 }
 
 /**
- * When both SL and TP are hit in the same candle, drill down to a lower
- * timeframe to determine which was actually hit first.
- * Falls back to open-price-proximity if no lower timeframe resolves it.
+ * When both SL and TP are hit in the same candle, fetch 1m candles
+ * for that candle's time range to determine which was hit first.
+ * Falls back to open-price-proximity if 1m data is unavailable.
  */
-async function resolveConflictWithDrillDown(
+async function resolveConflictWith1mCandles(
   symbol: string,
   conflictCandle: Kline,
   isLong: boolean,
@@ -840,54 +828,48 @@ async function resolveConflictWithDrillDown(
   tp1: number,
   tp2: number,
   tp3: number,
-  currentInterval: string,
   bestTpOutcome: { outcome: string; outcomePrice: number }
 ): Promise<{ outcome: string; outcomePrice: number; outcomeTime: number }> {
-  const drillDownChain = TIMEFRAME_DRILL_DOWN[currentInterval] || [];
+  try {
+    const minuteKlines = await fetchKlines(
+      symbol,
+      conflictCandle.openTime,
+      conflictCandle.closeTime,
+      '1m'
+    );
 
-  for (const lowerInterval of drillDownChain) {
-    try {
-      const subKlines = await fetchKlines(
-        symbol,
-        conflictCandle.openTime,
-        conflictCandle.closeTime,
-        lowerInterval
-      );
+    if (minuteKlines.length > 0) {
+      // Walk through 1m candles chronologically
+      for (const kline of minuteKlines) {
+        const { slHit, bestTp } = checkSingleCandleHits(kline, isLong, stopLoss, tp1, tp2, tp3);
 
-      if (subKlines.length === 0) continue;
-
-      // Walk through sub-candles chronologically
-      for (const subKline of subKlines) {
-        const sub = checkSingleCandleHits(subKline, isLong, stopLoss, tp1, tp2, tp3);
-
-        // Only SL hit in this sub-candle → SL was first
-        if (sub.slHit && !sub.bestTp) {
-          return { outcome: 'sl_hit', outcomePrice: stopLoss, outcomeTime: subKline.openTime };
+        // Only SL hit → SL was first
+        if (slHit && !bestTp) {
+          return { outcome: 'sl_hit', outcomePrice: stopLoss, outcomeTime: kline.openTime };
         }
-        // Only TP hit in this sub-candle → TP was first
-        if (!sub.slHit && sub.bestTp) {
-          return { ...sub.bestTp, outcomeTime: subKline.openTime };
+        // Only TP hit → TP was first
+        if (!slHit && bestTp) {
+          return { ...bestTp, outcomeTime: kline.openTime };
         }
-        // Both hit in this sub-candle too → drill down further
-        if (sub.slHit && sub.bestTp) {
-          // Recurse with the lower timeframe
-          return resolveConflictWithDrillDown(
-            symbol, subKline, isLong, stopLoss, tp1, tp2, tp3,
-            lowerInterval, sub.bestTp
-          );
+        // Both hit even in 1m candle → use open price proximity
+        if (slHit && bestTp) {
+          const distToSL = Math.abs(kline.open - stopLoss);
+          const distToTP = Math.abs(kline.open - bestTp.outcomePrice);
+          if (distToTP <= distToSL) {
+            return { ...bestTp, outcomeTime: kline.openTime };
+          }
+          return { outcome: 'sl_hit', outcomePrice: stopLoss, outcomeTime: kline.openTime };
         }
-        // Neither hit → continue to next sub-candle
+        // Neither hit → continue to next 1m candle
       }
-    } catch (error) {
-      logger.warn({ symbol, lowerInterval, error }, '[DrillDown] Failed to fetch sub-klines, trying next level');
-      continue;
     }
+  } catch (error) {
+    logger.warn({ symbol, error }, '[1mDrillDown] Failed to fetch 1m candles, using open-price fallback');
   }
 
-  // All drill-down levels exhausted (reached 1m) → fallback to open price proximity
-  const openPrice = conflictCandle.open;
-  const distToSL = Math.abs(openPrice - stopLoss);
-  const distToTP = Math.abs(openPrice - bestTpOutcome.outcomePrice);
+  // Fallback: open price proximity
+  const distToSL = Math.abs(conflictCandle.open - stopLoss);
+  const distToTP = Math.abs(conflictCandle.open - bestTpOutcome.outcomePrice);
   if (distToTP <= distToSL) {
     return { ...bestTpOutcome, outcomeTime: conflictCandle.openTime };
   }
@@ -915,10 +897,10 @@ async function checkKlinesForOutcome(
   for (const kline of klines) {
     const { slHit, bestTp } = checkSingleCandleHits(kline, isLong, stopLoss, tp1, tp2, tp3);
 
-    // Both hit in same candle → drill down to lower timeframe
+    // Both hit in same candle → check 1m candles to determine order
     if (slHit && bestTp) {
-      return resolveConflictWithDrillDown(
-        symbol, kline, isLong, stopLoss, tp1, tp2, tp3, interval, bestTp
+      return resolveConflictWith1mCandles(
+        symbol, kline, isLong, stopLoss, tp1, tp2, tp3, bestTp
       );
     }
 
