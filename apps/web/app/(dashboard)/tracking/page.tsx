@@ -19,7 +19,6 @@ import {
   RefreshCw,
   Target,
   AlertTriangle,
-  Clock,
   CheckCircle2,
   XCircle,
   Calendar,
@@ -47,6 +46,11 @@ interface TrackingAnalysis {
   creditsSpent: number;
   createdAt: string;
   expiresAt: string | null;
+}
+
+interface LivePriceData {
+  currentPrice: number | null;
+  unrealizedPnL: number | null;
 }
 
 interface Pagination {
@@ -87,7 +91,7 @@ function getVerdictStyle(verdict: string) {
 }
 
 function getOutcomeStyle(outcome: string | null) {
-  if (!outcome || outcome === 'pending') return { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30', label: 'LIVE', icon: Clock };
+  if (!outcome || outcome === 'pending') return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', label: 'LIVE', icon: TrendingUp };
   if (outcome.startsWith('tp')) {
     const tpNum = outcome.replace('tp', '').replace('_hit', '');
     return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', label: `TP${tpNum} HIT`, icon: CheckCircle2 };
@@ -116,6 +120,7 @@ const COLUMNS = [
   { key: 'stopLoss', label: 'Stop Loss', sortable: false, width: 'w-[100px]' },
   { key: 'takeProfit1', label: 'TP1', sortable: false, width: 'w-[100px]' },
   { key: 'takeProfit2', label: 'TP2', sortable: false, width: 'w-[100px]' },
+  { key: 'currentPrice', label: 'Current', sortable: false, width: 'w-[100px]' },
   { key: 'outcome', label: 'Outcome', sortable: true, width: 'w-[90px]' },
   { key: 'pnlPercent', label: 'P/L %', sortable: false, width: 'w-[80px]' },
   { key: 'outcomeAt', label: 'Closed At', sortable: false, width: 'w-[110px]' },
@@ -212,6 +217,35 @@ export default function TrackingPage() {
   const [dateTo, setDateTo] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Live prices for open trades (unrealized P/L)
+  const [livePrices, setLivePrices] = useState<Record<string, LivePriceData>>({});
+  const livePriceTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchLivePrices = useCallback(async () => {
+    try {
+      const res = await authFetch('/api/analysis/live-prices');
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data?.analyses)) {
+        const map: Record<string, LivePriceData> = {};
+        for (const a of json.data.analyses) {
+          map[a.id] = {
+            currentPrice: a.currentPrice ?? null,
+            unrealizedPnL: a.unrealizedPnL ?? null,
+          };
+        }
+        setLivePrices(map);
+      }
+    } catch { /* silently ignore */ }
+  }, []);
+
+  // Poll live prices every 30s
+  useEffect(() => {
+    fetchLivePrices();
+    livePriceTimer.current = setInterval(fetchLivePrices, 30000);
+    return () => { if (livePriceTimer.current) clearInterval(livePriceTimer.current); };
+  }, [fetchLivePrices]);
 
   // Debounce search input
   useEffect(() => {
@@ -402,12 +436,12 @@ export default function TrackingPage() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-        <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-blue-300">Live</span>
+            <TrendingUp className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs text-emerald-300">Live</span>
           </div>
-          <p className="text-lg font-bold text-blue-400 mt-1 font-mono">{liveCount}</p>
+          <p className="text-lg font-bold text-emerald-400 mt-1 font-mono">{liveCount}</p>
         </div>
         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
           <div className="flex items-center gap-2">
@@ -509,6 +543,7 @@ export default function TrackingPage() {
                 </tr>
               ) : (
                 analyses.map((a) => {
+                  const isLive = !a.outcome || a.outcome === 'pending';
                   const verdictStyle = getVerdictStyle(a.verdict);
                   const outcomeStyle = getOutcomeStyle(a.outcome);
                   const dirInfo = getDirectionIcon(a.direction);
@@ -518,7 +553,10 @@ export default function TrackingPage() {
                     <tr
                       key={a.id}
                       onClick={() => handleRowClick(a.id)}
-                      className="border-b border-white/5 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                      className={cn(
+                        'border-b border-white/5 hover:bg-white/[0.04] transition-colors cursor-pointer',
+                        isLive && 'bg-emerald-500/[0.03]',
+                      )}
                     >
                       {/* Date */}
                       <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">
@@ -597,6 +635,15 @@ export default function TrackingPage() {
                         {formatPrice(a.takeProfit2)}
                       </td>
 
+                      {/* Current Price (live trades only) */}
+                      <td className="px-3 py-2.5 font-mono">
+                        {isLive && livePrices[a.id]?.currentPrice ? (
+                          <span className="text-[#4dd0e1]">{formatPrice(livePrices[a.id].currentPrice)}</span>
+                        ) : a.outcomePrice ? (
+                          <span className="text-muted-foreground">{formatPrice(a.outcomePrice)}</span>
+                        ) : '—'}
+                      </td>
+
                       {/* Outcome */}
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-1">
@@ -609,11 +656,26 @@ export default function TrackingPage() {
 
                       {/* P/L % */}
                       <td className="px-3 py-2.5 font-mono font-bold">
-                        {a.pnlPercent !== null ? (
-                          <span className={a.pnlPercent >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                            {a.pnlPercent >= 0 ? '+' : ''}{a.pnlPercent.toFixed(2)}%
-                          </span>
-                        ) : '—'}
+                        {(() => {
+                          // For live trades, show unrealized P/L from live prices
+                          if (isLive && livePrices[a.id]?.unrealizedPnL != null) {
+                            const pnl = livePrices[a.id].unrealizedPnL!;
+                            return (
+                              <span className={pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                                {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}%
+                              </span>
+                            );
+                          }
+                          // For closed trades, show realized P/L
+                          if (a.pnlPercent !== null) {
+                            return (
+                              <span className={a.pnlPercent >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                                {a.pnlPercent >= 0 ? '+' : ''}{a.pnlPercent.toFixed(2)}%
+                              </span>
+                            );
+                          }
+                          return '—';
+                        })()}
                       </td>
 
                       {/* Closed At */}
