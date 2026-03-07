@@ -22,6 +22,7 @@ import {
   Monitor,
   BarChart3,
   FlaskConical,
+  ClipboardList,
 } from 'lucide-react';
 import { ThemeToggle } from '../../components/common/ThemeToggle';
 import { TraderPathLogo } from '../../components/common/TraderPathLogo';
@@ -50,6 +51,7 @@ const dropdownNav = [
     name: 'More',
     icon: Settings,
     items: [
+      { name: 'Trade Tracking', href: '/tracking', icon: ClipboardList },
       { name: 'Price Alerts', href: '/alerts', icon: Bell },
       { name: 'Notifications', href: '/notifications', icon: Inbox },
       { name: 'Methodology', href: '/methodology', icon: FlaskConical },
