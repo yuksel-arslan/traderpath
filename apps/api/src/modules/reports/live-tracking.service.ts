@@ -802,38 +802,52 @@ function checkKlinesForOutcome(
     //   - TP hit when Low <= TP price
     //   - SL hit when High >= SL price
 
-    // Check SL first (SL hit = trade closed, even if TP was also hit in same candle)
+    // Check both SL and TP for this candle
     const slHit = isLong
       ? (stopLoss > 0 && kline.low <= stopLoss)
       : (stopLoss > 0 && kline.high >= stopLoss);
 
-    if (slHit) {
-      return {
-        outcome: 'sl_hit',
-        outcomePrice: stopLoss,
-        outcomeTime: kline.openTime,
-      };
-    }
-
-    // Check TPs in order (TP1 first, then TP2, then TP3)
+    // Determine best TP hit in this candle
+    let bestTpOutcome: { outcome: string; outcomePrice: number } | null = null;
     if (tp1 > 0) {
       const tp1Hit = isLong ? kline.high >= tp1 : kline.low <= tp1;
       if (tp1Hit) {
+        bestTpOutcome = { outcome: 'tp1_hit', outcomePrice: tp1 };
         // Check if higher TPs were also hit in this candle
-        if (tp3 > 0) {
-          const tp3Hit = isLong ? kline.high >= tp3 : kline.low <= tp3;
-          if (tp3Hit) {
-            return { outcome: 'tp3_hit', outcomePrice: tp3, outcomeTime: kline.openTime };
-          }
-        }
         if (tp2 > 0) {
           const tp2Hit = isLong ? kline.high >= tp2 : kline.low <= tp2;
           if (tp2Hit) {
-            return { outcome: 'tp2_hit', outcomePrice: tp2, outcomeTime: kline.openTime };
+            bestTpOutcome = { outcome: 'tp2_hit', outcomePrice: tp2 };
           }
         }
-        return { outcome: 'tp1_hit', outcomePrice: tp1, outcomeTime: kline.openTime };
+        if (tp3 > 0) {
+          const tp3Hit = isLong ? kline.high >= tp3 : kline.low <= tp3;
+          if (tp3Hit) {
+            bestTpOutcome = { outcome: 'tp3_hit', outcomePrice: tp3 };
+          }
+        }
       }
+    }
+
+    // If both SL and TP hit in the same candle, use open price proximity
+    // to determine which was hit first (standard backtesting practice)
+    if (slHit && bestTpOutcome) {
+      const openPrice = kline.open;
+      const distToSL = Math.abs(openPrice - stopLoss);
+      const distToTP = Math.abs(openPrice - bestTpOutcome.outcomePrice);
+      if (distToTP <= distToSL) {
+        // TP was closer to open → likely hit first
+        return { ...bestTpOutcome, outcomeTime: kline.openTime };
+      }
+      return { outcome: 'sl_hit', outcomePrice: stopLoss, outcomeTime: kline.openTime };
+    }
+
+    if (slHit) {
+      return { outcome: 'sl_hit', outcomePrice: stopLoss, outcomeTime: kline.openTime };
+    }
+
+    if (bestTpOutcome) {
+      return { ...bestTpOutcome, outcomeTime: kline.openTime };
     }
   }
 

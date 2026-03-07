@@ -153,33 +153,52 @@ function checkTPSLHit(
   for (const kline of klines) {
     const high = kline.high;
     const low = kline.low;
+    const open = kline.open;
+
+    let slHit = false;
+    let bestTp: { hitType: 'tp1' | 'tp2' | 'tp3'; hitPrice: number } | null = null;
 
     if (direction === 'long') {
       // For LONG: SL is below entry, TP is above entry
-      // Check SL first (worst case)
-      if (low <= stopLoss) {
-        return { hitType: 'sl', hitPrice: stopLoss, hitTime: new Date(kline.openTime) };
-      }
-      // Check TPs (best case)
-      for (let i = 0; i < takeProfits.length; i++) {
+      slHit = low <= stopLoss;
+      // Check TPs (highest hit wins)
+      for (let i = takeProfits.length - 1; i >= 0; i--) {
         if (high >= takeProfits[i]) {
           const tpType = ['tp1', 'tp2', 'tp3'][i] as 'tp1' | 'tp2' | 'tp3';
-          return { hitType: tpType, hitPrice: takeProfits[i], hitTime: new Date(kline.openTime) };
+          bestTp = { hitType: tpType, hitPrice: takeProfits[i] };
+          break;
         }
       }
     } else if (direction === 'short') {
       // For SHORT: SL is above entry, TP is below entry
-      // Check SL first (worst case)
-      if (high >= stopLoss) {
-        return { hitType: 'sl', hitPrice: stopLoss, hitTime: new Date(kline.openTime) };
-      }
-      // Check TPs (best case)
-      for (let i = 0; i < takeProfits.length; i++) {
+      slHit = high >= stopLoss;
+      // Check TPs (lowest hit wins for short)
+      for (let i = takeProfits.length - 1; i >= 0; i--) {
         if (low <= takeProfits[i]) {
           const tpType = ['tp1', 'tp2', 'tp3'][i] as 'tp1' | 'tp2' | 'tp3';
-          return { hitType: tpType, hitPrice: takeProfits[i], hitTime: new Date(kline.openTime) };
+          bestTp = { hitType: tpType, hitPrice: takeProfits[i] };
+          break;
         }
       }
+    }
+
+    // If both SL and TP hit in the same candle, use open price proximity
+    // to determine which was hit first (standard backtesting practice)
+    if (slHit && bestTp) {
+      const distToSL = Math.abs(open - stopLoss);
+      const distToTP = Math.abs(open - bestTp.hitPrice);
+      if (distToTP <= distToSL) {
+        return { ...bestTp, hitTime: new Date(kline.openTime) };
+      }
+      return { hitType: 'sl', hitPrice: stopLoss, hitTime: new Date(kline.openTime) };
+    }
+
+    if (slHit) {
+      return { hitType: 'sl', hitPrice: stopLoss, hitTime: new Date(kline.openTime) };
+    }
+
+    if (bestTp) {
+      return { ...bestTp, hitTime: new Date(kline.openTime) };
     }
   }
 
